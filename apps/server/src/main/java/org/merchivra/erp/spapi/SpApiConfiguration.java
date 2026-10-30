@@ -24,6 +24,26 @@ public class SpApiConfiguration {
     }
 
     @Bean
+    @ConditionalOnProperty(prefix="merchivra.spapi.oauth", name="enabled", havingValue="true")
+    SellerOauthService sellerOauthService(
+        org.springframework.jdbc.core.JdbcTemplate jdbc,
+        org.springframework.transaction.support.TransactionTemplate transactions,
+        @Value("${merchivra.spapi.oauth.encryption-key-base64:}") String key,
+        @Value("${merchivra.spapi.oauth.application-id:}") String appId,
+        @Value("${merchivra.spapi.oauth.redirect-uri:}") String redirectUri,
+        @Value("${merchivra.spapi.oauth.allowed-amazon-origins:}") String origins,
+        @Value("${merchivra.spapi.lwa-client-id:}") String clientId,
+        @Value("${merchivra.spapi.lwa-client-secret:}") String clientSecret) {
+        var cipher = new SellerTokenCipher(key, 1);
+        var exchanger = LwaAuthorizationCodeClient.official(clientId,clientSecret,redirectUri);
+        var allowed = java.util.Arrays.stream(origins.split(","))
+            .map(String::trim).filter(v -> !v.isBlank())
+            .collect(java.util.stream.Collectors.toUnmodifiableSet());
+        return new SellerOauthService(jdbc,transactions,cipher,exchanger,
+            java.time.Clock.systemUTC(),appId,redirectUri,allowed);
+    }
+
+    @Bean
     SpApiClient spApiClient(
         @Value("${merchivra.spapi.lwa-client-id:}") String clientId,
         @Value("${merchivra.spapi.lwa-client-secret:}") String clientSecret,

@@ -42,3 +42,11 @@ merchivra:
     allow-writes: ${MERCHIVRA_SPAPI_ALLOW_WRITES:false}
     lwa-client-id: ${MERCHIVRA_LWA_CLIENT_ID:}
     lwa-client-secret: ${MERCHIVRA_LWA_CLIENT_SECRET:}
+    oauth:
+      # Requires reviewed public App registration and registered redirect URI.
+      enabled: ${MERCHIVRA_SPAPI_OAUTH_ENABLED:false}
+      application-id: ${MERCHIVRA_SPAPI_APP_ID:}
+      redirect-uri: ${MERCHIVRA_SPAPI_OAUTH_REDIRECT_URI:}
+      encryption-key-base64: ${MERCHIVRA_SPAPI_OAUTH_ENCRYPTION_KEY_BASE64:}
+      allowed-amazon-origins: ${MERCHIVRA_SPAPI_OAUTH_AMAZON_ORIGINS:}
+      secure-cookie: ${MERCHIVRA_SPAPI_OAUTH_SECURE_COOKIE:true}
