@@ -41,15 +41,15 @@ public class MarketplaceReadController {
 
     public record ListingView(String id, String sellerSku, String asin, String fnsku,
                               String mappingStatus, String internalSku,
-                              String sourceUpdatedAt) {}
+                              String sourceUpdatedAt, String dataOrigin) {}
 
     public record OrderView(String id, String externalOrderId, String fulfillmentStatus,
                             String refundStatus, String financialStatus,
-                            long itemCount, String sourceUpdatedAt) {}
+                            long itemCount, String sourceUpdatedAt, String dataOrigin) {}
 
     public record InventoryView(String id, String sellerSku, String quality,
                                 Integer fulfillable, Integer reserved,
-                                String observedAt, String ingestedAt) {}
+                                String observedAt, String ingestedAt, String dataOrigin) {}
 
     @GetMapping
     public List<MarketplaceView> marketplaces(Authentication authentication, HttpServletRequest request) {
@@ -77,7 +77,7 @@ public class MarketplaceReadController {
         UUID tenant = authorizedMarketplace(authentication, request, marketplaceId);
         return jdbc.query("""
             SELECT l.id, l.seller_sku, l.asin, l.fnsku, l.mapping_status,
-                   sku.internal_sku, l.source_updated_at
+                   sku.internal_sku, l.source_updated_at, l.data_origin
             FROM marketplace_listing l
             LEFT JOIN LATERAL (
               SELECT p.internal_sku FROM listing_sku_mapping m
@@ -93,7 +93,8 @@ public class MarketplaceReadController {
             """, (rs, row) -> new ListingView(
                 uuid(rs, "id"), rs.getString("seller_sku"), rs.getString("asin"),
                 rs.getString("fnsku"), rs.getString("mapping_status"),
-                rs.getString("internal_sku"), instant(rs, "source_updated_at")),
+                rs.getString("internal_sku"), instant(rs, "source_updated_at"),
+                rs.getString("data_origin")),
             tenant, marketplaceId, safeLimit);
     }
 
@@ -105,7 +106,7 @@ public class MarketplaceReadController {
         UUID tenant = authorizedMarketplace(authentication, request, marketplaceId);
         return jdbc.query("""
             SELECT o.id, o.external_order_id, o.fulfillment_status_raw,
-                   o.refund_status, o.financial_status, o.source_updated_at,
+                   o.refund_status, o.financial_status, o.source_updated_at, o.data_origin,
                    (SELECT COUNT(*) FROM order_item i
                      WHERE i.tenant_id = o.tenant_id AND i.sales_order_id = o.id) AS item_count
             FROM sales_order o
@@ -116,7 +117,7 @@ public class MarketplaceReadController {
                 uuid(rs, "id"), rs.getString("external_order_id"),
                 rs.getString("fulfillment_status_raw"), rs.getString("refund_status"),
                 rs.getString("financial_status"), rs.getLong("item_count"),
-                instant(rs, "source_updated_at")),
+                instant(rs, "source_updated_at"), rs.getString("data_origin")),
             tenant, marketplaceId, safeLimit);
     }
 
@@ -128,10 +129,10 @@ public class MarketplaceReadController {
         UUID tenant = authorizedMarketplace(authentication, request, marketplaceId);
         return jdbc.query("""
             SELECT i.id, i.seller_sku_raw, i.quality, i.fulfillable, i.reserved,
-                   i.observed_at, i.ingested_at
+                   i.observed_at, i.ingested_at, i.data_origin
             FROM (
               SELECT DISTINCT ON (seller_sku_raw)
-                id, seller_sku_raw, quality, fulfillable, reserved, observed_at, ingested_at
+                id, seller_sku_raw, quality, fulfillable, reserved, observed_at, ingested_at, data_origin
               FROM fba_inventory_observation
               WHERE tenant_id = ? AND seller_marketplace_id = ?
               ORDER BY seller_sku_raw, observed_at DESC NULLS LAST,
@@ -143,7 +144,7 @@ public class MarketplaceReadController {
                 uuid(rs, "id"), rs.getString("seller_sku_raw"),
                 rs.getString("quality"), nullableInteger(rs, "fulfillable"),
                 nullableInteger(rs, "reserved"), instant(rs, "observed_at"),
-                instant(rs, "ingested_at")),
+                instant(rs, "ingested_at"), rs.getString("data_origin")),
             tenant, marketplaceId, safeLimit);
     }
 
