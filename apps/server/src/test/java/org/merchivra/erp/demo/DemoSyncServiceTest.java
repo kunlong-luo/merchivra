@@ -10,8 +10,9 @@ import static org.mockito.Mockito.*;
 
 class DemoSyncServiceTest {
     private final DemoRepository repository = mock(DemoRepository.class);
+    private final DemoCoreImporter importer = mock(DemoCoreImporter.class);
     private final DemoSyncService sync =
-        new DemoSyncService(repository, new MockMarketplaceOverviewGateway());
+        new DemoSyncService(repository, new MockMarketplaceOverviewGateway(), importer);
 
     private static final String KEY = "demo-test-replay-01";
 
@@ -30,6 +31,7 @@ class DemoSyncServiceTest {
         when(repository.findRun(any(UUID.class))).thenReturn(result);
         assertEquals("SUCCEEDED", sync.synchronize(KEY, false).status());
         verify(repository).replaceOverview(argThat(o -> "MOCK".equals(o.mode())));
+        verify(importer).importFixture(argThat(o -> "MOCK".equals(o.mode())));
     }
 
     @Test
@@ -42,6 +44,7 @@ class DemoSyncServiceTest {
         when(repository.findRun(any(UUID.class))).thenReturn(result);
         assertTrue(sync.synchronize(KEY, true).retryable());
         verify(repository, never()).replaceOverview(any());
+        verifyNoInteractions(importer);
     }
 
     @Test

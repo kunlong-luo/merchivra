@@ -22,10 +22,13 @@ import org.springframework.web.server.ResponseStatusException;
 public class DemoSyncService implements MarketplaceOverviewGateway {
     private final DemoRepository repository;
     private final MockMarketplaceOverviewGateway mock;
+    private final DemoCoreImporter coreImporter;
 
-    public DemoSyncService(DemoRepository repository, MockMarketplaceOverviewGateway mock) {
+    public DemoSyncService(DemoRepository repository, MockMarketplaceOverviewGateway mock,
+                           DemoCoreImporter coreImporter) {
         this.repository = repository;
         this.mock = mock;
+        this.coreImporter = coreImporter;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -63,7 +66,12 @@ public class DemoSyncService implements MarketplaceOverviewGateway {
             }
             return previous;
         }
-        if (!simulateFailure) repository.replaceOverview(fixture);
+        if (!simulateFailure) {
+            // The same transaction commits demo snapshot, tenant-scoped normalized data,
+            // and successful idempotency record. Failure rolls back all three.
+            repository.replaceOverview(fixture);
+            coreImporter.importFixture(fixture);
+        }
         // Same DB transaction: a failed snapshot write must not produce SUCCEEDED.
         return repository.findRun(id);
     }
