@@ -57,3 +57,7 @@ The default authenticated **核心业务数据** workspace now includes a local 
 **Verification update (2026-10-30):** [一次性 PostgreSQL 17 冒烟验证](https://github.com/kunlong-luo/merchivra/actions/runs/41059134533) successfully launched Java 25 / Spring Boot 4 against a disposable PostgreSQL 17 service, applied Flyway V1–V4 and exercised the session/CSRF/account/marketplace/audit/404 path. This one-shot workflow deleted itself on success. **Still not verified:** concurrent transaction races, real Docker Compose stack and browser flows. Early CI remains Java unit tests + TypeScript/Vitest/Vite only.
 
 **Compose root dotenv:** when invoking a Compose file under `deploy/` from the repository root, always pass `--env-file .env`. Without this explicit flag, Compose may search for `.env` in the Compose project directory rather than reading the repo-root file shown in these docs.
+
+## Full simulated source-to-query chain
+
+The explicit [TEST-004 simulated SP-API smoke](testing/mock-full-chain.md) exercises login, local setup, mocked paginated Orders/Listing/FBA, tenant-scoped SQL reads, audit/idempotency and backend restart through the Nginx proxy. Run the separate manual Compose workflow or the localhost-only Python script against disposable data. The daily CI remains lightweight. No live Amazon Seller/Finances credentials are used.

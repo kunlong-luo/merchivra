@@ -47,3 +47,10 @@
 - [x] 固定虚构账户可通过本地 Mock 成功同步写入结构化核心表，在 Web 同步页展示数据计数；导入使用稳定来源键及幂等插入。
 - [ ] 真正的授权 Session、租户/账号权限作用域、真实 Seller 数据适配与 Finances 仍未实现；无真实业务 API。
 - [ ] V1/V2 在实际 PostgreSQL 的迁移执行及跨租户失败用例尚未验收，CI 仍仅为快速编译、类型检查和少量单测。
+
+## 本地模拟调用链补齐（2026-10-30）
+
+- [x] 按 INT-002/INT-003/SYNC-002 **语义**添加 MockSpApiClient / 固定 US/DE 分页 Orders、Listing、FBA 场景；没有真实 HTTP Amazon 调用。
+- [x] 本地 Owner 当前租户的 LOCAL/UNCONFIGURED Marketplace 可以显式触发 Sandbox 模拟导入，保留 MOCK 来源、事务、审计和幂等记录；前端通过核心业务 API 读取。
+- [x] 添加 [TEST-004](testing/mock-full-chain.md) 与手动 Compose 校验脚本，不增加 M0～M2 日常强制 E2E。
+- [ ] 真实 SP-API OAuth/角色、官方 DTO 的映射与分页 cursor/Worker 的租约 fencing、Finances 对账/成本利润、生产权限/备份仍未实现；不能把本地模拟运行称为已批准业务交付。

@@ -59,3 +59,7 @@ Never commit Amazon refresh tokens, client secrets, personal customer data or re
 ## License
 
 Licensed under the [Apache License 2.0](LICENSE). Contributions welcome.
+
+## Full local Mock simulation
+
+The **Core ERP** page now has an opt-in simulated SP-API replay for a local **UNCONFIGURED** US/DE Marketplace. It writes tenant-scoped facts marked `MOCK` using fictional paginated Orders, Listing, and FBA fixtures, then reuses the protected core APIs. Finance remains **NOT_AUTHORIZED**; no real Amazon credentials or data are used. See [full chain verification](docs/testing/mock-full-chain.md). The independent Compose smoke workflow is opt-in, not a new mandatory CI gate.

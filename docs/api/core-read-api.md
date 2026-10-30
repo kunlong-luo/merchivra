@@ -37,3 +37,7 @@
 ## 2026-10-30 一次性运行态验证补记
 
 [一次性 PostgreSQL 17 冒烟验证](https://github.com/kunlong-luo/merchivra/actions/runs/41059134533) 已在临时 PostgreSQL 17 验证 Flyway V1–V4、当前租户站点列表和陌生 Marketplace 查询 404（以及本地店铺配置链路）。该验证范围有限，**不能**代替复杂订单/Listing/FBA 带数据夹具的租户间 SQL 集成验证、完整分页、Docker Compose 或正式授权审查。
+
+## V5 模拟来源标记与受保护查询
+
+Listing、订单及 FBA 读结果新增 `dataOrigin`（`MOCK` / `UNVERIFIED`）。可在明确启用 Demo 的本地 `/api/v1/demo/sandbox/{marketplaceId}/replay` 中，按当前登录租户的 LOCAL/UNCONFIGURED Marketplace 模拟写入固定纯虚构数据；随后仍只使用本 API 的会话租户过滤读取。见 [TEST-004](../testing/mock-full-chain.md)。`UNVERIFIED` 并不代表已通过真实来源认证。
