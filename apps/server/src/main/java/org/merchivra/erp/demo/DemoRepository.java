@@ -1,7 +1,7 @@
 package org.merchivra.erp.demo;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
@@ -18,9 +18,9 @@ import org.springframework.stereotype.Repository;
 @Repository
 public class DemoRepository {
     private final JdbcTemplate jdbc;
-    private final ObjectMapper mapper;
+    private final JsonMapper mapper;
 
-    public DemoRepository(JdbcTemplate jdbc, ObjectMapper mapper) {
+    public DemoRepository(JdbcTemplate jdbc, JsonMapper mapper) {
         this.jdbc = jdbc;
         this.mapper = mapper;
     }
@@ -43,7 +43,7 @@ public class DemoRepository {
                 throw new IllegalStateException("Demo store contains non-mock data");
             }
             return overview;
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalStateException("Corrupt demo snapshot", e);
         }
     }
@@ -114,7 +114,7 @@ public class DemoRepository {
     private String toJson(Overview fixture) {
         try {
             return mapper.writeValueAsString(fixture);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new IllegalArgumentException("Invalid Mock fixture", e);
         }
     }
