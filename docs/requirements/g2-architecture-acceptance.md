@@ -20,7 +20,6 @@
 | G2-AC-14 | 首次初始化 | 同时两次抢占 Owner 初始化 | 仅单次成功；无默认口令 | IAM-001 |
 | G2-AC-15 | 用户角色与店铺 | 运营有 A 账号权限，查询同租户 B 账号 | 拒绝或不可见；Worker 同理 | SEC-002 |
 | G2-AC-16 | API 契约完整性 | OpenAPI 与文档列举的资源/错误/安全方案不一致 | 自动引用检查 + 协议评审阻止批准 | API-001 / OpenAPI candidate |
-
 | G2-AC-17 | Orders 分页过滤 | 第二页使用不同 Marketplace/更新时间过滤，并且 Token 已过期 | 不允许混用同一游标；过期安全重扫而非静默漏页 | INT-002 / SYNC-002 |
 | G2-AC-18 | FBA 详细库存字段 | `getInventorySummaries` 请求不含 `details=true` | 未请求库存桶显示 NOT_REQUESTED/UNKNOWN，而不是 0 或断货 | INT-003 |
 
