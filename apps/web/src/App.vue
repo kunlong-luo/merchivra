@@ -1,37 +1,265 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import { fetchPing } from './lib/api'
+import { fetchDemoOverview } from './lib/demo'
 
-const { data, isPending, isError } = useQuery({
-  queryKey: ['api', 'ping'],
-  queryFn: fetchPing,
-  staleTime: 30_000,
-  retry: 1
+type View = 'overview' | 'orders' | 'catalog' | 'inventory'
+
+const activeView = ref<View>('overview')
+const accountId = ref('')
+const { data: ping, isError: pingError, isPending: pingPending } = useQuery({
+  queryKey: ['api', 'ping'], queryFn: fetchPing, staleTime: 30_000, retry: 1
+})
+const {
+  data: overview,
+  isPending: demoPending,
+  isError: demoError,
+  error: demoFailure,
+  isFetching: demoFetching,
+  refetch
+} = useQuery({
+  queryKey: ['api', 'demo', 'overview'], queryFn: fetchDemoOverview, staleTime: 60_000, retry: 1
 })
 
+watch(overview, value => {
+  if (value?.accounts.length && !value.accounts.some(a => a.id === accountId.value)) {
+    accountId.value = value.accounts[0].id
+  }
+}, { immediate: true })
+
+const account = computed(() => overview.value?.accounts.find(a => a.id === accountId.value))
+const summary = computed(() => overview.value?.summaries.find(s => s.accountId === accountId.value))
+const orders = computed(() => overview.value?.orders.filter(o => o.accountId === accountId.value) ?? [])
+const listings = computed(() => overview.value?.listings.filter(l => l.accountId === accountId.value) ?? [])
+const inventory = computed(() => overview.value?.inventory.filter(i => i.accountId === accountId.value) ?? [])
 const apiStatus = computed(() => {
-  if (isPending.value) return '检测中…'
-  if (isError.value) return 'API 暂时不可用'
-  return data.value?.status === 'ok' ? 'API 已连接' : 'API 响应异常'
+  if (pingPending.value) return '连接检查中'
+  if (pingError.value) return 'API 不可用'
+  return ping.value?.status === 'ok' ? 'API 已连接' : 'API 状态异常'
 })
+const navigation: { key: View; label: string; symbol: string }[] = [
+  { key: 'overview', label: '经营总览', symbol: '◫' },
+  { key: 'orders', label: '订单管理', symbol: '▤' },
+  { key: 'catalog', label: '商品与 Listing', symbol: '▧' },
+  { key: 'inventory', label: 'FBA 库存', symbol: '▥' }
+]
+
+function money(amount?: { amount: string; currency: string } | null) {
+  if (!amount) return '不可计算'
+  return `${amount.currency} ${amount.amount}`
+}
+function timestamp(value?: string | null) {
+  if (!value) return '暂无来源时间'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '时间未知'
+  return date.toLocaleString('zh-CN', { timeZone: 'UTC', hour12: false }) + ' UTC'
+}
+function qualityLabel(value: string) {
+  const labels: Record<string, string> = {
+    OBSERVED: '已观测',
+    UNKNOWN: '未取得',
+    STALE: '已过期',
+    PARTIAL: '部分数据',
+    UNMAPPED: '待映射',
+    ACTIVE: '已映射',
+    SHIPPED: '已发货',
+    UNSHIPPED: '待发货',
+    PARTIAL_REFUND: '部分退款',
+    NOT_OBSERVED: '未取得财务数据'
+  }
+  return labels[value] ?? value
+}
+function tabTitle() {
+  return navigation.find(n => n.key === activeView.value)?.label ?? '经营总览'
+}
 </script>
 
 <template>
-  <main class="page">
-    <header>
-      <span class="brand">◉ Merchivra</span>
-      <span class="stage">M0 · Foundation</span>
-    </header>
-    <section class="hero">
-      <span class="eyebrow">Open Source Commerce Operations</span>
-      <h1>Merchivra ERP</h1>
-      <p>从亚马逊 Seller 店铺开始，建立可扩展、可自托管、可追溯的跨境电商运营平台。</p>
-      <div class="status" role="status" aria-live="polite">
-        <span class="dot" aria-hidden="true"></span>{{ apiStatus }}
+  <div class="workspace">
+    <aside class="sidebar">
+      <div class="brand-wrap">
+        <div class="brand-icon">M</div>
+        <div class="brand-copy"><strong>merchivra</strong><small>SELLER OPERATIONS</small></div>
       </div>
-      <div class="notice">当前为工程初始化版本，尚无登录鉴权和真实 Amazon 数据同步。请勿公网部署。</div>
-      <a href="https://github.com/kunlong-luo/merchivra" target="_blank" rel="noopener noreferrer">查看 GitHub 仓库 ↗</a>
-    </section>
-  </main>
+
+      <div class="sidebar-section-title">工作空间</div>
+      <nav class="nav-links" aria-label="主导航">
+        <button
+          v-for="item in navigation" :key="item.key" type="button"
+          :class="['nav-link', { active: activeView === item.key }]"
+          :aria-current="activeView === item.key ? 'page' : undefined"
+          @click="activeView = item.key"
+        >
+          <span class="nav-icon" aria-hidden="true">{{ item.symbol }}</span>
+          {{ item.label }}
+        </button>
+        <div class="nav-link nav-disabled" aria-disabled="true"><span class="nav-icon">▦</span> 财务与对账 <span class="soon">后续</span></div>
+      </nav>
+
+      <div class="sidebar-spacer"></div>
+      <div class="sidebar-info">
+        <span class="local-indicator"></span>
+        <div><strong>本地演示环境</strong><small>纯虚构数据 · 无真实连接</small></div>
+      </div>
+      <a class="sidebar-repo" href="https://github.com/kunlong-luo/merchivra" target="_blank" rel="noopener noreferrer">
+        GitHub 源代码 <span aria-hidden="true">↗</span>
+      </a>
+    </aside>
+
+    <main class="main-panel">
+      <header class="topbar">
+        <div class="breadcrumb">工作空间 <span>/</span> <strong>{{ tabTitle() }}</strong></div>
+        <div class="topbar-right">
+          <span :class="['connection', { connectionError: pingError }]"><span class="connection-dot"></span>{{ apiStatus }}</span>
+          <span class="avatar" aria-label="演示工作空间">D</span>
+        </div>
+      </header>
+
+      <div class="content">
+        <div class="page-heading">
+          <div>
+            <div class="eyebrow">COMMERCE INTELLIGENCE / DEMO</div>
+            <h1>{{ tabTitle() }}</h1>
+            <p>集中查看店铺运营数据，所有示例均来自本地 Mock Gateway。</p>
+          </div>
+          <div class="heading-actions">
+            <label class="shop-filter">
+              <span>当前店铺</span>
+              <select v-model="accountId" :disabled="!overview?.accounts.length" aria-label="切换演示店铺">
+                <option v-for="shop in overview?.accounts ?? []" :key="shop.id" :value="shop.id">{{ shop.name }}</option>
+              </select>
+            </label>
+            <button class="refresh-button" type="button" :disabled="demoFetching" @click="refetch()">
+              <span aria-hidden="true">↻</span> {{ demoFetching ? '读取中' : '刷新' }}
+            </button>
+          </div>
+        </div>
+
+        <div class="mock-banner" role="status">
+          <span class="mock-banner-icon" aria-hidden="true">✦</span>
+          <div><strong>MOCK 演示模式</strong><span>全部商品、订单、账户和库存均为虚构数据；无 Amazon 凭证、实际财务入账或实时库存。请勿用于经营决策。</span></div>
+          <span class="mock-pill">DEMO ONLY</span>
+        </div>
+
+        <div v-if="demoPending" class="state-panel">
+          <div class="loading-ring"></div>
+          <strong>正在读取模拟数据…</strong><p>正在连接后端 Mock Marketplace Gateway</p>
+        </div>
+
+        <div v-else-if="demoError" class="state-panel error-panel" role="alert">
+          <div class="state-symbol">!</div>
+          <h2>暂时无法加载业务演示</h2>
+          <p>{{ demoFailure instanceof Error ? demoFailure.message : '请检查服务状态及 Mock 配置。' }}</p>
+          <p>本地 Docker Compose 已配置启用 Mock；独立运行后端时需设置 MERCHIVRA_DEMO_ENABLED=true。</p>
+          <button class="primary-button" @click="refetch()">重新尝试</button>
+        </div>
+
+        <div v-else-if="overview && account && summary">
+          <div class="section-meta">
+            <span><span class="data-dot"></span> {{ account.name }} · {{ account.marketplaceId }} · {{ account.region }}</span>
+            <span>模拟数据截止 {{ timestamp(overview.fixtureAsOf) }}</span>
+          </div>
+
+          <template v-if="activeView === 'overview'">
+            <section class="metric-grid" aria-label="经营数据摘要">
+              <div class="metric-card">
+                <div class="metric-label">订单预计商品收入 <span class="metric-icon">↗</span></div>
+                <div class="metric-value">{{ money(summary.provisionalSales) }}</div>
+                <div class="metric-foot">按订单来源口径，不等于平台入账</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">订单数 <span class="metric-icon">▤</span></div>
+                <div class="metric-value">{{ summary.orderCount }} <span class="metric-unit">笔</span></div>
+                <div class="metric-foot">仅当前所选演示店铺</div>
+              </div>
+              <div class="metric-card">
+                <div class="metric-label">已观测退款 <span class="metric-icon">↙</span></div>
+                <div class="metric-value">{{ money(summary.observedRefunds) }}</div>
+                <div class="metric-foot">单独列示，不与收入重复相加</div>
+              </div>
+              <div class="metric-card accent-card">
+                <div class="metric-label">预估订单贡献额 <span class="metric-icon">○</span></div>
+                <div class="metric-value not-ready">不可计算</div>
+                <div class="metric-foot">缺少完整成本和费用；不显示虚假利润</div>
+              </div>
+            </section>
+
+            <section class="two-column">
+              <div class="panel">
+                <div class="panel-heading"><div><h2>近期订单</h2><p>来源状态、退款和财务状态分开记录</p></div>
+                  <button class="text-button" @click="activeView = 'orders'">查看全部 →</button></div>
+                <div class="table-scroll">
+                  <table><thead><tr><th>订单编号</th><th>SKU</th><th>预计金额</th><th>履约状态</th></tr></thead>
+                    <tbody><tr v-for="order in orders" :key="order.id">
+                      <td class="strong-cell">{{ order.externalOrderId }}</td><td>{{ order.sellerSku }}</td>
+                      <td class="nowrap">{{ money(order.provisionalSales) }}</td>
+                      <td><span class="status-chip" :class="order.fulfillmentStatus === 'SHIPPED' ? 'chip-green' : 'chip-amber'">{{ qualityLabel(order.fulfillmentStatus) }}</span></td>
+                    </tr></tbody></table>
+                </div>
+                <div v-if="!orders.length" class="empty-state">该店铺暂无订单</div>
+              </div>
+
+              <div class="panel insight-panel">
+                <div class="panel-heading"><div><h2>需要关注</h2><p>仅反映模拟数据的质量情况</p></div></div>
+                <div class="insight-row"><span class="insight-icon warning">!</span><div><strong>{{ summary.unmappedListings }} 个 SKU 待映射</strong><small>原始 Listing 已保留，不影响事实入库</small></div></div>
+                <div class="insight-row"><span class="insight-icon info">~</span><div><strong>{{ summary.unknownInventoryCount }} 条库存数量未知</strong><small>未知 ≠ 零库存，不触发缺货结论</small></div></div>
+                <div class="insight-row"><span class="insight-icon muted">◌</span><div><strong>平台财务交易未接入</strong><small>预计销售与实际入账不得合并计算</small></div></div>
+                <div class="insight-footer">数据质量优先于虚假的完整指标</div>
+              </div>
+            </section>
+
+            <div class="note-panel"><span class="note-mark">i</span><div><strong>关于本页面指标</strong><p>演示数据按店铺和原币种独立汇总。预计商品收入未扣除右侧单独显示的退款；真实的财务金额、结算收入和贡献利润尚未接入。</p></div></div>
+          </template>
+
+          <section v-else-if="activeView === 'orders'" class="panel full-panel">
+            <div class="panel-heading"><div><h2>订单列表</h2><p>订单业务事实与退款、财务状态保持独立</p></div><span class="count-pill">{{ orders.length }} 笔</span></div>
+            <div class="table-scroll">
+              <table><thead><tr><th>Amazon 订单（模拟）</th><th>Seller SKU</th><th>预计商品收入</th><th>退款</th><th>履约</th><th>财务</th><th>来源更新时间</th></tr></thead>
+                <tbody><tr v-for="order in orders" :key="order.id">
+                  <td class="strong-cell">{{ order.externalOrderId }}</td><td>{{ order.sellerSku }}</td>
+                  <td class="nowrap">{{ money(order.provisionalSales) }}</td>
+                  <td><span :class="['status-chip', order.refundStatus === 'NONE' ? 'chip-muted' : 'chip-amber']">{{ order.refundStatus === 'NONE' ? '无退款' : '部分退款' }}</span><div v-if="order.refundStatus !== 'NONE'" class="secondary-cell">{{ money(order.refundAmount) }}</div></td>
+                  <td><span class="status-chip" :class="order.fulfillmentStatus === 'SHIPPED' ? 'chip-green' : 'chip-amber'">{{ qualityLabel(order.fulfillmentStatus) }}</span></td>
+                  <td><span class="status-chip chip-muted">未入账</span></td>
+                  <td class="small-cell">{{ timestamp(order.sourceUpdatedAt) }}</td>
+                </tr></tbody></table>
+            </div>
+            <div v-if="!orders.length" class="empty-state">当前店铺没有 Mock 订单</div>
+          </section>
+
+          <section v-else-if="activeView === 'catalog'" class="panel full-panel">
+            <div class="panel-heading"><div><h2>Listing 与 SKU 归属</h2><p>ASIN、Seller SKU 与内部 SKU 不是同一个标识</p></div><span class="count-pill">{{ listings.length }} 个 Listing</span></div>
+            <div class="table-scroll">
+              <table><thead><tr><th>Seller SKU</th><th>ASIN（模拟）</th><th>内部 SKU</th><th>映射状态</th></tr></thead>
+                <tbody><tr v-for="item in listings" :key="item.id">
+                  <td class="strong-cell">{{ item.sellerSku }}</td><td>{{ item.asin }}</td>
+                  <td>{{ item.internalSku ?? '—' }}</td><td><span class="status-chip" :class="item.mappingStatus === 'ACTIVE' ? 'chip-green' : 'chip-amber'">{{ qualityLabel(item.mappingStatus) }}</span></td>
+                </tr></tbody></table>
+            </div>
+            <div class="panel-caption">待映射 SKU 仍保留来源记录。编辑、审核和版本化映射将在后续阶段接入。</div>
+          </section>
+
+          <section v-else-if="activeView === 'inventory'" class="panel full-panel">
+            <div class="panel-heading"><div><h2>FBA 库存快照</h2><p>观测型库存，不是仓库出入库流水；未知数值不可当 0</p></div><span class="count-pill">{{ inventory.length }} 条观测</span></div>
+            <div class="table-scroll">
+              <table><thead><tr><th>Seller SKU</th><th>可售</th><th>预留</th><th>数据质量</th><th>来源观测时间</th></tr></thead>
+                <tbody><tr v-for="item in inventory" :key="item.id">
+                  <td class="strong-cell">{{ item.sellerSku }}</td>
+                  <td class="quantity-cell">{{ item.fulfillable === null ? '未知' : item.fulfillable }} <span v-if="item.fulfillable === 0" class="zero-label">已观测为 0</span></td>
+                  <td>{{ item.reserved === null ? '未知' : item.reserved }}</td>
+                  <td><span class="status-chip" :class="item.quality === 'OBSERVED' ? 'chip-green' : 'chip-amber'">{{ qualityLabel(item.quality) }}</span></td>
+                  <td class="small-cell">{{ timestamp(item.observedAt) }}</td>
+                </tr></tbody></table>
+            </div>
+            <div class="panel-caption">这是静态 Mock 快照，不提供实时缺货告警，也不代表 FBM 库存。</div>
+          </section>
+        </div>
+
+        <footer class="footer">
+          <span>© Merchivra · Pre-alpha</span><span>开发演示 · 不包含真实 Seller 数据</span>
+        </footer>
+      </div>
+    </main>
+  </div>
 </template>
