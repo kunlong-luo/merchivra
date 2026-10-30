@@ -25,6 +25,9 @@ async function signIn() {
     password.value = ''
     // Invalidate any anonymous or previous-user cache before mounting ERP.
     client.removeQueries({ queryKey: ['api', 'demo'] })
+    client.removeQueries({ queryKey: ['core'] })
+    client.removeQueries({ queryKey: ['setup'] })
+    client.removeQueries({ queryKey: ['sandbox'] })
     await refetch()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '登录失败'
@@ -40,6 +43,9 @@ async function signOut() {
   try {
     await logoutSession()
     client.removeQueries({ queryKey: ['api', 'demo'] })
+    client.removeQueries({ queryKey: ['core'] })
+    client.removeQueries({ queryKey: ['setup'] })
+    client.removeQueries({ queryKey: ['sandbox'] })
     await refetch()
   } catch (error) {
     // A failed logout must not be presented as a successful sign-out.
