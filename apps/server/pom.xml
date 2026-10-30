@@ -15,6 +15,12 @@
     <description>Merchivra ERP API - Java 25 / Spring Boot 4</description>
     <properties><java.version>25</java.version></properties>
     <dependencies>
+        <!-- Official Amazon SP-API SDK: maintained generated API types, LWA, RDT and rate-limiting. -->
+        <dependency>
+            <groupId>software.amazon.spapi</groupId>
+            <artifactId>spapi-sdk</artifactId>
+            <version>1.13.0</version>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webmvc</artifactId>
