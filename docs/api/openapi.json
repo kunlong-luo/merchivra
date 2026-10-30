@@ -1,0 +1,1568 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "Merchivra ERP API — G2 candidate",
+    "version": "0.1.0-draft",
+    "description": "DESIGN ONLY / 未实现。API、认证、权限和财务口径待 G1/G2 正式审查；绝不返回 Amazon Token 或买家 PII。"
+  },
+  "servers": [
+    {
+      "url": "/api/v1",
+      "description": "Proposed local application API"
+    }
+  ],
+  "x-design-status": "Proposed / Not implemented",
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "paths": {
+    "/me": {
+      "get": {
+        "tags": [
+          "Identity"
+        ],
+        "operationId": "getCurrentMember",
+        "summary": "getCurrentMember",
+        "parameters": [],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CurrentMember"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/seller-accounts": {
+      "get": {
+        "tags": [
+          "Stores"
+        ],
+        "operationId": "listSellerAccounts",
+        "summary": "listSellerAccounts",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "ERP 自有分页游标，不是 Amazon 的 token",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SellerAccountsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Stores"
+        ],
+        "operationId": "createSellerAccountDraft",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SellerAccountCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SellerAccount"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "CONFLICT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/listings": {
+      "get": {
+        "tags": [
+          "Catalog"
+        ],
+        "operationId": "listListings",
+        "summary": "listListings",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "ERP 自有分页游标，不是 Amazon 的 token",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "sellerAccountId",
+            "in": "query",
+            "description": "受授权店铺",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "marketplaceId",
+            "in": "query",
+            "description": "Marketplace",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "mappingStatus",
+            "in": "query",
+            "description": "候选映射状态",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListingsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders": {
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "operationId": "listOrders",
+        "summary": "listOrders",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "ERP 自有分页游标，不是 Amazon 的 token",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "sellerAccountId",
+            "in": "query",
+            "description": "受授权店铺",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "marketplaceId",
+            "in": "query",
+            "description": "站点",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "RFC3339 UTC inclusive",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "RFC3339 UTC exclusive",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrdersResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/orders/{id}": {
+      "get": {
+        "tags": [
+          "Orders"
+        ],
+        "operationId": "getOrder",
+        "summary": "getOrder",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OrderDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "RESOURCE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/inventory/fba": {
+      "get": {
+        "tags": [
+          "Inventory"
+        ],
+        "operationId": "listFbaInventory",
+        "summary": "listFbaInventory",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "ERP 自有分页游标，不是 Amazon 的 token",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "sellerAccountId",
+            "in": "query",
+            "description": "店铺",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "marketplaceId",
+            "in": "query",
+            "description": "站点",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InventoryResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/finance/transactions": {
+      "get": {
+        "tags": [
+          "Finance"
+        ],
+        "operationId": "listFinanceTransactions",
+        "summary": "listFinanceTransactions",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "description": "ERP 自有分页游标，不是 Amazon 的 token",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "pageSize",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "default": 50
+            }
+          },
+          {
+            "name": "sellerAccountId",
+            "in": "query",
+            "description": "店铺",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinanceTransactionsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/reports/margin": {
+      "get": {
+        "tags": [
+          "Finance"
+        ],
+        "operationId": "getMarginReport",
+        "summary": "getMarginReport",
+        "parameters": [
+          {
+            "name": "sellerAccountId",
+            "in": "query",
+            "description": "店铺",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "description": "期间起点",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "description": "期间终点",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "currency",
+            "in": "query",
+            "description": "只使用已明确汇率策略的货币",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarginReport"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sync-runs": {
+      "post": {
+        "tags": [
+          "Sync"
+        ],
+        "operationId": "createSyncRun",
+        "parameters": [
+          {
+            "name": "Idempotency-Key",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 8,
+              "maxLength": 128
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SyncRunCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncRun"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "VALIDATION_ERROR",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "CONFLICT",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/sync-runs/{id}": {
+      "get": {
+        "tags": [
+          "Sync"
+        ],
+        "operationId": "getSyncRun",
+        "summary": "getSyncRun",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "成功",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncRun"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "UNAUTHENTICATED",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "FORBIDDEN",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "RESOURCE_NOT_FOUND",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "DEC-09 尚未决定。仅候选机制，正式可能采用 Cookie Session/OIDC。"
+      }
+    },
+    "schemas": {
+      "Money": {
+        "type": "object",
+        "required": [
+          "amount",
+          "currency"
+        ],
+        "properties": {
+          "amount": {
+            "type": "string",
+            "pattern": "^-?\\d+(?:\\.\\d{1,6})?$",
+            "examples": [
+              "40.00"
+            ]
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
+            "examples": [
+              "USD"
+            ]
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "required": [
+          "error",
+          "meta"
+        ],
+        "properties": {
+          "error": {
+            "type": "object",
+            "required": [
+              "code",
+              "message",
+              "retryable"
+            ],
+            "properties": {
+              "code": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "retryable": {
+                "type": "boolean"
+              }
+            }
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "requestId"
+            ],
+            "properties": {
+              "requestId": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "CurrentMember": {
+        "type": "object",
+        "required": [
+          "id",
+          "activeTenantId",
+          "roles"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "activeTenantId": {
+            "type": "string"
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "accountScopes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "SellerAccount": {
+        "type": "object",
+        "required": [
+          "id",
+          "sellerId",
+          "region",
+          "connectionStatus"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "sellerId": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string",
+            "enum": [
+              "NA",
+              "EU",
+              "FE"
+            ]
+          },
+          "connectionStatus": {
+            "type": "string",
+            "enum": [
+              "UNCONFIGURED",
+              "AUTHORIZING",
+              "CONNECTED",
+              "AUTH_REQUIRED",
+              "INSUFFICIENT_ROLE",
+              "DEGRADED"
+            ]
+          }
+        }
+      },
+      "SellerAccountCreate": {
+        "type": "object",
+        "required": [
+          "sellerId",
+          "region"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "sellerId": {
+            "type": "string"
+          },
+          "region": {
+            "type": "string",
+            "enum": [
+              "NA",
+              "EU",
+              "FE"
+            ]
+          }
+        }
+      },
+      "Listing": {
+        "type": "object",
+        "required": [
+          "id",
+          "marketplaceId",
+          "sellerSku",
+          "mappingStatus"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "marketplaceId": {
+            "type": "string"
+          },
+          "sellerSku": {
+            "type": "string"
+          },
+          "asin": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "internalSku": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "mappingStatus": {
+            "type": "string",
+            "enum": [
+              "UNMAPPED",
+              "SUGGESTED",
+              "VERIFIED",
+              "ACTIVE",
+              "CONFLICT",
+              "SUPERSEDED"
+            ]
+          },
+          "sourceUpdatedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "lastSyncedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "completeness": {
+            "type": "string",
+            "enum": [
+              "COMPLETE_KNOWN",
+              "PARTIAL",
+              "UNAVAILABLE",
+              "STALE",
+              "DISPUTED",
+              "NOT_CALCULABLE"
+            ]
+          }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "required": [
+          "id",
+          "externalOrderId",
+          "fulfillmentStatus",
+          "refundStatus",
+          "financialStatus",
+          "amount",
+          "completeness"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "externalOrderId": {
+            "type": "string"
+          },
+          "marketplaceId": {
+            "type": "string"
+          },
+          "fulfillmentStatus": {
+            "type": "string"
+          },
+          "refundStatus": {
+            "type": "string",
+            "enum": [
+              "NONE",
+              "PARTIAL",
+              "FULL",
+              "UNKNOWN"
+            ]
+          },
+          "financialStatus": {
+            "type": "string",
+            "enum": [
+              "NOT_OBSERVED",
+              "POSTED",
+              "PARTIALLY_RECONCILED",
+              "SETTLED",
+              "DISPUTED"
+            ]
+          },
+          "amount": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "sourceUpdatedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "lastSyncedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "completeness": {
+            "type": "string",
+            "enum": [
+              "COMPLETE_KNOWN",
+              "PARTIAL",
+              "UNAVAILABLE",
+              "STALE",
+              "DISPUTED",
+              "NOT_CALCULABLE"
+            ]
+          }
+        }
+      },
+      "OrderDetail": {
+        "type": "object",
+        "required": [
+          "id",
+          "order",
+          "items"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "order": {
+            "$ref": "#/components/schemas/Order"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OrderItem"
+            }
+          }
+        }
+      },
+      "OrderItem": {
+        "type": "object",
+        "required": [
+          "externalItemId",
+          "sellerSku",
+          "quantity"
+        ],
+        "properties": {
+          "externalItemId": {
+            "type": "string"
+          },
+          "sellerSku": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "itemProceeds": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "InventoryObservation": {
+        "type": "object",
+        "required": [
+          "sellerSku",
+          "quality",
+          "fulfillable"
+        ],
+        "properties": {
+          "sellerSku": {
+            "type": "string"
+          },
+          "marketplaceId": {
+            "type": "string"
+          },
+          "fulfillable": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0,
+            "description": "null = UNKNOWN; zero only when explicitly observed"
+          },
+          "reserved": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "inbound": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          },
+          "quality": {
+            "type": "string",
+            "enum": [
+              "OBSERVED",
+              "PARTIAL",
+              "UNKNOWN",
+              "STALE"
+            ]
+          },
+          "sourceObservedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "FinanceTransaction": {
+        "type": "object",
+        "required": [
+          "id",
+          "amount",
+          "matchingStatus"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/Money"
+          },
+          "matchingStatus": {
+            "type": "string",
+            "enum": [
+              "MATCHED",
+              "UNMATCHED",
+              "PENDING_REVIEW",
+              "DISPUTED"
+            ]
+          },
+          "postedAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "MarginReport": {
+        "type": "object",
+        "required": [
+          "currency",
+          "provisionalSales",
+          "contributionEstimate",
+          "financialPosted",
+          "completeness"
+        ],
+        "properties": {
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "provisionalSales": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "contributionEstimate": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "financialPosted": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Money"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "completeness": {
+            "type": "string",
+            "enum": [
+              "COMPLETE_KNOWN",
+              "PARTIAL",
+              "UNAVAILABLE",
+              "STALE",
+              "DISPUTED",
+              "NOT_CALCULABLE"
+            ]
+          },
+          "excludedCostCategories": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "calculationVersion": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "SyncRunCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sellerAccountId",
+          "resource",
+          "mode"
+        ],
+        "properties": {
+          "sellerAccountId": {
+            "type": "string"
+          },
+          "marketplaceIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "resource": {
+            "type": "string",
+            "enum": [
+              "ORDERS",
+              "LISTINGS",
+              "FBA_INVENTORY",
+              "FINANCES"
+            ]
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "INCREMENTAL",
+              "RECONCILE"
+            ]
+          }
+        }
+      },
+      "SyncRun": {
+        "type": "object",
+        "required": [
+          "id",
+          "state",
+          "resource",
+          "sellerAccountId"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "WAITING_RETRY",
+              "PAUSED",
+              "FAILED",
+              "SUCCEEDED"
+            ]
+          },
+          "resource": {
+            "type": "string"
+          },
+          "sellerAccountId": {
+            "type": "string"
+          },
+          "lastSafeCheckpoint": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "nextRetryAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "format": "date-time"
+          },
+          "sanitizedLastError": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      },
+      "SellerAccountsResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "page"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SellerAccount"
+            }
+          },
+          "page": {
+            "type": "object",
+            "required": [
+              "hasMore",
+              "nextCursor"
+            ],
+            "properties": {
+              "hasMore": {
+                "type": "boolean"
+              },
+              "nextCursor": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "ListingsResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "page"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Listing"
+            }
+          },
+          "page": {
+            "type": "object",
+            "required": [
+              "hasMore",
+              "nextCursor"
+            ],
+            "properties": {
+              "hasMore": {
+                "type": "boolean"
+              },
+              "nextCursor": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "OrdersResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "page"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            }
+          },
+          "page": {
+            "type": "object",
+            "required": [
+              "hasMore",
+              "nextCursor"
+            ],
+            "properties": {
+              "hasMore": {
+                "type": "boolean"
+              },
+              "nextCursor": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "InventoryResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "page"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InventoryObservation"
+            }
+          },
+          "page": {
+            "type": "object",
+            "required": [
+              "hasMore",
+              "nextCursor"
+            ],
+            "properties": {
+              "hasMore": {
+                "type": "boolean"
+              },
+              "nextCursor": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      },
+      "FinanceTransactionsResponse": {
+        "type": "object",
+        "required": [
+          "data",
+          "page"
+        ],
+        "properties": {
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FinanceTransaction"
+            }
+          },
+          "page": {
+            "type": "object",
+            "required": [
+              "hasMore",
+              "nextCursor"
+            ],
+            "properties": {
+              "hasMore": {
+                "type": "boolean"
+              },
+              "nextCursor": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

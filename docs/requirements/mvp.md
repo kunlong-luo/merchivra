@@ -1,49 +1,92 @@
-# Merchivra ERP — MVP PRD (v0.1.0)
+# PRD-001 · Merchivra ERP MVP 产品需求
 
-**Status:** Proposed; scope baseline for M0–M4. **Primary user:** self-hosting Amazon Seller operator with one or more accounts/marketplaces.
+**状态：Proposed**｜版本：v0.1｜日期：2026-10-30｜依赖：[待决策问题](decision-questions.md)
 
-## Problem
-Seller product/listing, order, FBA inventory and settlement data lives in separate tools. Operators need a transparent, auditable, low-cost workflow without surrendering all business data to a hosted ERP.
+## 1. 产品目标
 
-## MVP in scope (priority P0)
-| Module | Capability | Acceptance criteria |
-| --- | --- | --- |
-| System | login, tenant, user and role management | deny cross-tenant access; audit changes |
-| Seller account | private-app first; account/marketplace configuration | verify permissions; report authorization/health status |
-| Catalog | internal SKU and marketplace listing mapping | one internal SKU can map to many seller SKUs/marketplaces |
-| Orders | fetch incremental orders and order items; state changes and refunds when accessible | idempotent import, timestamps and source preserved |
-| Inventory | FBA quantities with status and source timestamp | snapshot/reconcile without overwriting internal warehouse ledger |
-| Costs | currency-aware manual SKU costs with effective dates | historical cost retained |
-| Finance | fees and financial transactions, estimated margin | money as decimal with currency; distinguish estimate/posted/settled |
-| Sync | scheduled tasks, checkpoints, retry and monitoring | backoff and per-account rate limits; failures visible |
-| Insights | orders, revenue and estimated margin by store/marketplace/SKU | figures traceable to source and calculation version |
-| Deployment | Docker Compose, migrations, demo/mock provider | no Amazon account required to run demo |
+构建开源、可自部署的 Amazon Seller ERP：统一展示多卖家账户 / 站点的商品、Listing、订单、FBA 库存和**可解释的**利润估算，并提供可靠同步与审计线索。
 
-## Explicitly out of MVP
-- Vendor Central; multi-channel integrations; shipping label purchasing.
-- Automated repricing, Amazon Ads bid optimization, purchase planning, general ledger.
-- SaaS billing and publicly available OAuth application approval workflows.
+产品价值：让卖家掌握自己的经营数据、减少报表拼接、清楚知道数据新鲜度与计算局限。
 
-## Key business rules
-1. Internal product SKU, seller SKU, ASIN and FNSKU are distinct identifiers; never assume 1:1 mappings.
-2. Order status and financial settlement are different timelines. Order totals do not equal payouts.
-3. FBA inventory API snapshots are external observations, not internal warehouse stock ledger events.
-4. Persist decimal monetary values and ISO currency codes; FX conversion uses an explicit rate source/date.
-5. Jobs must be idempotent, resumable, observable and safe under repeated notifications.
-6. Every business record belongs to a tenant; unique constraints include tenant and source identifiers.
-7. PII and restricted data are stored only if essential and permitted; minimize scope and retention.
+**MVP 非目标**：成熟通用财务总账、税务报税系统、FBA 发货计划自动生成、广告自动竞价、自动调价、SaaS 计费、多平台接入、Vendor Central。
 
-## P0 acceptance / release gate
-- Clean checkout builds; docker compose starts API, UI, database and Redis.
-- Demo/mock path usable without Amazon credentials.
-- Authorized self-hosted seller can sync sample or approved live products, orders and inventory.
-- Replaying same sync does not create duplicate records; failed pages can resume.
-- Tenant A cannot access Tenant B data through any endpoint or background job.
-- Basic estimated margin can be reconciled to source events; limitations shown explicitly.
-- Security checks and deployment warnings documented.
+## 2. 目标用户
 
-## External dependencies
-Amazon SP-API registration and role approval; latest endpoint versions and usage limits must be checked at integration time. Amazon Ads API requires separate access.
+- 核心用户：1–多店铺的 Amazon Seller 运营人员/店主，需跨站点查看商品、订单和库存。
+- 财务用户：核对销售、费用、退款和商品历史成本；关注「估算 vs 入账 vs 结算」差异。
+- 管理用户：配置店铺、角色、同步计划与异常处理。
+- 见 [用户与权限角色](../product/personas.md)。
 
-## Deferred decisions
-Public-app OAuth launch, tenant billing, cost allocation rules, storage of restricted PII and supported marketplaces beyond Amazon.
+## G1 首发试点候选（第三轮评审补充）
+
+**暂定选项，尚未获产品负责人批准**：建议首个试点为美国 Marketplace（SP-API NA region）、一个自有 Seller 账号、FBA 订单/库存与 FBM 订单只读。FBM 实物库存、发货与运单回传不在 P0。为未来多账号/多站点预留设计，但不要求首发同时覆盖全部站点。
+
+- 不得将 FBA 观测值当作 FBM 仓库库存。
+- 未取得 Finance 权限和费用/成本时，显示相应数据不可用，不构造“完整净利润”。
+- 首版关键经营指标建议命名 **预估订单贡献额（已知费用范围）**，与商品毛利、平台已入账与结算分开；等待 DEC-07 财务确认。
+- US/USD 只是试点默认；不意味着永久只支持美元，也不代表已拥有 API 授权。
+
+阅读：[G1 评审包](../product/g1-review-package.md) · [FBA/FBM 边界](../product/fulfillment-scope.md) · [SKU 策略](../product/sku-listing-policy.md) · [财务规则](../product/finance-rulebook.md) · [手工业务验收](g1-business-acceptance.md)。
+
+## 3. 首发范围
+
+| Epic | P0 功能 | 可演示场景 |
+|---|---|---|
+| SYS | 组织/用户/角色/审计 | 用户在所属租户内查询且不可越权 |
+| SHOP | 店铺配置、站点映射、私有应用授权状态 | 连接成功或有可定位失败原因 |
+| CAT | 内部 SKU / Seller SKU / ASIN 映射，Listing 浏览 | 同一内部 SKU 对应多个站点 |
+| ORD | 订单增量同步、订单项、状态更新、退款关联 | 不重复订单、可按店铺与日期筛选 |
+| INV | FBA 可售/预留/在途等状态与快照 | 同步时间可见、不会被重复累加 |
+| COST | 商品成本有效期、币种 | 历史订单可选定生效成本 |
+| FIN | 平台财务事件和费用分类、利润估算 | 未结算与缺失成本单独提示 |
+| SYNC | 调度、检查点、重试、限流、告警 | 429 / 中断后可恢复、不漏不重 |
+| DASH | 店铺/站点/SKU 销售和估算毛利 | 汇总数据可回钻到来源 |
+| DEPLOY | Docker 自托管、Mock 示例数据 | 无 Amazon 账号也可演示基本流程 |
+
+## 3.1 第二轮评审确定的设计约束（候选，尚待签署）
+
+- 一笔订单有独立的履约、退款、财务状态；退款不能改写订单历史发货事实。
+- Orders 预计金额、Finances 已入账金额与平台结算金额必须分列，不能合并双计。
+- 未关联内部 SKU 的平台订单行和库存仍要保留；未知、过期、观测为零三种数据状态必须区分。
+- 同步检查点属于长期存在的 Stream，而不是每次独立 Job；可追溯 run/attempt/pageCommit。
+- 初次安装不存在默认管理员账户，必须有一次性受保护的自举流程。
+- 前后端用明确 API 契约和错误码沟通，UI 数据卡必须呈现来源时间/币种/完整度。
+
+设计详见 [状态规则](../architecture/domain-state-model.md)、[来源对账](../architecture/source-reconciliation.md)、[Stream](../architecture/sync-stream-contract.md)、[首次认证](../architecture/tenant-bootstrap.md)。以上为审查提案，G1/G2 未批准前不作为用户实际业务口径。
+
+## 4. 核心业务规则
+
+1. `product_sku` 是 ERP 自有标识；`seller_sku`、`asin`、`fnsku` 是不同维度，映射不能假定一对一。
+2. 所有业务主数据必须有租户归属，外部 ID 唯一键应包含租户及账号/站点作用域。
+3. 订单金额不等于实收；退款/平台费用/结算有独立发生与入账时间。
+4. FBA 库存是有时间戳的外部快照；内部仓库台账（P1）用不可变出入库流水。
+5. 金额采用十进制数值及 ISO 货币代码；换汇显示来源、日期与舍入策略。
+6. 数据同步具有幂等性、补偿机制与运行日志；API 限额按操作与账号作用域治理。
+7. PII 最小采集：MVP 默认不请求买家身份或收货地址；仅当合法业务确需时走另行审查。
+8. MVP 的利润名称必须明确是「预估」，缺失广告费、头程或税费不能宣称为净利润。
+
+## 5. MVP 用户旅程
+
+- 第一次使用：本地安装 → 创建组织/管理员 → 连接自有 Seller 账户（或选择 Mock）→ 站点映射 → 首次同步。
+- 日常使用：查看总览 → 发现库存/同步告警 → 按店铺筛选订单和 Listing → 查看 SKU 经营指标。
+- 月末核对：录入成本 → 获取财务交易 → 按币种/费用分类汇总 → 导出差异报告。
+
+## 6. 成功标准（建议目标，非既成结果）
+
+- 端到端完成至少 1 个自有卖家账户和 1 个站点的 P0 同步。
+- 同一批次重放 3 次后订单、财务事件与库存当前值正确且无重复记账。
+- 对一次手工选定样本可追踪：订单行 → 成本生效记录 → 财务事件 → 估算利润。
+- 认证和租户隔离负向用例通过；敏感令牌不出现在日志/响应。
+- 全新克隆可通过 Docker Compose 启动 Mock 演示环境。
+- 同步失败可被发现、定位并从检查点恢复。
+
+## 7. 依赖与风险
+
+SP-API 授权和角色审批、不同区域数据完整度、财务入账延迟、成本与汇率数据来源、卖家对经营指标的定义。详见 [外部接口](../integrations/amazon-sp-api.md) 与 [未决清单](decision-questions.md)。
+
+## 8. 版本后续
+
+- P1：供应商/采购、国内仓、FBA 头程入仓、广告报表、补货建议。
+- P2：多平台适配、自动化规则、AI 预测、SaaS 能力。
+
+需求编号与测试追踪见 [功能矩阵](functional.md) 与 [验收标准](acceptance.md)。
