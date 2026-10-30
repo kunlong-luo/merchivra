@@ -83,13 +83,9 @@ public final class SpApiClient {
         if ("GET".equals(req.operation().method())) b.GET();
         else b.header("Content-Type", "application/json")
               .method(req.operation().method(), HttpRequest.BodyPublishers.ofString(req.jsonBody()));
-        // No automatic retries for remote writes. GET 429/503 may safely retry
-        // once; a production Worker still needs per-account rate budgeting.
+        // Don't retry immediately on 429/503; caller must apply operation/account
+        // throttling and respect Retry-After. Blind retries amplify throttling.
         HttpResponse<String> response = transport.send(b.build());
-        if ("GET".equals(req.operation().method())
-            && (response.statusCode()==429 || response.statusCode()==503)) {
-            response = transport.send(b.build());
-        }
         Map<String,String> responseHeaders = new LinkedHashMap<>();
         for (String name : new String[]{"x-amzn-requestid", "x-amzn-ratelimit-limit", "retry-after"}) {
             response.headers().firstValue(name).ifPresent(v -> responseHeaders.put(name, v));
