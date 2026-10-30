@@ -32,6 +32,17 @@
 | DASH | 店铺/站点/SKU 销售和估算毛利 | 汇总数据可回钻到来源 |
 | DEPLOY | Docker 自托管、Mock 示例数据 | 无 Amazon 账号也可演示基本流程 |
 
+## 3.1 第二轮评审确定的设计约束（候选，尚待签署）
+
+- 一笔订单有独立的履约、退款、财务状态；退款不能改写订单历史发货事实。
+- Orders 预计金额、Finances 已入账金额与平台结算金额必须分列，不能合并双计。
+- 未关联内部 SKU 的平台订单行和库存仍要保留；未知、过期、观测为零三种数据状态必须区分。
+- 同步检查点属于长期存在的 Stream，而不是每次独立 Job；可追溯 run/attempt/pageCommit。
+- 初次安装不存在默认管理员账户，必须有一次性受保护的自举流程。
+- 前后端用明确 API 契约和错误码沟通，UI 数据卡必须呈现来源时间/币种/完整度。
+
+设计详见 [状态规则](../architecture/domain-state-model.md)、[来源对账](../architecture/source-reconciliation.md)、[Stream](../architecture/sync-stream-contract.md)、[首次认证](../architecture/tenant-bootstrap.md)。以上为审查提案，G1/G2 未批准前不作为用户实际业务口径。
+
 ## 4. 核心业务规则
 
 1. `product_sku` 是 ERP 自有标识；`seller_sku`、`asin`、`fnsku` 是不同维度，映射不能假定一对一。

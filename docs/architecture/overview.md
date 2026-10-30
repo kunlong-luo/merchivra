@@ -45,6 +45,10 @@ Worker --> PG
 - 交易事实与同步 Checkpoint 必须有持久化策略；短期缓存不可作为唯一真相来源。
 - 不接受明文生产凭证或客户敏感数据写入仓库/CI。
 
+## 3.1 领域事实、状态与同步契约
+
+订单、退款与财务状态正交，见 [DOM-001](domain-state-model.md)；平台来源与投影对账见 [DATA-002](source-reconciliation.md)；一次任务的运行不能取代持久同步流，见 [SYNC-002](sync-stream-contract.md)。首次管理员与租户边界见 [IAM-001](tenant-bootstrap.md)。
+
 ## 4. API 边界
 
 前端 API 默认 `/api/v1`（规划约定）；UI 不直接调用 Amazon；后台任务不得绕过授权和租户过滤。具体资源/错误契约见 [模块边界](modules.md)。

@@ -1,47 +1,42 @@
 # Merchivra ERP · 文档中心
 
-> **文档版本：0.1-draft｜基线日期：2026-10-30｜状态：待产品/技术评审**
+> **文档版本：0.2-review｜日期：2026-10-30｜状态：Proposed / 待批准**
 >
-> 本目录是一套**设计稿，不是已经实现的功能清单**。所有未获卖家确认、未获得 Amazon 授权、未测试的假设均标注「待确认」。本文档不包含业务代码。
+> 当前只完成**设计规格与评审修订**，不存在已完成的 Amazon ERP 业务系统。G1/G2/G3 均未批准；详见 [第二轮评审报告](governance/review-report-2026-10-30.md)。
 
-## 阅读顺序（首次参与项目）
+## 第一次阅读：按业务闭环而不是文件数量看
 
-1. [产品需求 PRD](requirements/mvp.md) → 确定做什么、不做什么。
-2. [功能需求矩阵](requirements/functional.md) 与 [用户角色](product/personas.md) → 对齐业务场景。
-3. [业务流程](processes/core-flows.md) → 验证实际操作流程。
-4. [系统架构](architecture/overview.md) → 明确系统边界及技术原则。
-5. [数据模型/ER 图](architecture/data-model.md)、[同步引擎](architecture/sync-engine.md) → 审核最关键设计。
-6. [Amazon SP-API 接入](integrations/amazon-sp-api.md)、[安全设计](security/security-design.md) → 识别外部限制。
-7. [UI 信息架构](ux/navigation.md)、[测试验收](testing/test-plan.md) 与 [里程碑](roadmap.md) → 准备交付。
+1. **产品与范围**：[PRD](requirements/mvp.md) → [功能需求](requirements/functional.md) / [非功能需求](requirements/nonfunctional.md) / [角色](product/personas.md) / [术语](product/glossary.md)。
+2. **端到端业务**：[五条业务流程](processes/core-flows.md) → [订单/退款/库存状态不变量](architecture/domain-state-model.md)。
+3. **技术与数据**：[系统架构](architecture/overview.md) / [模块边界](architecture/modules.md) → [概念 ERD](architecture/data-model.md) → [来源事实与对账](architecture/source-reconciliation.md)。
+4. **外部集成**：[Amazon SP-API 总览](integrations/amazon-sp-api.md) → [操作级核对矩阵](integrations/sp-api-operation-matrix.md) → [同步架构](architecture/sync-engine.md) / [Stream 协议](architecture/sync-stream-contract.md)。
+5. **安全与接口**：[初装及租户权限](architecture/tenant-bootstrap.md) / [安全设计](security/security-design.md) → [API 契约](architecture/api-contracts.md) → [UI 导航](ux/navigation.md) / [页面状态矩阵](ux/page-state-matrix.md)。
+6. **验证与审查**：[验收用例](requirements/acceptance.md) → [端到端场景](testing/end-to-end-scenarios.md) / [测试策略](testing/test-plan.md) → [追踪矩阵](requirements/traceability.md) → [文档评审报告](governance/review-report-2026-10-30.md)。
 
-## 文档清单与负责人（角色而非指定个人）
+## 当前设计评审结果
 
-| 层级 | 文档 | 建议评审人 | 状态 |
-|---|---|---|---|
-| 产品 | [PRD / MVP](requirements/mvp.md)、[功能需求](requirements/functional.md)、[角色](product/personas.md) | 产品负责人、卖家 | 待确认 |
-| 产品 | [术语表](product/glossary.md)、[需求追踪](requirements/traceability.md) | 产品、开发 | 草案 |
-| 业务 | [核心业务流程图](processes/core-flows.md) | 运营、财务、供应链 | 待确认 |
-| 质量 | [非功能需求](requirements/nonfunctional.md)、[验收用例](requirements/acceptance.md) | 开发、测试、运维 | 草案 |
-| 架构 | [系统架构](architecture/overview.md)、[模块边界](architecture/modules.md) | 技术负责人 | 草案 |
-| 数据 | [ER 图/数据字典](architecture/data-model.md)、[财务口径](architecture/finance-model.md) | 后端、财务 | 待确认 |
-| 集成 | [同步引擎](architecture/sync-engine.md)、[SP-API](integrations/amazon-sp-api.md) | 集成负责人 | 待授权核对 |
-| 安全 | [安全、隐私与权限](security/security-design.md) | 技术负责人、安全负责人 | 待评审 |
-| 体验 | [导航与线框](ux/navigation.md) | 产品、UX | 草案 |
-| 部署 | [部署拓扑](architecture/deployment.md)、[运维方案](ops/operations.md) | 运维、后端 | 草案 |
-| 治理 | [图纸目录](diagrams/index.md)、[ADR](architecture/adrs/0001-modular-monolith.md)、[版本计划](roadmap.md) | 项目维护者 | 草案 |
-| 决策 | [未决问题与资料清单](requirements/decision-questions.md)、[文档控制](governance/document-control.md) | 项目负责人 | 需输入 |
+| 关口 | 应回答的问题 | 状态 |
+|---|---|---|
+| G1 产品冻结 | 谁用、哪些站点、FBA/FBM、财务/成本口径 | **未通过**：负责人输入缺失 |
+| G2 架构冻结 | 多租户、原始事实、流式同步、平台权限/唯一键 | **未通过**：候选方案完成但待签署/真实字段验证 |
+| G3 开发就绪 | API Schema、物理 ERD、可执行测试契约、权限批准 | **未通过**：正式实现前补齐 |
 
-## 三个评审关口
+必须先审阅 [待确认资料](requirements/decision-questions.md) 与 [决策登记](governance/decision-register.md)，不将默认值当作已确认事实。
 
-- **G1 — 产品冻结**：P0 功能、目标卖家类型、站点、业务术语及利润口径被确认。
-- **G2 — 架构冻结**：租户隔离、授权、实体关系、同步幂等性、安全方案被确认。
-- **G3 — 开发就绪**：功能需求能对应验收用例；接口依赖、风险与 Mock 数据可用。
+## 重点图纸与数据
 
-所有图均为可编辑 Mermaid；见 [图纸索引](diagrams/index.md)。不得将「草案」与「已实施」混同。
+- [图纸目录](diagrams/index.md)：系统/部署图、概念 ERD、订单/退款状态、库存对账、同步时序、租户初始化与 UI。
+- [数据模型 DATA-001](architecture/data-model.md)：支持映射缺失、账务事实和每 Stream 多次运行。
+- [财务 FIN-001](architecture/finance-model.md)：预计/已入账/结算必须分列，同源金额不能重复相加。
+- [来源对账 DATA-002](architecture/source-reconciliation.md)：保留无法匹配的财务事件与数据质量状态。
 
-## 范围约定
+## 文档治理
 
-- P0：第一版必须；P1：完成后迭代；P2：后续远景。
-- SHOULD：推荐但允许在 ADR 中说明例外；MUST：进入验收的约束。
-- MVP 初期只读 Amazon 数据；平台写入（改价/库存/Listing）后置。
-- 初版适用于自部署卖家；公开应用向其他卖家授权属于另一个合规工作流。
+- [状态、评审与变更规则](governance/document-control.md)
+- [第二轮评审记录](governance/review-report-2026-10-30.md)
+- [风险登记](governance/risk-register.md)
+- [关键决策](governance/decision-register.md)
+- [ADR-0001 模块化单体](architecture/adrs/0001-modular-monolith.md)、[ADR-0002 租户](architecture/adrs/0002-tenancy.md)、[ADR-0003 财务事实](architecture/adrs/0003-finance-ledger.md)
+- [ADR 模板](templates/adr-template.md)、[阶段路线](roadmap.md)、[运维](ops/operations.md)
+
+**文档不是执行证据**：所有测试用例目前均为未执行；部署/生产的安全与 API 资格必须在实现时验证。

@@ -32,22 +32,11 @@ AMZ --> SP["SP-API"]
 
 箭头为逻辑使用关系而非允许任意循环依赖；`identity` 的上下文策略跨模块复用但不开放修改租户权限的入口。
 
-## API 契约草案
+## API 契约（单一事实来源）
 
-| 方法/路径（建议） | 用途 | 角色 |
-|---|---|---|
-| GET /api/v1/me | 当前用户与租户上下文 | 登录用户 |
-| GET /api/v1/seller-accounts | 店铺连接列表 | Admin/运营 |
-| POST /api/v1/seller-accounts | 配置连接（无密钥回显） | Admin |
-| GET /api/v1/listings | Listing 查询与映射状态 | 运营/授权只读 |
-| GET /api/v1/orders | 订单分页筛选 | 运营/财务/授权只读 |
-| GET /api/v1/inventory/fba | FBA 最近快照 | 运营/授权只读 |
-| GET /api/v1/finance/transactions | 交易与费用查询 | 财务/Admin |
-| GET /api/v1/reports/margin | 预估利润 | 财务/Admin/特别授权 |
-| POST /api/v1/sync-jobs | 创建指定资源同步任务 | Admin/运营 |
-| GET /api/v1/sync-jobs/{id} | 查看进度与失败详情 | Admin/运营 |
+具体端点、权限、幂等键、分页、金额类型、错误码以 [API-001](api-contracts.md) 为准。本页只负责模块职责与依赖原则，不再重复维护容易漂移的资源路径表。
 
-统一错误结构（设计提案）：`{ "code": "SYNC_RATE_LIMITED", "message": "请求限流", "requestId": "...", "details": {} }`。禁止在 API 中使用客户端提供的 tenantId 进行授权决定。
+服务端从可信身份取得 tenant 上下文；创建同步任务统一走 `/api/v1/sync-runs`（设计约定），与持久 `sync_stream` 区分。同步 Worker 和 API 不能绕过租户范围。
 
 ## 模块解耦验收
 

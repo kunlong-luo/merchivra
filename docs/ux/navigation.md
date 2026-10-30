@@ -2,6 +2,8 @@
 
 > **低保真设计**；尚非视觉稿，也没有承诺已实现。布局供产品评审，可由设计师使用 Figma 二次深化。
 
+所有页面状态（正常、空、UNKNOWN、STALE、AUTH_REQUIRED、未授权）和操作出口见 [UX-002](page-state-matrix.md)，本文件仅维护导航与低保真布局。
+
 ## 1. 页面地图
 
 ```mermaid

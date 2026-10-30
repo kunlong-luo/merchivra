@@ -1,5 +1,7 @@
 # TEST-001 · 测试策略与测试数据规则
 
+已补充覆盖首次初始化、跨租户、乱序订单退款、未映射库存、防重复计费、Token 过期与多 Worker 的 [E2E 场景集](end-to-end-scenarios.md)。验收编号采用 [QA-001](../requirements/acceptance.md)，执行证据尚未生成。
+
 ## 质量金字塔
 
 1. 领域单元测试：成本有效日期、SKU 映射、金额计算、状态迁移。

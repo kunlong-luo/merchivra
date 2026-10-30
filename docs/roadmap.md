@@ -12,6 +12,10 @@
 | M3 | 财务/成本/利润 | 费用、成本与估算报表 | 可对账、可追踪 |
 | M4 | Beta | 安全、运维、发布 | P0 验收通过、运行手册完成 |
 
+## 第二轮评审状态（2026-10-30）
+
+目前完成候选设计的交叉修订，但 G1、G2、G3 均**尚未通过**。下一步不是立刻启动 M0/M1，而是处理 [REVIEW-002](governance/review-report-2026-10-30.md) 的 Blocker/High 项，邀请运营与财务确认 [DEC-001](governance/decision-register.md) 后再签署相关 ADR。
+
 ## 建议工作优先级
 
 - 当前第一优先：回答 [Q01–Q08](requirements/decision-questions.md)，进行产品与利润口径评审。
