@@ -25,6 +25,14 @@ public class SpApiConfiguration {
 
     @Bean
     @ConditionalOnProperty(prefix="merchivra.spapi.oauth", name="enabled", havingValue="true")
+    SpApiSellerGrantVault spApiSellerGrantVault(
+        org.springframework.jdbc.core.JdbcTemplate jdbc,
+        @Value("${merchivra.spapi.oauth.encryption-key-base64:}") String key) {
+        return new SpApiSellerGrantVault(jdbc,new SellerTokenCipher(key,1));
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix="merchivra.spapi.oauth", name="enabled", havingValue="true")
     SellerOauthService sellerOauthService(
         org.springframework.jdbc.core.JdbcTemplate jdbc,
         org.springframework.transaction.support.TransactionTemplate transactions,

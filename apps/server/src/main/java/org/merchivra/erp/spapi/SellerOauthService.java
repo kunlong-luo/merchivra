@@ -227,7 +227,7 @@ public final class SellerOauthService {
             if (updated != 1) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
             jdbc.update("""
                 UPDATE seller_account SET connection_status='REVOKED'
-                WHERE tenant_id=? AND id=? AND connection_status='AUTHORIZATION_PENDING'
+                WHERE tenant_id=? AND id=? AND connection_status IN ('AUTHORIZATION_PENDING','CONNECTED')
                 """,tenant,account);
             audit(tenant,actor,account,"REVOKED");
         });
