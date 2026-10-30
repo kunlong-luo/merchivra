@@ -75,3 +75,10 @@
 - [x] Maven 引入 Amazon 官方 `software.amazon.spapi:spapi-sdk:1.13.0`；提供可构造 SDK 已发布生成类型的内部工厂与常用领域类型化入口。
 - [x] 配置 LWA 令牌交换/内存缓存、NA/EU/FE 固定域名、默认关闭网络出站/远程写入；Orders v2026、Listing、FBA、Catalog、Finances、Reports、Feeds 等有安全读取调用封装与离线响应测试。
 - [ ] 这仍然**不是所有 SP-API endpoint 的 ERP 业务实现**：授权回调、凭证 Vault、来源实际认证、真实动态限额/Worker/财务对账、通知/Feeds/Reports 文件流程、非卖家/专用业务 API 均需逐模块补全。详见 [INT-004](integrations/sp-api-code-integration.md)。
+
+## V7 公有应用 Seller OAuth 初版（2026-10-31）
+
+- [x] V7 一次性 State hash 与 10 分钟 TTL、Amazon Login URI + Redirect URI、LWA Code 交换、AES-256-GCM 租户级凭证、审计与本地 revoke API；Owner Session+CSRF 保护用户发起/撤销。
+- [x] 增加严格的 Amazon Callback Origin 检查、前后两个阶段 Seller ID 绑定，私密 Code 查询日志脱敏，`PENDING_VERIFICATION` 不当作已连接。
+- [x] `SpApiSellerGrantVault` 仅在 `VERIFIED/CONNECTED`、活动 Tenant、Marketplace 相符时让内部 Worker 解密；当前没有将状态自动提升的真实账户校验。
+- [ ] 实际公有/私有 Seller 授权资格、TLS 域名与密钥管理、API 角色与卖家一致性校验、Token/Key 轮换、账户级任务终止和真实 Amazon Worker/财务仍需开发与验收。见 [SEC-004](security/seller-oauth.md)。

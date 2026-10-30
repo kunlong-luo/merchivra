@@ -55,3 +55,9 @@ MERCHIVRA_LWA_CLIENT_SECRET=<来自受控密钥管理器>
 - 建议服务端未来仅能通过受授权的 `SellerCredentialVault`（尚未实现）查询 Token，不在浏览器/API Body 暴露 `SpApiSellerScope`。不启用真实网络的情况下，前端不应新增“已连接 Amazon”误导性状态。
 
 官方证据：[连接/LWA](https://developer-docs.amazon.com/sp-api/docs/connecting-to-the-selling-partner-api)、[Orders v2026 迁移](https://developer-docs.amazon.com/sp-api/docs/orders-api-migration-guide)、[Finances v2024](https://developer-docs.amazon.com/sp-api/reference/listtransactions)、[FBA Inventory](https://developer-docs.amazon.com/sp-api/reference/getinventorysummaries)。
+
+## V7 · 公有 Seller OAuth / 凭证 Vault 代码补充
+
+已添加 [SEC-004](../security/seller-oauth.md)：公有应用网站发起、Amazon 登录 URI/最终 Redirect URI 两阶段 State 校验、LWA authorization_code 换 Refresh Token、按租户/账号/Seller AES-256-GCM 加密、局部审计及本地撤销。只有 `VERIFIED` + `CONNECTED` + 活动租户与站点匹配时，内部 `SpApiSellerGrantVault` 才允许读取加密凭证。
+
+**这只证明接入代码存在**：网站 OAuth 仍默认关闭、仅在已注册的 HTTPS 公有应用/独立非 Demo 环境配置后可尝试；私有应用必须另走自授权；实际 Seller/角色验证、KMS 轮换、Amazon 授权实测及生产同步仍未实现。早期关于「无 OAuth callback/凭证存储」的说明现指**未有生产验证/真实凭证**，不是代码文件不存在。

@@ -1,5 +1,7 @@
 # Merchivra ERP · 文档中心
 
+> 本轮新增 [SEC-004 公有 Amazon Seller OAuth + 加密 Vault](security/seller-oauth.md)：二阶段授权回调、一次性 State、AES-GCM 凭证、本地撤销/审计；**默认关闭且尚无真实身份/权限核验**。
+
 > SP-API 开发更新：[INT-004 官方 SDK/离线接入代码](integrations/sp-api-code-integration.md) 已提交，覆盖官方多模块 SDK 工厂与核心读取封装；网络出站默认禁用，**真实 Seller OAuth/安全 Vault 与业务同步仍未完成**。
 
 > 新增 [TEST-004 本地模拟 SP-API 全链路验证](testing/mock-full-chain.md)：登录 Session、配置店铺、模拟分页 Orders/Listing/FBA、写入已标识 MOCK 来源的核心表、查询/审计/重启。只覆盖纯虚构开发环境，不意味着真实 Amazon 接通。

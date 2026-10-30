@@ -71,3 +71,5 @@ The simulated source can now be advanced **one Orders page at a time**, with V6 
 ## Amazon official SDK integration (code-first, disabled by default)
 
 The backend now includes Amazon's **official Java SP-API SDK 1.13.0** with generated API types across many families, a server-only LWA/region configuration factory, typed core read operation wrappers, conservative Orders v2026/FBA payload parsers, and offline credential/role/PII safety tests. **No live Seller authorization or Amazon production traffic exists yet**, and remote integration is disabled by default. See [INT-004 SP-API code implementation](docs/integrations/sp-api-code-integration.md).
+
+**Seller authorization (code only):** Flyway V7 and a default-disabled public-app OAuth handoff, encrypted per-tenant Seller credential vault, local revoke/audit and worker-only verified grant gate are in place. No real Seller authorization, KMS rotation or Amazon verification has been performed. See [SEC-004](docs/security/seller-oauth.md).

@@ -73,3 +73,7 @@ The explicit [TEST-004 simulated SP-API smoke](testing/mock-full-chain.md) exerc
 ## SP-API connector code (no real authorization)
 
 The backend includes Amazon's official SDK 1.13.0 plus `spapi/` typed and read-only core adapters. `MERCHIVRA_SPAPI_ENABLED=false` and `MERCHIVRA_SPAPI_ALLOW_WRITES=false` are the defaults, so this does **not** connect any seller. See [INT-004](integrations/sp-api-code-integration.md) for secure integration prerequisites and offline contract tests. Do not enable outbound for a real seller until OAuth authorization/secret vault and role verification are complete.
+
+## Optional public Seller OAuth code (disabled by default)
+
+Flyway V7 creates tenant-bound state and encrypted grant tables. Public-app website authorization includes Amazon login-URI handoff, short-lived Lax HttpOnly cookie, final Code exchange and local revoke/audit, but **never marks a Seller connected until separately verified**. Real OAuth is incompatible with Demo mode and requires a registered HTTPS redirect plus a protected AES-256 key and LWA app credentials. See [SEC-004](security/seller-oauth.md); do not put any credentials in this repo or public CI.
