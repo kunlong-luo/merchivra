@@ -91,7 +91,7 @@ class SpApiClientTest {
     }
 
     @Test
-    void 429DoesNotRetryImmediatelyAndNeverExposesRemoteBody() {
+    void throttledResponseDoesNotRetryImmediatelyOrExposeRemoteBody() {
         AtomicInteger attempts = new AtomicInteger();
         SpApiClient client = new SpApiClient(req -> {
             attempts.incrementAndGet(); return response(429, "token=SECRET buyer-info=SECRET");
