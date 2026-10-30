@@ -49,14 +49,8 @@ public class SandboxSyncService {
                 .getBytes(StandardCharsets.UTF_8));
     }
 
-    @Transactional
-    public Result replay(UUID tenant, UUID actor, UUID marketplace, String requestKey,
-                         boolean simulateFailure) {
-        if (requestKey == null || !requestKey.matches("[A-Za-z0-9._:-]{8,128}")) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Idempotency-Key");
-        }
-        // Must be a LOCAL-only, UNCONFIGURED account in the authenticated tenant.
-        // Unknown and foreign tenant marketplaces have exactly the same 404.
+    /** Shared scope enforcement for both full and page-by-page Mock replays. */
+    String localSite(UUID tenant, UUID marketplace) {
         List<String> marketplaces = jdbc.query("""
             SELECT mp.marketplace_id FROM seller_marketplace mp
             JOIN seller_account sa ON sa.tenant_id = mp.tenant_id
@@ -67,7 +61,16 @@ public class SandboxSyncService {
         if (marketplaces.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Local marketplace not found");
         }
-        String site = marketplaces.getFirst();
+        return marketplaces.getFirst();
+    }
+
+    @Transactional
+    public Result replay(UUID tenant, UUID actor, UUID marketplace, String requestKey,
+                         boolean simulateFailure) {
+        if (requestKey == null || !requestKey.matches("[A-Za-z0-9._:-]{8,128}")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Idempotency-Key");
+        }
+        String site = localSite(tenant, marketplace);
         MockSpApiClient.Snapshot fixture;
         try { fixture = client.simulate(site); }
         catch (IllegalArgumentException unsupported) {
@@ -154,7 +157,7 @@ public class SandboxSyncService {
             rs.getObject("created_at", OffsetDateTime.class).toInstant().toString());
     }
 
-    private void upsertListing(UUID tenant, UUID marketplace, Listing item) {
+    void upsertListing(UUID tenant, UUID marketplace, Listing item) {
         UUID id = stableId(tenant, marketplace, "listing", item.sellerSku());
         jdbc.update("""
             INSERT INTO marketplace_listing
@@ -180,7 +183,7 @@ public class SandboxSyncService {
         }
     }
 
-    private void upsertOrder(UUID tenant, UUID marketplace, Order item) {
+    void upsertOrder(UUID tenant, UUID marketplace, Order item) {
         String key = "SANDBOX-" + item.externalOrderId();
         UUID id = stableId(tenant, marketplace, "order", key);
         jdbc.update("""
@@ -201,7 +204,7 @@ public class SandboxSyncService {
             new BigDecimal(item.provisionalSales().amount()), item.provisionalSales().currency());
     }
 
-    private void upsertInventory(UUID tenant, UUID marketplace, Inventory item) {
+    void upsertInventory(UUID tenant, UUID marketplace, Inventory item) {
         String key = "SANDBOX:" + item.id();
         jdbc.update("""
             INSERT INTO fba_inventory_observation

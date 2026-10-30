@@ -14,9 +14,11 @@ import org.springframework.web.bind.annotation.*;
 @ConditionalOnProperty(prefix="merchivra.demo", name="enabled", havingValue="true")
 public class SandboxSyncController {
     private final SandboxSyncService service;
+    private final SandboxPageService pages;
     private final TenantAccessService access;
-    public SandboxSyncController(SandboxSyncService service, TenantAccessService access) {
-        this.service = service; this.access = access;
+    public SandboxSyncController(SandboxSyncService service, SandboxPageService pages,
+                                 TenantAccessService access) {
+        this.service = service; this.pages = pages; this.access = access;
     }
 
     public record Request(boolean simulateFailure) {}
@@ -30,6 +32,30 @@ public class SandboxSyncController {
         UUID actor = access.authenticatedUser(auth);
         return service.replay(tenant, actor, marketplaceId, key,
             body != null && body.simulateFailure());
+    }
+
+
+    /**
+     * Explicit step-based Mock source reader: each request commits at most one
+     * page, and a repeated key returns the saved checkpoint without reimport.
+     */
+    @PostMapping("/{marketplaceId}/pages/advance")
+    @ResponseStatus(HttpStatus.CREATED)
+    public SandboxPageService.Step advance(Authentication auth, HttpServletRequest request,
+        @PathVariable UUID marketplaceId, @RequestHeader("Idempotency-Key") String key) {
+        try {
+            return pages.advance(access.currentTenant(auth, request),
+                access.authenticatedUser(auth), marketplaceId, key);
+        } catch (org.springframework.dao.CannotAcquireLockException busy) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                HttpStatus.CONFLICT, "Mock stream busy; retry same request key");
+        }
+    }
+
+    @GetMapping("/{marketplaceId}/pages")
+    public SandboxPageService.Progress progress(Authentication auth, HttpServletRequest request,
+        @PathVariable UUID marketplaceId) {
+        return pages.progress(access.currentTenant(auth, request), marketplaceId);
     }
 
     @GetMapping("/{marketplaceId}/runs")
