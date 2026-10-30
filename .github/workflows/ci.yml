@@ -4,13 +4,21 @@ on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+concurrency:
+  group: merchivra-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   backend:
+    name: Java 21 / Maven tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -19,11 +27,13 @@ jobs:
           java-version: '21'
           cache: maven
           cache-dependency-path: apps/server/pom.xml
-      - name: Unit tests
+      - name: Run backend unit tests
         run: mvn -B -f apps/server/pom.xml test
 
   frontend:
+    name: Vue / TypeScript / Vitest / Vite
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     defaults:
       run:
         working-directory: apps/web
@@ -32,7 +42,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Install dependencies
+      - name: Install dependencies (temporary until npm lockfile is generated)
         run: npm install --no-audit --no-fund
-      - name: Typecheck and build
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Unit tests
+        run: npm run test
+      - name: Build
         run: npm run build

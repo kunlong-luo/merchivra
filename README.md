@@ -2,7 +2,7 @@
 
 **Open-source commerce operations platform — start with Amazon Seller.**
 
-[简体中文](README.zh-CN.md) · [MVP](docs/requirements/mvp.md) · [Architecture](docs/architecture/overview.md) · [Roadmap](docs/roadmap.md) · [Contributing](CONTRIBUTING.md)
+[简体中文](README.zh-CN.md) · [完整设计文档](docs/README.md) · [API 契约](docs/api/README.md) · [MVP](docs/requirements/mvp.md) · [Architecture](docs/architecture/overview.md) · [Roadmap](docs/roadmap.md) · [Contributing](CONTRIBUTING.md)
 
 > **Status: pre-alpha / M0 foundation.** This repository contains an initial development scaffold, not a production-ready ERP. Amazon integration, authentication, tenant isolation and accounting workflows are NOT implemented yet.
 
@@ -15,7 +15,9 @@
 
 ## Technology
 
-Java 21 / Spring Boot 3.5, Vue 3 / TypeScript / Vite, PostgreSQL, Redis, Docker Compose.
+Java 21 / Spring Boot 3.5, Vue 3 / TypeScript / Vite / TanStack Vue Query / Zod / Vitest, PostgreSQL, Redis, Docker Compose.
+
+Engineering conventions are informed by [Pagevela](https://github.com/kunlong-luo/pagevela) (CI, dependency hygiene and persistence coordination), while retaining the ERP-specific Java/Vue architecture. See [dependency decisions](docs/architecture/dependency-adoption.md).
 
 ## Quick start (development scaffold only)
 

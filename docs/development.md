@@ -31,10 +31,10 @@ Vite proxies `/api` to the local Spring Boot API. The API reads `DB_HOST`, `DB_P
 ## Tests
 ```bash
 mvn -f apps/server/pom.xml test
-cd apps/web && npm install && npm run build
+cd apps/web && npm install && npm run typecheck && npm run test && npm run build
 ```
 
-A locked frontend dependency file will be added before the first release; current CI installs dependencies without a committed lockfile. More integration tests will be required as business features arrive.
+A reproducible frontend lockfile is still missing. See [dependency decisions](architecture/dependency-adoption.md) and Issue #2. The current CI temporarily uses npm install instead of npm ci; do not treat this as a reproducible production build. More integration tests will be required as business features arrive.
 
 ## Warnings
 The M0 application exposes only health and ping endpoints and a static frontend. There is **no authentication**. It is intended only for localhost development. Do not expose it to the internet or supply real Amazon credentials.

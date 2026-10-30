@@ -1,17 +1,19 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed } from 'vue'
+import { useQuery } from '@tanstack/vue-query'
+import { fetchPing } from './lib/api'
 
-const apiStatus = ref('检测中…')
+const { data, isPending, isError } = useQuery({
+  queryKey: ['api', 'ping'],
+  queryFn: fetchPing,
+  staleTime: 30_000,
+  retry: 1
+})
 
-onMounted(async () => {
-  try {
-    const response = await fetch('/api/v1/ping')
-    if (!response.ok) throw new Error('API unavailable')
-    const data: { service: string; status: string } = await response.json()
-    apiStatus.value = data.status === 'ok' ? 'API 已连接' : 'API 异常'
-  } catch {
-    apiStatus.value = 'API 暂时不可用'
-  }
+const apiStatus = computed(() => {
+  if (isPending.value) return '检测中…'
+  if (isError.value) return 'API 暂时不可用'
+  return data.value?.status === 'ok' ? 'API 已连接' : 'API 响应异常'
 })
 </script>
 
@@ -25,8 +27,8 @@ onMounted(async () => {
       <span class="eyebrow">Open Source Commerce Operations</span>
       <h1>Merchivra ERP</h1>
       <p>从亚马逊 Seller 店铺开始，建立可扩展、可自托管、可追溯的跨境电商运营平台。</p>
-      <div class="status">
-        <span class="dot"></span>{{ apiStatus }}
+      <div class="status" role="status" aria-live="polite">
+        <span class="dot" aria-hidden="true"></span>{{ apiStatus }}
       </div>
       <div class="notice">当前为工程初始化版本，尚无登录鉴权和真实 Amazon 数据同步。请勿公网部署。</div>
       <a href="https://github.com/kunlong-luo/merchivra" target="_blank" rel="noopener noreferrer">查看 GitHub 仓库 ↗</a>
