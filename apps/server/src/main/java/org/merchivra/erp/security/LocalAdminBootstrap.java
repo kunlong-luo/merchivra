@@ -38,7 +38,7 @@ public class LocalAdminBootstrap implements ApplicationRunner {
     public void run(ApplicationArguments args) {
         transactions.executeWithoutResult(tx -> {
             // Protect against two app instances bootstrapping concurrently.
-            jdbc.queryForObject("SELECT pg_advisory_xact_lock(746289001)", Object.class);
+            jdbc.execute("SELECT pg_advisory_xact_lock(746289001)");
             Long existing = jdbc.queryForObject("SELECT count(*) FROM local_credential", Long.class);
             if (existing != null && existing > 0) return;
             if (username.isBlank() && password.isBlank()) {
