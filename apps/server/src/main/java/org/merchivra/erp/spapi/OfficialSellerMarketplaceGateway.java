@@ -27,6 +27,6 @@ public final class OfficialSellerMarketplaceGateway implements SellerMarketplace
             throw new IllegalStateException("Malformed Sellers marketplace participation");
         return new Participation(value.getMarketplace().getId(),
             Boolean.TRUE.equals(value.getParticipation().getIsParticipating()),
-            Boolean.TRUE.equals(value.getParticipation().getHasSuspendedListings()));
+            !Boolean.FALSE.equals(value.getParticipation().getHasSuspendedListings()));
     }
 }
