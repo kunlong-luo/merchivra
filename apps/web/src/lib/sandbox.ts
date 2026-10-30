@@ -41,3 +41,38 @@ export async function fetchSandboxRuns(marketplaceId: string) {
     { credentials: 'same-origin', cache: 'no-store' }
   ), z.array(sandboxRunSchema))
 }
+
+export const mockPageStepSchema = z.object({
+  status: z.enum(['RUNNING', 'SUCCEEDED']),
+  committedPage: z.number().int().nonnegative(),
+  nextPage: z.number().int().nonnegative(),
+  totalPages: z.number().int().positive(),
+  recordCount: z.number().int().nonnegative(),
+  leaseEpoch: z.number().int().nonnegative(),
+  replayed: z.boolean()
+})
+export const mockPageProgressSchema = z.object({
+  status: z.enum(['NOT_STARTED', 'RUNNING', 'SUCCEEDED']),
+  nextPage: z.number().int().nonnegative(),
+  totalPages: z.number().int().nonnegative(),
+  leaseEpoch: z.number().int().nonnegative(),
+  pages: z.array(mockPageStepSchema)
+})
+export type MockPageProgress = z.infer<typeof mockPageProgressSchema>
+
+export async function fetchMockPageProgress(marketplaceId: string) {
+  return decode(await fetch(
+    '/api/v1/demo/sandbox/' + encodeURIComponent(marketplaceId) + '/pages',
+    { credentials: 'same-origin', cache: 'no-store' }
+  ), mockPageProgressSchema)
+}
+
+export async function advanceMockPage(marketplaceId: string, key: string) {
+  return decode(await fetch(
+    '/api/v1/demo/sandbox/' + encodeURIComponent(marketplaceId) + '/pages/advance',
+    {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Idempotency-Key': key, ...(await csrfHeader()) }
+    }
+  ), mockPageStepSchema)
+}

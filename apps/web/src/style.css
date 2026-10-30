@@ -219,3 +219,8 @@ td { padding: 19px; border-top: 1px solid #f0f3f7; color: #71829a; }
 .sandbox-actions .primary-button {margin:0;}
 .sandbox-history {margin-top:18px;font-size:12px;}
 .sandbox-history > strong {display:block;margin-bottom:10px;}
+
+.sandbox-page-progress { margin:18px 0 10px;padding:15px;border:1px solid #d8e6f5;
+  background:#fff;border-radius:9px;color:#355472; }
+.sandbox-page-progress strong { font-size:12px; }
+.sandbox-page-progress p { color:#7690a8;font-size:12px;line-height:1.6;margin:7px 0 0; }
