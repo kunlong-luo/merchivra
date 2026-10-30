@@ -55,3 +55,9 @@ MERCHIVRA_SPAPI_ALLOW_WRITES=false
 - 离线单测覆盖凭证加密/防篡改、LWA Code 交换及响应泄漏、伪造 State/Callback Origin 的拦截；独立 Compose 工作流核对 V7 Flyway 迁移及**OAuth 默认关闭**，不是 Amazon 网络验收。参见 [INT-004](../integrations/sp-api-code-integration.md)。
 
 **任何真实 Seller 接入仍需 G1/G2 授权和数据安全决策正式通过；当前不应在公共互联网直接启用此代码。**
+
+## 2026-10-31 运行验证记录
+
+[真实 PostgreSQL 17 / Docker Compose V7 迁移和回归通过](https://github.com/kunlong-luo/merchivra/actions/runs/41145773306)：Flyway V1–V7 迁移成功、未启用 OAuth 时回调返回受保护的 401 或未注册的 404、`spapi_seller_authorization` 表无授权记录；已有 US/DE Mock 分页、查询、审计、容器重启与登出检查继续通过。
+
+此运行**没有**连接 Amazon，也没有测试真实公有应用 OAuth 外站重定向、真实 Refresh Token、完整密钥轮换或可信 Seller 身份校验。相关 Java 测试使用纯虚构数据。

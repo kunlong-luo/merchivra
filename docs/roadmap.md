@@ -82,3 +82,5 @@
 - [x] 增加严格的 Amazon Callback Origin 检查、前后两个阶段 Seller ID 绑定，私密 Code 查询日志脱敏，`PENDING_VERIFICATION` 不当作已连接。
 - [x] `SpApiSellerGrantVault` 仅在 `VERIFIED/CONNECTED`、活动 Tenant、Marketplace 相符时让内部 Worker 解密；当前没有将状态自动提升的真实账户校验。
 - [ ] 实际公有/私有 Seller 授权资格、TLS 域名与密钥管理、API 角色与卖家一致性校验、Token/Key 轮换、账户级任务终止和真实 Amazon Worker/财务仍需开发与验收。见 [SEC-004](security/seller-oauth.md)。
+
+- [x] [V7 真实 Compose/PG 验证](https://github.com/kunlong-luo/merchivra/actions/runs/41145773306)：Flyway V1–V7 与旧 Mock 链全部通过，未开放 OAuth 或插入任何真实 Seller 授权。不是 Amazon 生产授权验收。
