@@ -16,6 +16,14 @@ import org.springframework.context.annotation.Configuration;
 @ConditionalOnProperty(prefix="merchivra.spapi", name="enabled", havingValue="true")
 public class SpApiConfiguration {
     @Bean
+    SpApiOfficialSdkFactory spApiOfficialSdkFactory(
+        @Value("${merchivra.spapi.lwa-client-id:}") String clientId,
+        @Value("${merchivra.spapi.lwa-client-secret:}") String clientSecret,
+        @Value("${merchivra.spapi.sandbox:true}") boolean sandbox) {
+        return new SpApiOfficialSdkFactory(clientId, clientSecret, true, sandbox);
+    }
+
+    @Bean
     SpApiClient spApiClient(
         @Value("${merchivra.spapi.lwa-client-id:}") String clientId,
         @Value("${merchivra.spapi.lwa-client-secret:}") String clientSecret,
