@@ -6,11 +6,12 @@ Java 21, Maven 3.9+, Node.js 22+, npm, Docker Compose.
 ## One-command local stack
 ```bash
 cp .env.example .env
-# Edit MERCHIVRA_DB_PASSWORD
+# Edit MERCHIVRA_DB_PASSWORD, and set a unique >=16-character bootstrap password.
+# Set MERCHIVRA_BOOTSTRAP_USERNAME and MERCHIVRA_BOOTSTRAP_PASSWORD.
 docker compose -f deploy/compose.yaml up --build
 ```
 
-The web is available on 127.0.0.1:3000; API on 127.0.0.1:8080. Compose explicitly enables the synthetic demo endpoints via MERCHIVRA_DEMO_ENABLED=true. Demo data and simulated sync run history persist in PostgreSQL (separate demo_snapshot/demo_sync_run tables); see [demo guide](demo.md). Database and Redis are internal to the Compose network.
+The web now requires local Session login; see [first-run authentication](security/local-auth.md). The web is available on 127.0.0.1:3000; API on 127.0.0.1:8080. Compose explicitly enables the synthetic demo endpoints via MERCHIVRA_DEMO_ENABLED=true. Demo data and simulated sync run history persist in PostgreSQL (separate demo_snapshot/demo_sync_run tables); see [demo guide](demo.md). Database and Redis are internal to the Compose network.
 
 ## Run independently
 ```bash
@@ -18,7 +19,7 @@ The web is available on 127.0.0.1:3000; API on 127.0.0.1:8080. Compose explicitl
 docker compose -f deploy/compose.yaml up -d postgres redis
 
 # Shell 1 (set DB_PASSWORD to match .env)
-MERCHIVRA_DEMO_ENABLED=true DB_PASSWORD=your_password mvn -f apps/server/pom.xml spring-boot:run
+MERCHIVRA_DEMO_ENABLED=true MERCHIVRA_BOOTSTRAP_USERNAME=your_admin MERCHIVRA_BOOTSTRAP_PASSWORD=your_unique_random_password DB_PASSWORD=your_db_password mvn -f apps/server/pom.xml spring-boot:run
 
 # Shell 2
 cd apps/web
@@ -41,4 +42,4 @@ cd apps/web && npm install && npm run typecheck && npm run test && npm run build
 A reproducible frontend lockfile is still missing. See [dependency decisions](architecture/dependency-adoption.md) and Issue #2. The current CI temporarily uses npm install instead of npm ci; do not treat this as a reproducible production build. More integration tests will be required as business features arrive.
 
 ## Warnings
-The M0/M1 application exposes health and ping endpoints plus an opt-in synthetic read-only demo. The demo endpoint is OFF by default and Compose enables it locally. There is **no authentication**. It is intended only for localhost development. Do not expose it to the internet or supply real Amazon credentials.
+The M0/M1 application exposes health and ping endpoints plus an opt-in synthetic read-only demo. The demo endpoint is OFF by default and Compose enables it locally. There is now an initial **local Session/CSRF and OWNER tenant scope**, but no comprehensive production IAM or Amazon credential policy. It remains intended only for localhost development. Do not expose it to the internet or supply real Amazon credentials.

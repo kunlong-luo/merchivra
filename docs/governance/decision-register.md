@@ -12,7 +12,7 @@
 | DEC-06 | 商品成本口径 | 有效日期 + 原币种 + 不可覆盖历史 | 待确认 | 财务、ERD | 财务确认 |
 | DEC-07 | 经营利润与费用 | 预估贡献毛利，与已入账/结算分列 | 待确认 | FIN、DATA、UI | 公式例子验算 |
 | DEC-08 | 汇率 | 保留原币，折算策略需选择 | 待确认 | FIN、报表 | 财务确认 |
-| DEC-09 | Auth/自举 | 一次性初始化令牌，RBAC，登录/会话方案 TBD | 待确认 | IAM、安全、API | 安全 ADR |
+| DEC-09 | Auth/自举 | 早期本地实现采用环境变量首次 Owner 初始化 + Session/CSRF；正式 OIDC/MFA/RBAC 待确认 | 实施中，**未正式签署** | IAM、安全、API | 安全 ADR + 集成验证 |
 | DEC-10 | 技术架构 | 模块化单体 / PG / Vue | Proposed ADR-0001 | ARCH、部署 | 技术负责人 Accept |
 | DEC-11 | 共享 Schema 租户隔离 | 租户字段 + 强制查询作用域 | Proposed ADR-0002 | ERD、安全 | 隔离威胁评审 |
 | DEC-12 | 财务事实不可变 | 追加更正事件，利润投影可重算 | Proposed ADR-0003 | FIN、DATA | 财务/技术签署 |
@@ -46,7 +46,7 @@
 | DEC-13 | SP-API 真实字段、角色和来源唯一键 | 仅 Mock 模式通过设计；取得权限后逐操作验证 | [INT-003](../integrations/amazon-data-contract.md) |
 | DEC-14 | 历史数据留存/备份/吞吐 | 在试点负载明确后定 RPO/RTO/归档策略 | [NFR](../requirements/nonfunctional.md) |
 
-注意：G1 仍未批准的 SKU/成本/税费口径决定表结构，因此 G2 的物理字段与 OpenAPI 不能直接转为 Accepted。
+注意：本地登录（SEC-003）已作为开发期最小实施，但不代表 DEC-09 获得生产安全签署。G1 仍未批准的 SKU/成本/税费口径决定表结构，因此 G2 的物理字段与 OpenAPI 不能直接转为 Accepted。
 
 ## 优先级与顺序
 

@@ -1,6 +1,6 @@
 # ADR-0005 · ERP API 身份认证方案选择（未决）
 
-- **状态：Proposed alternatives — DEC-09 未批准**
+- **状态：Proposed alternatives — 开发期已选择实现本地 Session/CSRF 最小版，DEC-09 仍未正式批准**
 - 日期：2026-10-30
 - 相关文档：[API-002](../../api/README.md)、[SEC-002](../../security/tenant-enforcement.md)、[IAM-001](../tenant-bootstrap.md)
 
@@ -15,7 +15,7 @@
 
 ## 本轮结论
 
-- 没有选定正式认证机制。可机读 OpenAPI 中的 `bearerAuth` **只是占位候选**，不是已生效产品承诺。
+- 实际已在 [SEC-003](../../security/local-auth.md) 实现**最小本地 Session + CSRF** 用于保护当前开发期 API；这并不决定未来的非浏览器客户端/OIDC/MFA，也不意味着完整生产签审。可机读 OpenAPI 中的 `bearerAuth` 仍是**过时的候选占位**，不能当做已实现 JWT。
 - 无论选什么方式，`tenantId` 必须来自可信认证主体/任务上下文，授权还要校验角色和 sellerAccount 范围；不能仅依靠前端隐藏。
 - 首次引导必须有仅一次有效的随机凭证、禁止默认口令及重复初始化。
 - 选择 Cookie 后应更新 OpenAPI securityScheme、CSRF 机制及 Mock 契约，不能长期保留与真实实现矛盾的 Bearer 描述。

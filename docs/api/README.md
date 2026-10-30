@@ -5,7 +5,7 @@
 ## 契约设计原则
 
 - 所有业务路径基于 `/api/v1`；只读操作不暴露 Amazon SP-API token、买家 PII 或未验证的租户 ID。
-- 服务器认证决定活动租户和获准访问的 Seller Account 范围。JSON 中的 bearerAuth 是 **DEC-09 的候选方案**，不是已决定使用 JWT；可由 HttpOnly Session/OIDC 替代。
+- **已实现的最小本地认证**采用 Spring Security Session + HttpOnly Cookie + CSRF，见 [SEC-003](../security/local-auth.md)。JSON 文件中的 bearerAuth 仍是**未同步到实际实现的设计候选**，不能用于推断现有端点使用 JWT；正式 G2/G3 冻结时必须更正。
 - 金额 `{amount: "40.00", currency: "USD"}`，string Decimal 保持精度；未知/未分配不可默认为零。
 - Orders 的履约/退款/财务状态并列；FBA 观测允许 null 数量（UNKNOWN）；利润预计与平台入账分别报告。
 - Sync Run 是可重试运行，内部持久 Sync Stream 和 Amazon paginationToken 不暴露给 Web。

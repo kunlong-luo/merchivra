@@ -4,7 +4,7 @@
 
 [简体中文](README.zh-CN.md) · [完整设计文档](docs/README.md) · [API 契约](docs/api/README.md) · [MVP](docs/requirements/mvp.md) · [Architecture](docs/architecture/overview.md) · [Roadmap](docs/roadmap.md) · [Contributing](CONTRIBUTING.md)
 
-> **Status: pre-alpha / read-only Mock workspace.** Local demonstration pages now show invented seller accounts, listings, orders and FBA stock via a Java Mock Gateway. Real Amazon integration, authentication, tenant isolation and accounting workflows are NOT implemented. Never use real credentials or expose the unauthenticated demo publicly.
+> **Status: pre-alpha / local authenticated Mock workspace.** First local admin login, Spring Security Session/CSRF and an initial tenant-scoped seller account reader are implemented. Complete multi-role security, real Amazon integration and accounting are NOT implemented. Not production-ready.
 
 ## Goals
 
@@ -25,7 +25,9 @@ Requires Docker with Compose.
 
 ```bash
 cp .env.example .env
-# Set a strong MERCHIVRA_DB_PASSWORD in .env
+# Set a strong MERCHIVRA_DB_PASSWORD, and set your own
+# MERCHIVRA_BOOTSTRAP_USERNAME and MERCHIVRA_BOOTSTRAP_PASSWORD (>=16 chars).
+# No built-in password is provided.
 docker compose -f deploy/compose.yaml up --build
 ```
 
@@ -34,9 +36,9 @@ docker compose -f deploy/compose.yaml up --build
 - Mock overview: http://localhost:8080/api/v1/demo/overview (only with `MERCHIVRA_DEMO_ENABLED=true`)
 - Actuator health: http://localhost:8080/actuator/health
 
-**This scaffold has no login or API authorization yet. Keep it on localhost; do not expose it to the public internet.**
+**Local session login now protects API and demo endpoints, but broader security and actual database integration validation remain incomplete. Keep it on localhost, do not expose it publicly.**
 
-Local development instructions: [docs/development.md](docs/development.md) · [Mock demo guide](docs/demo.md).
+Local development instructions: [docs/development.md](docs/development.md) · [Mock demo guide](docs/demo.md) · [local authentication](docs/security/local-auth.md).
 
 ## Roadmap
 

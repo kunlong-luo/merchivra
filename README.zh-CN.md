@@ -4,7 +4,7 @@
 
 [English](README.md) · [MVP 需求](docs/requirements/mvp.md) · [技术架构](docs/architecture/overview.md) · [路线图](docs/roadmap.md) · [参与贡献](CONTRIBUTING.md)
 
-> **当前状态：Pre-alpha / 本地 Mock 运营工作台。** 已有店铺切换、订单、Listing 与 FBA 库存的虚构数据只读演示。Amazon 真实接口、登录认证、租户隔离和完整财务功能尚未实现，禁止用于真实生产业务。
+> **当前状态：Pre-alpha / 本地登录 + Mock 运营工作台。** 已有服务端 Session、首个管理员初始化、基础租户范围查询；店铺/订单/库存仍为虚构数据演示。完整角色权限、真实 Amazon 接入与财务功能尚未完成，禁止生产使用。
 
 ## 产品愿景
 
@@ -23,6 +23,7 @@
 ```bash
 cp .env.example .env
 # 修改 .env 中的 MERCHIVRA_DB_PASSWORD 为强密码
+# 再填写 MERCHIVRA_BOOTSTRAP_USERNAME 和 MERCHIVRA_BOOTSTRAP_PASSWORD（自设至少 16 位）
 docker compose -f deploy/compose.yaml up --build
 ```
 
@@ -31,9 +32,9 @@ docker compose -f deploy/compose.yaml up --build
 - Mock 业务概览：http://localhost:8080/api/v1/demo/overview （需显式启用 Mock；Compose 已在本地开启）
 - 健康检查：http://localhost:8080/actuator/health
 
-**目前尚未实现认证授权，端口仅监听 127.0.0.1，不得直接部署到公网。**
+**已实现首个管理员 Session 登录和最小租户隔离，但未完成生产级认证审计。端口仅监听 127.0.0.1，不得直接部署到公网。**
 
-更多命令见 [开发指南](docs/development.md) 和 [Mock 演示说明](docs/demo.md)。
+更多命令见 [开发指南](docs/development.md) 和 [Mock 演示说明](docs/demo.md) 和 [本地登录指南](docs/security/local-auth.md)。
 
 ## 开发路线
 

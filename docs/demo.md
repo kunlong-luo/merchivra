@@ -1,6 +1,6 @@
 # DEMO-001 · M1 本地 Mock 运营工作台（持久化版本）
 
-**当前能力：仅虚构 Mock 数据；无真实 Amazon 授权、生产 API 或身份鉴权。** M2 已增加核心实体表及固定虚构租户的 Mock 导入，仍**不能用于真实卖家业务数据**。
+**当前能力：仅虚构 Mock 数据；现已需要本地账号 Session 登录，但无真实 Amazon 授权或完整生产 IAM。** M2 已增加核心实体表及固定虚构租户的 Mock 导入，仍**不能用于真实卖家业务数据**。
 
 ## 架构与数据边界
 
@@ -25,13 +25,14 @@
 | `GET /api/v1/demo/sync-runs` | 最近 20 次运行记录 | 仅本地演示 |
 | `GET /api/v1/demo/sync-runs/{id}` | 按 UUID 读取任务 | 未知任务 404 |
 
-**注意**：所有路径都在 `/demo` 命名空间，与拟议中的受保护 `/api/v1/orders`、`/api/v1/sync-runs` 是两套不同 API。当前未实现用户认证；不能对公众开放。
+**注意**：所有路径都在 `/demo` 命名空间，与拟议中的受保护 `/api/v1/orders`、`/api/v1/sync-runs` 是两套不同 API。当前所有 `/demo` API 均需要先进行 Session 登录（含 POST CSRF）；仍不能对公众开放。
 
 ## 本地启动
 
 ```bash
 cp .env.example .env
 # 先将 MERCHIVRA_DB_PASSWORD 改为随机强密码
+# 另设置 MERCHIVRA_BOOTSTRAP_USERNAME 和 MERCHIVRA_BOOTSTRAP_PASSWORD（自设至少 16 位）
 docker compose -f deploy/compose.yaml up --build
 
 # 浏览器：http://localhost:3000
@@ -41,12 +42,15 @@ docker compose -f deploy/compose.yaml up --build
 Compose 会在后端显式配置 `MERCHIVRA_DEMO_ENABLED=true`，Web 与 API 端口绑定 `127.0.0.1`。单独启动 Java 服务时：
 
 ```bash
-MERCHIVRA_DEMO_ENABLED=true DB_PASSWORD=your_local_db_password mvn -f apps/server/pom.xml spring-boot:run
+MERCHIVRA_DEMO_ENABLED=true MERCHIVRA_BOOTSTRAP_USERNAME=your_admin MERCHIVRA_BOOTSTRAP_PASSWORD=your_random_password DB_PASSWORD=your_local_db_password mvn -f apps/server/pom.xml spring-boot:run
 ```
 
 默认设置为 **false**，Demo Controller 不会注册。不要输入真实账号密钥或真实订单，也不要将演示端口转发到公网。
 
 ## 演示同步及失败恢复
+
+**请优先在登录后的 Web 工作台中操作。** 下方旧的 curl 示例在新 Session/CSRF 安全边界下不会单独成功：必须额外先取得 Session Cookie、登录成功并在 POST 请求中提交最新的 `X-CSRF-TOKEN`。参见 [本地登录说明](security/local-auth.md)；不建议在命令行中传递真实密码。
+
 
 ```bash
 # 默认重新写入纯虚构快照，并留下 SUCCEEDED 记录
