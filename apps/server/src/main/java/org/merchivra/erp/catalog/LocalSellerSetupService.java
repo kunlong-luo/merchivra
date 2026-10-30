@@ -76,7 +76,7 @@ public class LocalSellerSetupService {
             INSERT INTO seller_account
               (id, tenant_id, seller_id, region, connection_status, display_name, setup_request_key)
             VALUES (?, ?, ?, ?, 'UNCONFIGURED', ?, ?)
-            ON CONFLICT (tenant_id, setup_request_key) DO NOTHING
+            ON CONFLICT (tenant_id, setup_request_key) WHERE setup_request_key IS NOT NULL DO NOTHING
             """, id, tenant, "LOCAL-" + id, region, name, requestKey);
         LocalAccount result = jdbc.queryForObject("""
             SELECT id, display_name, region, connection_status FROM seller_account

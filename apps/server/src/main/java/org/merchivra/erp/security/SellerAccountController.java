@@ -21,16 +21,16 @@ public class SellerAccountController {
         this.tenants = tenants;
     }
 
-    public record SellerAccountView(String id, String region, String connectionStatus) {}
+    public record SellerAccountView(String id, String displayName, String region, String connectionStatus) {}
 
     @GetMapping
     public List<SellerAccountView> list(Authentication authentication, HttpServletRequest request) {
         UUID tenant = tenants.currentTenant(authentication, request);
         return jdbc.query("""
-            SELECT id, region, connection_status FROM seller_account
+            SELECT id, display_name, region, connection_status FROM seller_account
             WHERE tenant_id = ? ORDER BY id
             """, (rs, row) -> new SellerAccountView(
                 rs.getObject("id", UUID.class).toString(),
-                rs.getString("region"), rs.getString("connection_status")), tenant);
+                rs.getString("display_name"), rs.getString("region"), rs.getString("connection_status")), tenant);
     }
 }
