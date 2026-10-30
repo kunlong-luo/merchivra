@@ -27,6 +27,22 @@ class SpApiOfficialSdkFactoryTest {
         assertNotNull(sdk.create(SearchOrdersApi.class, fakeSeller()));
     }
 
+
+    @Test
+    void provisionalVerificationNeverRunsAgainstSandboxOrDisabledSdk() {
+        var sandbox=new SpApiOfficialSdkFactory("fake-client","fake-secret",true,true);
+        assertThrows(IllegalStateException.class, () ->
+            sandbox.sellersForVerification(SpApiRegion.NA,"fake-offline-refresh"));
+        var disabled=new SpApiOfficialSdkFactory("fake-client","fake-secret",false,false);
+        assertThrows(IllegalStateException.class, () ->
+            disabled.sellersForVerification(SpApiRegion.NA,"fake-offline-refresh"));
+        var productionBuilder=new SpApiOfficialSdkFactory("fake-client","fake-secret",true,false);
+        assertNotNull(productionBuilder.sellersForVerification(
+            SpApiRegion.NA,"fake-offline-refresh"));
+        assertThrows(IllegalArgumentException.class, () ->
+            productionBuilder.sellersForVerification(SpApiRegion.NA,""));
+    }
+
     @Test
     void rejectsNonSdkClassAndMockAccountScope() {
         var sdk = new SpApiOfficialSdkFactory("fake-client", "fake-secret", true, true);

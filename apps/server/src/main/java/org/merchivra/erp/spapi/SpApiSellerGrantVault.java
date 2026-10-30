@@ -8,7 +8,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
  * Internal worker-only secret reader. Refuses provisional and revoked grants,
- * disabled accounts and mismatched Marketplace scope. Never exposed by HTTP.
+ * disabled accounts, mismatched or stale Marketplace evidence. Never exposed by HTTP.
  * Role grants must be independently verified before populating approvedRoles.
  */
 public final class SpApiSellerGrantVault {
@@ -35,6 +35,13 @@ public final class SpApiSellerGrantVault {
               AND g.status='VERIFIED' AND sa.connection_status='CONNECTED'
               AND sa.region=g.region AND mp.marketplace_id IS NOT NULL
               AND t.status='ACTIVE'
+              AND EXISTS (
+                SELECT 1 FROM spapi_marketplace_verification v
+                WHERE v.tenant_id=g.tenant_id
+                  AND v.seller_account_id=g.seller_account_id
+                  AND v.marketplace_id=mp.marketplace_id
+                  AND v.verified_at > now() - interval '24 hours'
+              )
             """, (rs,n)->new Grant(rs.getString("seller_id"),rs.getString("region"),
                 rs.getBytes("ciphertext"),rs.getBytes("nonce"),rs.getInt("key_version")),
             tenant,account,marketplaceId);

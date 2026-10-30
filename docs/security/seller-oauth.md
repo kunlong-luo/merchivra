@@ -61,3 +61,16 @@ MERCHIVRA_SPAPI_ALLOW_WRITES=false
 [真实 PostgreSQL 17 / Docker Compose V7 迁移和回归通过](https://github.com/kunlong-luo/merchivra/actions/runs/41145773306)：Flyway V1–V7 迁移成功、未启用 OAuth 时回调返回受保护的 401 或未注册的 404、`spapi_seller_authorization` 表无授权记录；已有 US/DE Mock 分页、查询、审计、容器重启与登出检查继续通过。
 
 此运行**没有**连接 Amazon，也没有测试真实公有应用 OAuth 外站重定向、真实 Refresh Token、完整密钥轮换或可信 Seller 身份校验。相关 Java 测试使用纯虚构数据。
+
+## V8 · 官方 Sellers API 站点准入验证（未连接真实 Amazon）
+
+新增独立的 [SEC-005](seller-verification.md) 实现：生产模式且额外显式启用后，
+由已登录 Owner 手动触发 `POST /api/v1/seller-accounts/{accountId}/oauth/verify`，
+调用官方 `getMarketplaceParticipations()`，核对每一个本地配置的站点活跃状态。
+一旦通过，事务内将 grant 标为 `VERIFIED`、店铺标为 `CONNECTED` 并存核验证据；
+Worker Vault 仅接受 24 小时内的证据。撤销、并发 claim、失效证据均拒绝使用 Token。
+
+**注意：此时只实现代码和离线 Mock；并没有真实 Amazon 网络验收，Seller ID
+仍来自 OAuth callback，Sellers API 不独立返回 Seller ID，也不证明 Finance 等角色。**
+此文前述的「未完成状态提升」是 V7 当时的状态，现以 V8 的受限实现和
+[SEC-005](seller-verification.md) 中的验收限制为准。

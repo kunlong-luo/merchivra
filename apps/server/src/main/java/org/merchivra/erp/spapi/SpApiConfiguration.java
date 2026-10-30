@@ -67,4 +67,28 @@ public class SpApiConfiguration {
             LwaTokenClient.official(http, clientId, clientSecret),
             sandbox, true, allowWrites);
     }
+
+    @Bean
+    @ConditionalOnProperty(prefix="merchivra.spapi.verification", name="enabled", havingValue="true")
+    SellerMarketplaceGateway sellerMarketplaceGateway(
+        SpApiOfficialSdkFactory sdk,
+        @Value("${merchivra.spapi.sandbox:true}") boolean sandbox,
+        @Value("${merchivra.spapi.oauth.enabled:false}") boolean oauthEnabled,
+        @Value("${merchivra.demo.enabled:false}") boolean demo) {
+        if (sandbox || !oauthEnabled || demo)
+            throw new IllegalStateException(
+                "Live Seller verification requires production endpoint, OAuth and Demo disabled");
+        return new OfficialSellerMarketplaceGateway(sdk);
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix="merchivra.spapi.verification", name="enabled", havingValue="true")
+    SellerConnectionVerificationService sellerConnectionVerificationService(
+        org.springframework.jdbc.core.JdbcTemplate jdbc,
+        org.springframework.transaction.support.TransactionTemplate transactions,
+        SellerMarketplaceGateway gateway,
+        @Value("${merchivra.spapi.oauth.encryption-key-base64:}") String key) {
+        return new SellerConnectionVerificationService(jdbc,transactions,
+            new SellerTokenCipher(key,1),gateway,java.time.Clock.systemUTC());
+    }
 }

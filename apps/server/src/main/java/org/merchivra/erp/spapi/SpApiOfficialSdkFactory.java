@@ -1,7 +1,7 @@
 package org.merchivra.erp.spapi;
 
 import com.amazon.SellingPartnerAPIAA.LWAAuthorizationCredentials;
-import java.lang.reflect.InvocationTargetException;
+import software.amazon.spapi.api.sellers.v1.SellersApi;
 
 /**
  * Official Amazon SDK builder for all generated operation families.
@@ -21,9 +21,25 @@ public final class SpApiOfficialSdkFactory {
         this.enabled=enabled; this.sandbox=sandbox;
     }
 
+
     public <T> T create(Class<T> apiClass, SpApiSellerScope approvedScope) {
-        if (!enabled) throw new IllegalStateException("Official Amazon SDK is disabled");
         if (approvedScope == null) throw new IllegalArgumentException("Approved Seller scope required");
+        return build(apiClass,approvedScope.region(),approvedScope.refreshToken());
+    }
+
+    /**
+     * Provisional grant can call ONLY Sellers v1, NEVER general API families.
+     * A sandbox response is not evidence of a live Seller authorization.
+     */
+    public SellersApi sellersForVerification(SpApiRegion region, String refreshToken) {
+        if (sandbox) throw new IllegalStateException("Production Sellers verification cannot use sandbox");
+        return build(SellersApi.class,region,refreshToken);
+    }
+
+    private <T> T build(Class<T> apiClass, SpApiRegion region, String refreshToken) {
+        if (!enabled) throw new IllegalStateException("Official Amazon SDK is disabled");
+        if (region == null || refreshToken == null || refreshToken.isBlank())
+            throw new IllegalArgumentException("Server-side Seller grant required");
         if (clientId == null || clientId.isBlank() || clientSecret == null || clientSecret.isBlank())
             throw new IllegalStateException("LWA application credentials missing");
         if (!apiClass.getName().startsWith("software.amazon.spapi.api.")
@@ -32,7 +48,7 @@ public final class SpApiOfficialSdkFactory {
         var credentials = LWAAuthorizationCredentials.builder()
             .clientId(clientId)
             .clientSecret(clientSecret)
-            .refreshToken(approvedScope.refreshToken())
+            .refreshToken(refreshToken)
             .endpoint(LwaTokenClient.OFFICIAL_TOKEN_ENDPOINT.toString())
             .build();
         try {
@@ -41,11 +57,9 @@ public final class SpApiOfficialSdkFactory {
             builderType.getMethod("lwaAuthorizationCredentials", LWAAuthorizationCredentials.class)
                 .invoke(builder, credentials);
             builderType.getMethod("endpoint", String.class)
-                .invoke(builder, approvedScope.region().endpoint(sandbox).toString());
-            Object api = builderType.getMethod("build").invoke(builder);
-            return apiClass.cast(api);
+                .invoke(builder, region.endpoint(sandbox).toString());
+            return apiClass.cast(builderType.getMethod("build").invoke(builder));
         } catch (ReflectiveOperationException e) {
-            // Never include method argument values or credentials in exceptions.
             throw new IllegalStateException("Unable to build official SP-API SDK family: "
                 + apiClass.getSimpleName());
         }

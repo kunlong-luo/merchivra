@@ -40,6 +40,9 @@ merchivra:
     enabled: ${MERCHIVRA_SPAPI_ENABLED:false}
     sandbox: ${MERCHIVRA_SPAPI_SANDBOX:true}
     allow-writes: ${MERCHIVRA_SPAPI_ALLOW_WRITES:false}
+    verification:
+      # Separate explicit live-only gate. No sandbox/Demo verification.
+      enabled: ${MERCHIVRA_SPAPI_VERIFICATION_ENABLED:false}
     lwa-client-id: ${MERCHIVRA_LWA_CLIENT_ID:}
     lwa-client-secret: ${MERCHIVRA_LWA_CLIENT_SECRET:}
     oauth:

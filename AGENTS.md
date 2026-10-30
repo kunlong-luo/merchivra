@@ -46,3 +46,18 @@
 - 当前已具备**会话租户/Marketplace 只读 API 与本地未连接 Seller 配置/审计初版**。已有一次性 PostgreSQL V1–V4 验证，以及 [Compose 全链路 Mock 实机成功](https://github.com/kunlong-luo/merchivra/actions/runs/41061679196)（Nginx/Session/CSRF/US+DE 模拟页/Listing/Orders/FBA/审计/重启）；这不表示 Amazon SP-API、浏览器 E2E、生产 IAM 或 Finances 已完成。此外 [V6 页级持久恢复的真实 Compose 运行](https://github.com/kunlong-luo/merchivra/actions/runs/41065562926) 已通过（页 1→重启→页 2→旧键重放不进位）。后续仍应加强真正的多租户/并发验证，然后再设计可审计、可撤销的 Amazon 授权流程；未经批准不得接入真实 Seller/财务数据。
 
 参见 [轻量 CI 策略](docs/testing/ci-policy.md)、[安全初版](docs/security/local-auth.md)、[依赖与 Pagevela 借鉴](docs/architecture/dependency-adoption.md)、[已实施核心表](docs/architecture/core-domain-foundation.md)。
+
+## V8 · Sellers v1 Marketplace 验证准入（2026-10-31）
+
+- [SEC-005](docs/security/seller-verification.md) 新增默认关闭的手动 Owner 验证入口，
+  使用 Amazon 官方 SDK Sellers v1 的 `getMarketplaceParticipations`。
+  必须同时开启 SP-API、OAuth、验证，关闭 Demo 与 Amazon sandbox；**未进行真实 Amazon 验收**。
+- 只允许所有已配置 Marketplace 均 `isParticipating=true`、Listings 未暂停时
+  将授权由 `PENDING_VERIFICATION` 升至 `VERIFIED`，店铺才成为 `CONNECTED`。
+  验证请求需 Claim fencing，撤销优先；Worker Vault 仅允许 24 小时内有效的
+  Marketplace 证据，任何失效/缺失都默认拒绝。
+- 该 Sellers v1 操作**无法提供独立的 Seller ID 或角色证明**：Seller ID 仍来自
+  经过状态绑定的 Amazon OAuth 回调，Finance/PII/受限操作没有角色批准记录，
+  `approvedRoles` 继续为空，禁止自动宣称角色已获批准。
+- V8 为代码与离线单测交付，尚未实现自动凭证轮换、KMS 多版本密钥、
+  后台实时 Worker、安全运营与真实卖家环境测试；后续 Issue 不能据此关闭生产验收。
