@@ -1,7 +1,7 @@
 # Development guide
 
 ## Prerequisites
-Java 21, Maven 3.9+, Node.js 22+, npm, Docker Compose.
+**Java 25 LTS**, Maven 3.9+, **Node.js 24.11+ (24.x)**, npm, Docker Compose. Frontend local Node selection: `cd apps/web && nvm use`. The same major versions are used in GitHub Actions and the Docker multi-stage builds.
 
 ## One-command local stack
 ```bash
@@ -23,7 +23,7 @@ MERCHIVRA_DEMO_ENABLED=true MERCHIVRA_BOOTSTRAP_USERNAME=your_admin MERCHIVRA_BO
 
 # Shell 2
 cd apps/web
-npm install
+npm ci
 npm run dev
 ```
 
@@ -36,10 +36,10 @@ Current CI deliberately remains lightweight: backend unit tests, frontend typech
 ## Tests
 ```bash
 mvn -f apps/server/pom.xml test
-cd apps/web && npm install && npm run typecheck && npm run test && npm run build
+cd apps/web && npm ci && npm run typecheck && npm run test && npm run build
 ```
 
-A reproducible frontend lockfile is still missing. See [dependency decisions](architecture/dependency-adoption.md) and Issue #2. The current CI temporarily uses npm install instead of npm ci; do not treat this as a reproducible production build. More integration tests will be required as business features arrive.
+The real npm-registry-resolved `apps/web/package-lock.json` is checked in (lockfile v3). CI and the Node 24 Docker build both use **`npm ci`** rather than resolving dependencies afresh. This improves dependency repeatability but does not guarantee production readiness; Maven's managed dependency BOM remains pinned by Spring Boot 4.1.2. No new E2E/coverage gates were added. See [toolchain upgrade record](architecture/stack-upgrade-2026-10-30.md).
 
 ## Warnings
 The M0/M1 application exposes health and ping endpoints plus an opt-in synthetic read-only demo. The demo endpoint is OFF by default and Compose enables it locally. There is now an initial **local Session/CSRF and OWNER tenant scope**, but no comprehensive production IAM or Amazon credential policy. It remains intended only for localhost development. Do not expose it to the internet or supply real Amazon credentials.

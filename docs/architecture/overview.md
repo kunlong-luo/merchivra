@@ -21,7 +21,7 @@ ERP --> Store["自有对象存储"]
 ```mermaid
 flowchart TB
 Browser["浏览器"] --> Web["Web / Vue 3 + TypeScript"]
-Web --> API["API / Spring Boot 3"]
+Web --> API["API / Spring Boot 4.1"]
 API --> Identity["授权/租户上下文"]
 API --> Domain["领域模块"]
 Scheduler["定时触发"] --> Worker["同步 Worker"]
@@ -38,7 +38,7 @@ Worker --> PG
 
 ## 3. 约束与边界
 
-- 技术候选：Java 21、Spring Boot、Maven、PostgreSQL、Flyway、Vue 3/TypeScript/Vite、Docker Compose。
+- 已实施的基础技术版本：**Java 25 LTS、Spring Boot 4.1.2（Spring Security 7 / Jackson 3）、Maven、PostgreSQL 17、Flyway、Vue 3.5 / TypeScript 6.0.3 / Vite 8.3.5 / Node 24**、Docker Compose。架构业务选择仍待 G1/G2 正式确认。
 - 领域模型不可直接依赖 Amazon HTTP DTO，必须经过适配器标准化。
 - Controller 只做协议与输入验证；应用服务编排；领域处理规则；存储层落实租户与事务约束。
 - 命令/查询分离是代码组织原则而非必须实现 CQRS 基建。

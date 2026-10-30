@@ -15,7 +15,9 @@
 
 ## Technology
 
-Java 21 / Spring Boot 3.5, Vue 3 / TypeScript / Vite / TanStack Vue Query / Zod / Vitest, PostgreSQL, Redis, Docker Compose.
+**Java 25 LTS / Spring Boot 4.1.2 / Spring Security 7 / Jackson 3 / Maven**, **Vue 3.5 / TypeScript 6.0.3 / Vite 8.3.5 / Vitest 5 / Node.js 24 LTS / npm ci**, TanStack Vue Query / Zod, PostgreSQL 17, Redis 7, Docker Compose.
+
+See [October 2026 toolchain migration notes](docs/architecture/stack-upgrade-2026-10-30.md). Frontend dependencies are now locked in `apps/web/package-lock.json`.
 
 Engineering conventions are informed by [Pagevela](https://github.com/kunlong-luo/pagevela) (CI, dependency hygiene and persistence coordination), while retaining the ERP-specific Java/Vue architecture. See [dependency decisions](docs/architecture/dependency-adoption.md).
 

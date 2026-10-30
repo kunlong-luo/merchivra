@@ -12,11 +12,13 @@
 
 ## 技术栈
 
-- 后端：Java 21 / Spring Boot 3.5 / Maven
-- 前端：Vue 3 / TypeScript / Vite
+- 后端：**Java 25 LTS / Spring Boot 4.1.2 / Spring Security 7 / Jackson 3 / Maven**
+- 前端：**Node.js 24 LTS / Vue 3.5 / Vite 8.3.5 / TypeScript 6.0.3 / Vitest 5**（npm lockfile 已提交）
 - 数据库：PostgreSQL；缓存预留 Redis
 - 架构：模块化单体，后续根据业务量拆分 Worker
-- 部署：Docker Compose；CI：GitHub Actions
+- 部署：Docker Compose；CI：GitHub Actions（`npm ci` + Maven 快速单测，不运行 E2E）
+
+升级细节与尚未运行的容器验证见 [2026 技术栈升级记录](docs/architecture/stack-upgrade-2026-10-30.md)。
 
 ## 快速启动（仅本地模拟演示）
 

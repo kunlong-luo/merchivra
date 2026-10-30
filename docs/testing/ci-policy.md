@@ -5,7 +5,7 @@
 ## 当前 main 的必需工作流（M0～M2）
 
 - 后端：`mvn -B -f apps/server/pom.xml test`（只运行当前存在的快速单元测试）。
-- 前端：`npm install`、`npm run typecheck`、`npm run test`、`npm run build`（当前未提交 package-lock，后续补齐后改为 `npm ci`）。
+- 前端：`npm ci`（已有真实解析的 `package-lock.json`）、`npm run typecheck`、`npm run test`、`npm run build`。
 - 无 Playwright / Chromium / Firefox / WebKit、无 E2E 执行、无覆盖率阈值、无 Docker 全栈 CI、无性能预算或安全扫描的阻塞型门禁。
 - 不要求每个早期功能都拥有浏览器级自动化场景，不为 Mock 占位页创建 E2E 测试。
 
