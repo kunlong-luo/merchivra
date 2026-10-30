@@ -39,6 +39,14 @@
 
 详见 [端到端场景](../testing/end-to-end-scenarios.md)。
 
+## 第三轮补齐的主数据与查询验收
+
+| 用例 ID | 需求 | Given / When / Then |
+|---|---|---|
+| AC-28 | FR-SHOP-02 | Seller 账户绑定不属于指定 API Region 的 Marketplace；应拒绝不一致的站点配置并提供脱敏错误 |
+| AC-29 | FR-CAT-01 | 同一租户两次创建相同 internal SKU；第二次返回冲突；其它租户可以使用相同 SKU |
+| AC-30 | FR-ORD-02 | 运营按站点/日期/状态/SKU 检索订单；分页稳定；未请求 PII 的接口和导出均不出现买家字段 |
+
 ## 各层测试
 
 - 领域测试：SKU 映射、状态迁移、利润公式、成本有效区间。

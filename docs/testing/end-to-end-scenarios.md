@@ -45,6 +45,12 @@
 **预期**：401/404/409 与合适的连接状态；API 仅返回脱敏的 requestId 和错误码，Worker 退避逻辑与 UI 任务状态对齐，不泄漏 Token。  
 **追踪**：API-001、SEC-001、AC-01/12/16/26/27。
 
+## P0 基础补充场景
+
+- **AC-28**：用两个不同 API Region 的虚构 Marketplace 组合验证绑定拒绝，避免 Region 与 Marketplace 混淆。
+- **AC-29**：租户内重复内部 SKU 拒绝、跨租户同名 SKU 允许，不允许按 ASIN 直接作为 ERP SKU 键。
+- **AC-30**：订单查询/导出遵循账号范围、稳定分页、不给未授权角色返回 PII。
+
 ## 测试数据最低集合
 
 2 tenants × 至少 2 accounts × 至少 3 marketplaces；多币种、同 ASIN 异 SKU、缺失映射、时间乱序、退款、库存快照过期、财务未知来源、重复事件、API 429/401/5xx 与分页过期。
