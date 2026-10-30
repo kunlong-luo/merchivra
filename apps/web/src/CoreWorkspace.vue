@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import SellerSetup from './SellerSetup.vue'
+import SandboxReplay from './SandboxReplay.vue'
 import {
   fetchCoreMarketplaces, fetchCoreListings, fetchCoreOrders, fetchCoreInventory
 } from './lib/core'
@@ -107,6 +108,10 @@ function isoTime(value: string | null) {
         <span>连接状态：{{ activeMarketplace.connectionStatus }}</span>
       </div>
 
+      <SandboxReplay v-if="activeMarketplace" :key="activeMarketplace.id"
+        :tenant-id="tenantId" :marketplace-id="activeMarketplace.id"
+        :marketplace-code="activeMarketplace.marketplaceId"
+        :connection-status="activeMarketplace.connectionStatus" />
       <div class="core-subtabs" role="group" aria-label="核心数据分类">
         <button v-for="tab in [
           { id: 'listings', label: 'Listing' },
@@ -125,11 +130,12 @@ function isoTime(value: string | null) {
         <div v-else-if="listingError" class="empty-state" role="alert">{{ listingFailure instanceof Error ? listingFailure.message : '读取失败' }}</div>
         <div v-else-if="!listings?.length" class="empty-state">当前 Marketplace 尚无 Listing 记录</div>
         <div v-else class="table-scroll">
-          <table><thead><tr><th>Seller SKU</th><th>ASIN</th><th>内部 SKU</th><th>映射状态</th><th>来源更新时间</th></tr></thead>
+          <table><thead><tr><th>Seller SKU</th><th>ASIN</th><th>内部 SKU</th><th>映射状态</th><th>来源</th><th>来源更新时间</th></tr></thead>
             <tbody><tr v-for="item in listings" :key="item.id">
               <td class="strong-cell">{{ item.sellerSku }}</td>
               <td>{{ item.asin ?? '未知' }}</td><td>{{ item.internalSku ?? '未确认' }}</td>
               <td><span class="status-chip" :class="item.mappingStatus === 'ACTIVE' ? 'chip-green' : 'chip-amber'">{{ item.mappingStatus }}</span></td>
+              <td><span :class="['status-chip', item.dataOrigin === 'MOCK' ? 'chip-amber' : 'chip-muted']">{{ item.dataOrigin }}</span></td>
               <td class="small-cell">{{ isoTime(item.sourceUpdatedAt) }}</td>
             </tr></tbody></table>
         </div>
@@ -142,7 +148,7 @@ function isoTime(value: string | null) {
         <div v-else-if="orderError" class="empty-state" role="alert">{{ orderFailure instanceof Error ? orderFailure.message : '读取失败' }}</div>
         <div v-else-if="!orders?.length" class="empty-state">当前 Marketplace 尚无订单记录</div>
         <div v-else class="table-scroll">
-          <table><thead><tr><th>外部订单号</th><th>订单项数量</th><th>履约</th><th>退款</th><th>财务</th><th>来源时间</th></tr></thead>
+          <table><thead><tr><th>外部订单号</th><th>订单项数量</th><th>履约</th><th>退款</th><th>财务</th><th>来源</th><th>来源时间</th></tr></thead>
             <tbody><tr v-for="item in orders" :key="item.id">
               <td class="strong-cell">{{ item.externalOrderId }}</td><td>{{ item.itemCount }}</td>
               <td>{{ item.fulfillmentStatus }}</td><td>{{ item.refundStatus }}</td>
@@ -160,12 +166,13 @@ function isoTime(value: string | null) {
         <div v-else-if="stockError" class="empty-state" role="alert">{{ stockFailure instanceof Error ? stockFailure.message : '读取失败' }}</div>
         <div v-else-if="!inventory?.length" class="empty-state">当前 Marketplace 尚无 FBA 库存观测</div>
         <div v-else class="table-scroll">
-          <table><thead><tr><th>Seller SKU</th><th>可售</th><th>预留</th><th>质量</th><th>观测时间</th></tr></thead>
+          <table><thead><tr><th>Seller SKU</th><th>可售</th><th>预留</th><th>质量</th><th>来源</th><th>观测时间</th></tr></thead>
             <tbody><tr v-for="item in inventory" :key="item.id">
               <td class="strong-cell">{{ item.sellerSku }}</td>
               <td class="quantity-cell">{{ observed(item.fulfillable) }}</td>
               <td>{{ observed(item.reserved) }}</td>
               <td><span class="status-chip" :class="item.quality === 'OBSERVED' ? 'chip-green' : 'chip-amber'">{{ item.quality }}</span></td>
+              <td><span :class="['status-chip', item.dataOrigin === 'MOCK' ? 'chip-amber' : 'chip-muted']">{{ item.dataOrigin }}</span></td>
               <td class="small-cell">{{ isoTime(item.observedAt) }}</td>
             </tr></tbody></table>
         </div>

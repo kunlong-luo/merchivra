@@ -17,7 +17,8 @@ export const coreListingSchema = z.object({
   fnsku: z.string().nullable(),
   mappingStatus: z.string(),
   internalSku: z.string().nullable(),
-  sourceUpdatedAt: z.string().nullable()
+  sourceUpdatedAt: z.string().nullable(),
+  dataOrigin: z.enum(['MOCK','UNVERIFIED'])
 })
 
 export const coreOrderSchema = z.object({
@@ -27,7 +28,8 @@ export const coreOrderSchema = z.object({
   refundStatus: z.string(),
   financialStatus: z.string(),
   itemCount: z.number().int().nonnegative(),
-  sourceUpdatedAt: z.string().nullable()
+  sourceUpdatedAt: z.string().nullable(),
+  dataOrigin: z.enum(['MOCK','UNVERIFIED'])
 })
 
 export const coreInventorySchema = z.object({
@@ -37,7 +39,8 @@ export const coreInventorySchema = z.object({
   fulfillable: z.number().int().nonnegative().nullable(),
   reserved: z.number().int().nonnegative().nullable(),
   observedAt: z.string().nullable(),
-  ingestedAt: z.string()
+  ingestedAt: z.string(),
+  dataOrigin: z.enum(['MOCK','UNVERIFIED'])
 })
 
 export type CoreMarketplace = z.infer<typeof marketplaceSchema>

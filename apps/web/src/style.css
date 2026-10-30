@@ -210,3 +210,12 @@ td { padding: 19px; border-top: 1px solid #f0f3f7; color: #71829a; }
 .setup-audit { border-top:1px solid #ecf0f5;padding:20px 22px; }
 .setup-audit-heading { display:flex;gap:12px;justify-content:space-between;align-items:center;font-size:13px; }
 @media(max-width:760px) { .setup-forms { grid-template-columns:1fr; } }
+
+.sandbox-panel { border:1px dashed #aac6e8;background:#f9fcff;border-radius:10px;padding:18px 20px;margin:0 0 18px; }
+.sandbox-panel-top { display:flex;align-items:flex-start;justify-content:space-between;gap:12px; }
+.sandbox-panel-top strong {font-size:13px;color:#2f5c8c;}
+.sandbox-panel-top p {margin:7px 0 0;font-size:12px;color:#728ba9;line-height:1.7;}
+.sandbox-actions {display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:15px 0;}
+.sandbox-actions .primary-button {margin:0;}
+.sandbox-history {margin-top:18px;font-size:12px;}
+.sandbox-history > strong {display:block;margin-bottom:10px;}

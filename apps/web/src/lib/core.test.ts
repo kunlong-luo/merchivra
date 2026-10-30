@@ -36,7 +36,7 @@ describe('core ERP read contract', () => {
     expect(coreOrderSchema.parse({
       id, externalOrderId: 'ORDER-001', fulfillmentStatus: 'SHIPPED',
       refundStatus: 'PARTIAL', financialStatus: 'NOT_OBSERVED',
-      itemCount: 1, sourceUpdatedAt: null
+      itemCount: 1, sourceUpdatedAt: null, dataOrigin: 'MOCK'
     }).financialStatus).toBe('NOT_OBSERVED')
   })
 })
