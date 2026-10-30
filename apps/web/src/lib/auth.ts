@@ -12,7 +12,7 @@ const csrfSchema = z.object({
   headerName: z.literal('X-CSRF-TOKEN')
 })
 
-async function csrfHeader(): Promise<Record<string, string>> {
+export async function csrfHeader(): Promise<Record<string, string>> {
   const response = await fetch('/api/v1/auth/csrf', {
     credentials: 'same-origin',
     cache: 'no-store'

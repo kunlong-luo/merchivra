@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
+import SellerSetup from './SellerSetup.vue'
 import {
   fetchCoreMarketplaces, fetchCoreListings, fetchCoreOrders, fetchCoreInventory
 } from './lib/core'
@@ -70,6 +71,8 @@ function isoTime(value: string | null) {
       <strong>已认证租户 · PostgreSQL 结构化数据</strong>
       <p>这里直接读取核心业务表，不读取虚构 Mock 快照。租户由后端会话确定；当前只支持 Owner 范围内的只读操作。</p>
     </div>
+
+    <SellerSetup :tenant-id="tenantId" />
 
     <div v-if="marketplacePending" class="state-panel">
       <strong>正在加载可访问的 Marketplace…</strong>
