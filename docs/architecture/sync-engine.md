@@ -29,6 +29,24 @@ G --> L["无效源记录: 隔离异常池"]
 
 不要将 Amazon 授权失败误归因于暂时限流，也不要因为 Job 成功就断言全部财务数据已齐全。
 
+### Run/Attempt 状态机（图 D-11）
+
+```mermaid
+stateDiagram-v2
+  [*] --> QUEUED
+  QUEUED --> RUNNING: Worker 获得有效租约
+  RUNNING --> SUCCEEDED: 窗口完整处理并确认进度
+  RUNNING --> WAITING_RETRY: 可恢复 API / 网络错误
+  WAITING_RETRY --> RUNNING: 退避完成并重新获取有效租约
+  RUNNING --> PAUSED: 人工暂停或配额保护
+  PAUSED --> QUEUED: 授权恢复/人工恢复
+  RUNNING --> FAILED: 非恢复性错误或重试耗尽
+  FAILED --> QUEUED: 人工修复后安全重放
+  SUCCEEDED --> [*]
+```
+
+说明：本图是**单次 run/attempt**状态，不是持久 Stream 的高水位状态。不能凭 `SUCCEEDED` 推断外部财务结算已完成。
+
 ## 3. 事务不变量
 
 1. 只有持有有效租约的 Worker 可推进 Stream；旧 Worker 恢复后不能提交。
