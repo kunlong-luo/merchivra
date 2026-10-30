@@ -1,3 +1,4 @@
+# Regression focus: same internal SKU across US and DE sites must reuse tenant SKU ID.
 name: Mock full-chain Compose validation
 on:
   workflow_dispatch:

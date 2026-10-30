@@ -34,6 +34,16 @@ class MockSpApiClientTest {
     }
 
     @Test
+    void identicalInternalSkuHasSameTenantIdentityAcrossMarketplaces() {
+        var tenant = UUID.fromString("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
+        var other = UUID.fromString("bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb");
+        assertEquals(SandboxSyncService.stableProductId(tenant, "SANDBOX-MV-CUP-BLUE"),
+            SandboxSyncService.stableProductId(tenant, "SANDBOX-MV-CUP-BLUE"));
+        assertNotEquals(SandboxSyncService.stableProductId(tenant, "SANDBOX-MV-CUP-BLUE"),
+            SandboxSyncService.stableProductId(other, "SANDBOX-MV-CUP-BLUE"));
+    }
+
+    @Test
     void syntheticSourceKeysAreStableAndMarketplaceScoped() {
         var tenant = UUID.fromString("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
         var one = UUID.randomUUID();

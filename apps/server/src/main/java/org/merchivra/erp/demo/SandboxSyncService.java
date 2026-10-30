@@ -41,6 +41,14 @@ public class SandboxSyncService {
                 .getBytes(StandardCharsets.UTF_8));
     }
 
+    public static UUID stableProductId(UUID tenant, String internalSku) {
+        // An ERP internal SKU is tenant-wide, NOT marketplace-specific.
+        // US/DE listings can share the same tenant SKU without conflicting IDs.
+        return UUID.nameUUIDFromBytes(
+            ("merchivra:sandbox:" + tenant + ":sku:" + internalSku)
+                .getBytes(StandardCharsets.UTF_8));
+    }
+
     @Transactional
     public Result replay(UUID tenant, UUID actor, UUID marketplace, String requestKey,
                          boolean simulateFailure) {
@@ -156,7 +164,7 @@ public class SandboxSyncService {
             """, id, tenant, marketplace, item.sellerSku(), item.asin(), item.mappingStatus());
         if (item.internalSku() != null) {
             String localSku = "SANDBOX-" + item.internalSku();
-            UUID skuId = stableId(tenant, marketplace, "sku", localSku);
+            UUID skuId = stableProductId(tenant, localSku);
             jdbc.update("""
                 INSERT INTO product_sku (id, tenant_id, internal_sku, display_name)
                 VALUES (?, ?, ?, ?)
