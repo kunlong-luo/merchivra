@@ -43,7 +43,17 @@ jobs:
           applied=$(docker compose --env-file .env -f deploy/compose.yaml exec -T postgres             psql -U merchivra -d merchivra -Atc             "SELECT count(*) FROM flyway_schema_history WHERE version = '7' AND success")
           test "$applied" = 1
           status=$(curl -sS -o /dev/null -w '%{http_code}'             http://127.0.0.1:3000/api/v1/spapi/oauth/callback)
-          test "$status" = 404
+          # Spring Security may guard the /error dispatch after an absent
+          # controller; either anonymous 401 or route 404 is fail-closed.
+          echo "OAuth disabled callback HTTP status: $status"
+          case "$status" in
+            401|404) ;;
+            *) echo "Unexpected OAuth callback status"; exit 1 ;;
+          esac
+          credential_rows=$(docker compose --env-file .env -f deploy/compose.yaml exec -T postgres \
+            psql -U merchivra -d merchivra -Atc \
+            "SELECT count(*) FROM spapi_seller_authorization")
+          test "$credential_rows" = 0
       - name: Verify Mock operations through real HTTP and PostgreSQL
         run: |
           set -a
