@@ -17,7 +17,7 @@ describe('core ERP read contract', () => {
       id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
       sellerSku: 'SKU-001',
       observedAt: null,
-      ingestedAt: '2026-10-30T00:00:00Z'
+      ingestedAt: '2026-10-30T00:00:00Z', dataOrigin: 'MOCK'
     }
     expect(coreInventorySchema.parse({
       ...fields, quality: 'UNKNOWN', fulfillable: null, reserved: null
@@ -31,7 +31,7 @@ describe('core ERP read contract', () => {
     const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
     expect(() => coreInventorySchema.parse({
       id, sellerSku: 'SKU-001', quality: 'OBSERVED',
-      fulfillable: -1, reserved: 0, observedAt: null, ingestedAt: '2026-10-30T00:00:00Z'
+      fulfillable: -1, reserved: 0, observedAt: null, ingestedAt: '2026-10-30T00:00:00Z', dataOrigin: 'MOCK'
     })).toThrow()
     expect(coreOrderSchema.parse({
       id, externalOrderId: 'ORDER-001', fulfillmentStatus: 'SHIPPED',
