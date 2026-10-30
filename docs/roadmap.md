@@ -60,3 +60,10 @@
 - [x] [Compose 全链路成功运行（2026-10-30）](https://github.com/kunlong-luo/merchivra/actions/runs/41061679196)：真实 Nginx + Spring Boot + PG 构建并执行两店铺 Mock source → 订单分页、Listing、FBA → 持久化 → 登录用户 SQL 查询 → 运行/审计 → 重启后复核 → 退出失效。
 - [x] 修复根目录 Compose `.env` 读取和 US/DE 共享内部 SKU 外键冲突；原始币种与 FBA NULL/0 均保留。
 - [ ] 真实 SP-API 接入、页级持久检查点/worker fencing、Finances/结算/成本利润、正式租户安全、备份及生产部署仍未完成，不能把 Mock 测试结果当成正式业务验收。
+
+## 逐页持久模拟（V6）
+
+- [x] V6 只增加开发用 `sandbox_page_stream` 和 `sandbox_page_commit`，支持一个 LOCAL/UNCONFIGURED Marketplace 的手动下一页提交，并对同页/同键/同租户设唯一约束。
+- [x] 后端用 PostgreSQL 事务行锁与递增 `lease_epoch`，每次只落一个 Mock Orders 页；前端可查看提交进度并手动继续。
+- [x] 独立 Compose 脚本新增第 1 页提交后重启、再继续第 2 页及同键重放的验证场景；最终通过结论需参考对应工作流实际运行记录。
+- [ ] 尚未实现真实后台 Worker、流租约过期、真实 API 分页 token 过期恢复、持久查询窗口与正式高水位、来源授权或真实对账。

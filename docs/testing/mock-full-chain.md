@@ -65,3 +65,20 @@ GitHub Actions 可手动运行 [Mock full-chain Compose validation](https://gith
 3. **权限缓存清理**：登录/退出时清除 `core`、`setup`、`sandbox` 等前端 Query 缓存，防止上一个会话的租户内容被下一个用户看到。
 
 **验证结果：[Compose 全链路成功运行（2026-10-30）](https://github.com/kunlong-luo/merchivra/actions/runs/41061679196)：** 完整 Compose 构建成功，实际脚本先后输出通过 Demo 隔离/幂等、US/DE 站点、Mock Orders 分页、核心表查询、财务权限 `NOT_AUTHORIZED`、库存 null/0、审计记录、后端重启持久化及登出后的 401；销毁临时服务和数据库成功。**此为可重复的模拟集成验证，不是浏览器 E2E，也不是正式 Amazon API 授权/数据准确性证明。**
+
+## V6 · 手动逐页持久检查点（开发期验证）
+
+原 `POST /api/v1/demo/sandbox/{marketplaceUuid}/replay` 是**整批单事务**，保留用于快速演示。V6 另外新增一条逐页协议，用来验证断点恢复：
+
+| 方法 | 路径 | 行为 |
+|---|---|---|
+| GET | `/api/v1/demo/sandbox/{marketplaceUuid}/pages` | 返回当前 Mock 流状态 `NOT_STARTED / RUNNING / SUCCEEDED`、下一页号、总页数、已提交页面列表、单调增加的 `leaseEpoch` |
+| POST | `/api/v1/demo/sandbox/{marketplaceUuid}/pages/advance` | 提交**下一页**；Header `Idempotency-Key` + Session/CSRF；每次调用恰好一个 PostgreSQL 事务 |
+
+V6 `sandbox_page_stream` 对 `(tenant_id, seller_marketplace_id)` 唯一约束，`sandbox_page_commit` 对页面序号和幂等键分别唯一；业务写入、page commit 和进度的条件更新发生在同一事务。流锁使用 PostgreSQL `SELECT ... FOR UPDATE NOWAIT`；并发的分页请求不得将旧 `leaseEpoch` 覆盖进度。相同幂等键返回原页号，已完成后**不能以新键继续产生不存在的页面**。
+
+具体行为：美国站 2 页，每次一页；第 1 页同时保存 Listing 和第 1 笔订单，第 2 页保存第 2 笔订单、FBA 观测和最终成功审计。德国站只有 1 页，所以一次提交完成。所有事实都继续标记 `MOCK`，不存在真实 Amazon `paginationToken` 和有效期。
+
+**重要边界**：这里是**人工点击/HTTP 请求驱动的 PostgreSQL 事务锁协议**，不是 Worker 租约/租期续约、分布式调度、真实高水位、Token 过期处理或带版本的 Canonical Source Adapter；它不使用基础表里的正式 `sync_stream` / `sync_run` 推进生产同步流。固定样本规模改变会返回 409，需要以后受控创建新版本流，而不是直接重置老检查点。
+
+可通过已有手动 Compose Workflow 验证 **第 1 页提交 → 后端重启 → 第 2 页继续 → 同键重新提交不重放 → 查询两页**，不增加日常 CI/E2E 门禁。
