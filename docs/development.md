@@ -61,3 +61,7 @@ The default authenticated **核心业务数据** workspace now includes a local 
 ## Full simulated source-to-query chain
 
 The explicit [TEST-004 simulated SP-API smoke](testing/mock-full-chain.md) exercises login, local setup, mocked paginated Orders/Listing/FBA, tenant-scoped SQL reads, audit/idempotency and backend restart through the Nginx proxy. Run the separate manual Compose workflow or the localhost-only Python script against disposable data. The daily CI remains lightweight. No live Amazon Seller/Finances credentials are used.
+
+### Verified Compose mock integration
+
+[Compose 全链路成功运行（2026-10-30）](https://github.com/kunlong-luo/merchivra/actions/runs/41061679196) built and ran the full Nginx + Java 25/Spring Boot 4 + PostgreSQL 17 Compose stack using ephemeral credentials, exercised authenticated US/DE Mock operations and tenant-scoped Listing/Order/FBA queries, and verified persistence across a backend restart plus logout/session invalidation. The standalone workflow is manual/on-workflow-file change only, not part of the regular CI gate. Follow [TEST-004](testing/mock-full-chain.md); live Amazon OAuth/Finances, multi-user ACL and production readiness are **not** verified.

@@ -41,3 +41,7 @@
 ## V5 模拟来源标记与受保护查询
 
 Listing、订单及 FBA 读结果新增 `dataOrigin`（`MOCK` / `UNVERIFIED`）。可在明确启用 Demo 的本地 `/api/v1/demo/sandbox/{marketplaceId}/replay` 中，按当前登录租户的 LOCAL/UNCONFIGURED Marketplace 模拟写入固定纯虚构数据；随后仍只使用本 API 的会话租户过滤读取。见 [TEST-004](../testing/mock-full-chain.md)。`UNVERIFIED` 并不代表已通过真实来源认证。
+
+### V5 Mock 数据查询：实际运行证据
+
+[Compose 全链路成功运行（2026-10-30）](https://github.com/kunlong-luo/merchivra/actions/runs/41061679196) 已分别查询 US/DE 租户内 Sandbox Marketplace 的 Listing/订单/FBA，确认所有模拟行都返回 `dataOrigin=MOCK`，US `PARTIAL` 退款与 `NOT_OBSERVED` 财务状态独立，US 库存 UNKNOWN(null)、DE 已观测零数量都保持正确。无权 Marketplace 404，重放同步后记录数不翻倍。正式 Amazon 数据来源仍未认证。

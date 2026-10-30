@@ -40,3 +40,7 @@
 - 后续正式 Seller 接入需经安全审查：Amazon 授权、证书/密钥生命周期、细粒度 Seller Account ACL、最小权限、审计安全、撤销授权、速率限制、SP-API 数据契约等。
 
 关联：[API-003 核心只读数据](core-read-api.md)、[SEC-003](../security/local-auth.md)、[DATA-004](../architecture/core-domain-foundation.md)、[Agent 开发策略](../../Agent.md)。
+
+## 完整 Compose 实机验证追加
+
+[Compose 全链路成功运行（2026-10-30）](https://github.com/kunlong-luo/merchivra/actions/runs/41061679196) 实际经前端 Nginx 的 /api 代理完成了 Owner 登录、创建 US/DE 本地 Seller 占位、区域错误 400、幂等键冲突 409、重复添加站点的 ID 保持一致、同租户审计事件及无权资源 404，最后在容器重启后复核业务事实和审计持久化。此前的「未验证 Compose」说明已由该证据替代；**这仍不是正式 Amazon 授权、浏览器交互 E2E 或生产安全审查**。

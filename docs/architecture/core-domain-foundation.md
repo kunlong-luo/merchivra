@@ -40,3 +40,7 @@
 3. Auth 定稿后接入服务端租户 Context 和真正的数据 Repository，**不准直接开放数据库表为无鉴权 CRUD**。
 
 相关：[物理设计候选](physical-data-design.md)、[租户权限](../security/tenant-enforcement.md)、[Mock 工作台](../demo.md)、[轻量 CI](../testing/ci-policy.md)。
+
+## V5 开发期模拟数据标识补充
+
+Flyway V5 给 Listing、订单、订单项和 FBA 观测新增 `data_origin`（`MOCK` / `UNVERIFIED`）并建立按租户、Marketplace 和幂等键约束的 `sandbox_sync_run`。当美国与德国 Listing 共享一个 ERP 内部 SKU 时，SKU ID 必须**租户级稳定**，而不是站点级；真实 [Compose 全链路成功运行（2026-10-30）](https://github.com/kunlong-luo/merchivra/actions/runs/41061679196) 先暴露外键问题，修复后通过。旧数据迁移后的 `UNVERIFIED` 不是 Amazon 已认证真实来源。

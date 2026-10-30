@@ -1,6 +1,6 @@
 # TEST-004 · 纯虚构 SP-API 全链路模拟联调
 
-> **2026-10-30 / Pre-alpha。仅开发环境、只使用虚构事实。** 这是对 [INT-002 操作矩阵](../integrations/sp-api-operation-matrix.md)、[INT-003 Canonical Contract](../integrations/amazon-data-contract.md) 和 [SYNC-002 同步流设计](../architecture/sync-stream-contract.md) 中可安全模拟的部分做纵向联调；不是正式 Amazon SDK/HTTP 响应测试，也不证明权限已批准。
+> **2026-10-30 / Pre-alpha。仅开发环境、只使用虚构事实。** [Compose 全链路成功运行（2026-10-30）](https://github.com/kunlong-luo/merchivra/actions/runs/41061679196)：真实 Docker Compose（Nginx + Java 25/Spring Boot 4.1.2 + PostgreSQL 17）已成功启动并实际执行本页列出的全部 Python HTTP 验证；后端重启后重新登录，记录仍持久，退出后 401。没有连接 Amazon。 这是对 [INT-002 操作矩阵](../integrations/sp-api-operation-matrix.md)、[INT-003 Canonical Contract](../integrations/amazon-data-contract.md) 和 [SYNC-002 同步流设计](../architecture/sync-stream-contract.md) 中可安全模拟的部分做纵向联调；不是正式 Amazon SDK/HTTP 响应测试，也不证明权限已批准。
 
 ## 为什么需要这条链
 
@@ -52,8 +52,16 @@ python3 scripts/smoke_mock_chain.py --stage initial
 
 GitHub Actions 可手动运行 [Mock full-chain Compose validation](https://github.com/kunlong-luo/merchivra/actions/workflows/mock-full-chain.yml)，该工作流**不随日常代码变更执行**，只在显式触发或工作流文件自身更改时执行。它会生成一次性随机密码、构建 Nginx/Java/PG、运行全链路、重启后复核、最后销毁临时数据库。
 
-## 当前验收与明确尚缺
+## 已运行的验证证据与明确尚缺
 
 - 可测：匿名 API 401、登录/CSRF、Local Seller 创建/幂等/区域、固定 Demo 隔离、US/DE 模拟分页、已入库数据的查询、来源标识、订单部分退款、FBA null/0、失败/成功/重复/冲突、审计计数、重启持久化、登出。
 - 不能因此宣称已接通：真实 Amazon Seller 授权或凭证、真实 Orders/Listing/FBA DTO 与分页重试、限流/token 过期恢复、同步 Worker 的租约与 checkpoint、Finances/成本/汇兑/利润/结算、生产 RBAC/安全审计/备份。
 - G1/G2 业务与安全决策仍 Proposed。**运行环境测试成功与生产就绪是两个完全不同的里程碑。**
+
+## 首次完整 Compose 联调发现并修复的缺陷
+
+1. **根目录 `.env` 读取**：原命令 `docker compose -f deploy/compose.yaml` 没有正确加载根目录密码；使用显式 `docker compose --env-file .env -f deploy/compose.yaml` 后服务可以启动。此调整已同步 README、开发说明和安全指南。
+2. **跨站点复用内部 SKU 的 FK 失败**：同一个虚构 `MV-CUP-BLUE` 在 US/DE Seller SKU 映射时，内部 SKU ID 必须按 `tenant_id + internal_sku` 而不是 `tenant_id + marketplace_id + internal_sku` 派生。将 Mock `product_sku` 改为租户级稳定 ID、Listing/Order/Inventory 继续保持 Marketplace 作用域后重新运行全链路通过。
+3. **权限缓存清理**：登录/退出时清除 `core`、`setup`、`sandbox` 等前端 Query 缓存，防止上一个会话的租户内容被下一个用户看到。
+
+**验证结果：[Compose 全链路成功运行（2026-10-30）](https://github.com/kunlong-luo/merchivra/actions/runs/41061679196)：** 完整 Compose 构建成功，实际脚本先后输出通过 Demo 隔离/幂等、US/DE 站点、Mock Orders 分页、核心表查询、财务权限 `NOT_AUTHORIZED`、库存 null/0、审计记录、后端重启持久化及登出后的 401；销毁临时服务和数据库成功。**此为可重复的模拟集成验证，不是浏览器 E2E，也不是正式 Amazon API 授权/数据准确性证明。**

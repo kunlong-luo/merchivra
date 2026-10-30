@@ -104,3 +104,9 @@ curl http://127.0.0.1:8080/api/v1/demo/core-status
 所有导入通过 `DemoCoreImporter`，使用预留的固定 Mock Tenant ID；该 API 不接受用户传入的租户 ID，也不允许读取真实卖家数据。它与生产中的 tenant session/权限模型**不是一回事**。
 
 **验证限制：** Maven/Vue/Vitest 快速 CI 已通过，但尚未有 PostgreSQL 容器执行 V1/V2 的运行证据。上述计数是代码与 fixture 的预期值，不是实际数据库验收结果。
+
+## V5 Sandbox：从模拟 API 到当前登录租户核心表
+
+旧 `/demo/sync-runs` 仍只落在固定虚构 Demo Tenant。另有 [TEST-004](testing/mock-full-chain.md) 的 `/api/v1/demo/sandbox/{marketplaceId}/replay`，允许当前登录 OWNER **手动**把固定 US/DE 虚构订单（分页）、Listing、FBA 投影到自己创建的本地 `LOCAL-`/`UNCONFIGURED` Marketplace。使用 `dataOrigin=MOCK`，不会注入真实账号、也不创建 Finances 事件；日本没有对应场景会返回 422。
+
+[Compose 全链路成功运行（2026-10-30）](https://github.com/kunlong-luo/merchivra/actions/runs/41061679196) 已实测该链路，包括重启后持久化和登出失效。不能据此说已接通真实 SP-API。
