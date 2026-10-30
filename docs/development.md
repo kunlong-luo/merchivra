@@ -10,7 +10,7 @@ cp .env.example .env
 docker compose -f deploy/compose.yaml up --build
 ```
 
-The web is available on 127.0.0.1:3000; API on 127.0.0.1:8080. Compose explicitly enables the synthetic demo endpoint via MERCHIVRA_DEMO_ENABLED=true. Database and Redis are internal to the Compose network.
+The web is available on 127.0.0.1:3000; API on 127.0.0.1:8080. Compose explicitly enables the synthetic demo endpoints via MERCHIVRA_DEMO_ENABLED=true. Demo data and simulated sync run history persist in PostgreSQL (separate demo_snapshot/demo_sync_run tables); see [demo guide](demo.md). Database and Redis are internal to the Compose network.
 
 ## Run independently
 ```bash
