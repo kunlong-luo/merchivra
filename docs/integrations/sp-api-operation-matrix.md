@@ -19,6 +19,18 @@
 
 官方 API 与 ERP 内部字段的语义映射在 G2 的 [INT-003 规范化数据契约](amazon-data-contract.md) 中单独记录。该规范不能替代官方响应字段验证；操作权限和限额需按实际卖家角色重新确认。
 
+## G2 操作级已核对参数与边界（2026-10-30）
+
+| API 操作 | 官方行为/字段 | 系统设计强约束 | 证据 |
+|---|---|---|---|
+| Orders `searchOrders` | `maxResultsPerPage` 1～100；`marketplaceIds` 数量有限（最多 50）；`fulfilledBy` 可使用 MERCHANT/AMAZON | 分页参数与查询指纹存 Stream；不能假设无限 page size | [官方操作参考](https://developer-docs.amazon.com/sp-api/reference/searchorders) |
+| Orders 分页 | 下一页将 `nextToken` 作为 `paginationToken`，其余过滤参数保持不变（部分页面/字段参数可调整）；Token 24h 后过期 | Token 不是持久水位；过期后时间窗重扫；请求参数指纹必须一致 | [官方迁移](https://developer-docs.amazon.com/sp-api/docs/orders-api-migration-guide) |
+| Orders usage plan | operation/account-app 等维度可能同时限流，响应 `x-amzn-RateLimit-Limit` 仅包含部分维度 | 不把单一响应限额当成所有额度；动态受限退避 | [官方限流](https://developer-docs.amazon.com/sp-api/docs/orders-api-rate-limits) |
+| FBA `getInventorySummaries` | `details` 默认 false；未传 true 时不一定带 `inventoryDetails` | 字段缺失标为 UNKNOWN/NOT_REQUESTED，不是 0 | [Amazon FBA API 模型](https://github.com/amzn/selling-partner-api-models/blob/main/models/fba-inventory-api-model/fbaInventory.json) |
+| FBA 查询窗口 | 带 `startDateTime` 的变化查询可能忽略指定 sellerSKU 过滤 | Adapter 按官方模式拆分查询计划，避免错误推断查询只覆盖指定 SKU | [官方操作参考](https://developer-docs.amazon.com/sp-api/reference/getinventorysummaries) |
+
+以上是**公开文档级核对**，未在卖家生产应用上实测。个别 URL 可能有语言/地区重定向，接入前应复核具体操作版本与账户角色。
+
 ## 2. 按操作应进一步确认
 
 | 操作/资源 | P0 用途 | 需要记录的真实接入参数 | 状态 |

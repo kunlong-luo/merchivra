@@ -35,6 +35,10 @@
 
 Orders v2026-01-01 的 `includedData` 支持 FULFILLMENT/PROCEEDS/EXPENSE/PROMOTION/TAX 等选择；**不默认请求 BUYER/RECIPIENT**。数据字典不假设所有字段无条件返回。
 
+## 2.1 Orders 分页与数据分量规则
+
+`searchOrders` 的 `paginationToken` 是有有效期且依赖同一查询条件的临时句柄；必须记录初次窗口的 `lastUpdatedAfter/Before`、marketplace 过滤和查询指纹，避免重试时悄悄修改范围。字段是否存在受 `includedData` 选择、角色和来源条件影响，不能将未请求/无权字段当成 0。
+
 ## 3. FBA Inventory Observation
 
 | 字段 | 含义 | 数据质量 |
@@ -44,6 +48,10 @@ Orders v2026-01-01 的 `includedData` 支持 FULFILLMENT/PROCEEDS/EXPENSE/PROMOT
 | fulfillable / reserved / inbound / unfulfillable / researching | API 已返回的库存状态分桶 | 各字段允许 null = 未观测 |
 | sourceObservedAt / ingestedAt | 外部观测、ERP 获得时间 | 若上游未提供观测时间，使用抓取完成时间标为 `ERP_OBSERVED`，不得伪称平台源时点 |
 | quality | OBSERVED / PARTIAL / UNKNOWN / STALE | 库存值 0 与 UNKNOWN 不同 |
+
+### FBA `details` 与缺字段
+
+官方 `getInventorySummaries` 的 `details` 默认 false；不要求详细字段时无法据此做数量型断货推断。适配器必须记录请求是否 `details=true`，若无 `inventoryDetails` 则标记 `NOT_REQUESTED/UNKNOWN`。在 `startDateTime` 模式使用卖家 SKU 过滤时，先按官方操作语义验证过滤是否适用，不能臆测来源只覆盖指定 SKU。
 
 ## 4. Finances Transaction
 

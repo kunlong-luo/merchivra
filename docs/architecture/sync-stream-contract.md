@@ -44,6 +44,12 @@ W->>DB: 完成当前窗口 + 推进 highWatermark
 - 分页过期：丢弃旧 token，重建有重叠的更新窗口，再做幂等写入。
 - 任务可以 CANCEL/PAUSE，但不可抹除 stream 上的已确认进度和失败证据。
 
+## 2.1 查询参数指纹与数据字段完整性
+
+Orders `searchOrders` 后续页原则上继续使用初次查询的相同 Marketplace 与时间窗口过滤，不将任意后续任务参数混入既有分页 Token；官方允许修改的页大小或 includedData 例外必须按具体版本校验并记录。过期 Token 以稳定窗口从安全点重扫，复用 Canonical 事件幂等键。
+
+FBA 的库存增量变化查询与商品 SKU 过滤具有不同操作语义，不能把 Amazon 没返回的库存数据当成明确零件数。详细能力矩阵见 [INT-002](../integrations/sp-api-operation-matrix.md)。
+
 ## 3. 验收
 
 | 场景 | 预期 |
