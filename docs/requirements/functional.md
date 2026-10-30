@@ -27,6 +27,20 @@
 | FR-ADS-01 | P1 | 广告报表 | 广告花费与归因窗口 | 广告 API 独立授权 |
 | FR-AUTO-01 | P2 | 补货预测/自动化 | 规则、建议与审核 | 默认不可自动更改平台资源 |
 
+## 第二轮补充需求（跨模块关键约束）
+
+| ID | 优先级 | 业务功能 | 核心输入/输出 | 异常与边界 |
+|---|---|---|---|---|
+| FR-SYS-03 | P0 | 安全首次引导与管理员初始化 | 一次性初始化令牌、租户 Owner | 禁止默认密码、阻止第二次初始化 |
+| FR-ORD-04 | P0 | 订单履约/退款/财务独立状态 | 原始履约枚举、退款事件、财务匹配 | 不用 REFUNDED 替换 SHIPPED |
+| FR-CAT-03 | P0 | 映射版本与未映射保留 | 来源 Seller SKU、版本化映射 | 缺少映射不能丢弃订单/库存事实 |
+| FR-INV-03 | P0 | 库存数据质量标签 | UNKNOWN / ZERO / STALE | 无数据不等于 0 |
+| FR-FIN-03 | P0 | 来源优先级与事件对账 | 订单预计、财务已入账、结算视图 | 同源金额不双计、未匹配进异常池 |
+| FR-SYNC-03 | P0 | 持久化 Stream/Run/Lease | 固定作用域高水位、attempt 证据 | 运行重启/分页过期不丢数据 |
+| FR-API-01 | P0 | HTTP 契约、幂等、分页与错误码 | REST v1、completeness、requestId | 401/403/404/409、脱敏日志 |
+
+**约束文件**：[DOM-001](../architecture/domain-state-model.md)、[API-001](../architecture/api-contracts.md)、[DATA-002](../architecture/source-reconciliation.md)、[SYNC-002](../architecture/sync-stream-contract.md)。
+
 ## 通用字段与交互要求
 
 - 列表必须支持租户安全的分页、过滤、排序；导出遵守当前用户权限。

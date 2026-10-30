@@ -22,6 +22,23 @@
 | AC-16 | FR-SYS-02 | 未登录访问私有 API；全部拒绝（健康检查例外且仅暴露必要信息） |
 | AC-17 | NFR-SEC-02 | 提交和运行日志扫描；不存在 token、buyer PII、密钥和真实数据文件 |
 
+## 第二轮新增的跨模块验收
+
+| 用例 ID | 需求 | Given / When / Then |
+|---|---|---|
+| AC-18 | FR-ORD-04 | 已发货订单出现部分退款；查看详情；履约仍 SHIPPED 且 refundStatus PARTIAL |
+| AC-19 | FR-CAT-03 | Seller SKU 未映射；订单/FBA 来源记录仍入库；映射后可重新关联且审计版本 |
+| AC-20 | FR-ORD-04 | 较旧 UNSHIPPED 通知晚于 SHIPPED 到达；已知更晚平台状态不被倒序覆盖 |
+| AC-21 | FR-INV-03 | 上游未返回库存桶；报告 UNKNOWN 而不是 0；明确观测 0 才能显示 ZERO |
+| AC-22 | FR-FIN-03 | Orders 预计 40、Finances 交易 38；分别呈现，不合计为 78，也不由发货推断结算 |
+| AC-23 | FR-SYNC-03 | 不同日期创建多个 run；均从同一 stream 安全高水位推进而非丢游标 |
+| AC-24 | FR-FIN-03 | 财务无匹配订单或来源唯一键不可靠；进入待判定池且不自动双计 |
+| AC-25 | FR-SYNC-03 | 第三页宕机、分页 Token 过期、旧 Worker 复活；回扫无重复且过期租约不能提交 |
+| AC-26 | FR-API-01 | 未认证/越租户/重复任务/授权失效；得到一致的脱敏错误码、HTTP/任务状态 |
+| AC-27 | FR-SYS-03 | 新实例首次初始化一次成功，再次初始化失败；无默认管理员密码 |
+
+详见 [端到端场景](../testing/end-to-end-scenarios.md)。
+
 ## 各层测试
 
 - 领域测试：SKU 映射、状态迁移、利润公式、成本有效区间。

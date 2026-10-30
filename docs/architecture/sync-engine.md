@@ -1,77 +1,43 @@
-# SYNC-001 · Amazon 数据同步引擎设计
+# SYNC-001 · 同步引擎总览（第二轮修订）
 
-**设计目标：可恢复 + 幂等 + 可观测 + 平台限流友好。** 不依赖具体 Amazon 版本，按接口适配器隔离。
+**状态：Proposed**。本文件定义架构职责；核心的持久 Stream、Run、Attempt、租约、幂等与检查点协议以 [SYNC-002](sync-stream-contract.md) 为准，禁止使用「每次新建 job 自带独立唯一 checkpoint」代替。
 
-## 1. 时序图
-
-```mermaid
-sequenceDiagram
-autonumber
-participant T as Scheduler / User
-participant J as Job Store (PG)
-participant W as Sync Worker
-participant L as Quota Limiter
-participant A as Amazon Adapter
-participant D as Domain DB
-
-T->>J: 建立 job(scope, type, window)
-W->>J: 租约领取待运行任务
-J-->>W: checkpoint + attempt
-loop 分页或时间窗口
-W->>L: 请求配额
-L-->>W: 允许执行
-W->>A: Fetch page / cursor
-alt success
-A-->>W: 标准化数据 + next page
-W->>D: 事务内幂等 upsert
-D-->>W: 提交成功
-W->>J: 安全推进 checkpoint
-else 429 / 5xx / transient
-A-->>W: 错误类型与 Retry-After(如有)
-W->>J: 记录退避与下次执行
-else 401 / 403 / validation
-A-->>W: 非瞬时错误
-W->>J: 停止任务并提示授权/数据修复
-end
-end
-W->>J: 任务完成 + 统计
-```
-
-**事务边界**：数据提交后再推进游标，或在同事务内提交数据与检查点；绝不先提交检查点再写业务数据。
-
-## 2. Job 生命周期
+## 1. 总体流程
 
 ```mermaid
-stateDiagram-v2
-[*] --> QUEUED
-QUEUED --> RUNNING: 获取租约
-RUNNING --> SUCCEEDED: 所有分页已提交
-RUNNING --> WAITING_RETRY: 可重试错误
-WAITING_RETRY --> RUNNING: 退避到期
-RUNNING --> FAILED: 权限或永久错误
-RUNNING --> PAUSED: 用户停止/配额保护
-PAUSED --> QUEUED: 恢复
-FAILED --> QUEUED: 人工修复后重放
-SUCCEEDED --> [*]
+flowchart TD
+A["Scheduler / Notifications / 手动触发"] --> B["持久 sync_stream（作用域+高水位）"]
+B --> C["新建 sync_run（单次执行）"]
+C --> D["Worker 获取租约与 fencing epoch"]
+D --> E["按 operation/账号/区域限流"]
+E --> F["Marketplace Adapter 拉取分页"]
+F --> G["标准化+数据质量校验"]
+G --> H["幂等写入事实表 + 已提交页证据"]
+H --> I{"窗口已全部完成？"}
+I -->|否| E
+I -->|是| J["原子推进 Stream 高水位"]
+F --> K["可重试错误: 退避"]
+K --> C
+G --> L["无效源记录: 隔离异常池"]
 ```
 
-## 3. 幂等与回填约束
+## 2. 三类状态
 
-- 每条业务事件都必须建立稳定幂等键：`tenant + source + account + marketplace + external-id + event-type(如适用)`。
-- 支持更新/更正事件；对同一订单采用来源更新时间及有定义的版本选择策略。
-- 时间窗口同步采用**有重叠的安全回看区间**，重叠数据依靠幂等去重。
-- 分页 Token 可能过期：按该操作版本的文档处理；Token 无效时从最近安全时间点补偿，而非永久放弃。
-- 所有 429、5xx、超时与网络重置分类处理，支持指数退避、抖动和操作限流；不硬编码全平台一个固定 QPS。
-- 失败任务必须能展示 account/marketplace/operation、脱敏错误、最后成功检查点、重试次数。
-- 每次同步记录 sourceUpdatedAt、startedAt、completedAt、recordsSeen/Upserted、lag 与 traceId。
+- **Connection**：AUTH_REQUIRED / CONNECTED / DEGRADED 等。用于账户授权状态。
+- **Stream**：稳定作用域、水位和最新健康状态。
+- **Run/Attempt**：单次触发与多次重试记录，状态 QUEUED/RUNNING/WAITING_RETRY/PAUSED/FAILED/SUCCEEDED。
 
-## 4. 特别注意
+不要将 Amazon 授权失败误归因于暂时限流，也不要因为 Job 成功就断言全部财务数据已齐全。
 
-- 不能把 Amazon 平台通知当作唯一真相来源：通知驱动增量与定期补偿需要配合。
-- Finances 的交易发生、发布和结算存在时间差；用独立流水并定期重对账。
-- FBA 快照应保存观测时间与数据来源；不能将缺失数据解释为 0。
-- 工作队列先采用 PostgreSQL 持久化任务，只有性能瓶颈经测量后再引入消息总线。
+## 3. 事务不变量
 
-## 5. 失败注入验收
+1. 只有持有有效租约的 Worker 可推进 Stream；旧 Worker 恢复后不能提交。
+2. 事实写入与进度推进采用同一 DB 事务或先安全提交事实、再推进游标；**绝不反过来**。
+3. Orders v2026-01-01 分页 Token 有有效期限制：过期后重建重叠时间窗口，不能永久依赖保存 Token。
+4. 一次窗口中的全部分页确认完成后方可推进高水位；空页与结束信号分开判断。
+5. 通知只加速发现变化，仍须周期性回扫/补偿、财务重对账。
+6. 平台库存快照不是仓储增减事件；不同 API 的水位与速率不可混用。
 
-同一批数据三次重放；第三页中断；Token 过期；429 限流；401 授权失效；一条非法商品数据；跨租户任务被错误配置；Worker 崩溃后租约回收；竞态同作用域提交。这些测试必须对应 [QA 文档](../requirements/acceptance.md)。
+## 4. 验收入口
+
+[AC-04/05/12/13/23/25](../requirements/acceptance.md) 与 [E2E-06](../testing/end-to-end-scenarios.md) 是最小契约；正式实现必须加入操作级限流、游标过期、漏页、重复、乱序、任务租约/崩溃等失败注入测试。

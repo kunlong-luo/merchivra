@@ -40,26 +40,19 @@ D --> H["成本/订单/库存关联"]
 
 **关键例外**：同一 ASIN 存在不同变体、包装、账号 Seller SKU；缺失映射不可静默归属错误的内部 SKU。
 
-## BIZ-03 订单生命周期与退款
+## BIZ-03 订单履约、退款与结算三条独立轴
 
 ```mermaid
-stateDiagram-v2
-[*] --> Observed: 从平台获取
-Observed --> Pending: 待履约
-Observed --> Shipped: 已履约
-Pending --> Shipped: 状态更新
-Pending --> Cancelled: 取消
-Shipped --> Refunded: 部分或全部退款
-Cancelled --> [*]
-Refunded --> [*]
-Shipped --> [*]
-note right of Observed
-仅为 ERP 简化状态视图；
-保留平台原始状态与时间
-end note
+flowchart LR
+A["平台订单事实"] --> F["履约状态（Amazon 原值）"]
+B["财务退款/冲销事件"] --> R["退款状态（NONE/PARTIAL/FULL/UNKNOWN）"]
+C["财务已入账与结算事件"] --> S["财务/结算状态"]
+F --> UI["订单详情（并列展示）"]
+R --> UI
+S --> UI
 ```
 
-**注意**：退款、付款、结算可在订单生命周期之外异步发生，不要求与订单状态严格同步。
+**核心不变量**：一张订单可以是 `SHIPPED + PARTIAL_REFUND + POSTED`；退款不能将履约状态改为 `REFUNDED`，订单发货也不能推断已结算。乱序消息按平台最后更新时间/数据版本谨慎处理，保留原始状态。详见 [DOM-001](../architecture/domain-state-model.md)。
 
 ## BIZ-04 FBA 库存对账
 
