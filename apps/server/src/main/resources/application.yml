@@ -1,5 +1,12 @@
 server:
   port: 8080
+  servlet:
+    session:
+      timeout: 4h
+      cookie:
+        http-only: true
+        same-site: strict
+        secure: ${MERCHIVRA_SESSION_COOKIE_SECURE:false}
 
 spring:
   application:
@@ -20,23 +27,9 @@ management:
     health:
       show-details: never
 
-# An explicit opt-in is required: unauthenticated M0 endpoints may only
-# serve made-up demo fixtures. Never use this flag for production data.
 merchivra:
   demo:
     enabled: ${MERCHIVRA_DEMO_ENABLED:false}
-
-# Session cookie is HttpOnly + Strict. Enable secure=true behind HTTPS.
-server:
-  servlet:
-    session:
-      timeout: 4h
-      cookie:
-        http-only: true
-        same-site: strict
-        secure: ${MERCHIVRA_SESSION_COOKIE_SECURE:false}
-
-merchivra:
   bootstrap:
     username: ${MERCHIVRA_BOOTSTRAP_USERNAME:}
     password: ${MERCHIVRA_BOOTSTRAP_PASSWORD:}
