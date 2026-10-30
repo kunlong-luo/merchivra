@@ -30,7 +30,7 @@ cp .env.example .env
 # Set a strong MERCHIVRA_DB_PASSWORD, and set your own
 # MERCHIVRA_BOOTSTRAP_USERNAME and MERCHIVRA_BOOTSTRAP_PASSWORD (>=16 chars).
 # No built-in password is provided.
-docker compose -f deploy/compose.yaml up --build
+docker compose --env-file .env -f deploy/compose.yaml up --build
 ```
 
 - Web: http://localhost:3000

@@ -33,7 +33,7 @@
 cp .env.example .env
 # 先将 MERCHIVRA_DB_PASSWORD 改为随机强密码
 # 另设置 MERCHIVRA_BOOTSTRAP_USERNAME 和 MERCHIVRA_BOOTSTRAP_PASSWORD（自设至少 16 位）
-docker compose -f deploy/compose.yaml up --build
+docker compose --env-file .env -f deploy/compose.yaml up --build
 
 # 浏览器：http://localhost:3000
 # 仅本机读取：http://localhost:8080/api/v1/demo/overview

@@ -24,7 +24,7 @@ jobs:
           PY
       - name: Build and run Nginx, Spring Boot and PostgreSQL
         run: |
-          docker compose -f deploy/compose.yaml up --build -d postgres server web
+          docker compose --env-file .env -f deploy/compose.yaml up --build -d postgres server web
           ready=0
           for i in $(seq 1 120); do
             if curl -fsS http://127.0.0.1:3000/api/v1/ping >/dev/null 2>&1; then
@@ -42,7 +42,7 @@ jobs:
           python3 scripts/smoke_mock_chain.py --stage initial
       - name: Restart backend and verify persisted chain and logout
         run: |
-          docker compose -f deploy/compose.yaml restart server
+          docker compose --env-file .env -f deploy/compose.yaml restart server
           ready=0
           for i in $(seq 1 80); do
             if curl -fsS http://127.0.0.1:3000/api/v1/ping >/dev/null 2>&1; then
@@ -58,7 +58,7 @@ jobs:
           python3 scripts/smoke_mock_chain.py --stage restart
       - name: Diagnostics
         if: failure()
-        run: docker compose -f deploy/compose.yaml logs --no-color --tail=150
+        run: docker compose --env-file .env -f deploy/compose.yaml logs --no-color --tail=150
       - name: Dispose of local data
         if: always()
-        run: docker compose -f deploy/compose.yaml down --volumes --remove-orphans
+        run: docker compose --env-file .env -f deploy/compose.yaml down --volumes --remove-orphans

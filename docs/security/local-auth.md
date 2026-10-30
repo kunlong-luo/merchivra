@@ -6,7 +6,7 @@
 
 1. 在仓库根目录复制 `.env.example` 为 `.env`，将数据库密码改成强密码。
 2. 设置 `MERCHIVRA_BOOTSTRAP_USERNAME`（3–64 位，允许字母数字和 `._-`）和 `MERCHIVRA_BOOTSTRAP_PASSWORD`（**至少 16 个字符、必须自己生成**）；可修改 `MERCHIVRA_BOOTSTRAP_TENANT_NAME`。
-3. 在本机执行 `docker compose -f deploy/compose.yaml up --build`，打开 `http://localhost:3000` 输入刚设定的账号密码。
+3. 在本机执行 `docker compose --env-file .env -f deploy/compose.yaml up --build`，打开 `http://localhost:3000` 输入刚设定的账号密码。
 4. 登录后仅可浏览固定虚构 Mock 数据；另有 `GET /api/v1/seller-accounts` 返回当前真实登录租户下的已建店铺（首次新租户通常为空）。
 5. 首次成功初始化后建议**从运行环境删除 Bootstrap Password**，重启不会覆盖或重置已有密码。
 
