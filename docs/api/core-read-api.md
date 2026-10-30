@@ -33,3 +33,7 @@
 代码位置：`apps/server/src/main/java/org/merchivra/erp/catalog/MarketplaceReadController.java`、`apps/web/src/CoreWorkspace.vue`、`apps/web/src/lib/core.ts`。
 
 关联：[SEC-003 Session](../security/local-auth.md)、[DATA-004 核心表](../architecture/core-domain-foundation.md)、[TEST-003 轻量 CI](../testing/ci-policy.md)、[Agent.md](../../Agent.md)。
+
+## 2026-10-30 一次性运行态验证补记
+
+[一次性 PostgreSQL 17 冒烟验证](https://github.com/kunlong-luo/merchivra/actions/runs/41059134533) 已在临时 PostgreSQL 17 验证 Flyway V1–V4、当前租户站点列表和陌生 Marketplace 查询 404（以及本地店铺配置链路）。该验证范围有限，**不能**代替复杂订单/Listing/FBA 带数据夹具的租户间 SQL 集成验证、完整分页、Docker Compose 或正式授权审查。

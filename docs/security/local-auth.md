@@ -44,10 +44,10 @@
 - 没有 Seller 真实 OAuth / SP-API 凭证加密或权限角色，真实 Amazon 数据**仍禁止接入**。
 - 当前只实现 OWNER 全租户读与**本地店铺初始化写入**；细粒度员工/财务/店铺角色没有实现。仅 [API-004](../api/local-seller-setup.md) 具有局部配置审计，缺少全站审计、统一 API 速率限制、账户锁定/暴力破解防护、密钥管理、RLS、分布式 Session 存储、多实例一致性与正式安全扫描。
 - 浏览器 Cookie 走本地 HTTP 仅是开发便利；若要 HTTPS 部署必须调整 `MERCHIVRA_SESSION_COOKIE_SECURE=true`，配置可信反向代理，并完成实际检查（当前仅绑定本地 IP）。
-- 当前没有完成真实 PostgreSQL V3 迁移和端到端浏览器登录验收；CI 通过**仅验证静态类型/单元测试/构建**，不代表服务器端实机安全完整。
+- 2026-10-30 的 [一次性 PostgreSQL 17 冒烟验证](https://github.com/kunlong-luo/merchivra/actions/runs/41059134533) 已验证**临时 PostgreSQL 17 上 V1–V4 的真实启动与最小登录/CSRF/本地店铺配置链路**，但没有完成浏览器 E2E、Docker Compose 正式部署、并发与生产安全验收；不代表服务器端实机安全完整。
 
 ## 后续验收
 
-优先完成运行态 PostgreSQL V1/V2/V3/V4 迁移及启动验证、匿名 API 401、CSRF 缺失 403、登录错误密码 401、会话过期/注销、跨租户账号访问 403/不返回数据、权限撤销后 403 的负例。项目要求前期轻量 CI，详细运行态/浏览器测试留待 M3/M4 质量阶段，不将 E2E 添加到当前 CI。
+临时 PostgreSQL V1–V4 单次冒烟已通过；下一步完成 Docker Compose 联调、并发/撤销权限负例和全套生产安全审查、匿名 API 401、CSRF 缺失 403、登录错误密码 401、会话过期/注销、跨租户账号访问 403/不返回数据、权限撤销后 403 的负例。项目要求前期轻量 CI，详细运行态/浏览器测试留待 M3/M4 质量阶段，不将 E2E 添加到当前 CI。
 
 相关：[Tenant enforcement](tenant-enforcement.md)、[ADR-0005](../architecture/adrs/0005-api-authentication-tradeoffs.md)、[实施物理表](../architecture/core-domain-foundation.md)、[候选 OpenAPI](../api/README.md)。

@@ -38,7 +38,7 @@ docker compose -f deploy/compose.yaml up --build
 - Mock overview: http://localhost:8080/api/v1/demo/overview (only with `MERCHIVRA_DEMO_ENABLED=true`)
 - Actuator health: http://localhost:8080/actuator/health
 
-**Local session login now protects API and demo endpoints, but broader security and actual database integration validation remain incomplete. Keep it on localhost, do not expose it publicly.**
+**Local session login protects APIs and demo endpoints. A [one-shot PostgreSQL V1–V4 smoke](https://github.com/kunlong-luo/merchivra/actions/runs/41059134533) passed, but full Docker Compose, role security and production deployment are still unverified. Keep it on localhost; do not expose publicly.**
 
 Local development instructions: [docs/development.md](docs/development.md) · [authenticated core read APIs](docs/api/core-read-api.md) · [local Seller setup](docs/api/local-seller-setup.md) · [Mock demo guide](docs/demo.md) · [local authentication](docs/security/local-auth.md).
 

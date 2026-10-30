@@ -35,7 +35,8 @@
 
 - 无真实卖家连接、授权流程、账号 Token 存储、定时同步、正式角色矩阵或完整审计框架。审计只覆盖**本地店铺/站点配置事件**，不是全站管理操作审计。
 - 当前仍只允许全租户 Owner；未批准 G1/G2 前不要把开发期预设当成正式业务范围。**不要输入真实店铺凭证或真实订单/买家资料**。
-- CI 仅验证 Java 单测、Vue/TypeScript、Vitest 和构建；未完成真实 PostgreSQL Flyway V1–V4 迁移、事务/并发竞争、Docker Compose、浏览器或 Amazon SP-API 实测。提交代码与 CI 通过不等于上线资格。
+- **一次性 PostgreSQL 17 验证已实际通过**：[一次性 PostgreSQL 17 冒烟验证](https://github.com/kunlong-luo/merchivra/actions/runs/41059134533) 在临时数据库启动 Spring Boot，执行 Flyway V1–V4，并用 HTTP 验证登录、CSRF 缺失 403、店铺幂等重放/409、区域限制 400、已授权店铺/站点读取、两条审计事件及无权 Marketplace 404。成功后临时工作流自动从 `main` 删除，未纳入永久严格 CI。
+- 该验证**没有**覆盖并发双写/生产 RLS、实际 Docker Compose 部署、浏览器 E2E、密钥存储或 Amazon SP-API；不能据此声称生产上线资格。日常 CI 仍只执行 Java 单测、Vue 类型检查、Vitest 和构建。
 - 后续正式 Seller 接入需经安全审查：Amazon 授权、证书/密钥生命周期、细粒度 Seller Account ACL、最小权限、审计安全、撤销授权、速率限制、SP-API 数据契约等。
 
 关联：[API-003 核心只读数据](core-read-api.md)、[SEC-003](../security/local-auth.md)、[DATA-004](../architecture/core-domain-foundation.md)、[Agent 开发策略](../../Agent.md)。
