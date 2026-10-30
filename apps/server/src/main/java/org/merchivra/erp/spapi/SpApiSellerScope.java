@@ -11,6 +11,12 @@ import java.util.UUID;
 public record SpApiSellerScope(UUID tenantId, UUID sellerAccountId,
         String sellerId, String marketplaceId, SpApiRegion region,
         String refreshToken, Set<String> approvedRoles) {
+    @Override public String toString() {
+        return "SpApiSellerScope[tenantId=" + tenantId + ",sellerAccountId=" + sellerAccountId
+            + ",sellerId=<redacted>,marketplaceId=" + marketplaceId
+            + ",region=" + region + ",refreshToken=<redacted>,approvedRoles=<redacted>]";
+    }
+
     public SpApiSellerScope {
         if (tenantId == null || sellerAccountId == null || region == null
             || sellerId == null || sellerId.isBlank()
