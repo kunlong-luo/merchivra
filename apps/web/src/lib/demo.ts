@@ -92,3 +92,39 @@ export async function fetchDemoOverview(): Promise<DemoOverview> {
   }
   return parseDemoOverview(await response.json())
 }
+
+export const demoSyncRunSchema = z.object({
+  id: z.string().uuid(),
+  status: z.enum(['SUCCEEDED', 'FAILED_RETRYABLE']),
+  source: z.literal('MOCK'),
+  fixtureCount: z.number().int().nonnegative(),
+  failureCode: z.string().nullable(),
+  startedAt: z.string(),
+  finishedAt: z.string()
+})
+export type DemoSyncRun = z.infer<typeof demoSyncRunSchema>
+
+async function readList<T>(url: string, schema: z.ZodType<T>): Promise<T> {
+  const res = await fetch(url, { headers: { Accept: 'application/json' }, credentials: 'same-origin' })
+  if (!res.ok) throw new Error(`Mock API: HTTP ${res.status}`)
+  return schema.parse(await res.json())
+}
+export const fetchDemoOrders = (account: string) =>
+  readList('/api/v1/demo/orders?accountId=' + encodeURIComponent(account), z.array(orderSchema))
+export const fetchDemoListings = (account: string) =>
+  readList('/api/v1/demo/listings?accountId=' + encodeURIComponent(account), z.array(listingSchema))
+export const fetchDemoInventory = (account: string) =>
+  readList('/api/v1/demo/inventory/fba?accountId=' + encodeURIComponent(account), z.array(inventorySchema))
+export const fetchDemoSyncRuns = () =>
+  readList('/api/v1/demo/sync-runs', z.array(demoSyncRunSchema))
+
+export async function startDemoSync(simulateFailure: boolean): Promise<DemoSyncRun> {
+  const response = await fetch('/api/v1/demo/sync-runs', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID() },
+    credentials: 'same-origin',
+    body: JSON.stringify({ simulateFailure })
+  })
+  if (!response.ok) throw new Error(`Mock 同步返回 HTTP ${response.status}`)
+  return demoSyncRunSchema.parse(await response.json())
+}
