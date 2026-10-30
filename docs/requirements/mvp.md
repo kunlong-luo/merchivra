@@ -17,6 +17,17 @@
 - 管理用户：配置店铺、角色、同步计划与异常处理。
 - 见 [用户与权限角色](../product/personas.md)。
 
+## G1 首发试点候选（第三轮评审补充）
+
+**暂定选项，尚未获产品负责人批准**：建议首个试点为美国 Marketplace（SP-API NA region）、一个自有 Seller 账号、FBA 订单/库存与 FBM 订单只读。FBM 实物库存、发货与运单回传不在 P0。为未来多账号/多站点预留设计，但不要求首发同时覆盖全部站点。
+
+- 不得将 FBA 观测值当作 FBM 仓库库存。
+- 未取得 Finance 权限和费用/成本时，显示相应数据不可用，不构造“完整净利润”。
+- 首版关键经营指标建议命名 **预估订单贡献额（已知费用范围）**，与商品毛利、平台已入账与结算分开；等待 DEC-07 财务确认。
+- US/USD 只是试点默认；不意味着永久只支持美元，也不代表已拥有 API 授权。
+
+阅读：[G1 评审包](../product/g1-review-package.md) · [FBA/FBM 边界](../product/fulfillment-scope.md) · [SKU 策略](../product/sku-listing-policy.md) · [财务规则](../product/finance-rulebook.md) · [手工业务验收](g1-business-acceptance.md)。
+
 ## 3. 首发范围
 
 | Epic | P0 功能 | 可演示场景 |

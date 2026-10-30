@@ -30,6 +30,22 @@
 | FR-MOCK-01 | [ARCH-001](../architecture/overview.md)、[TEST-002](../testing/end-to-end-scenarios.md) | synthetic fixtures | API-001 / UX-002 | AC-15 |
 | FR-API-01 | API-001、SEC-001 | requestId / audit | API-001 / UX-002 | AC-26 |
 
+## G1 业务验收追踪（单独设计验收，不代替 AC）
+
+| G1 场景 | 涉及 FR | G1 验收 |
+|---|---|---|
+| FBA 销售/部分退款 | FR-FIN-02、FR-ORD-04 | G1-AC-01/02 |
+| FBM 订单只读与缺失物流费 | FR-ORD-02、FR-FIN-02 | G1-AC-03 |
+| Orders / Finances 防双计 | FR-FIN-03 | G1-AC-04/14 |
+| FBA UNKNOWN / ZERO | FR-INV-03 | G1-AC-05 |
+| SKU 归属冲突及未映射 | FR-CAT-02/03 | G1-AC-06/11 |
+| USD/EUR 汇总 | FR-DASH-01 | G1-AC-07 |
+| 历史成本与退款先到 | FR-COST-01、FR-ORD-03 | G1-AC-08 |
+| 站点和 API 角色/权限 | FR-SHOP-02、FR-FIN-01、FR-SYS-01 | G1-AC-09/10/12 |
+| 税费、退货及净额源 | FR-FIN-03、FR-INV-01 | G1-AC-13/15 |
+
+详见 [G1-QA-001](g1-business-acceptance.md) 和 [BIZ-004](../product/business-scenarios.md)。G1-AC 是**人工业务规则复核条款，未执行**；原 30 条 AC 是系统实施后的验收规格，同样未执行。
+
 ## P1 / P2 预留（非 MVP 开发准入范围）
 
 | 需求 ID | 后续设计依赖 | 状态 |
