@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import type { AuthViewer } from './lib/auth'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { fetchPing } from './lib/api'
 import { fetchDemoOverview, fetchDemoSyncRuns, startDemoSync, fetchDemoOrders, fetchDemoListings, fetchDemoInventory, fetchDemoCoreStatus } from './lib/demo'
 
 type View = 'overview' | 'orders' | 'catalog' | 'inventory' | 'sync'
 
+defineProps<{ viewer: AuthViewer; signingOut: boolean }>()
+const emit = defineEmits<{ logout: [] }>()
 const activeView = ref<View>('overview')
 const accountId = ref('')
 const queryClient = useQueryClient()
@@ -160,7 +163,9 @@ function tabTitle() {
         <div class="breadcrumb">工作空间 <span>/</span> <strong>{{ tabTitle() }}</strong></div>
         <div class="topbar-right">
           <span :class="['connection', { connectionError: pingError }]"><span class="connection-dot"></span>{{ apiStatus }}</span>
-          <span class="avatar" aria-label="演示工作空间">D</span>
+          <span class="avatar" aria-label="已登录">✓</span>
+          <button type="button" class="logout-control" :disabled="signingOut"
+            @click="emit('logout')">{{ signingOut ? '退出中…' : '退出登录' }}</button>
         </div>
       </header>
 

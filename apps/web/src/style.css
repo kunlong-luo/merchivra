@@ -158,3 +158,31 @@ td { padding: 19px; border-top: 1px solid #f0f3f7; color: #71829a; }
 .core-storage-note { color: #8797aa; font-size: 11px; margin: 14px 0 0; line-height: 1.6; }
 @media (max-width: 1100px) { .core-count-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 500px) { .core-count-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* Authentication is a real access gate, not a mocked logged-in UI. */
+.auth-shell { min-height:100vh;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(circle at 20% 10%,#e7f1ff,#f6f9fd 48%,#eaf0f8);
+  padding:24px; }
+.auth-card { width:min(100%,440px);background:#fff;border:1px solid #e0e9f4;
+  border-radius:20px;padding:36px;box-shadow:0 18px 60px #233b5c17;display:flex;
+  flex-direction:column;gap:12px; }
+.auth-symbol { height:50px;width:50px;display:grid;place-items:center;border-radius:14px;
+  background:linear-gradient(135deg,#3375c5,#5eb8cf);color:#fff;font-size:26px;font-weight:900; }
+.auth-kicker { color:#7298c4;letter-spacing:.16em;font-size:10px;font-weight:800;margin-top:10px; }
+.auth-card h1 { font-size:29px;margin:8px 0 0;color:#19324f; }
+.auth-card p { color:#75879c;font-size:13px;line-height:1.7;margin:0 0 9px; }
+.auth-card label { font-size:12px;color:#506985;font-weight:700;margin-top:7px; }
+.auth-card input { width:100%;border:1px solid #d9e3f0;border-radius:9px;
+  padding:13px;font-size:14px;color:#1b3353; }
+.auth-card input:focus { outline:2px solid #9bc7fa;outline-offset:1px; }
+.auth-submit { margin-top:9px;border:0;border-radius:9px;background:#346fae;color:#fff;
+  padding:14px;font-weight:700; }
+.auth-submit:hover { background:#235c98; }
+.auth-footnote { font-size:11px;color:#92a0b2;line-height:1.8;
+  background:#f5f8fc;padding:12px;border-radius:10px;overflow-wrap:anywhere; }
+.auth-footnote code { color:#53759f;font-size:11px; }
+.auth-card a { align-self:center;font-size:12px;color:#477fbe;text-decoration:none; }
+.auth-error { background:#fff0ee;color:#b5453f;border-radius:8px;font-size:12px;padding:11px; }
+.logout-control { border:1px solid #dce4ed;border-radius:8px;background:#fff;color:#627b96;
+  padding:8px 11px;font-size:11px; }
+.logout-control:hover { border-color:#9fbedf; }
