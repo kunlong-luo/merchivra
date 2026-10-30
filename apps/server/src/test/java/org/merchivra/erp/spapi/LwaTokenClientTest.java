@@ -24,8 +24,9 @@ class LwaTokenClientTest {
     @Test
     void reusesAccessTokenInMemoryForSameSellerGrant() throws Exception {
         HttpClient http = mock(HttpClient.class);
+        HttpResponse<String> success = json(200, "{\"access_token\":\"unit-only-token\",\"expires_in\":3600}");
         when(http.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-            .thenReturn(json(200, "{\"access_token\":\"unit-only-token\",\"expires_in\":3600}"));
+            .thenReturn(success);
         var tokens = new LwaTokenClient(http, URI.create("http://localhost:12345/token"),
             "fake-client", "fake-secret", Clock.fixed(Instant.parse("2026-10-30T00:00:00Z"), ZoneOffset.UTC));
         assertEquals("unit-only-token", tokens.accessToken("fake-refresh-1"));
@@ -37,8 +38,9 @@ class LwaTokenClientTest {
     @Test
     void doesNotLeakAmazonAuthenticationErrorBody() throws Exception {
         HttpClient http = mock(HttpClient.class);
+        HttpResponse<String> rejected = json(401, "confidential-refresh-and-client-secret");
         when(http.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
-            .thenReturn(json(401, "confidential-refresh-and-client-secret"));
+            .thenReturn(rejected);
         var tokens = new LwaTokenClient(http, URI.create("http://localhost:12345/token"),
             "fake-client", "fake-secret", Clock.systemUTC());
         var error = assertThrows(java.io.IOException.class,
