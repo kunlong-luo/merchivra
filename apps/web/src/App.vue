@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useQuery } from '@tanstack/vue-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { fetchPing } from './lib/api'
-import { fetchDemoOverview } from './lib/demo'
+import { fetchDemoOverview, fetchDemoSyncRuns, startDemoSync, fetchDemoOrders, fetchDemoListings, fetchDemoInventory } from './lib/demo'
 
-type View = 'overview' | 'orders' | 'catalog' | 'inventory'
+type View = 'overview' | 'orders' | 'catalog' | 'inventory' | 'sync'
 
 const activeView = ref<View>('overview')
 const accountId = ref('')
+const queryClient = useQueryClient()
+const syncMessage = ref('')
 const { data: ping, isError: pingError, isPending: pingPending } = useQuery({
   queryKey: ['api', 'ping'], queryFn: fetchPing, staleTime: 30_000, retry: 1
 })
@@ -28,6 +30,43 @@ watch(overview, value => {
   }
 }, { immediate: true })
 
+const { data: syncRuns, isPending: syncRunsPending, isError: syncRunsError } = useQuery({
+  queryKey: ['api', 'demo', 'sync-runs'],
+  queryFn: fetchDemoSyncRuns,
+  enabled: computed(() => activeView.value === 'sync'),
+  staleTime: 15_000
+})
+const { mutate: runDemoSync, isPending: syncPending } = useMutation({
+  mutationFn: startDemoSync,
+  onSuccess: run => {
+    syncMessage.value = run.status === 'SUCCEEDED'
+      ? '模拟同步成功：快照和运行记录已保存'
+      : '模拟失败已记录：快照未覆盖，可重新创建任务'
+    void queryClient.invalidateQueries({ queryKey: ['api', 'demo'] })
+  },
+  onError: error => {
+    syncMessage.value = error instanceof Error ? error.message : '无法启动模拟同步'
+  }
+})
+const { data: shopOrders, isPending: shopOrdersPending, isError: shopOrdersError } = useQuery({
+  queryKey: ['api', 'demo', 'orders', accountId],
+  queryFn: () => fetchDemoOrders(accountId.value),
+  enabled: computed(() => !!accountId.value && activeView.value === 'orders'),
+  staleTime: 30_000
+})
+const { data: shopListings, isPending: shopListingsPending, isError: shopListingsError } = useQuery({
+  queryKey: ['api', 'demo', 'listings', accountId],
+  queryFn: () => fetchDemoListings(accountId.value),
+  enabled: computed(() => !!accountId.value && activeView.value === 'catalog'),
+  staleTime: 30_000
+})
+const { data: shopInventory, isPending: shopInventoryPending, isError: shopInventoryError } = useQuery({
+  queryKey: ['api', 'demo', 'inventory', accountId],
+  queryFn: () => fetchDemoInventory(accountId.value),
+  enabled: computed(() => !!accountId.value && activeView.value === 'inventory'),
+  staleTime: 30_000
+})
+
 const account = computed(() => overview.value?.accounts.find(a => a.id === accountId.value))
 const summary = computed(() => overview.value?.summaries.find(s => s.accountId === accountId.value))
 const orders = computed(() => overview.value?.orders.filter(o => o.accountId === accountId.value) ?? [])
@@ -42,7 +81,8 @@ const navigation: { key: View; label: string; symbol: string }[] = [
   { key: 'overview', label: '经营总览', symbol: '◫' },
   { key: 'orders', label: '订单管理', symbol: '▤' },
   { key: 'catalog', label: '商品与 Listing', symbol: '▧' },
-  { key: 'inventory', label: 'FBA 库存', symbol: '▥' }
+  { key: 'inventory', label: 'FBA 库存', symbol: '▥' },
+  { key: 'sync', label: '模拟同步', symbol: '↻' }
 ]
 
 function money(amount?: { amount: string; currency: string } | null) {
@@ -213,10 +253,12 @@ function tabTitle() {
           </template>
 
           <section v-else-if="activeView === 'orders'" class="panel full-panel">
-            <div class="panel-heading"><div><h2>订单列表</h2><p>订单业务事实与退款、财务状态保持独立</p></div><span class="count-pill">{{ orders.length }} 笔</span></div>
-            <div class="table-scroll">
+            <div class="panel-heading"><div><h2>订单列表</h2><p>订单业务事实与退款、财务状态保持独立</p></div><span class="count-pill">{{ shopOrders?.length ?? 0 }} 笔</span></div>
+            <div v-if="shopOrdersPending" class="empty-state">读取订单中…</div>
+            <div v-else-if="shopOrdersError" class="empty-state">订单查询失败，请检查本地服务</div>
+            <div v-else class="table-scroll">
               <table><thead><tr><th>Amazon 订单（模拟）</th><th>Seller SKU</th><th>预计商品收入</th><th>退款</th><th>履约</th><th>财务</th><th>来源更新时间</th></tr></thead>
-                <tbody><tr v-for="order in orders" :key="order.id">
+                <tbody><tr v-for="order in shopOrders ?? []" :key="order.id">
                   <td class="strong-cell">{{ order.externalOrderId }}</td><td>{{ order.sellerSku }}</td>
                   <td class="nowrap">{{ money(order.provisionalSales) }}</td>
                   <td><span :class="['status-chip', order.refundStatus === 'NONE' ? 'chip-muted' : 'chip-amber']">{{ order.refundStatus === 'NONE' ? '无退款' : '部分退款' }}</span><div v-if="order.refundStatus !== 'NONE'" class="secondary-cell">{{ money(order.refundAmount) }}</div></td>
@@ -225,14 +267,16 @@ function tabTitle() {
                   <td class="small-cell">{{ timestamp(order.sourceUpdatedAt) }}</td>
                 </tr></tbody></table>
             </div>
-            <div v-if="!orders.length" class="empty-state">当前店铺没有 Mock 订单</div>
+            <div v-if="shopOrders && !shopOrders.length" class="empty-state">当前店铺没有 Mock 订单</div>
           </section>
 
           <section v-else-if="activeView === 'catalog'" class="panel full-panel">
-            <div class="panel-heading"><div><h2>Listing 与 SKU 归属</h2><p>ASIN、Seller SKU 与内部 SKU 不是同一个标识</p></div><span class="count-pill">{{ listings.length }} 个 Listing</span></div>
-            <div class="table-scroll">
+            <div class="panel-heading"><div><h2>Listing 与 SKU 归属</h2><p>ASIN、Seller SKU 与内部 SKU 不是同一个标识</p></div><span class="count-pill">{{ shopListings?.length ?? 0 }} 个 Listing</span></div>
+            <div v-if="shopListingsPending" class="empty-state">读取 Listing 中…</div>
+            <div v-else-if="shopListingsError" class="empty-state">Listing 查询失败，请检查本地服务</div>
+            <div v-else class="table-scroll">
               <table><thead><tr><th>Seller SKU</th><th>ASIN（模拟）</th><th>内部 SKU</th><th>映射状态</th></tr></thead>
-                <tbody><tr v-for="item in listings" :key="item.id">
+                <tbody><tr v-for="item in shopListings ?? []" :key="item.id">
                   <td class="strong-cell">{{ item.sellerSku }}</td><td>{{ item.asin }}</td>
                   <td>{{ item.internalSku ?? '—' }}</td><td><span class="status-chip" :class="item.mappingStatus === 'ACTIVE' ? 'chip-green' : 'chip-amber'">{{ qualityLabel(item.mappingStatus) }}</span></td>
                 </tr></tbody></table>
@@ -241,10 +285,12 @@ function tabTitle() {
           </section>
 
           <section v-else-if="activeView === 'inventory'" class="panel full-panel">
-            <div class="panel-heading"><div><h2>FBA 库存快照</h2><p>观测型库存，不是仓库出入库流水；未知数值不可当 0</p></div><span class="count-pill">{{ inventory.length }} 条观测</span></div>
-            <div class="table-scroll">
+            <div class="panel-heading"><div><h2>FBA 库存快照</h2><p>观测型库存，不是仓库出入库流水；未知数值不可当 0</p></div><span class="count-pill">{{ shopInventory?.length ?? 0 }} 条观测</span></div>
+            <div v-if="shopInventoryPending" class="empty-state">读取库存中…</div>
+            <div v-else-if="shopInventoryError" class="empty-state">库存查询失败，请检查本地服务</div>
+            <div v-else class="table-scroll">
               <table><thead><tr><th>Seller SKU</th><th>可售</th><th>预留</th><th>数据质量</th><th>来源观测时间</th></tr></thead>
-                <tbody><tr v-for="item in inventory" :key="item.id">
+                <tbody><tr v-for="item in shopInventory ?? []" :key="item.id">
                   <td class="strong-cell">{{ item.sellerSku }}</td>
                   <td class="quantity-cell">{{ item.fulfillable === null ? '未知' : item.fulfillable }} <span v-if="item.fulfillable === 0" class="zero-label">已观测为 0</span></td>
                   <td>{{ item.reserved === null ? '未知' : item.reserved }}</td>
@@ -253,6 +299,30 @@ function tabTitle() {
                 </tr></tbody></table>
             </div>
             <div class="panel-caption">这是静态 Mock 快照，不提供实时缺货告警，也不代表 FBM 库存。</div>
+          </section>
+
+          <section v-else-if="activeView === 'sync'" class="panel full-panel">
+            <div class="panel-heading"><div><h2>本地模拟同步记录</h2><p>运行历史持久化到 PostgreSQL；只刷新虚构数据</p></div>
+              <span class="count-pill">最近 {{ syncRuns?.length ?? 0 }} 次</span></div>
+            <div class="sync-actions">
+              <button type="button" class="primary-button" :disabled="syncPending" @click="runDemoSync(false)">{{ syncPending ? '正在同步…' : '开始模拟同步' }}</button>
+              <button type="button" class="refresh-button" :disabled="syncPending" @click="runDemoSync(true)">模拟失败</button>
+              <span class="sync-hint">失败后创建新任务可重试；历史失败记录不会消失。</span>
+            </div>
+            <div v-if="syncMessage" class="panel-caption" role="status">{{ syncMessage }}</div>
+            <div v-if="syncRunsPending" class="empty-state">读取同步历史中…</div>
+            <div v-else-if="syncRunsError" class="empty-state">无法读取同步记录，请检查数据库</div>
+            <div v-else-if="!syncRuns?.length" class="empty-state">暂无任务。初始 Mock 快照在首次启动时保存。</div>
+            <div v-else class="table-scroll">
+              <table><thead><tr><th>任务 ID</th><th>结果</th><th>快照记录数</th><th>完成时间</th><th>说明</th></tr></thead>
+                <tbody><tr v-for="run in syncRuns" :key="run.id">
+                  <td class="strong-cell">{{ run.id.slice(0, 8) }}…</td>
+                  <td><span :class="['status-chip', run.status === 'SUCCEEDED' ? 'chip-green' : 'chip-amber']">{{ run.status === 'SUCCEEDED' ? '已完成' : '失败，可重试' }}</span></td>
+                  <td>{{ run.fixtureCount }}</td><td class="small-cell">{{ timestamp(run.finishedAt) }}</td>
+                  <td>{{ run.failureCode ?? '本地快照写入' }}</td>
+                </tr></tbody></table>
+            </div>
+            <div class="panel-caption">仅供本地演示，不代表真实 Amazon 同步、后台 Worker、自动重试或生产权限已实现。</div>
           </section>
         </div>
 

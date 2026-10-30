@@ -143,3 +143,7 @@ td { padding: 19px; border-top: 1px solid #f0f3f7; color: #71829a; }
   .footer { flex-direction: column; gap: 8px; }
 }
 @media (max-width: 390px) { .metric-grid { grid-template-columns: 1fr; } }
+
+.sync-actions { display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:20px 22px;border-bottom:1px solid #eef2f7; }
+.sync-hint { color:#8a9bad;font-size:11px;line-height:1.5; }
+.sync-actions .primary-button { margin-top:0; }
