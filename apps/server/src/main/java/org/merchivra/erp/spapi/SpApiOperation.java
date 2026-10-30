@@ -44,7 +44,27 @@ public enum SpApiOperation {
     GET_FEEDS("Feeds", "2021-06-30", "GET", "/feeds/2021-06-30/feeds",
         Set.of("feedTypes", "marketplaceIds", "pageSize", "nextToken",
             "processingStatuses", "createdSince", "createdUntil")),
-    CREATE_FEED("Feeds", "2021-06-30", "POST", "/feeds/2021-06-30/feeds", Set.of());
+    CREATE_FEED("Feeds", "2021-06-30", "POST", "/feeds/2021-06-30/feeds", Set.of()),
+    GET_SELLER_MARKETPLACES("Sellers", "v1", "GET",
+        "/sellers/v1/marketplaceParticipations", Set.of()),
+    GET_SALES_METRICS("Sales", "v1", "GET", "/sales/v1/orderMetrics",
+        Set.of("marketplaceIds", "interval", "granularity", "granularityTimeZone",
+               "buyerType", "firstDayOfWeek", "asin", "sku", "amazonProgram")),
+    GET_PRODUCT_TYPE_DEFINITION("Product Type Definitions", "2020-09-01", "GET",
+        "/definitions/2020-09-01/productTypes/{productType}",
+        Set.of("marketplaceIds", "sellerId", "productTypeVersion", "requirements",
+               "requirementsEnforced", "locale", "parentageLevel")),
+    GET_LISTING_OFFERS("Product Pricing", "v0", "GET",
+        "/products/pricing/v0/listings/{SellerSKU}/offers",
+        Set.of("MarketplaceId", "ItemCondition", "CustomerType")),
+    GET_NOTIFICATION_SUBSCRIPTION("Notifications", "v1", "GET",
+        "/notifications/v1/subscriptions/{notificationType}", Set.of("payloadVersion")),
+    PUT_LISTING("Listings", "2021-08-01", "PUT",
+        "/listings/2021-08-01/items/{sellerId}/{sku}",
+        Set.of("marketplaceIds", "issueLocale")),
+    PATCH_LISTING("Listings", "2021-08-01", "PATCH",
+        "/listings/2021-08-01/items/{sellerId}/{sku}",
+        Set.of("marketplaceIds", "issueLocale"));
 
     private final String family, version, method, path;
     private final Set<String> params;
