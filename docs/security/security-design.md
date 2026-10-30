@@ -4,6 +4,8 @@
 
 首次安装时不可存在硬编码默认管理员密码或公开可复用的初始化入口；一次性初始化与租户成员关系以 [IAM-001](../architecture/tenant-bootstrap.md) 为单一契约。未完成安全验收前不能开放公网或提交真实凭证。
 
+G2 已将跨租户防御措施细化为 [SEC-002 权限执行方案](tenant-enforcement.md)，包括同租户账号范围、数据库复合 FK、共享连接池测试、Worker 作用域和非敏感日志。身份认证选型保留 [ADR-0005](../architecture/adrs/0005-api-authentication-tradeoffs.md) 的未决状态。
+
 ## 1. 关键资产与威胁
 
 | 资产 | 主要威胁 | 必须实施的控制 |

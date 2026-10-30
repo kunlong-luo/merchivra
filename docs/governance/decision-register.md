@@ -35,6 +35,19 @@
 
 正式选择需将选项 A/B/自定义、理由、审阅者、时间记录在 Issue #15；本表是待办，不是默认同意。参见 [G1 评审结果](g1-review-2026-10-30.md)。
 
+## 第四轮 G2 关键待批准选型
+
+| DEC | 需要签署的技术选择 | 推荐候选（尚未批准） | 影响 |
+|---|---|---|---|
+| DEC-04 | tenant + account 细粒度授权 | Tenant Membership + Role Binding + Account Scope | [SEC-002](../security/tenant-enforcement.md) |
+| DEC-09 | API 身份认证 | 同源 Web 采用 HttpOnly Session + CSRF 防护，OIDC 后续可选；机器可读 OpenAPI 当前 bearerAuth 仅占位 | [ADR-0005](../architecture/adrs/0005-api-authentication-tradeoffs.md) |
+| DEC-11 | PostgreSQL 租户隔离 | 复合 FK + service 强制过滤，RLS 作为可选纵深防御 | [DATA-003](../architecture/physical-data-design.md) |
+| DEC-12 | 财务事实一致性 | 不变财务事实 + 版本化投影 + 事件关联证据 | [ARCH-003](../architecture/consistency-boundaries.md) |
+| DEC-13 | SP-API 真实字段、角色和来源唯一键 | 仅 Mock 模式通过设计；取得权限后逐操作验证 | [INT-003](../integrations/amazon-data-contract.md) |
+| DEC-14 | 历史数据留存/备份/吞吐 | 在试点负载明确后定 RPO/RTO/归档策略 | [NFR](../requirements/nonfunctional.md) |
+
+注意：G1 仍未批准的 SKU/成本/税费口径决定表结构，因此 G2 的物理字段与 OpenAPI 不能直接转为 Accepted。
+
 ## 优先级与顺序
 
 1. **G1 业务冻结**：DEC-01/02/03/05/06/07/08/15。

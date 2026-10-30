@@ -49,6 +49,10 @@ Worker --> PG
 
 订单、退款与财务状态正交，见 [DOM-001](domain-state-model.md)；平台来源与投影对账见 [DATA-002](source-reconciliation.md)；一次任务的运行不能取代持久同步流，见 [SYNC-002](sync-stream-contract.md)。首次管理员与租户边界见 [IAM-001](tenant-bootstrap.md)。
 
+## 3.2 G2 约束级架构候选
+
+概念模型与实际数据库约束之间的差距详见 [DATA-003](physical-data-design.md)。事务、重试与租约 fencing 详见 [ARCH-003](consistency-boundaries.md)。服务器端账户/租户授权执行见 [SEC-002](../security/tenant-enforcement.md)；完整可机读接口初稿见 [API-002](../api/README.md)。这些文件为候选方案，业务和技术签署后才可作为正式实现契约。
+
 ## 4. API 边界
 
 前端 API 默认 `/api/v1`（规划约定）；UI 不直接调用 Amazon；后台任务不得绕过授权和租户过滤。具体资源/错误契约见 [模块边界](modules.md)。

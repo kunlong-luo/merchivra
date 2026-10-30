@@ -17,6 +17,8 @@
 | Notifications | 通知类型与支持方式不同；例如 `TRANSACTION_UPDATE` 可经 SQS | 不能把通知作为唯一事实或认为所有事件有通知 | [Notification Types](https://developer-docs.amazon.com/sp-api/docs/notification-type-values) |
 | Registration | 开发者注册需要用途、安全控制及政策接受/审批 | 公开源码不代表自动拥有 API 权限 | [Private Developer](https://developer-docs.amazon.com/sp-api/docs/register-as-a-private-developer) |
 
+官方 API 与 ERP 内部字段的语义映射在 G2 的 [INT-003 规范化数据契约](amazon-data-contract.md) 中单独记录。该规范不能替代官方响应字段验证；操作权限和限额需按实际卖家角色重新确认。
+
 ## 2. 按操作应进一步确认
 
 | 操作/资源 | P0 用途 | 需要记录的真实接入参数 | 状态 |

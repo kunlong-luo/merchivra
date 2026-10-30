@@ -1,8 +1,20 @@
 # Merchivra ERP · 文档中心
 
-> **文档版本：0.3-g1-review｜日期：2026-10-30｜状态：Proposed / 待批准**
+> **文档版本：0.4-g2-review｜日期：2026-10-30｜状态：Proposed / 待批准**
 >
 > 当前只完成**设计规格与评审修订**，不存在已完成的 Amazon ERP 业务系统。G1/G2/G3 均未批准；详见 [第二轮评审报告](governance/review-report-2026-10-30.md)。
+
+## 第四轮（G2）数据与接口架构评审入口
+
+- [物理数据字典、键和索引 DATA-003](architecture/physical-data-design.md)：PostgreSQL Schema 候选、跨租户复合外键、来源唯一键、金额和历史成本。
+- [事务一致性 ARCH-003](architecture/consistency-boundaries.md)：同步 lease / 事务 / 可重放事实与最终一致投影。
+- [Amazon 正规化字段 INT-003](integrations/amazon-data-contract.md)：订单、库存、财务来源及缺失字段语义。
+- [租户与权限执行 SEC-002](security/tenant-enforcement.md)：服务端、数据库、Worker 的授权边界与安全负例。
+- [可机读 OpenAPI 3.1.1 候选](api/README.md)：10 条资源路径、11 个操作及 Schema；认证方式仍待 DEC-09。
+- [G2-QA-001 架构验收](requirements/g2-architecture-acceptance.md)：16 条设计验收条款（未执行）。
+- [第四轮评审报告 REVIEW-004](governance/g2-review-2026-10-30.md)：已识别数据和接口风险、准入门禁。
+
+**状态仍为 G1/G2/G3 均未批准**，本轮仅新增架构和契约草案，不存在数据库迁移或应用实现。
 
 ## 第三轮（G1）产品业务评审入口
 

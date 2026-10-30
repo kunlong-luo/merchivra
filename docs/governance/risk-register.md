@@ -17,6 +17,15 @@
 | R-11 | 文档 PR #14 与骨架 PR #1 同名文件冲突 | H | M | 先合并审核后的文档，重设/调整骨架分支 | Maintainer | 合并文档 |
 | R-12 | 开源贡献者误以为设计已经上线 | M | M | README/PR 明确 Draft / 未实现，发布清单 | Maintainer | 外部使用 |
 
+## 第四轮 G2 新增监控风险
+
+| ID | 风险 | 可能性 | 影响 | 处理 |
+|---|---|---|---|---|
+| R-13 | 同一租户 ID 但跨账号引用被数据库单列 FK 放过 | M | Critical | [SEC-002](../security/tenant-enforcement.md) + [DATA-003](../architecture/physical-data-design.md) 复合外键 |
+| R-14 | 金额或外部 transaction ID 的字段类型/唯一键判断错误 | M | H | [INT-003](../integrations/amazon-data-contract.md) + 真实脱敏验证 |
+| R-15 | 服务端 JWT/Session 方案与 OpenAPI 约定不一致 | M | H | [ADR-0005](../architecture/adrs/0005-api-authentication-tradeoffs.md) 决策后同步生成契约 |
+| R-16 | 事务成功但指标投影/任务水位不一致 | M | H | [ARCH-003](../architecture/consistency-boundaries.md) 原子写入与补偿验证 |
+
 ## 关闭责任
 
 G1 评审至少认领 R-01/03/04/09；G2 至少认领 R-05/06/07/10；任何 Critical 风险未验证控制前，不能宣称可用于生产。参见 [评审报告](review-report-2026-10-30.md)。

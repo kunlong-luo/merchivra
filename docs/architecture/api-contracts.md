@@ -1,6 +1,6 @@
 # API-001 · 前后端契约基线（设计稿）
 
-> **不是最终 OpenAPI YAML，也不是已经实现的 API。** 本文先冻结资源语义、租户身份、请求幂等、分页与错误行为。精确 JSON Schema/状态码在 G3 前生成 OpenAPI 文件并评审。
+> **不是已经实现的 API。** G2 已补充 [API-002 可机读 OpenAPI 3.1.1 候选](../api/README.md)，包含核心 Schema/Operation；尚非已签署的最终契约。认证方式（JWT vs Session）仍需 DEC-09 选择。 本文先冻结资源语义、租户身份、请求幂等、分页与错误行为。精确 JSON Schema/状态码在 G3 前生成 OpenAPI 文件并评审。
 
 ## 1. 设计原则
 

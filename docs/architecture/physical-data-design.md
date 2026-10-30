@@ -2,6 +2,8 @@
 
 **版本 0.1 / Proposed / 未批准**。面向 PostgreSQL 的**约束级设计**，非可立即执行生产迁移。目标首发 US/NA、FBA 库存优先，**不把未签署的 G1 假设固化为数据库限制**。
 
+本轮设计审查对应 [REVIEW-004](../governance/g2-review-2026-10-30.md)、[G2-QA-001](../requirements/g2-architecture-acceptance.md)；**仅有 SQL 片段作为约束说明，并无迁移文件**。
+
 ## 1. 数据分层与边界
 
 

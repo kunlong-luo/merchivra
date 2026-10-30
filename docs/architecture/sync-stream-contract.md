@@ -1,6 +1,6 @@
 # SYNC-002 · 持久同步流、任务租约与检查点协议
 
-**状态：Proposed**。修复旧设计中「检查点只依附一次 job」的问题。同步按固定作用域定义一个持久 Stream，多次任务运行共用该 Stream 的安全水位。
+**状态：Proposed**。事务与 Worker fencing 的 G2 进一步设计见 [ARCH-003](consistency-boundaries.md)，迁移前必须审查 [ADR-0004](adrs/0004-durable-sync-and-idempotency.md)。修复旧设计中「检查点只依附一次 job」的问题。同步按固定作用域定义一个持久 Stream，多次任务运行共用该 Stream 的安全水位。
 
 ## 1. 逻辑身份
 

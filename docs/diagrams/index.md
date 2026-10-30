@@ -43,6 +43,17 @@
 
 本轮新增 4 张 Mermaid，累计**26 张实际图纸**；D-18～D-23 仍为计划图。数量是源文件统计，GitHub 上的渲染需另行人工审查。
 
+## 第四轮 G2 技术图纸
+
+| 图号 | 图纸名称 / 类型 | 所在文档 | 阶段 | 评审重点 |
+|---|---|---|---|---|
+| D-33 | 物理数据关系和来源分层图 | [DATA-003](../architecture/physical-data-design.md) | G2 | 复合外键/来源事实/投影 |
+| D-34 | 来源事实入库与 pageCommit 原子性时序 | [ARCH-003](../architecture/consistency-boundaries.md) | G2 | 事务与投影补偿 |
+| D-35 | Stream 租约、重试和进度安全推进流程 | [ARCH-003](../architecture/consistency-boundaries.md) | G2 | 旧 Worker fencing |
+| D-36 | API/Worker 租户授权与数据库防线 | [SEC-002](../security/tenant-enforcement.md) | G2 | 跨租户安全隔离 |
+
+本轮新增 4 张 Mermaid，累计 **30 张实际源图**；需在 GitHub 中逐图人工验证渲染，源图存在不等于正式签署。
+
 ## 尚需补齐的图纸
 
 | 图号 | 计划图纸 | 何时制作 | 依赖 |
@@ -56,6 +67,6 @@
 
 ## 图纸评审规则
 
-本目录设计阶段现有 26 张 Mermaid 源图（第一轮 17 张、第二轮新增 5 张、第三轮新增 4 张）；实际 GitHub 渲染和图纸质量仍须在评审时检查，不把提交视为签收。
+本目录设计阶段现有 30 张 Mermaid 源图（第一轮 17 张、第二轮新增 5 张、第三轮新增 4 张、第四轮新增 4 张）；实际 GitHub 渲染和图纸质量仍须在评审时检查，不把提交视为签收。
 
 每张图标注名称、版本、业务前提、维护者和对应需求 ID；图与文字冲突时以已签署的 ADR + 最新 PRD 为准。不要把尚未审核的 Mermaid 图视为生产架构。

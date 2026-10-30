@@ -46,6 +46,19 @@
 
 详见 [G1-QA-001](g1-business-acceptance.md) 和 [BIZ-004](../product/business-scenarios.md)。G1-AC 是**人工业务规则复核条款，未执行**；原 30 条 AC 是系统实施后的验收规格，同样未执行。
 
+## G2 数据与接口约束关联（设计级）
+
+| 业务/风险 | FR/验收链 | G2 方案与证据 |
+|---|---|---|
+| 租户与账号隔离 | FR-SYS-01, FR-SHOP-02, AC-01/28 | [DATA-003](../architecture/physical-data-design.md)、[SEC-002](../security/tenant-enforcement.md)、G2-AC-01/02/15 |
+| SKU 版本和成本 | FR-CAT-03, FR-COST-01, AC-09/19 | DATA-003、G2-AC-03 |
+| FBA 库存 UNKNOWN | FR-INV-03, AC-21 | [INT-003](../integrations/amazon-data-contract.md)、G2-AC-04 |
+| 平台财务来源辨重 | FR-FIN-01/03, AC-10/24 | DATA-003、INT-003、G2-AC-05/06 |
+| 同步任务与检查点 | FR-SYNC-01/02/03, AC-05/23/25 | [ARCH-003](../architecture/consistency-boundaries.md)、G2-AC-07/08/09/11 |
+| API 与授权/数据类型 | FR-API-01, AC-26 | [API-002](../api/README.md)、G2-AC-12/13/16 |
+
+G2 全部为**设计验收规范**，并未执行任何数据库/HTTP 测试，详见 [G2-QA](g2-architecture-acceptance.md)。
+
 ## P1 / P2 预留（非 MVP 开发准入范围）
 
 | 需求 ID | 后续设计依赖 | 状态 |
