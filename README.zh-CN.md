@@ -4,7 +4,7 @@
 
 [English](README.md) · [MVP 需求](docs/requirements/mvp.md) · [技术架构](docs/architecture/overview.md) · [路线图](docs/roadmap.md) · [参与贡献](CONTRIBUTING.md)
 
-> **当前状态：Pre-alpha / 本地登录 + Mock 运营工作台。** 已有服务端 Session、首个管理员初始化、基础租户范围查询；店铺/订单/库存仍为虚构数据演示。完整角色权限、真实 Amazon 接入与财务功能尚未完成，禁止生产使用。
+> **当前状态：Pre-alpha / 登录后的核心业务只读工作台 + Mock 演示。** 已有服务端 Session、首个管理员初始化以及按当前登录租户过滤的 Marketplace、Listing、订单、FBA 只读查询；新租户通常没有真实店铺数据。原来的经营总览与模拟同步仍只使用虚构数据。完整角色权限、真实 Amazon 接入与财务功能尚未完成，禁止生产使用。
 
 ## 产品愿景
 
@@ -36,7 +36,7 @@ docker compose -f deploy/compose.yaml up --build
 
 **已实现首个管理员 Session 登录和最小租户隔离，但未完成生产级认证审计。端口仅监听 127.0.0.1，不得直接部署到公网。**
 
-更多命令见 [开发指南](docs/development.md) 和 [Mock 演示说明](docs/demo.md) 和 [本地登录指南](docs/security/local-auth.md)。
+更多命令见 [开发指南](docs/development.md)、[受保护核心只读 API](docs/api/core-read-api.md)、[Mock 演示](docs/demo.md)、[本地登录指南](docs/security/local-auth.md) 以及 [Agent 策略](Agent.md)。
 
 ## 开发路线
 

@@ -1,6 +1,6 @@
 # API-002 · 可机读 OpenAPI 3.1.1 候选草案
 
-**状态 Proposed，不代表已实现全部真实业务 API。** 现有已实现的 Mock 演示接口位于独立命名空间 `/api/v1/demo/*`，包含只读店铺/订单/Listing/FBA 查询以及只对纯虚构数据生效的 POST 模拟同步，详见 [Mock 演示指南](../demo.md)；它与下文尚未实现的安全业务资源 API 分开管理。 [查看 OpenAPI JSON](openapi.json)（10 条路径、11 个 HTTP operation、19 个 Schema）。它用于架构审查和未来契约测试，不是部署在服务器的接口。
+**状态 Proposed，不代表已实现全部真实业务 API。** 已实现的另一组只读路由是 [API-003 当前 Session 租户范围下的核心查询](core-read-api.md)，读取 PostgreSQL 结构化 Listing/订单/FBA（若没有已授权的 Seller 数据则返回空列表），与下面的 G2 OpenAPI 设计草案不等同。 现有已实现的 Mock 演示接口位于独立命名空间 `/api/v1/demo/*`，包含只读店铺/订单/Listing/FBA 查询以及只对纯虚构数据生效的 POST 模拟同步，详见 [Mock 演示指南](../demo.md)；它与下文尚未实现的安全业务资源 API 分开管理。 [查看 OpenAPI JSON](openapi.json)（10 条路径、11 个 HTTP operation、19 个 Schema）。它用于架构审查和未来契约测试，不是部署在服务器的接口。
 
 ## 契约设计原则
 

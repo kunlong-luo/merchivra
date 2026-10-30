@@ -4,7 +4,7 @@
 
 [简体中文](README.zh-CN.md) · [完整设计文档](docs/README.md) · [API 契约](docs/api/README.md) · [MVP](docs/requirements/mvp.md) · [Architecture](docs/architecture/overview.md) · [Roadmap](docs/roadmap.md) · [Contributing](CONTRIBUTING.md)
 
-> **Status: pre-alpha / local authenticated Mock workspace.** First local admin login, Spring Security Session/CSRF and an initial tenant-scoped seller account reader are implemented. Complete multi-role security, real Amazon integration and accounting are NOT implemented. Not production-ready.
+> **Status: pre-alpha / authenticated core read workspace plus synthetic Mock demo.** First local admin login, Spring Security Session/CSRF and tenant-scoped Marketplace/Listing/order/FBA read endpoints are implemented. New tenants correctly show no real seller data. Complete multi-role security, real Amazon integration and accounting are NOT implemented. Not production-ready.
 
 ## Goals
 
@@ -17,7 +17,7 @@
 
 **Java 25 LTS / Spring Boot 4.1.2 / Spring Security 7 / Jackson 3 / Maven**, **Vue 3.5 / TypeScript 6.0.3 / Vite 8.3.5 / Vitest 5 / Node.js 24 LTS / npm ci**, TanStack Vue Query / Zod, PostgreSQL 17, Redis 7, Docker Compose.
 
-See [October 2026 toolchain migration notes](docs/architecture/stack-upgrade-2026-10-30.md). Frontend dependencies are now locked in `apps/web/package-lock.json`.
+See [October 2026 toolchain migration notes](docs/architecture/stack-upgrade-2026-10-30.md) and [Agent engineering policies](Agent.md). Frontend dependencies are now locked in `apps/web/package-lock.json`.
 
 Engineering conventions are informed by [Pagevela](https://github.com/kunlong-luo/pagevela) (CI, dependency hygiene and persistence coordination), while retaining the ERP-specific Java/Vue architecture. See [dependency decisions](docs/architecture/dependency-adoption.md).
 
@@ -40,7 +40,7 @@ docker compose -f deploy/compose.yaml up --build
 
 **Local session login now protects API and demo endpoints, but broader security and actual database integration validation remain incomplete. Keep it on localhost, do not expose it publicly.**
 
-Local development instructions: [docs/development.md](docs/development.md) · [Mock demo guide](docs/demo.md) · [local authentication](docs/security/local-auth.md).
+Local development instructions: [docs/development.md](docs/development.md) · [authenticated core read APIs](docs/api/core-read-api.md) · [Mock demo guide](docs/demo.md) · [local authentication](docs/security/local-auth.md).
 
 ## Roadmap
 
