@@ -2,7 +2,7 @@
 
 **版本 0.1 / Proposed / 未批准**。面向 PostgreSQL 的**约束级设计**，非可立即执行生产迁移。目标首发 US/NA、FBA 库存优先，**不把未签署的 G1 假设固化为数据库限制**。
 
-本轮设计审查对应 [REVIEW-004](../governance/g2-review-2026-10-30.md)、[G2-QA-001](../requirements/g2-architecture-acceptance.md)；**仅有 SQL 片段作为约束说明，并无迁移文件**。
+本轮设计审查对应 [REVIEW-004](../governance/g2-review-2026-10-30.md)、[G2-QA-001](../requirements/g2-architecture-acceptance.md)。**最新实施记录：** 初步核心实体迁移与虚构数据导入已建立在 [DATA-004 / Flyway V2](core-domain-foundation.md)；此文件仍覆盖未落地的财务、授权和审计设计，**G1/G2 未签署，迁移尚未在真实 PostgreSQL 验证**。
 
 ## 1. 数据分层与边界
 

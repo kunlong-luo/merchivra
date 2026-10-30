@@ -1,6 +1,6 @@
 # Merchivra ERP · 文档中心
 
-> **M1 持久化 Mock 演示**：[本地 Mock 工作台](demo.md) 已直接在 main 提供店铺、商品、订单、FBA 库存和可记录模拟同步历史的纯虚构数据工作台；不代表真实 Amazon 集成、认证或财务系统已经实现。
+> **M1 持久化 Mock 演示**：[本地 Mock 工作台](demo.md) 已直接在 main 提供店铺、商品、订单、FBA 库存、同步历史，以及 [DATA-004](architecture/core-domain-foundation.md) 的核心表 Mock 入库状态；不代表真实 Amazon 集成、认证或财务系统已经实现。
 
 > **开发策略更新（2026-10-30）**：两个早期 PR 已合入 main；当前按 [轻量 CI 策略](testing/ci-policy.md) 推进 M0～M2，E2E 推迟至 M3～M4。下述 G1/G2 候选设计仍需业务/技术负责人审阅。
 

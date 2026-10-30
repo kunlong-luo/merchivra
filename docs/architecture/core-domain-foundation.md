@@ -13,6 +13,8 @@
 | FBA | `fba_inventory_observation` | 来源观测键和站点作用域，`NULL` 允许 UNKNOWN，非负库存 |
 | 同步 | `sync_stream`、`sync_run`、`sync_page_commit` | Lease epoch、来源接口/版本/作用域指纹、同租户运行与页去重 |
 
+**Mock 映射已落地：** `DemoCoreImporter` 只在本地成功手动 Mock 同步时，将固定虚构租户的数据转换为 Seller、Marketplace、SKU/Listing、订单与 FBA 观测。来源账户/订单/库存键派生稳定 UUID，使用 `ON CONFLICT` 保持重复调用幂等。演示订单项数量 1 是测试简化，**不能用于 Amazon 真实订单项映射**。核心表计数只通过 `/api/v1/demo/core-status` 公开，仅对固定 Mock 租户有效。
+
 所有业务表外键不只引用随机 UUID，还包含 `tenant_id`。**外键本身不能防止服务端查询越权**；加入真实身份和认证之前，没有任何非 `/demo` 的业务读取/写入 API 暴露。
 
 ## 本阶段与 G2 草案的差异

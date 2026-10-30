@@ -1,6 +1,6 @@
 # DEMO-001 · M1 本地 Mock 运营工作台（持久化版本）
 
-**当前能力：仅虚构 Mock 数据；无真实 Amazon 授权、订单入库或生产权限隔离。** M1 试验性的 PostgreSQL 持久化已经落地，但**不能**用于真实卖家业务数据。
+**当前能力：仅虚构 Mock 数据；无真实 Amazon 授权、生产 API 或身份鉴权。** M2 已增加核心实体表及固定虚构租户的 Mock 导入，仍**不能用于真实卖家业务数据**。
 
 ## 架构与数据边界
 
@@ -9,7 +9,7 @@
 - `DemoRepository`：Spring JDBC + Jackson JSONB。Flyway `V1__demo_snapshot_and_sync_history.sql` 创建 **`demo_snapshot` 和 `demo_sync_run`**，没有建立生产租户/订单模型，也没有将财务数字加入账簿。
 - `POST /api/v1/demo/sync-runs`：在单一 PostgreSQL 事务中校验幂等键、写入模拟运行状态和快照；同一幂等键同一参数不重复刷新，**更换参数会得到 409**。
 - 可选 `simulateFailure=true`：生成 `FAILED_RETRYABLE` 模拟失败记录，不覆盖快照；以后用**新幂等键**发起新任务。这里没有后台 Worker、自动 retry 或真实 SP-API 限流。
-- 当前演示以 JSONB **完整快照**保存测试数据，便于快速形成纵向闭环。正式 ERP 应使用已有 [DATA-003](architecture/physical-data-design.md) 提议的租户复合外键及独立来源事实表；**不能直接把 demo_snapshot 当成生产订单数据库**。
+- `demo_snapshot` 仍为前端只读工作台的数据来源。成功手动 Mock 同步后，[DATA-004](architecture/core-domain-foundation.md) 的 `DemoCoreImporter` 同事务把两个固定虚构 Seller 账号、SKU、Listing、订单项和库存观测导入 V2 核心业务表，**失败模拟与幂等重放不会再次导入**。新表并不是已授权的生产数据服务。
 
 ## API 清单（全部只对虚构数据生效）
 
@@ -17,6 +17,7 @@
 |---|---|---|
 | `GET /api/v1/demo/overview` | 读取持久 Mock 快照与按账号摘要 | 必须标 `mode=MOCK` |
 | `GET /api/v1/demo/accounts` | 虚构店铺列表 | 无真实 Seller ID |
+| `GET /api/v1/demo/core-status` | 核心表的固定虚构租户计数 | 不接受客户端 tenantId，仅 Mock 开关启用时存在 |
 | `GET /api/v1/demo/orders?accountId=...` | 单店铺订单列表 | 未知账号返回 404，不回退全量 |
 | `GET /api/v1/demo/listings?accountId=...` | 单店铺 Listing 列表 | 原始 Seller SKU 与内部 SKU 分开 |
 | `GET /api/v1/demo/inventory/fba?accountId=...` | 单店铺 FBA 观测 | `null=UNKNOWN`、明确 `0=0` |
@@ -75,11 +76,27 @@ curl -X POST http://127.0.0.1:8080/api/v1/demo/sync-runs \
 - 退款与履约状态可同时为 `PARTIAL + SHIPPED`，财务仍 `NOT_OBSERVED`。
 - FBA `fulfillable=null` 是未知，**不等于**观测值零。
 - 因费用/成本未取得，预估贡献额“不可计算”，不显示看似精确的净利润。
-- JSONB demo 快照不是 `sales_order` 或 `finance_transaction`；没有真实业务独立入库、源事实留存和多租户权限。
+- JSONB 快照现在能**投影到 V2 结构化核心表**（含 `sales_order`/`order_item`），但只允许固定虚构数据，没有真实 Amazon 源事实流、Finances 事件或经过认证的多租户数据权限。
 - **测试状态**：现阶段只有快速 Java / Vue 单元测试、类型检查和构建；未进行真实 PostgreSQL 集成测试、Docker Compose 运行验收或 E2E，不能把 CI 通过描述为可正式部署。
 
 ## 下一轮
 
-先做真正的租户/账号服务端作用域和有审计来源的基础业务实体（需要 G1/G2 决策），再把 Mock 输入迁移到正式业务数据写入协议。同步的分页游标、fencing lease、失败补偿会分模块实施，并在真正使用 Amazon API 前验证。
+先在真实 PostgreSQL 中验证 V1/V2 迁移、核心表唯一约束与跨租户负例，再落实已审核的身份认证、租户/账号服务端作用域及真实来源事实协议。同步的分页游标、fencing lease、失败补偿会分模块实施，并在真正使用 Amazon API 前验证。
 
 涉及 [Issue #5 Mock](https://github.com/kunlong-luo/merchivra/issues/5)、[Issue #6 同步](https://github.com/kunlong-luo/merchivra/issues/6)、[Issue #7 SKU](https://github.com/kunlong-luo/merchivra/issues/7)。
+
+## 本轮新增：结构化 Mock 入库演示
+
+进入左侧“模拟同步”，点击“开始模拟同步”，即可查看新增加的“PostgreSQL · 核心实体入库”计数。
+
+按目前虚构 fixture，**预期**为 2 店铺、2 Marketplace、1 内部 SKU、3 Listing、3 订单、3 订单项与 3 条 FBA 库存观测。再次同步相同来源时，这些计数预期不会翻倍；模拟失败不会覆盖已保存快照及结构化实体。
+
+直接读取计数接口：
+
+```bash
+curl http://127.0.0.1:8080/api/v1/demo/core-status
+```
+
+所有导入通过 `DemoCoreImporter`，使用预留的固定 Mock Tenant ID；该 API 不接受用户传入的租户 ID，也不允许读取真实卖家数据。它与生产中的 tenant session/权限模型**不是一回事**。
+
+**验证限制：** Maven/Vue/Vitest 快速 CI 已通过，但尚未有 PostgreSQL 容器执行 V1/V2 的运行证据。上述计数是代码与 fixture 的预期值，不是实际数据库验收结果。
