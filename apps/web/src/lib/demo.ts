@@ -128,3 +128,18 @@ export async function startDemoSync(simulateFailure: boolean): Promise<DemoSyncR
   if (!response.ok) throw new Error(`Mock 同步返回 HTTP ${response.status}`)
   return demoSyncRunSchema.parse(await response.json())
 }
+
+export const demoCoreStatusSchema = z.object({
+  source: z.literal('MOCK'),
+  tenantId: z.string().uuid(),
+  accounts: z.number().int().nonnegative(),
+  marketplaces: z.number().int().nonnegative(),
+  internalSkus: z.number().int().nonnegative(),
+  listings: z.number().int().nonnegative(),
+  orders: z.number().int().nonnegative(),
+  orderItems: z.number().int().nonnegative(),
+  inventoryObservations: z.number().int().nonnegative()
+})
+export type DemoCoreStatus = z.infer<typeof demoCoreStatusSchema>
+export const fetchDemoCoreStatus = () =>
+  readList('/api/v1/demo/core-status', demoCoreStatusSchema)

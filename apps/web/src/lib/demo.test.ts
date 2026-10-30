@@ -53,3 +53,26 @@ describe('demo overview contract', () => {
     expect(() => parseDemoOverview(wrong)).toThrow()
   })
 })
+
+describe('tenant-scoped core demo status', () => {
+  it('accepts counts for an isolated synthetic tenant', async () => {
+    const { demoCoreStatusSchema } = await import('./demo')
+    const result = demoCoreStatusSchema.parse({
+      source: 'MOCK',
+      tenantId: '00000000-0000-4000-8000-000000000001',
+      accounts: 2, marketplaces: 2, internalSkus: 1,
+      listings: 3, orders: 3, orderItems: 3, inventoryObservations: 3
+    })
+    expect(result.orders).toBe(3)
+  })
+  it('rejects real source and negative record counts', async () => {
+    const { demoCoreStatusSchema } = await import('./demo')
+    const valid = {
+      source: 'MOCK', tenantId: '00000000-0000-4000-8000-000000000001',
+      accounts: 2, marketplaces: 2, internalSkus: 1,
+      listings: 3, orders: 3, orderItems: 3, inventoryObservations: 3
+    }
+    expect(() => demoCoreStatusSchema.parse({ ...valid, source: 'AMAZON' })).toThrow()
+    expect(() => demoCoreStatusSchema.parse({ ...valid, orders: -1 })).toThrow()
+  })
+})

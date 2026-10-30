@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { fetchPing } from './lib/api'
-import { fetchDemoOverview, fetchDemoSyncRuns, startDemoSync, fetchDemoOrders, fetchDemoListings, fetchDemoInventory } from './lib/demo'
+import { fetchDemoOverview, fetchDemoSyncRuns, startDemoSync, fetchDemoOrders, fetchDemoListings, fetchDemoInventory, fetchDemoCoreStatus } from './lib/demo'
 
 type View = 'overview' | 'orders' | 'catalog' | 'inventory' | 'sync'
 
@@ -29,6 +29,14 @@ watch(overview, value => {
     accountId.value = value.accounts[0].id
   }
 }, { immediate: true })
+
+const { data: coreStatus, isPending: coreStatusPending, isError: coreStatusError } = useQuery({
+  queryKey: ['api', 'demo', 'core-status'],
+  queryFn: fetchDemoCoreStatus,
+  enabled: computed(() => activeView.value === 'sync'),
+  staleTime: 15_000,
+  retry: 1
+})
 
 const { data: syncRuns, isPending: syncRunsPending, isError: syncRunsError } = useQuery({
   queryKey: ['api', 'demo', 'sync-runs'],
@@ -310,6 +318,28 @@ function tabTitle() {
               <span class="sync-hint">失败后创建新任务可重试；历史失败记录不会消失。</span>
             </div>
             <div v-if="syncMessage" class="panel-caption" role="status">{{ syncMessage }}</div>
+            <section class="core-storage" aria-label="核心数据库入库情况">
+              <div class="core-storage-header">
+                <strong>PostgreSQL · 核心实体入库</strong>
+                <span>固定虚构租户 · 非正式 Amazon 业务数据</span>
+              </div>
+              <div v-if="coreStatusPending" class="core-storage-note">正在读取核心数据表…</div>
+              <div v-else-if="coreStatusError" class="core-storage-note">读取失败，请核查数据库迁移和演示服务。</div>
+              <template v-else-if="coreStatus">
+                <div class="core-count-grid">
+                  <div><strong>{{ coreStatus.accounts }}</strong><span>店铺</span></div>
+                  <div><strong>{{ coreStatus.internalSkus }}</strong><span>内部 SKU</span></div>
+                  <div><strong>{{ coreStatus.listings }}</strong><span>Listing</span></div>
+                  <div><strong>{{ coreStatus.orders }}</strong><span>订单</span></div>
+                  <div><strong>{{ coreStatus.orderItems }}</strong><span>订单项</span></div>
+                  <div><strong>{{ coreStatus.inventoryObservations }}</strong><span>FBA 观测</span></div>
+                </div>
+                <p class="core-storage-note">
+                  {{ coreStatus.accounts === 0 ? '还未运行过成功的模拟同步，点击上方按钮建立核心数据。' :
+                    '成功同步后持久化；同一虚构来源重复导入不会重复新增订单与库存观测。' }}
+                </p>
+              </template>
+            </section>
             <div v-if="syncRunsPending" class="empty-state">读取同步历史中…</div>
             <div v-else-if="syncRunsError" class="empty-state">无法读取同步记录，请检查数据库</div>
             <div v-else-if="!syncRuns?.length" class="empty-state">暂无任务。初始 Mock 快照在首次启动时保存。</div>
