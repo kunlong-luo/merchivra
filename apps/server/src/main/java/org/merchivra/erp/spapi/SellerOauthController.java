@@ -32,7 +32,11 @@ public class SellerOauthController {
         @Value("${merchivra.spapi.oauth.secure-cookie:true}") boolean secureCookie) {
         this.access=access; this.oauth=oauth; this.secureCookie=secureCookie;
     }
-    public record StartLink(String authorizationUrl, String expiresAt) {}
+    public record StartLink(String authorizationUrl, String expiresAt) {
+        @Override public String toString() {
+            return "StartLink[authorizationUrl=<redacted>,expiresAt=" + expiresAt + "]";
+        }
+    }
 
     @PostMapping("/seller-accounts/{accountId}/oauth/start")
     public ResponseEntity<StartLink> start(Authentication auth, HttpServletRequest req,

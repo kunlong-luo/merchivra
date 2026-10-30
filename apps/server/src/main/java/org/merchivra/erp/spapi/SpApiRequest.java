@@ -15,6 +15,11 @@ public record SpApiRequest(
     String jsonBody,
     Set<String> grantedRoles
 ) {
+    @Override public String toString() {
+        return "SpApiRequest[region=" + region + ",operation=" + operation
+            + ",pathVariables=<redacted>,query=<redacted>,jsonBody=<redacted>]";
+    }
+
     public SpApiRequest {
         if (region == null || operation == null) throw new IllegalArgumentException("Region and operation required");
         pathVariables = Map.copyOf(pathVariables);

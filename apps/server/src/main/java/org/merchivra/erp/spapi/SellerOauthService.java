@@ -54,7 +54,11 @@ public final class SellerOauthService {
         this.allowedAmazonOrigins=Set.copyOf(allowedAmazonOrigins);
     }
 
-    public record Start(String state, String authorizationUrl, String expiresAt) {}
+    public record Start(String state, String authorizationUrl, String expiresAt) {
+        @Override public String toString() {
+            return "Start[state=<redacted>,authorizationUrl=<redacted>,expiresAt=" + expiresAt + "]";
+        }
+    }
     public record Connection(String status, String sellerId, String region) {}
     public record AuditEvent(String type, String occurredAt) {}
     private record Claimed(UUID tenant, UUID actor, UUID account, String sellerId) {}
