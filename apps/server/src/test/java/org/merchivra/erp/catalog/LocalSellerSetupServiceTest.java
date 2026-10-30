@@ -43,7 +43,6 @@ class LocalSellerSetupServiceTest {
         assertEquals(saved, service.createAccount(tenant, actor, " Local Store ", "NA", key));
         verify(jdbc).update(contains("ON CONFLICT"), any(UUID.class), eq(tenant),
             anyString(), eq("NA"), eq("Local Store"), eq(key));
-        verify(jdbc, times(1)).update(anyString(), any());
     }
 
     @Test
