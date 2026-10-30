@@ -1,5 +1,7 @@
 # Merchivra ERP · 文档中心
 
+> **开发策略更新（2026-10-30）**：两个早期 PR 已合入 main；当前按 [轻量 CI 策略](testing/ci-policy.md) 推进 M0～M2，E2E 推迟至 M3～M4。下述 G1/G2 候选设计仍需业务/技术负责人审阅。
+
 > **文档版本：0.4-g2-review｜日期：2026-10-30｜状态：Proposed / 待批准**
 >
 > 当前只完成**设计规格与评审修订**，不存在已完成的 Amazon ERP 业务系统。G1/G2/G3 均未批准；详见 [第二轮评审报告](governance/review-report-2026-10-30.md)。

@@ -2,6 +2,12 @@
 
 已补充覆盖首次初始化、跨租户、乱序订单退款、未映射库存、防重复计费、Token 过期与多 Worker 的 [E2E 场景集](end-to-end-scenarios.md)。验收编号采用 [QA-001](../requirements/acceptance.md)，执行证据尚未生成。
 
+## 执行时机与 CI 分层（当前约定）
+
+见 [TEST-003 轻量 CI 策略](ci-policy.md)：**M0～M2 不在 CI 跑 E2E**，只做快速 Java 单测、前端 TypeScript/Vitest 与构建。下列金字塔是逐步完善的测试类别，不是目前全部启用的检查。M3 业务流程完整度提高后再开始核心 Playwright 用例；M4 Beta 前再根据上线风险设置正式集成、E2E 与安全门禁。
+
+已编写的 E2E 场景是**业务验收规格**，并非已经写出或运行的 Playwright 代码。
+
 ## 质量金字塔
 
 1. 领域单元测试：成本有效日期、SKU 映射、金额计算、状态迁移。

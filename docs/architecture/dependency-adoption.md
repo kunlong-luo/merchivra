@@ -22,7 +22,7 @@
 
 - **Pinia**：存在跨页面的活动租户、Seller 账号/筛选 UI 状态时再引入。严格禁止以浏览器状态作为后台权限证明。
 - **Vue Router**：有真正的多业务页面后引入，配合 server-side ACL；不以路由守卫作为唯一授权手段。
-- **Playwright**：有可测试的登录/订单/库存工作流后接入 Chromium 核心 E2E。可以直接借鉴 Pagevela 的 trace/screenshot-on-failure 和必要的跨浏览器矩阵，避免在 M0 空页面空跑几十条测试。
+- **Playwright**：**M0～M2 暂不引入或纳入 CI**。M3 核心订单/库存/财务流程基本稳定后再挑选关键 E2E，M4 Beta 前才考虑主分支门禁及跨浏览器覆盖。参考 [轻量 CI 决策](../testing/ci-policy.md)，不要在开发前期追求 Pagevela 级别的完整测试矩阵。
 - **Spring Security + Validation**：真正开始用户/租户授权时统一引入官方模块；不要在安全机制未设计好前以一个依赖宣称 API 已受保护。
 - **Resilience4j**：明确 SP-API 调用和 operation 限流模型后考虑；不能把通用自动重试当作财务幂等策略。
 - **金额**：服务端使用 Java `BigDecimal` 和 PostgreSQL `NUMERIC`，不要依赖 JavaScript Number 算利润；前端显示层使用 Decimal String + ISO 4217。
