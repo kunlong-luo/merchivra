@@ -1,0 +1,29 @@
+# Java
+target/
+*.class
+.mvn/wrapper/maven-wrapper.jar
+# Node
+node_modules/
+dist/
+*.tsbuildinfo
+# IDE
+.idea/
+.vscode/
+*.iml
+.DS_Store
+# Secrets and local state
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+*.jks
+*.log
+# Data dumps
+*.sql.gz
+*.dump
+*.csv
+*.xlsx
+# Build/test
+coverage/
