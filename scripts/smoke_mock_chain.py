@@ -93,6 +93,30 @@ if args.stage == "restart":
     runs = expect("/api/v1/demo/sandbox/" + state["usMarketplace"] + "/runs")
     assert len(runs) == 2 and {x["status"] for x in runs} == {"SUCCEEDED", "FAILED_RETRYABLE"}
     print("PASS: container restart preserved synthetic facts and sync history")
+    mp = state["pagedMarketplace"]
+    page_path = "/api/v1/demo/sandbox/" + mp + "/pages"
+    before = expect(page_path)
+    assert (before["status"], before["nextPage"], before["leaseEpoch"]) == ("RUNNING", 1, 1)
+    assert_records(mp, listings=2, orders=1, inventory=0)
+    # Interrupted after page one, then advance from the persisted stream.
+    second = expect(page_path + "/advance", 201, method="POST",
+        headers={"X-CSRF-TOKEN": csrf, "Idempotency-Key": "fullchain-step-02"})
+    assert (second["committedPage"], second["nextPage"], second["leaseEpoch"],
+            second["status"]) == (1, 2, 2, "SUCCEEDED")
+    assert_records(mp, listings=2, orders=2, inventory=2)
+    # Even after the stream has completed, retrying the original request
+    # must NOT ingest a third page or increment the fencing epoch.
+    first_replay = expect(page_path + "/advance", 201, method="POST",
+        headers={"X-CSRF-TOKEN": csrf, "Idempotency-Key": "fullchain-step-01"})
+    assert first_replay["replayed"] and first_replay["committedPage"] == 0
+    final = expect(page_path)
+    assert final["status"] == "SUCCEEDED" and final["nextPage"] == 2
+    assert final["leaseEpoch"] == 2 and len(final["pages"]) == 2
+    expect(page_path + "/advance", 409, method="POST",
+        headers={"X-CSRF-TOKEN": csrf, "Idempotency-Key": "fullchain-step-03"})
+    audit = expect("/api/v1/seller-accounts/audit")
+    assert len(audit) == 9, [x["action"] for x in audit]
+    print("PASS: true page-1 commit -> backend restart -> page-2 resume, idempotent replay, audit")
     expect("/api/v1/auth/logout", 204, method="POST", headers={"X-CSRF-TOKEN": csrf})
     expect("/api/v1/seller-accounts", 401)
     print("PASS: logout revokes session")
@@ -185,5 +209,27 @@ expect("/api/v1/demo/sandbox/33333333-3333-4333-8333-333333333333/replay",
        headers={"Idempotency-Key": "not-authorized-01", "X-CSRF-TOKEN": csrf})
 print("PASS: run history, one audit per committed import, isolation and hidden IDs")
 
-Path(args.state).write_text(json.dumps({"usMarketplace": us_mp, "euMarketplace": eu_mp}))
+# Separate marketplace, same tenant: page one commits independently of page two.
+# It must survive the following API restart and resume without rerunning page 1.
+paged_acc = create_account("NA", "Sandbox Paged US", "fullchain-paged-local-account")
+paged_mp = post("/api/v1/seller-accounts/" + paged_acc + "/marketplaces",
+                {"marketplaceId": "ATVPDKIKX0DER"})["id"]
+page_path = "/api/v1/demo/sandbox/" + paged_mp + "/pages"
+progress = expect(page_path)
+assert progress["status"] == "NOT_STARTED" and progress["nextPage"] == 0
+assert progress["totalPages"] == 2
+first = expect(page_path + "/advance", 201, method="POST",
+    headers={"X-CSRF-TOKEN": csrf, "Idempotency-Key": "fullchain-step-01"})
+assert (first["status"], first["committedPage"], first["nextPage"],
+        first["leaseEpoch"], first["recordCount"]) == ("RUNNING", 0, 1, 1, 1)
+assert not first["replayed"]
+assert_records(paged_mp, listings=2, orders=1, inventory=0)
+# No second page yet; this is the durable checkpoint for the restart stage.
+assert expect(page_path)["nextPage"] == 1
+assert len(expect("/api/v1/seller-accounts/audit")) == 8
+print("PASS: first page committed separately, second page not yet imported")
+
+Path(args.state).write_text(json.dumps({
+    "usMarketplace": us_mp, "euMarketplace": eu_mp, "pagedMarketplace": paged_mp
+}))
 print("PASS: initial full fake integration chain complete")

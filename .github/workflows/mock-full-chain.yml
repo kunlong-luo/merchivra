@@ -1,4 +1,5 @@
-# Regression focus: same internal SKU across US and DE sites must reuse tenant SKU ID.
+# Regression focus: V6 page-one durable commit survives container restart before page two.
+# Shared US/DE internal SKU remains tenant-scoped.
 name: Mock full-chain Compose validation
 on:
   workflow_dispatch:
