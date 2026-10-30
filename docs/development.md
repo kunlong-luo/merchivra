@@ -10,7 +10,7 @@ cp .env.example .env
 docker compose -f deploy/compose.yaml up --build
 ```
 
-The web is available on 127.0.0.1:3000; API on 127.0.0.1:8080. Database and Redis are internal to the Compose network.
+The web is available on 127.0.0.1:3000; API on 127.0.0.1:8080. Compose explicitly enables the synthetic demo endpoint via MERCHIVRA_DEMO_ENABLED=true. Database and Redis are internal to the Compose network.
 
 ## Run independently
 ```bash
@@ -18,7 +18,7 @@ The web is available on 127.0.0.1:3000; API on 127.0.0.1:8080. Database and Redi
 docker compose -f deploy/compose.yaml up -d postgres redis
 
 # Shell 1 (set DB_PASSWORD to match .env)
-DB_PASSWORD=your_password mvn -f apps/server/pom.xml spring-boot:run
+MERCHIVRA_DEMO_ENABLED=true DB_PASSWORD=your_password mvn -f apps/server/pom.xml spring-boot:run
 
 # Shell 2
 cd apps/web
@@ -41,4 +41,4 @@ cd apps/web && npm install && npm run typecheck && npm run test && npm run build
 A reproducible frontend lockfile is still missing. See [dependency decisions](architecture/dependency-adoption.md) and Issue #2. The current CI temporarily uses npm install instead of npm ci; do not treat this as a reproducible production build. More integration tests will be required as business features arrive.
 
 ## Warnings
-The M0 application exposes only health and ping endpoints and a static frontend. There is **no authentication**. It is intended only for localhost development. Do not expose it to the internet or supply real Amazon credentials.
+The M0/M1 application exposes health and ping endpoints plus an opt-in synthetic read-only demo. The demo endpoint is OFF by default and Compose enables it locally. There is **no authentication**. It is intended only for localhost development. Do not expose it to the internet or supply real Amazon credentials.

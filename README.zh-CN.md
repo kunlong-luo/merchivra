@@ -4,7 +4,7 @@
 
 [English](README.md) · [MVP 需求](docs/requirements/mvp.md) · [技术架构](docs/architecture/overview.md) · [路线图](docs/roadmap.md) · [参与贡献](CONTRIBUTING.md)
 
-> **当前状态：Pre-alpha / M0 工程初始化。** 这是可扩展的开发骨架，并非已完成的业务 ERP。Amazon 接口、登录认证、租户隔离执行逻辑及完整财务功能尚未实现，请勿用于真实生产业务。
+> **当前状态：Pre-alpha / 本地 Mock 运营工作台。** 已有店铺切换、订单、Listing 与 FBA 库存的虚构数据只读演示。Amazon 真实接口、登录认证、租户隔离和完整财务功能尚未实现，禁止用于真实生产业务。
 
 ## 产品愿景
 
@@ -18,7 +18,7 @@
 - 架构：模块化单体，后续根据业务量拆分 Worker
 - 部署：Docker Compose；CI：GitHub Actions
 
-## 快速启动（仅工程骨架）
+## 快速启动（仅本地模拟演示）
 
 ```bash
 cp .env.example .env
@@ -28,11 +28,12 @@ docker compose -f deploy/compose.yaml up --build
 
 - 前端：http://localhost:3000
 - API：http://localhost:8080/api/v1/ping
+- Mock 业务概览：http://localhost:8080/api/v1/demo/overview （需显式启用 Mock；Compose 已在本地开启）
 - 健康检查：http://localhost:8080/actuator/health
 
 **目前尚未实现认证授权，端口仅监听 127.0.0.1，不得直接部署到公网。**
 
-更多命令见 [开发指南](docs/development.md)。
+更多命令见 [开发指南](docs/development.md) 和 [Mock 演示说明](docs/demo.md)。
 
 ## 开发路线
 

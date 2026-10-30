@@ -4,7 +4,7 @@
 
 [简体中文](README.zh-CN.md) · [完整设计文档](docs/README.md) · [API 契约](docs/api/README.md) · [MVP](docs/requirements/mvp.md) · [Architecture](docs/architecture/overview.md) · [Roadmap](docs/roadmap.md) · [Contributing](CONTRIBUTING.md)
 
-> **Status: pre-alpha / M0 foundation.** This repository contains an initial development scaffold, not a production-ready ERP. Amazon integration, authentication, tenant isolation and accounting workflows are NOT implemented yet.
+> **Status: pre-alpha / read-only Mock workspace.** Local demonstration pages now show invented seller accounts, listings, orders and FBA stock via a Java Mock Gateway. Real Amazon integration, authentication, tenant isolation and accounting workflows are NOT implemented. Never use real credentials or expose the unauthenticated demo publicly.
 
 ## Goals
 
@@ -19,7 +19,7 @@ Java 21 / Spring Boot 3.5, Vue 3 / TypeScript / Vite / TanStack Vue Query / Zod 
 
 Engineering conventions are informed by [Pagevela](https://github.com/kunlong-luo/pagevela) (CI, dependency hygiene and persistence coordination), while retaining the ERP-specific Java/Vue architecture. See [dependency decisions](docs/architecture/dependency-adoption.md).
 
-## Quick start (development scaffold only)
+## Quick start (local Mock demonstration only)
 
 Requires Docker with Compose.
 
@@ -31,11 +31,12 @@ docker compose -f deploy/compose.yaml up --build
 
 - Web: http://localhost:3000
 - API: http://localhost:8080/api/v1/ping
+- Mock overview: http://localhost:8080/api/v1/demo/overview (only with `MERCHIVRA_DEMO_ENABLED=true`)
 - Actuator health: http://localhost:8080/actuator/health
 
 **This scaffold has no login or API authorization yet. Keep it on localhost; do not expose it to the public internet.**
 
-Local development instructions: [docs/development.md](docs/development.md).
+Local development instructions: [docs/development.md](docs/development.md) · [Mock demo guide](docs/demo.md).
 
 ## Roadmap
 

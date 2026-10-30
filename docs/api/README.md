@@ -1,6 +1,6 @@
 # API-002 · 可机读 OpenAPI 3.1.1 候选草案
 
-**状态 Proposed，不代表已经实现。** [查看 OpenAPI JSON](openapi.json)（10 条路径、11 个 HTTP operation、19 个 Schema）。它用于架构审查和未来契约测试，不是部署在服务器的接口。
+**状态 Proposed，不代表已实现全部真实业务 API。** 现有唯一新业务演示端点是独立命名空间 `GET /api/v1/demo/overview`，返回纯虚构只读数据，详见 [Mock 演示指南](../demo.md)；它与下文尚未实现的安全业务资源 API 分开管理。 [查看 OpenAPI JSON](openapi.json)（10 条路径、11 个 HTTP operation、19 个 Schema）。它用于架构审查和未来契约测试，不是部署在服务器的接口。
 
 ## 契约设计原则
 
