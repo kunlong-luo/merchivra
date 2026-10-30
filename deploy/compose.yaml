@@ -30,6 +30,7 @@ services:
       DB_NAME: merchivra
       DB_USER: merchivra
       DB_PASSWORD: ${MERCHIVRA_DB_PASSWORD:?Set MERCHIVRA_DB_PASSWORD in .env}
+      MERCHIVRA_DEMO_ENABLED: 'true' # Only invented fixtures; Compose binds web/API to localhost.
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:

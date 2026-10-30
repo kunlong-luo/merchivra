@@ -19,3 +19,9 @@ management:
   endpoint:
     health:
       show-details: never
+
+# An explicit opt-in is required: unauthenticated M0 endpoints may only
+# serve made-up demo fixtures. Never use this flag for production data.
+merchivra:
+  demo:
+    enabled: ${MERCHIVRA_DEMO_ENABLED:false}
