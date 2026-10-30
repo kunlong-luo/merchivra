@@ -82,6 +82,12 @@ public class SellerOauthController {
         @PathVariable UUID accountId) {
         return oauth.status(access.currentTenant(auth,req),accountId);
     }
+    @GetMapping("/seller-accounts/{accountId}/oauth/audit")
+    public java.util.List<SellerOauthService.AuditEvent> audit(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID accountId) {
+        return oauth.auditHistory(access.currentTenant(auth,req),accountId);
+    }
+
     @PostMapping("/seller-accounts/{accountId}/oauth/revoke")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void revoke(Authentication auth,HttpServletRequest req,

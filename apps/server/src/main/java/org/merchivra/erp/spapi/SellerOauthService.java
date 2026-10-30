@@ -56,6 +56,7 @@ public final class SellerOauthService {
 
     public record Start(String state, String authorizationUrl, String expiresAt) {}
     public record Connection(String status, String sellerId, String region) {}
+    public record AuditEvent(String type, String occurredAt) {}
     private record Claimed(UUID tenant, UUID actor, UUID account, String sellerId) {}
 
     public Start start(UUID tenant, UUID actor, UUID account, boolean beta) {
@@ -214,6 +215,17 @@ public final class SellerOauthService {
             """, (rs,n)->new Connection(rs.getString("status"),rs.getString("seller_id"),
                 rs.getString("region")), tenant,account)
             .stream().findFirst().orElse(new Connection("NOT_CONNECTED",null,null));
+    }
+
+    /** Redacted, tenant-scoped OAuth lifecycle audit; no codes or tokens. */
+    public List<AuditEvent> auditHistory(UUID tenant, UUID account) {
+        return jdbc.query("""
+            SELECT event_type,occurred_at FROM spapi_oauth_audit
+            WHERE tenant_id=? AND seller_account_id=?
+            ORDER BY occurred_at DESC,id DESC LIMIT 30
+            """, (rs,n)->new AuditEvent(rs.getString("event_type"),
+                rs.getObject("occurred_at",java.time.OffsetDateTime.class)
+                    .toInstant().toString()),tenant,account);
     }
 
     public void revoke(UUID tenant, UUID actor, UUID account) {
