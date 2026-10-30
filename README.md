@@ -67,3 +67,7 @@ The **Core ERP** page now has an opt-in simulated SP-API replay for a local **UN
 **Verified:** [Compose 全链路成功运行（2026-10-30）](https://github.com/kunlong-luo/merchivra/actions/runs/41061679196) built the Compose Nginx/Java/PostgreSQL stack, ran fictional US+DE Orders/Listing/FBA replay through the protected APIs, and confirmed persistent facts after restarting the server. This is *not* a live SP-API integration or production certification.
 
 The simulated source can now be advanced **one Orders page at a time**, with V6 PostgreSQL page commits/conditional epochs and a progress viewer in the Core ERP workspace. This is a manual Mock checkpoint prototype, **not** a production scheduler or live Amazon pagination. See [TEST-004](docs/testing/mock-full-chain.md).
+
+## Amazon official SDK integration (code-first, disabled by default)
+
+The backend now includes Amazon's **official Java SP-API SDK 1.13.0** with generated API types across many families, a server-only LWA/region configuration factory, typed core read operation wrappers, conservative Orders v2026/FBA payload parsers, and offline credential/role/PII safety tests. **No live Seller authorization or Amazon production traffic exists yet**, and remote integration is disabled by default. See [INT-004 SP-API code implementation](docs/integrations/sp-api-code-integration.md).

@@ -69,3 +69,7 @@ The explicit [TEST-004 simulated SP-API smoke](testing/mock-full-chain.md) exerc
 ### V6 restart-resumable Mock page validation
 
 [V6 逐页断点恢复 Compose 验证成功](https://github.com/kunlong-luo/merchivra/actions/runs/41065562926): the standalone Compose suite submitted page 1 for a separate US LOCAL/UNCONFIGURED marketplace, restarted the Java API, resumed page 2, replayed the first request key safely, then validated the page count, epoch, core facts and audit. Run the manual [Mock full-chain workflow](https://github.com/kunlong-luo/merchivra/actions/workflows/mock-full-chain.yml) when changing page-commit behavior; no permanent heavy CI gate.
+
+## SP-API connector code (no real authorization)
+
+The backend includes Amazon's official SDK 1.13.0 plus `spapi/` typed and read-only core adapters. `MERCHIVRA_SPAPI_ENABLED=false` and `MERCHIVRA_SPAPI_ALLOW_WRITES=false` are the defaults, so this does **not** connect any seller. See [INT-004](integrations/sp-api-code-integration.md) for secure integration prerequisites and offline contract tests. Do not enable outbound for a real seller until OAuth authorization/secret vault and role verification are complete.

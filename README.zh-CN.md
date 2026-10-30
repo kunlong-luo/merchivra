@@ -59,3 +59,7 @@ docker compose --env-file .env -f deploy/compose.yaml up --build
 **实际验证：** [Compose 全链路成功运行（2026-10-30）](https://github.com/kunlong-luo/merchivra/actions/runs/41061679196) 已实际构建并运行 Compose 的 Nginx、Spring Boot、PostgreSQL，模拟 US/DE 的订单/Listing/FBA 同步，检查幂等、审计与服务器重启后数据仍在。**但仍不是**真实 Amazon 授权、Finances 对账或生产上线验证。
 
 开发期新增 **V6 模拟订单逐页提交**：可在核心工作台查看已完成页数、手动推进一页、通过 PostgreSQL 持久化检查点与幂等键验证重启后恢复。它不是真实后台同步 Worker、Amazon 分页或已授权来源。详见 [TEST-004](docs/testing/mock-full-chain.md)。
+
+## Amazon 官方 SDK 接入代码（默认关闭）
+
+后端已引入 Amazon **官方 Java SP-API SDK 1.13.0**，包含多个模块的生成 API 类型；新增仅供受授权服务端调用的 LWA/区域 Client、Orders/Listing/FBA/Finances/Reports/Feeds 等读取封装，以及测试中使用的纯虚构 Token 和响应结构。**真实 Seller OAuth、凭证安全存储和实际 Amazon 网络调用仍未完成，默认不开启出站**。模块与差距详见 [INT-004](docs/integrations/sp-api-code-integration.md)。

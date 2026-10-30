@@ -69,3 +69,9 @@
 - [ ] 尚未实现真实后台 Worker、流租约过期、真实 API 分页 token 过期恢复、持久查询窗口与正式高水位、来源授权或真实对账。
 
 - [x] [V6 逐页断点恢复 Compose 验证成功](https://github.com/kunlong-luo/merchivra/actions/runs/41065562926)：实际 PG 17 + Nginx/Java Compose 验证先提交第 1 页、重启后续第 2 页、重复旧幂等键返回原页，页级事务代数与审计正确；**不是正式后台 Worker**。
+
+## Amazon 官方 SP-API SDK 代码先行（2026-10-30）
+
+- [x] Maven 引入 Amazon 官方 `software.amazon.spapi:spapi-sdk:1.13.0`；提供可构造 SDK 已发布生成类型的内部工厂与常用领域类型化入口。
+- [x] 配置 LWA 令牌交换/内存缓存、NA/EU/FE 固定域名、默认关闭网络出站/远程写入；Orders v2026、Listing、FBA、Catalog、Finances、Reports、Feeds 等有安全读取调用封装与离线响应测试。
+- [ ] 这仍然**不是所有 SP-API endpoint 的 ERP 业务实现**：授权回调、凭证 Vault、来源实际认证、真实动态限额/Worker/财务对账、通知/Feeds/Reports 文件流程、非卖家/专用业务 API 均需逐模块补全。详见 [INT-004](integrations/sp-api-code-integration.md)。

@@ -1,5 +1,7 @@
 # Merchivra ERP · 文档中心
 
+> SP-API 开发更新：[INT-004 官方 SDK/离线接入代码](integrations/sp-api-code-integration.md) 已提交，覆盖官方多模块 SDK 工厂与核心读取封装；网络出站默认禁用，**真实 Seller OAuth/安全 Vault 与业务同步仍未完成**。
+
 > 新增 [TEST-004 本地模拟 SP-API 全链路验证](testing/mock-full-chain.md)：登录 Session、配置店铺、模拟分页 Orders/Listing/FBA、写入已标识 MOCK 来源的核心表、查询/审计/重启。只覆盖纯虚构开发环境，不意味着真实 Amazon 接通。
 
 > **M2 配置开发更新：** 增加 [API-004 本地 Seller Account/Marketplace 未连接配置与局部审计](api/local-seller-setup.md)。配置记录仍标记为 `UNCONFIGURED`，**不是 Amazon 授权**；缺少真实 PG/Compose 验证与正式安全签审。
