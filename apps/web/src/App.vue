@@ -3,13 +3,14 @@ import { computed, ref, watch } from 'vue'
 import type { AuthViewer } from './lib/auth'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { fetchPing } from './lib/api'
+import CoreWorkspace from './CoreWorkspace.vue'
 import { fetchDemoOverview, fetchDemoSyncRuns, startDemoSync, fetchDemoOrders, fetchDemoListings, fetchDemoInventory, fetchDemoCoreStatus } from './lib/demo'
 
-type View = 'overview' | 'orders' | 'catalog' | 'inventory' | 'sync'
+type View = 'core' | 'overview' | 'orders' | 'catalog' | 'inventory' | 'sync'
 
 defineProps<{ viewer: AuthViewer; signingOut: boolean }>()
 const emit = defineEmits<{ logout: [] }>()
-const activeView = ref<View>('overview')
+const activeView = ref<View>('core')
 const accountId = ref('')
 const queryClient = useQueryClient()
 const syncMessage = ref('')
@@ -24,7 +25,8 @@ const {
   isFetching: demoFetching,
   refetch
 } = useQuery({
-  queryKey: ['api', 'demo', 'overview'], queryFn: fetchDemoOverview, staleTime: 60_000, retry: 1
+  queryKey: ['api', 'demo', 'overview'], queryFn: fetchDemoOverview,
+  enabled: computed(() => activeView.value !== 'core'), staleTime: 60_000, retry: 1
 })
 
 watch(overview, value => {
@@ -89,6 +91,7 @@ const apiStatus = computed(() => {
   return ping.value?.status === 'ok' ? 'API 已连接' : 'API 状态异常'
 })
 const navigation: { key: View; label: string; symbol: string }[] = [
+  { key: 'core', label: '核心业务数据', symbol: '▣' },
   { key: 'overview', label: '经营总览', symbol: '◫' },
   { key: 'orders', label: '订单管理', symbol: '▤' },
   { key: 'catalog', label: '商品与 Listing', symbol: '▧' },
@@ -172,11 +175,11 @@ function tabTitle() {
       <div class="content">
         <div class="page-heading">
           <div>
-            <div class="eyebrow">COMMERCE INTELLIGENCE / DEMO</div>
+            <div class="eyebrow">{{ activeView === 'core' ? 'SECURE ERP / CORE DATA' : 'COMMERCE INTELLIGENCE / DEMO' }}</div>
             <h1>{{ tabTitle() }}</h1>
-            <p>集中查看店铺运营数据，所有示例均来自本地 Mock Gateway。</p>
+            <p>{{ activeView === 'core' ? '基于当前会话的租户权限读取 PostgreSQL 核心业务表。' : '集中查看店铺运营数据，所有示例均来自本地 Mock Gateway。' }}</p>
           </div>
-          <div class="heading-actions">
+          <div v-if="activeView !== 'core'" class="heading-actions">
             <label class="shop-filter">
               <span>当前店铺</span>
               <select v-model="accountId" :disabled="!overview?.accounts.length" aria-label="切换演示店铺">
@@ -189,13 +192,15 @@ function tabTitle() {
           </div>
         </div>
 
-        <div class="mock-banner" role="status">
+        <div v-if="activeView !== 'core'" class="mock-banner" role="status">
           <span class="mock-banner-icon" aria-hidden="true">✦</span>
           <div><strong>MOCK 演示模式</strong><span>全部商品、订单、账户和库存均为虚构数据；无 Amazon 凭证、实际财务入账或实时库存。请勿用于经营决策。</span></div>
           <span class="mock-pill">DEMO ONLY</span>
         </div>
 
-        <div v-if="demoPending" class="state-panel">
+        <CoreWorkspace v-if="activeView === 'core'" :tenant-id="viewer.activeTenantId" />
+
+        <div v-else-if="demoPending" class="state-panel">
           <div class="loading-ring"></div>
           <strong>正在读取模拟数据…</strong><p>正在连接后端 Mock Marketplace Gateway</p>
         </div>

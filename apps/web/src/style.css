@@ -186,3 +186,14 @@ td { padding: 19px; border-top: 1px solid #f0f3f7; color: #71829a; }
 .logout-control { border:1px solid #dce4ed;border-radius:8px;background:#fff;color:#627b96;
   padding:8px 11px;font-size:11px; }
 .logout-control:hover { border-color:#9fbedf; }
+
+/* Authenticated, tenant-scoped core views are deliberately separate from Mock. */
+.core-intro { border:1px solid #dbe8f5;background:#f7fbff;padding:19px 21px;border-radius:12px;margin-bottom:20px; }
+.core-intro strong { color:#2e567d;font-size:13px; }
+.core-intro p { color:#6e89a2;font-size:12px;line-height:1.7;margin:6px 0 0; }
+.core-controls { display:flex;gap:13px;align-items:flex-end;flex-wrap:wrap;margin:0 0 20px; }
+.core-subtabs { display:flex;align-items:center;gap:7px;padding:10px 0 16px; }
+.core-subtab { border:1px solid #dce7f3;background:#fff;border-radius:8px;padding:10px 16px;color:#7185a2;font-size:12px;font-weight:700; }
+.core-subtab.selected { border-color:#8db7e8;background:#eaf4ff;color:#2d69ab; }
+.core-empty-icon { font-size:28px;color:#4d80b5;margin-bottom:7px; }
+@media (max-width:760px) { .core-controls .shop-filter { min-width:100%; }.core-subtab { flex:1; } }
