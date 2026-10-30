@@ -31,6 +31,10 @@ services:
       DB_USER: merchivra
       DB_PASSWORD: ${MERCHIVRA_DB_PASSWORD:?Set MERCHIVRA_DB_PASSWORD in .env}
       MERCHIVRA_DEMO_ENABLED: 'true' # Only invented fixtures; Compose binds web/API to localhost.
+      MERCHIVRA_BOOTSTRAP_USERNAME: ${MERCHIVRA_BOOTSTRAP_USERNAME:-}
+      MERCHIVRA_BOOTSTRAP_PASSWORD: ${MERCHIVRA_BOOTSTRAP_PASSWORD:-}
+      MERCHIVRA_BOOTSTRAP_TENANT_NAME: ${MERCHIVRA_BOOTSTRAP_TENANT_NAME:-Merchivra Workspace}
+      MERCHIVRA_SESSION_COOKIE_SECURE: 'false' # Local HTTP only; HTTPS deployment MUST set true.
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:

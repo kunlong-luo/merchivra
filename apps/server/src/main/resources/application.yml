@@ -25,3 +25,19 @@ management:
 merchivra:
   demo:
     enabled: ${MERCHIVRA_DEMO_ENABLED:false}
+
+# Session cookie is HttpOnly + Strict. Enable secure=true behind HTTPS.
+server:
+  servlet:
+    session:
+      timeout: 4h
+      cookie:
+        http-only: true
+        same-site: strict
+        secure: ${MERCHIVRA_SESSION_COOKIE_SECURE:false}
+
+merchivra:
+  bootstrap:
+    username: ${MERCHIVRA_BOOTSTRAP_USERNAME:}
+    password: ${MERCHIVRA_BOOTSTRAP_PASSWORD:}
+    tenant-name: ${MERCHIVRA_BOOTSTRAP_TENANT_NAME:Merchivra Workspace}
