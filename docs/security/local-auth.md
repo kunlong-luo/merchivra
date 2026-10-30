@@ -21,7 +21,7 @@
 | Session | Spring Security 登录成功迁移会话 ID、`JSESSIONID` HttpOnly、SameSite=Strict | 本地 HTTP 为 `Secure=false`；**公网/HTTPS 必须启用 Secure 和可信 TLS 代理** |
 | CSRF | `GET /api/v1/auth/csrf` 返回存在服务端 Session 的 Token；写操作通过 `X-CSRF-TOKEN` 请求头提交 | Token 不保存在 localStorage；登录、模拟同步、切换租户、退出均校验 |
 | 租户作用域 | 权限从服务端认证 UUID + ACTIVE Membership + OWNER role 查询得出；活动租户在 Session 内 | 客户端不可用 `tenantId` 直接读取其他租户；角色变更后下次访问会重新校验 |
-| 读取 API | `GET /api/v1/seller-accounts` 仅返回会话允许的当前租户店铺；缺身份 401，缺 OWNER 403 | 当前仅此生产结构查询端点，**没有新增正式写业务 API** |
+| 业务 API | `GET /api/v1/seller-accounts` 与按当前租户查询 Marketplace/Listing/订单/FBA；本地配置 POST 经 CSRF | 新增的是只创建 `UNCONFIGURED` 店铺/站点的开发期安全配置，不接受真实 Amazon 凭证 |
 | Mock 工作台 | `/api/v1/demo/**` 除需显式开关外还要求登录 | 继续只处理固定虚构数据，不代表真实 Amazon 授权 |
 
 ## 当前认证端点
@@ -42,12 +42,12 @@
 
 - 不支持注册、多管理员、邀请成员、密码重设/MFA/OIDC，也没有邮箱找回；忘记密码需后续受审核的维护恢复工具，**不能使用默认密码绕过**。
 - 没有 Seller 真实 OAuth / SP-API 凭证加密或权限角色，真实 Amazon 数据**仍禁止接入**。
-- 当前只实现 OWNER 全租户读取；细粒度员工/财务/店铺角色没有实现。没有统一 API 速率限制、账户锁定/暴力破解防护、审计、密钥管理、RLS、分布式 Session 存储、多实例一致性与正式安全扫描。
+- 当前只实现 OWNER 全租户读与**本地店铺初始化写入**；细粒度员工/财务/店铺角色没有实现。仅 [API-004](../api/local-seller-setup.md) 具有局部配置审计，缺少全站审计、统一 API 速率限制、账户锁定/暴力破解防护、密钥管理、RLS、分布式 Session 存储、多实例一致性与正式安全扫描。
 - 浏览器 Cookie 走本地 HTTP 仅是开发便利；若要 HTTPS 部署必须调整 `MERCHIVRA_SESSION_COOKIE_SECURE=true`，配置可信反向代理，并完成实际检查（当前仅绑定本地 IP）。
 - 当前没有完成真实 PostgreSQL V3 迁移和端到端浏览器登录验收；CI 通过**仅验证静态类型/单元测试/构建**，不代表服务器端实机安全完整。
 
 ## 后续验收
 
-优先完成运行态 PostgreSQL V1/V2/V3 迁移及启动验证、匿名 API 401、CSRF 缺失 403、登录错误密码 401、会话过期/注销、跨租户账号访问 403/不返回数据、权限撤销后 403 的负例。项目要求前期轻量 CI，详细运行态/浏览器测试留待 M3/M4 质量阶段，不将 E2E 添加到当前 CI。
+优先完成运行态 PostgreSQL V1/V2/V3/V4 迁移及启动验证、匿名 API 401、CSRF 缺失 403、登录错误密码 401、会话过期/注销、跨租户账号访问 403/不返回数据、权限撤销后 403 的负例。项目要求前期轻量 CI，详细运行态/浏览器测试留待 M3/M4 质量阶段，不将 E2E 添加到当前 CI。
 
 相关：[Tenant enforcement](tenant-enforcement.md)、[ADR-0005](../architecture/adrs/0005-api-authentication-tradeoffs.md)、[实施物理表](../architecture/core-domain-foundation.md)、[候选 OpenAPI](../api/README.md)。

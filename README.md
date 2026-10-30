@@ -4,7 +4,7 @@
 
 [简体中文](README.zh-CN.md) · [完整设计文档](docs/README.md) · [API 契约](docs/api/README.md) · [MVP](docs/requirements/mvp.md) · [Architecture](docs/architecture/overview.md) · [Roadmap](docs/roadmap.md) · [Contributing](CONTRIBUTING.md)
 
-> **Status: pre-alpha / authenticated core read workspace plus synthetic Mock demo.** First local admin login, Spring Security Session/CSRF and tenant-scoped Marketplace/Listing/order/FBA read endpoints are implemented. New tenants correctly show no real seller data. Complete multi-role security, real Amazon integration and accounting are NOT implemented. Not production-ready.
+> **Status: pre-alpha / authenticated core read workspace plus synthetic Mock demo.** First local admin login, Spring Security Session/CSRF, tenant-scoped Marketplace/Listing/order/FBA read endpoints and **local-only unconfigured Seller Account setup with audit** are implemented. New tenants correctly show no real seller data. Complete multi-role security, real Amazon integration and accounting are NOT implemented. Not production-ready.
 
 ## Goals
 
@@ -40,7 +40,7 @@ docker compose -f deploy/compose.yaml up --build
 
 **Local session login now protects API and demo endpoints, but broader security and actual database integration validation remain incomplete. Keep it on localhost, do not expose it publicly.**
 
-Local development instructions: [docs/development.md](docs/development.md) · [authenticated core read APIs](docs/api/core-read-api.md) · [Mock demo guide](docs/demo.md) · [local authentication](docs/security/local-auth.md).
+Local development instructions: [docs/development.md](docs/development.md) · [authenticated core read APIs](docs/api/core-read-api.md) · [local Seller setup](docs/api/local-seller-setup.md) · [Mock demo guide](docs/demo.md) · [local authentication](docs/security/local-auth.md).
 
 ## Roadmap
 

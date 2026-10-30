@@ -1,5 +1,7 @@
 # Merchivra ERP · 文档中心
 
+> **M2 配置开发更新：** 增加 [API-004 本地 Seller Account/Marketplace 未连接配置与局部审计](api/local-seller-setup.md)。配置记录仍标记为 `UNCONFIGURED`，**不是 Amazon 授权**；缺少真实 PG/Compose 验证与正式安全签审。
+
 > **2026-10-30 开发更新：** 已升级到 [Java 25 / Spring Boot 4 + Node 24 / Vite 8](architecture/stack-upgrade-2026-10-30.md)，加入 [Agent 策略](../Agent.md)，并提交 [按会话租户约束的核心只读 API 和工作台](api/core-read-api.md)；真实 Amazon 接入、完整 RBAC 和 PG/Compose 端到端验收**仍未完成**。后文 G1/G2 文档均属待签署设计。
 
 > **M1 持久化 Mock 演示**：[本地 Mock 工作台](demo.md) 已直接在 main 提供店铺、商品、订单、FBA 库存、同步历史，以及 [DATA-004](architecture/core-domain-foundation.md) 的核心表 Mock 入库状态；不代表真实 Amazon 集成、认证或财务系统已经实现。

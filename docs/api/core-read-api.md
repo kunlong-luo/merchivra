@@ -23,12 +23,12 @@
 ## 安全约束与目前缺口
 
 - 当前 `OWNER` 仅按**整个租户**授权，员工角色和店铺范围角色未上线；后续必须在真正的 Seller 授权流程前落实 [SEC-002](../security/tenant-enforcement.md)。
-- 未实现 Seller 注册、Amazon OAuth/SP-API、生产凭证加密、退款财务事实、导入审计或完整同步 Worker；**不能接入真实客户或外部 Seller 数据**。
-- 未加入新的无鉴权 HTTP 路由、未改变 Mock Tenant、未创建业务写入/修改 API。
+- 已有 [API-004 本地未连接 Seller Account 配置与局部审计](local-seller-setup.md)，但未实现**真实 Amazon Seller 注册/授权**、OAuth/SP-API、生产凭证加密、退款财务事实、全站审计或完整同步 Worker；**不能接入真实客户或外部 Seller 数据**。
+- 未加入新的无鉴权 HTTP 路由、未改变 Mock Tenant；仅新增 **Owner 本地占位配置** POST，所有业务来源订单/商品/库存仍只读。
 - 已做 Maven 单测中的租户作用域与无界分页负例，前端 Zod/Vitest 的响应契约检查；未执行数据库级读取、容器部署和 E2E。
 - 正式上线前必须在独立 PG 租户夹具中执行跨租户 Marketplace 隐藏、访问撤销、多个 Marketplace 分页与库存 UNKNOWN 的真正集成验收。
 
-**下一步**：完善可安全配置 Seller 账号/Marketplace 的授权操作和审计日志，以及真正的游标分页；在数据来源与业务决策通过前不实现虚构 Amazon Adapter 的生产写入。
+**下一步**：在真实 PostgreSQL 验证 V4 本地店铺/Marketplace 配置与局部审计，并补充真正的游标分页；在数据来源与业务决策通过前不实现虚构 Amazon Adapter 的生产写入。
 
 代码位置：`apps/server/src/main/java/org/merchivra/erp/catalog/MarketplaceReadController.java`、`apps/web/src/CoreWorkspace.vue`、`apps/web/src/lib/core.ts`。
 
