@@ -68,3 +68,5 @@ FBA 的库存增量变化查询与商品 SKU 过滤具有不同操作语义，�
 V6 `sandbox_page_stream`、`sandbox_page_commit` 和 `SandboxPageService` 将本文的一小段协议落在开发用 Mock 数据上：一个 tenant+Marketplace 唯一流；每次外部请求推进恰好一页，SQL `FOR UPDATE NOWAIT` 与 `lease_epoch` 条件更新防同一事务中无序推进，业务记录与页提交同事务；新的请求继续已保存的 `next_page`。模拟客户端为固定 US（两页）/DE（一页），支持同键重放与完成后拒绝额外请求。
 
 **没有实现**正式 `sync_stream` 的租约过期、后台任务分发、Worker fencing、持久查询时间窗、可刷新 Amazon Token、跨时区 API 速率限制或真实来源数据版本迁移。该协议仅用于学习故障与事务边界，与 Proposed 的 G2 正式同步流契约不等价。详见 [TEST-004](../testing/mock-full-chain.md)。
+
+**验证证据：** [V6 逐页断点恢复 Compose 验证成功](https://github.com/kunlong-luo/merchivra/actions/runs/41065562926)。先处理页 1，后端容器重启后从页 2 继续，随后重复使用页 1 的幂等键不重新提交，并验证完成流拒绝额外页。尚未覆盖两个不同进程同一瞬间竞争、锁超时/死锁、正式 `sync_stream` 的 Worker lease fencing 或过期 Amazon cursor。

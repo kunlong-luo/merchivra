@@ -67,3 +67,5 @@
 - [x] 后端用 PostgreSQL 事务行锁与递增 `lease_epoch`，每次只落一个 Mock Orders 页；前端可查看提交进度并手动继续。
 - [x] 独立 Compose 脚本新增第 1 页提交后重启、再继续第 2 页及同键重放的验证场景；最终通过结论需参考对应工作流实际运行记录。
 - [ ] 尚未实现真实后台 Worker、流租约过期、真实 API 分页 token 过期恢复、持久查询窗口与正式高水位、来源授权或真实对账。
+
+- [x] [V6 逐页断点恢复 Compose 验证成功](https://github.com/kunlong-luo/merchivra/actions/runs/41065562926)：实际 PG 17 + Nginx/Java Compose 验证先提交第 1 页、重启后续第 2 页、重复旧幂等键返回原页，页级事务代数与审计正确；**不是正式后台 Worker**。

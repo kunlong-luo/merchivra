@@ -82,3 +82,9 @@ V6 `sandbox_page_stream` 对 `(tenant_id, seller_marketplace_id)` 唯一约束�
 **重要边界**：这里是**人工点击/HTTP 请求驱动的 PostgreSQL 事务锁协议**，不是 Worker 租约/租期续约、分布式调度、真实高水位、Token 过期处理或带版本的 Canonical Source Adapter；它不使用基础表里的正式 `sync_stream` / `sync_run` 推进生产同步流。固定样本规模改变会返回 409，需要以后受控创建新版本流，而不是直接重置老检查点。
 
 可通过已有手动 Compose Workflow 验证 **第 1 页提交 → 后端重启 → 第 2 页继续 → 同键重新提交不重放 → 查询两页**，不增加日常 CI/E2E 门禁。
+
+## V6 真实 Compose 验证结论（2026-10-30）
+
+[V6 逐页断点恢复 Compose 验证成功](https://github.com/kunlong-luo/merchivra/actions/runs/41065562926) 完整通过：在**第三个独立 LOCAL/UNCONFIGURED 美国站**先手动提交第 1 个 Orders 页，此时 PostgreSQL 核心查询仅见 **2 Listing + 1 Order + 0 FBA**，`nextPage=1`、`leaseEpoch=1`；重启 Spring Boot API 后重新登录，同一站点仍从 `nextPage=1` 开始，继续提交第 2 页后得到 **2 Listing + 2 Orders + 2 FBA**，`nextPage=2`、`leaseEpoch=2`。之后重新提交最初的幂等键，响应 `replayed=true` 且不增加时代数、事实或额外页；已完成流使用新键继续提交返回 409；最终审计事件数核对一致，退出后业务 API 返回 401。
+
+**覆盖的是串行事务与进度持久化、容器重启恢复，不是高并发压力测试或分布式过期租约。** 用户提供的正式 SP-API 真正分页/限流/授权信息仍待官方来源与已批准卖家角色核验，不能据此对外宣称真实 Amazon Worker 已完成。
