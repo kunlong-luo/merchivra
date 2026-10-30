@@ -41,7 +41,10 @@ public class SpApiConfiguration {
         @Value("${merchivra.spapi.oauth.redirect-uri:}") String redirectUri,
         @Value("${merchivra.spapi.oauth.allowed-amazon-origins:}") String origins,
         @Value("${merchivra.spapi.lwa-client-id:}") String clientId,
-        @Value("${merchivra.spapi.lwa-client-secret:}") String clientSecret) {
+        @Value("${merchivra.spapi.lwa-client-secret:}") String clientSecret,
+        @Value("${merchivra.demo.enabled:false}") boolean demoEnabled) {
+        if (demoEnabled) throw new IllegalStateException(
+            "Real Seller OAuth cannot be enabled together with synthetic Demo mode");
         var cipher = new SellerTokenCipher(key, 1);
         var exchanger = LwaAuthorizationCodeClient.official(clientId,clientSecret,redirectUri);
         var allowed = java.util.Arrays.stream(origins.split(","))
