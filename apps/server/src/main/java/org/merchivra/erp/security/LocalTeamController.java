@@ -19,7 +19,7 @@ public class LocalTeamController {
     public LocalTeamController(TenantAccessService access,LocalTeamService team) {
         this.access=access;this.team=team;
     }
-    public record InviteRequest(String loginName) {}
+    public record InviteRequest(String loginName,String role,UUID sellerAccountId) {}
     public record ReviewerChange(boolean enabled) {}
     @GetMapping("/members")
     public ResponseEntity<List<LocalTeamService.Member>> members(
@@ -40,7 +40,7 @@ public class LocalTeamController {
         Authentication auth,HttpServletRequest request,@RequestBody InviteRequest body) {
         UUID tenant=access.currentTenant(auth,request);
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-            .body(team.invite(tenant,access.authenticatedUser(auth),body.loginName()));
+            .body(team.invite(tenant,access.authenticatedUser(auth),body.loginName(),body.role()==null?"OWNER":body.role(),body.sellerAccountId()));
     }
     @PostMapping("/invitations/{id}/revoke")
     public ResponseEntity<Void> revokeInvite(

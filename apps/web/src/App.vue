@@ -10,7 +10,7 @@ import { fetchDemoOverview, fetchDemoSyncRuns, startDemoSync, fetchDemoOrders, f
 
 type View = 'core' | 'ops' | 'team' | 'overview' | 'orders' | 'catalog' | 'inventory' | 'sync'
 
-defineProps<{ viewer: AuthViewer; signingOut: boolean }>()
+const props = defineProps<{ viewer: AuthViewer; signingOut: boolean }>()
 const emit = defineEmits<{ logout: [] }>()
 const activeView = ref<View>('core')
 const accountId = ref('')
@@ -103,6 +103,7 @@ const navigation: { key: View; label: string; symbol: string }[] = [
   { key: 'sync', label: '模拟同步', symbol: '↻' }
 ]
 
+const visibleNavigation = computed(() => props.viewer.isOwner ? navigation : navigation.filter(item => item.key === 'core'))
 function money(amount?: { amount: string; currency: string } | null) {
   if (!amount) return '不可计算'
   return `${amount.currency} ${amount.amount}`
@@ -145,7 +146,7 @@ function tabTitle() {
       <div class="sidebar-section-title">工作空间</div>
       <nav class="nav-links" aria-label="主导航">
         <button
-          v-for="item in navigation" :key="item.key" type="button"
+          v-for="item in visibleNavigation" :key="item.key" type="button"
           :class="['nav-link', { active: activeView === item.key }]"
           :aria-current="activeView === item.key ? 'page' : undefined"
           @click="activeView = item.key"
@@ -153,7 +154,7 @@ function tabTitle() {
           <span class="nav-icon" aria-hidden="true">{{ item.symbol }}</span>
           {{ item.label }}
         </button>
-        <div class="nav-link nav-disabled" aria-disabled="true"><span class="nav-icon">▦</span> 财务与对账 <span class="soon">后续</span></div>
+        <div v-if="viewer.isOwner" class="nav-link nav-disabled" aria-disabled="true"><span class="nav-icon">▦</span> 财务与对账 <span class="soon">后续</span></div>
       </nav>
 
       <div class="sidebar-spacer"></div>
@@ -184,7 +185,7 @@ function tabTitle() {
             <h1>{{ tabTitle() }}</h1>
             <p>{{ activeView === 'core' ? '基于当前会话的租户权限读取 PostgreSQL 核心业务表。' : activeView === 'ops' ? '通过规则自动检查来源数据，生成可认领、可审计的运营待办。' : activeView === 'team' ? '使用一次性邀请开通独立管理员，并审计 Orders 安全审核员授权。' : '集中查看店铺运营数据，所有示例均来自本地 Mock Gateway。' }}</p>
           </div>
-          <div v-if="activeView !== 'core' && activeView !== 'ops' && activeView !== 'team'" class="heading-actions">
+          <div v-if="viewer.isOwner && activeView !== 'core' && activeView !== 'ops' && activeView !== 'team'" class="heading-actions">
             <label class="shop-filter">
               <span>当前店铺</span>
               <select v-model="accountId" :disabled="!overview?.accounts.length" aria-label="切换演示店铺">
@@ -197,16 +198,16 @@ function tabTitle() {
           </div>
         </div>
 
-        <div v-if="activeView !== 'core' && activeView !== 'ops' && activeView !== 'team'" class="mock-banner" role="status">
+        <div v-if="viewer.isOwner && activeView !== 'core' && activeView !== 'ops' && activeView !== 'team'" class="mock-banner" role="status">
           <span class="mock-banner-icon" aria-hidden="true">✦</span>
           <div><strong>MOCK 演示模式</strong><span>全部商品、订单、账户和库存均为虚构数据；无 Amazon 凭证、实际财务入账或实时库存。请勿用于经营决策。</span></div>
           <span class="mock-pill">DEMO ONLY</span>
         </div>
 
-        <CoreWorkspace v-if="activeView === 'core'" :tenant-id="viewer.activeTenantId" />
+        <CoreWorkspace v-if="activeView === 'core'" :tenant-id="viewer.activeTenantId" :is-owner="viewer.isOwner" />
 
-        <OperationsWorkspace v-else-if="activeView === 'ops'" :tenant-id="viewer.activeTenantId" />
-        <TeamWorkspace v-else-if="activeView === 'team'" :tenant-id="viewer.activeTenantId" :current-user-id="viewer.userId" />
+        <OperationsWorkspace v-else-if="activeView === 'ops' && viewer.isOwner" :tenant-id="viewer.activeTenantId" />
+        <TeamWorkspace v-else-if="activeView === 'team' && viewer.isOwner" :tenant-id="viewer.activeTenantId" :current-user-id="viewer.userId" />
 
         <div v-else-if="demoPending" class="state-panel">
           <div class="loading-ring"></div>

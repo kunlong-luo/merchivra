@@ -29,16 +29,16 @@ public class AuthController {
             .body(Map.of("token", token.getToken(), "headerName", token.getHeaderName()));
     }
 
-    public record Viewer(String userId, String activeTenantId, List<String> availableTenantIds) {}
+    public record Viewer(String userId, String activeTenantId, List<String> availableTenantIds, boolean isOwner) {}
 
     @GetMapping("/me")
     public ResponseEntity<Viewer> me(Authentication authentication, HttpServletRequest request) {
         UUID user = tenants.authenticatedUser(authentication);
-        UUID current = tenants.currentTenant(authentication, request);
-        List<String> allowed = tenants.accessibleTenants(authentication).stream()
+        UUID current = tenants.currentReadTenant(authentication, request);
+        List<String> allowed = tenants.readableTenants(authentication).stream()
             .map(UUID::toString).toList();
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-            .body(new Viewer(user.toString(), current.toString(), allowed));
+            .body(new Viewer(user.toString(), current.toString(), allowed, tenants.isOwner(authentication,current)));
     }
 
     public record TenantSelection(UUID tenantId) {}

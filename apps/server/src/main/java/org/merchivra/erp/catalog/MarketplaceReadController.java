@@ -22,7 +22,7 @@ import org.springframework.web.server.ResponseStatusException;
  * The tenant is derived from the authenticated session on every request.
  * Scope is also enforced in every SQL statement (defense in depth).
  *
- * M2: OWNER tenant-wide only. Account-specific roles require a later ACL design.
+ * V16: OWNER-wide or explicitly seller-account-scoped OPERATOR_READ only.
  */
 @RestController
 @RequestMapping("/api/v1/seller-marketplaces")
@@ -53,20 +53,29 @@ public class MarketplaceReadController {
 
     @GetMapping
     public List<MarketplaceView> marketplaces(Authentication authentication, HttpServletRequest request) {
-        UUID tenantId = tenantAccess.currentTenant(authentication, request);
+        UUID tenantId = tenantAccess.currentReadTenant(authentication, request);
+        UUID actor = tenantAccess.authenticatedUser(authentication);
         return jdbc.query("""
             SELECT mp.id, mp.seller_account_id, mp.marketplace_id, a.region,
                    mp.currency_code, mp.timezone, a.connection_status
             FROM seller_marketplace mp
             JOIN seller_account a ON a.tenant_id = mp.tenant_id AND a.id = mp.seller_account_id
             WHERE mp.tenant_id = ?
+              AND EXISTS (
+                SELECT 1 FROM membership m JOIN app_user u ON u.id=m.user_id
+                JOIN role_binding rb ON rb.tenant_id=m.tenant_id AND rb.user_id=m.user_id
+                WHERE m.tenant_id=mp.tenant_id AND m.user_id=? AND m.status='ACTIVE'
+                  AND u.status='ACTIVE'
+                  AND ((rb.role_code='OWNER' AND rb.seller_account_id IS NULL)
+                    OR (rb.role_code='OPERATOR_READ' AND rb.seller_account_id=a.id))
+              )
             ORDER BY mp.marketplace_id, mp.id
             LIMIT 100
             """, (rs, row) -> new MarketplaceView(
                 uuid(rs, "id"), uuid(rs, "seller_account_id"),
                 rs.getString("marketplace_id"), rs.getString("region"),
                 rs.getString("currency_code").trim(), rs.getString("timezone"),
-                rs.getString("connection_status")), tenantId);
+                rs.getString("connection_status")), tenantId,actor);
     }
 
     @GetMapping("/{marketplaceId}/listings")
@@ -149,13 +158,23 @@ public class MarketplaceReadController {
     }
 
     private UUID authorizedMarketplace(Authentication auth, HttpServletRequest request, UUID marketplaceId) {
-        UUID tenant = tenantAccess.currentTenant(auth, request);
+        UUID tenant = tenantAccess.currentReadTenant(auth, request);
+        UUID actor = tenantAccess.authenticatedUser(auth);
         Integer count = jdbc.queryForObject("""
             SELECT COUNT(*) FROM seller_marketplace mp
             JOIN seller_account sa
               ON sa.tenant_id = mp.tenant_id AND sa.id = mp.seller_account_id
             WHERE mp.id = ? AND mp.tenant_id = ? AND sa.tenant_id = ?
-            """, Integer.class, marketplaceId, tenant, tenant);
+              AND EXISTS (
+                SELECT 1 FROM membership m JOIN app_user u ON u.id=m.user_id
+                JOIN role_binding rb ON rb.tenant_id=m.tenant_id AND rb.user_id=m.user_id
+                WHERE m.tenant_id=mp.tenant_id AND m.user_id=? AND m.status='ACTIVE'
+                  AND u.status='ACTIVE'
+                  AND ((rb.role_code='OWNER' AND rb.seller_account_id IS NULL)
+                    OR (rb.role_code='OPERATOR_READ'
+                        AND rb.seller_account_id=sa.id))
+              )
+            """, Integer.class, marketplaceId, tenant, tenant,actor);
         // The same 404 for unknown and foreign-tenant IDs avoids disclosing existence.
         if (count == null || count != 1) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Marketplace not found");

@@ -10,7 +10,7 @@ import {
 } from './lib/core'
 
 type Section = 'listings' | 'orders' | 'inventory'
-const props = defineProps<{ tenantId: string }>()
+const props = defineProps<{ tenantId: string; isOwner?: boolean }>()
 const marketplaceId = ref('')
 const section = ref<Section>('listings')
 const searchText = ref('')
@@ -97,7 +97,7 @@ function observed(value: number | null) {
         <p>先创建本地占位店铺并添加站点，之后即可读取当前租户的业务表。配置站点不等于授权 Amazon。</p>
         <button class="refresh-button" type="button" @click="reloadMarketplaces()">重新检查站点</button>
       </div>
-      <SellerSetup :tenant-id="tenantId" />
+      <SellerSetup v-if="isOwner !== false" :tenant-id="tenantId" />
     </div>
     <template v-else>
       <div class="core-controls">
@@ -212,10 +212,10 @@ function observed(value: number | null) {
         <strong>数据完整性提醒</strong>
         <p>每类最多读取 50 条，筛选仅作用于本页；分页与真实 Amazon 同步尚未完成。测试数据必须标注 MOCK，未知库存不能按 0 处理。</p>
       </div></div>
-      <OrdersSyncPanel v-if="activeMarketplace && activeMarketplace.connectionStatus === 'CONNECTED'"
+      <OrdersSyncPanel v-if="isOwner !== false && activeMarketplace && activeMarketplace.connectionStatus === 'CONNECTED'"
         :key="'live-orders-'+activeMarketplace.id"
         :tenant-id="tenantId" :marketplace-id="activeMarketplace.id" :is-live="true" />
-      <details class="core-tools">
+      <details v-if="isOwner !== false" class="core-tools">
         <summary><strong>本地店铺配置与测试工具</strong><span>添加 Marketplace、手动 Mock 回放 · 不连接 Amazon</span></summary>
         <div class="core-tools-content">
           <SellerSetup :tenant-id="tenantId" />

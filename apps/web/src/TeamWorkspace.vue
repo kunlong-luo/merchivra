@@ -4,10 +4,17 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { listTeamMembers, listTeamInvites, createTeamInvite,
   revokeTeamInvite, setTeamReviewer, revokeTeamOwner } from './lib/team'
 import type { IssuedInvite } from './lib/team'
+import { fetchCoreMarketplaces } from './lib/core'
 
 const props=defineProps<{ tenantId:string; currentUserId:string }>()
 const client=useQueryClient()
+const {data:scopedMarketplaces}=useQuery({
+  queryKey:['team',props.tenantId,'scope-accounts'], queryFn:fetchCoreMarketplaces,
+  retry:false,staleTime:30000
+})
 const login=ref('')
+const role=ref<'OWNER'|'OPERATOR_READ'>('OWNER')
+const sellerAccountId=ref('')
 const result=ref<IssuedInvite|null>(null)
 const message=ref('')
 const error=ref('')
@@ -23,7 +30,8 @@ function refresh() {
   void client.invalidateQueries({queryKey:['team',props.tenantId]})
 }
 const {mutate:issueInvite,isPending:issuingPending}=useMutation({
-  mutationFn:()=>createTeamInvite(login.value),
+  mutationFn:()=>createTeamInvite(login.value,role.value,
+    role.value==='OPERATOR_READ'?sellerAccountId.value:undefined),
   onSuccess:issued=>{
     result.value=issued;login.value='';message.value='邀请已生成。请通过可信渠道单独交给受邀者。'
     error.value='';refresh()
@@ -59,7 +67,7 @@ function removeOwner(id:string) {
     <section class="panel full-panel">
       <div class="panel-heading">
         <div><h2>管理员与安全审核员</h2>
-          <p>当前只支持多位 OWNER 管理员。安全审核员需由另一位管理员显式授权。</p></div>
+          <p>OWNER 具有全租户权限；OPERATOR_READ 仅可查看指定店铺的 Listing、订单与 FBA 观测。</p></div>
         <button type="button" class="refresh-button" @click="refresh()">刷新</button>
       </div>
       <div v-if="membersPending" class="empty-state">读取成员…</div>
@@ -71,12 +79,13 @@ function removeOwner(id:string) {
           <thead><tr><th>登录名</th><th>成员状态</th><th>Orders 角色审核权限</th><th>操作</th></tr></thead>
           <tbody>
             <tr v-for="member in teamMembers ?? []" :key="member.userId">
-              <td class="strong-cell">{{ member.loginName }} <span v-if="member.userId===currentUserId" class="secondary-cell">（当前账号）</span></td>
+              <td class="strong-cell">{{ member.loginName }} <span v-if="member.userId===currentUserId" class="secondary-cell">（当前账号）</span>
+                <div class="secondary-cell">{{ member.role==='OPERATOR_READ'?'店铺只读员工':'租户管理员' }}<span v-if="member.sellerAccountId"> · {{ member.sellerAccountId.slice(0,8) }}</span></div></td>
               <td><span class="status-chip" :class="member.status==='ACTIVE'?'chip-green':'chip-muted'">{{ member.status==='ACTIVE'?'有效':'已撤销' }}</span></td>
               <td><span class="status-chip" :class="member.reviewer?'chip-green':'chip-muted'">{{ member.reviewer?'已授权':'未授权' }}</span></td>
               <td>
                 <div class="sandbox-actions">
-                  <button class="refresh-button" type="button" :disabled="actionPending || member.status!=='ACTIVE' || (member.userId===currentUserId && !member.reviewer)"
+                  <button class="refresh-button" type="button" :disabled="actionPending || member.status!=='ACTIVE' || member.role!=='OWNER' || (member.userId===currentUserId && !member.reviewer)"
                     @click="runAction({kind:'reviewer',id:member.userId,enabled:!member.reviewer})">{{ member.reviewer?'撤销审核员':'授予审核员' }}</button>
                   <button class="text-button" type="button" :disabled="actionPending || member.status!=='ACTIVE' || member.userId===currentUserId"
                     @click="removeOwner(member.userId)">移除管理员</button>
@@ -91,15 +100,28 @@ function removeOwner(id:string) {
     <section class="panel full-panel">
       <div class="panel-heading">
         <div><h2>邀请另一位管理员</h2>
-          <p>生成 24 小时有效的一次性令牌，由受邀者自行设置密码。邀请不会自动授予安全审核员权限。</p></div>
+          <p>生成 24 小时有效的一次性令牌。可邀请另一位 OWNER，或只授予指定店铺读权限的 OPERATOR_READ 员工。</p></div>
       </div>
       <form class="team-invite-form" @submit.prevent="issueInvite()">
+        <label for="invite-role">邀请角色</label>
+        <select id="invite-role" v-model="role" aria-label="邀请权限">
+          <option value="OWNER">OWNER · 全租户管理员</option>
+          <option value="OPERATOR_READ">OPERATOR_READ · 指定店铺只读员工</option>
+        </select>
+        <template v-if="role==='OPERATOR_READ'">
+          <label for="invite-account">允许访问的 Seller Account</label>
+          <select id="invite-account" v-model="sellerAccountId" required aria-label="员工授权店铺">
+            <option value="" disabled>选择店铺</option>
+            <option v-for="a in [...new Map((scopedMarketplaces??[]).map(m=>[m.sellerAccountId,m])).values()]"
+              :key="a.sellerAccountId" :value="a.sellerAccountId">{{ a.region }} · {{ a.marketplaceId }}</option>
+          </select>
+        </template>
         <label for="invite-login">新管理员登录名</label>
         <div class="sandbox-actions">
           <input id="invite-login" v-model.trim="login" required
             pattern="[A-Za-z0-9._-]{3,64}" minlength="3" maxlength="64"
             autocomplete="off" placeholder="例如 ops-reviewer" />
-          <button type="submit" class="primary-button" :disabled="issuingPending || !login">生成邀请</button>
+          <button type="submit" class="primary-button"  :disabled="issuingPending || !login || (role==='OPERATOR_READ' && !sellerAccountId)">生成邀请</button>
         </div>
       </form>
       <div v-if="result" class="team-invite-secret" role="status">
@@ -116,7 +138,7 @@ function removeOwner(id:string) {
       <div class="table-scroll" role="region" tabindex="0" aria-label="最近的管理员邀请">
         <table><thead><tr><th>登录名</th><th>状态</th><th>失效时间</th><th>操作</th></tr></thead>
           <tbody><tr v-for="invite in teamInvites ?? []" :key="invite.id">
-            <td>{{ invite.loginName }}</td><td>{{ invite.status }}</td>
+            <td>{{ invite.loginName }} <small>{{ invite.role==='OPERATOR_READ'?'· 店铺只读':'· 管理员' }}</small></td><td>{{ invite.status }}</td>
             <td>{{ new Date(invite.expiresAt).toLocaleString('zh-CN') }}</td>
             <td><button type="button" class="text-button"
               :disabled="invite.status!=='PENDING' || actionPending"
@@ -124,7 +146,7 @@ function removeOwner(id:string) {
           </tr></tbody>
         </table>
       </div>
-      <p class="setup-hint">权限变更将立即影响后续服务端校验。当前不提供普通员工访问，避免未配置细粒度权限时过度授权。</p>
+      <p class="setup-hint">权限变更将立即影响后续服务端校验。OPERATOR_READ 仅能读取已授权店铺核心表，不可修改运营规则、创建同步任务、管理 OAuth/团队或读取敏感管理员接口。</p>
     </section>
   </div>
 </template>

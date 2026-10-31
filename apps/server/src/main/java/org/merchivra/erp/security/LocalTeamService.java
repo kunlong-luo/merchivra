@@ -35,8 +35,10 @@ public class LocalTeamService {
         this.jdbc=jdbc;this.tx=tx;this.encoder=encoder;
     }
 
-    public record Member(UUID userId,String loginName,String status,boolean reviewer) {}
-    public record Invitation(UUID id,String loginName,String status,String expiresAt) {}
+    public record Member(UUID userId,String loginName,String status,boolean reviewer,
+                         String role,UUID sellerAccountId) {}
+    public record Invitation(UUID id,String loginName,String status,String expiresAt,
+                             String role,UUID sellerAccountId) {}
     public record Issued(UUID invitationId,String loginName,String token,String expiresAt) {}
 
     private void lockTenant(UUID tenant) {
@@ -86,27 +88,46 @@ public class LocalTeamService {
                EXISTS (SELECT 1 FROM role_binding r
                  WHERE r.tenant_id=m.tenant_id AND r.user_id=m.user_id
                    AND r.role_code='SECURITY_REVIEWER'
-                   AND r.seller_account_id IS NULL) reviewer
+                   AND r.seller_account_id IS NULL) reviewer,
+               CASE WHEN EXISTS (SELECT 1 FROM role_binding rb
+                 WHERE rb.tenant_id=m.tenant_id AND rb.user_id=m.user_id
+                   AND rb.role_code='OWNER' AND rb.seller_account_id IS NULL)
+                 THEN 'OWNER' ELSE 'OPERATOR_READ' END AS access_role,
+               (SELECT rb.seller_account_id FROM role_binding rb
+                 WHERE rb.tenant_id=m.tenant_id AND rb.user_id=m.user_id
+                   AND rb.role_code='OPERATOR_READ' LIMIT 1) AS assigned_account
             FROM membership m
             JOIN app_user u ON u.id=m.user_id
             JOIN local_credential c ON c.user_id=u.id
             WHERE m.tenant_id=?
             ORDER BY c.login_name
             """,(rs,n)->new Member(rs.getObject(1,UUID.class),rs.getString(2),
-                rs.getString(3),rs.getBoolean(4)),tenant);
+                rs.getString(3),rs.getBoolean(4),rs.getString("access_role"),
+                rs.getObject("assigned_account",UUID.class)),tenant);
     }
 
     public List<Invitation> invitations(UUID tenant,UUID actor) {
         requireOwner(tenant,actor);
         return jdbc.query("""
-            SELECT id,login_name,status,expires_at FROM local_owner_invitation
+            SELECT id,login_name,status,expires_at,invite_role,seller_account_id
+            FROM local_owner_invitation
             WHERE tenant_id=? ORDER BY created_at DESC LIMIT 50
             """,(rs,n)->new Invitation(rs.getObject(1,UUID.class),rs.getString(2),
-                rs.getString(3),rs.getObject(4,OffsetDateTime.class).toInstant().toString()),tenant);
+                rs.getString(3),rs.getObject(4,OffsetDateTime.class).toInstant().toString(),
+                rs.getString(5),rs.getObject(6,UUID.class)),tenant);
     }
 
     /** Token is returned only once in a no-store response. The inviter delivers it manually. */
     public Issued invite(UUID tenant,UUID actor,String login) {
+        return invite(tenant,actor,login,"OWNER",null);
+    }
+
+    public Issued invite(UUID tenant,UUID actor,String login,String role,UUID sellerAccount) {
+        if(!"OWNER".equals(role) && !"OPERATOR_READ".equals(role))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Unsupported invite role");
+        if(("OWNER".equals(role) && sellerAccount!=null)
+          || ("OPERATOR_READ".equals(role) && sellerAccount==null))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid account role scope");
         if(login==null || !login.matches("[A-Za-z0-9._-]{3,64}"))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid login");
         byte[] secret=new byte[32];
@@ -116,6 +137,13 @@ public class LocalTeamService {
         return tx.execute(transaction->{
             lockTenant(tenant);
             requireOwner(tenant,actor);
+            if("OPERATOR_READ".equals(role)) {
+                Integer scoped=jdbc.queryForObject("""
+                    SELECT count(*) FROM seller_account WHERE tenant_id=? AND id=?
+                    """,Integer.class,tenant,sellerAccount);
+                if(scoped==null || scoped!=1)
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Seller scope unavailable");
+            }
             Integer existing=jdbc.queryForObject("""
                 SELECT count(*) FROM local_credential WHERE login_name=?
                 """,Integer.class,login);
@@ -137,9 +165,10 @@ public class LocalTeamService {
             Instant expiry=Instant.now().plusSeconds(24*3600);
             jdbc.update("""
                 INSERT INTO local_owner_invitation
-                  (id,tenant_id,invited_by,login_name,token_sha256,status,expires_at)
-                VALUES (?,?,?,?,?,'PENDING',?)
-                """,id,tenant,actor,login,digest,OffsetDateTime.ofInstant(expiry,ZoneOffset.UTC));
+                  (id,tenant_id,invited_by,login_name,token_sha256,status,expires_at,invite_role,seller_account_id)
+                VALUES (?,?,?,?,?,'PENDING',?,?,?)
+                """,id,tenant,actor,login,digest,OffsetDateTime.ofInstant(expiry,ZoneOffset.UTC),
+                role,sellerAccount);
             audit(tenant,actor,null,id,"INVITED");
             return new Issued(id,login,token,expiry.toString());
         });
@@ -167,18 +196,30 @@ public class LocalTeamService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid invitation or password");
         String digest=hash(token);
         tx.executeWithoutResult(transaction->{
-            record Pending(UUID id,UUID tenant,UUID inviter,String login) {}
+            record Pending(UUID id,UUID tenant,UUID inviter,String login,
+                           String role,UUID sellerAccount) {}
             List<Pending> matches=jdbc.query("""
-                SELECT id,tenant_id,invited_by,login_name FROM local_owner_invitation
+                SELECT id,tenant_id,invited_by,login_name,invite_role,seller_account_id
+                FROM local_owner_invitation
                 WHERE token_sha256=? AND status='PENDING' AND expires_at>now()
                 FOR UPDATE
                 """,(rs,n)->new Pending(rs.getObject(1,UUID.class),
-                    rs.getObject(2,UUID.class),rs.getObject(3,UUID.class),rs.getString(4)),digest);
+                    rs.getObject(2,UUID.class),rs.getObject(3,UUID.class),rs.getString(4),
+                    rs.getString(5),rs.getObject(6,UUID.class)),digest);
             if(matches.size()!=1)
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid invitation or password");
             Pending invite=matches.getFirst();
             lockTenant(invite.tenant());
             requireOwner(invite.tenant(),invite.inviter());
+            if("OPERATOR_READ".equals(invite.role())) {
+                Integer scoped=jdbc.queryForObject("""
+                    SELECT count(*) FROM seller_account WHERE tenant_id=? AND id=?
+                    """,Integer.class,invite.tenant(),invite.sellerAccount());
+                if(scoped==null || scoped!=1)
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,"Account scope unavailable");
+            } else if(!"OWNER".equals(invite.role()) || invite.sellerAccount()!=null) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,"Invitation role invalid");
+            }
             Integer exists=jdbc.queryForObject("""
                 SELECT count(*) FROM local_credential WHERE login_name=?
                 """,Integer.class,invite.login());
@@ -193,8 +234,9 @@ public class LocalTeamService {
                 invite.tenant(),user);
             jdbc.update("""
                 INSERT INTO role_binding(id,tenant_id,user_id,role_code,seller_account_id)
-                VALUES (?,?,?,'OWNER',NULL)
-                """,UUID.randomUUID(),invite.tenant(),user);
+                VALUES (?,?,?,?,?)
+                """,UUID.randomUUID(),invite.tenant(),user,
+                invite.role(),invite.sellerAccount());
             jdbc.update("""
                 UPDATE local_owner_invitation SET status='ACCEPTED',
                   consumed_at=now(),accepted_user_id=?
@@ -236,18 +278,24 @@ public class LocalTeamService {
             requireOwner(tenant,actor);
             if(actor.equals(target))
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Cannot revoke yourself");
-            if(!owner(tenant,target))
+            Integer active=jdbc.queryForObject("""
+                SELECT count(*) FROM membership WHERE tenant_id=? AND user_id=?
+                  AND status='ACTIVE'
+                """,Integer.class,tenant,target);
+            if(active==null || active!=1)
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-            Integer remaining=jdbc.queryForObject("""
+            if(owner(tenant,target)) {
+              Integer remaining=jdbc.queryForObject("""
                 SELECT count(DISTINCT m.user_id) FROM membership m
                 JOIN app_user u ON u.id=m.user_id AND u.status='ACTIVE'
                 JOIN role_binding rb ON rb.tenant_id=m.tenant_id AND rb.user_id=m.user_id
                 WHERE m.tenant_id=? AND m.status='ACTIVE'
                   AND rb.role_code='OWNER' AND rb.seller_account_id IS NULL
                 """,Integer.class,tenant);
-            if(remaining==null || remaining<2)
-                throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Last active Owner cannot be removed");
+              if(remaining==null || remaining<2)
+                  throw new ResponseStatusException(HttpStatus.CONFLICT,
+                      "Last active Owner cannot be removed");
+            }
             jdbc.update("""
                 UPDATE membership SET status='REVOKED'
                 WHERE tenant_id=? AND user_id=? AND status='ACTIVE'

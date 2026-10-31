@@ -3,7 +3,8 @@ import { z } from 'zod'
 export const viewerSchema = z.object({
   userId: z.string().uuid(),
   activeTenantId: z.string().uuid(),
-  availableTenantIds: z.array(z.string().uuid())
+  availableTenantIds: z.array(z.string().uuid()),
+  isOwner: z.boolean().default(true)
 })
 export type AuthViewer = z.infer<typeof viewerSchema>
 

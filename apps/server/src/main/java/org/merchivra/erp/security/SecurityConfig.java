@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.web.configurers.AbstractHt
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.access.intercept.AuthorizationFilter;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 import org.springframework.security.web.csrf.HttpSessionCsrfTokenRepository;
 
@@ -23,7 +24,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, TenantAccessService tenants) throws Exception {
         // CSRF token is stored server-side in the session and fetched by the SPA
         // through GET /api/v1/auth/csrf. JSESSIONID remains HttpOnly.
         var csrfHandler = new CsrfTokenRequestAttributeHandler();
@@ -60,6 +61,7 @@ public class SecurityConfig {
                 .accessDeniedHandler((request, response, exception) ->
                     response.sendError(HttpServletResponse.SC_FORBIDDEN)))
             .requestCache(cache -> cache.disable())
+            .addFilterAfter(new ReadOnlyStaffGuardFilter(tenants), AuthorizationFilter.class)
             .httpBasic(AbstractHttpConfigurer::disable);
         return http.build();
     }

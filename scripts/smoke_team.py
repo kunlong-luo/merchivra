@@ -89,6 +89,45 @@ expect(owner,"/api/v1/team/members/"+second+"/reviewer",404,method="POST",csrf=o
   body={"enabled":True})
 after=expect(owner,"/api/v1/team/members")
 assert sum(1 for m in after if m["status"]=="ACTIVE")==1
+# V16: staff must be scoped to ONE Seller account, including all its Marketplaces.
+scopes=expect(owner,"/api/v1/seller-marketplaces")
+assert scopes, "Mock chain should have created Seller Marketplaces"
+account=scopes[0]["sellerAccountId"]
+authorized=[m["id"] for m in scopes if m["sellerAccountId"]==account]
+unassigned=[m["id"] for m in scopes if m["sellerAccountId"]!=account]
+expect(owner,"/api/v1/team/invitations",400,method="POST",csrf=oc,
+  body={"loginName":"staffbad","role":"OPERATOR_READ","sellerAccountId":None})
+created=expect(owner,"/api/v1/team/invitations",method="POST",csrf=oc,
+  body={"loginName":"staff16","role":"OPERATOR_READ","sellerAccountId":account})
+token=created["token"]
+staff=session()
+sc=csrf(staff)
+expect(staff,"/api/v1/auth/invitations/accept",204,method="POST",csrf=sc,
+  body={"token":token,"password":"local-operator-strong-secret-678"})
+login(staff,"staff16","local-operator-strong-secret-678")
+sc=csrf(staff)
+viewer=expect(staff,"/api/v1/auth/me")
+assert viewer["isOwner"] is False,viewer
+staff_id=viewer["userId"]
+staff_markets=expect(staff,"/api/v1/seller-marketplaces")
+assert {x["id"] for x in staff_markets}==set(authorized),(staff_markets,authorized)
+for mp in authorized:
+    for suffix in ["listings","orders","inventory/fba"]:
+        expect(staff,"/api/v1/seller-marketplaces/"+mp+"/"+suffix,200)
+for mp in unassigned:
+    for suffix in ["listings","orders","inventory/fba"]:
+        expect(staff,"/api/v1/seller-marketplaces/"+mp+"/"+suffix,404)
+for forbidden in ["/api/v1/team/members","/api/v1/seller-accounts",
+                  "/api/v1/operations/summary"]:
+    expect(staff,forbidden,403)
+expect(staff,"/api/v1/team/invitations",403,method="POST",csrf=sc,
+  body={"loginName":"staffprivilege","role":"OWNER"})
+expect(staff,"/api/v1/seller-accounts",403,method="POST",csrf=sc,
+  body={"displayName":"Forbidden","region":"NA"})
+expect(owner,"/api/v1/team/members/"+staff_id+"/revoke",204,method="POST",csrf=oc)
+expect(staff,"/api/v1/auth/me",403)
+expect(staff,"/api/v1/seller-marketplaces",403)
+print("PASS V16: staff login, scoped Marketplace + orders/listings/FBA, foreign 404, no OWNER routes, immediate revoke")
 expect(owner,"/api/v1/auth/logout",204,method="POST",csrf=oc)
 expect(owner,"/api/v1/team/members",401)
 print("PASS V15: PG18 2-Owner invitation, one-use token, CSRF, separate login, reviewer no self-grant, reviewer revoke, membership immediate revocation, owner retained")

@@ -3,11 +3,11 @@ import { csrfHeader } from './auth'
 
 const memberSchema = z.object({
   userId:z.string().uuid(), loginName:z.string(), status:z.enum(['ACTIVE','REVOKED']),
-  reviewer:z.boolean()
+  reviewer:z.boolean(),role:z.enum(['OWNER','OPERATOR_READ']).default('OWNER'),sellerAccountId:z.string().uuid().nullable().optional()
 })
 const invitationSchema = z.object({
   id:z.string().uuid(),loginName:z.string(),
-  status:z.enum(['PENDING','ACCEPTED','REVOKED']),expiresAt:z.string()
+  status:z.enum(['PENDING','ACCEPTED','REVOKED']),expiresAt:z.string(),role:z.enum(['OWNER','OPERATOR_READ']).default('OWNER'),sellerAccountId:z.string().uuid().nullable().optional()
 })
 const issuedSchema = z.object({
   invitationId:z.string().uuid(),loginName:z.string(),token:z.string().min(40),
@@ -34,8 +34,8 @@ async function api(path:string,method:'GET'|'POST'='GET',body?:unknown) {
 
 export const listTeamMembers = async () => z.array(memberSchema).parse(await api('team/members'))
 export const listTeamInvites = async () => z.array(invitationSchema).parse(await api('team/invitations'))
-export const createTeamInvite = async (loginName:string) =>
-  issuedSchema.parse(await api('team/invitations','POST',{loginName}))
+export const createTeamInvite = async (loginName:string,role:'OWNER'|'OPERATOR_READ'='OWNER',sellerAccountId?:string) =>
+  issuedSchema.parse(await api('team/invitations','POST',{loginName,role,sellerAccountId:sellerAccountId ?? null}))
 export const revokeTeamInvite = async (id:string) =>
   api('team/invitations/'+encodeURIComponent(id)+'/revoke','POST')
 export const setTeamReviewer = async (id:string,enabled:boolean) =>

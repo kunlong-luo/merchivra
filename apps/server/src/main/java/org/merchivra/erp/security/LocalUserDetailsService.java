@@ -28,7 +28,10 @@ public class LocalUserDetailsService implements UserDetailsService {
                 JOIN role_binding rb ON rb.tenant_id = m.tenant_id
                   AND rb.user_id = m.user_id
                 WHERE m.user_id = u.id AND m.status = 'ACTIVE'
-                  AND rb.role_code = 'OWNER' AND rb.seller_account_id IS NULL)
+                  AND ((rb.role_code = 'OWNER' AND rb.seller_account_id IS NULL)
+                    OR (rb.role_code='OPERATOR_READ' AND rb.seller_account_id IS NOT NULL
+                       AND EXISTS (SELECT 1 FROM seller_account a WHERE a.tenant_id=rb.tenant_id
+                           AND a.id=rb.seller_account_id))))
             """, (rs, row) -> User.withUsername(rs.getObject("id", UUID.class).toString())
                 .password(rs.getString("password_hash"))
                 .authorities("ROLE_USER")

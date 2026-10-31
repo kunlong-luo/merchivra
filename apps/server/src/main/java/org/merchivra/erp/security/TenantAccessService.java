@@ -57,8 +57,48 @@ public class TenantAccessService {
         return first;
     }
 
+
+    /**
+     * V16 read-only workspace access. Does NOT change currentTenant's OWNER
+     * gate used by sensitive existing controllers and write operations.
+     */
+    public List<UUID> readableTenants(Authentication authentication) {
+        UUID user = authenticatedUser(authentication);
+        return jdbc.queryForList("""
+            SELECT DISTINCT m.tenant_id FROM membership m
+            JOIN tenant t ON t.id=m.tenant_id
+            JOIN app_user u ON u.id=m.user_id
+            WHERE m.user_id=? AND m.status='ACTIVE'
+              AND u.status='ACTIVE' AND t.status='ACTIVE'
+              AND EXISTS (
+                SELECT 1 FROM role_binding rb
+                LEFT JOIN seller_account a ON a.tenant_id=rb.tenant_id
+                  AND a.id=rb.seller_account_id
+                WHERE rb.tenant_id=m.tenant_id AND rb.user_id=m.user_id
+                  AND ((rb.role_code='OWNER' AND rb.seller_account_id IS NULL)
+                    OR (rb.role_code='OPERATOR_READ'
+                        AND a.id IS NOT NULL))
+              )
+            ORDER BY m.tenant_id
+            """, UUID.class, user);
+    }
+
+    public UUID currentReadTenant(Authentication auth,HttpServletRequest request) {
+        List<UUID> allowed=readableTenants(auth);
+        if(allowed.isEmpty())throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        Object selected=request.getSession().getAttribute(TENANT_SESSION_KEY);
+        if(selected instanceof UUID tenant && allowed.contains(tenant))return tenant;
+        UUID tenant=allowed.getFirst();
+        request.getSession().setAttribute(TENANT_SESSION_KEY,tenant);
+        return tenant;
+    }
+
+    public boolean isOwner(Authentication auth,UUID tenant) {
+        return accessibleTenants(auth).contains(tenant);
+    }
+
     public UUID switchTenant(Authentication authentication, HttpServletRequest request, UUID tenantId) {
-        if (!accessibleTenants(authentication).contains(tenantId)) {
+        if (!readableTenants(authentication).contains(tenantId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
         request.getSession().setAttribute(TENANT_SESSION_KEY, tenantId);
