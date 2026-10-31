@@ -356,7 +356,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
      </div>}
    </>}
   </section>
-  <SupplierAsnPanel tenantId={tenantId} orderId={selectedId}
+  <SupplierAsnPanel key={selectedId||'no-order'} tenantId={tenantId} orderId={selectedId}
    orderStatus={selected.data?.order.status??''}
    lines={selected.data?.lines??[]} warehouses={warehouses.data??[]}
    onOpenOrder={orderId=>{setSelectedId(orderId);setReceiveAsnId('')}}
