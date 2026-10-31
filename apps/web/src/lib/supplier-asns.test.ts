@@ -1,6 +1,6 @@
 import {afterEach,describe,expect,it,vi} from 'vitest'
 import {
- createSupplierAsn,fetchSupplierAsns,supplierAsnAction,
+ createSupplierAsn,fetchSupplierAsns,fetchSupplierAsnEvents,supplierAsnAction,
  updateSupplierAsnEta,scanSupplierAsns,supplierAsnFindingState
 } from './supplier-asns'
 import {receivePurchase} from './purchasing'
@@ -26,6 +26,24 @@ describe('V43 supplier ASN contract',()=>{
   expect(list[0].quantity).toBe(8)
   expect(list[0].receivedQuantity).toBe(3)
   expect(list[0].status).toBe('SHIPPED')
+ })
+ it('reads immutable ASN event history with explicit nullable quantity',async()=>{
+  const urlList:string[]=[]
+  vi.stubGlobal('fetch',vi.fn(async(url:string)=>{
+   urlList.push(url)
+   return new Response(JSON.stringify([{
+    id:'88888888-8888-4888-8888-888888888888',
+    eventType:'ETA_UPDATED',actorUserId:asnId,quantity:null,
+    oldEta:'2026-11-10',newEta:'2026-11-12',
+    note:'Supplier delayed arrival',createdAt:'2026-10-31T12:00:00Z'
+   }]),{status:200})
+  }))
+  const history=await fetchSupplierAsnEvents(orderId,asnId)
+  expect(history[0].quantity).toBeNull()
+  expect(history[0].oldEta).toBe('2026-11-10')
+  expect(urlList).toEqual([
+   '/api/v1/purchasing/supplier-asns/orders/'+orderId+'/'+asnId+'/events'
+  ])
  })
  it('preserves explicit request key and CSRF for supplier notice and ETA updates',async()=>{
   const calls:Array<{url:string;options?:RequestInit}>=[]
