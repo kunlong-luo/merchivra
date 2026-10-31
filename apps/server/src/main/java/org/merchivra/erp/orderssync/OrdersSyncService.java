@@ -54,6 +54,9 @@ public class OrdersSyncService {
         return value==null ? null : value.toInstant();
     }
     private static String time(Instant instant) { return instant == null ? null : instant.toString(); }
+    private static OffsetDateTime dbTime(Instant value) {
+        return value == null ? null : OffsetDateTime.ofInstant(value, java.time.ZoneOffset.UTC);
+    }
 
     private Stored row(UUID tenant, UUID mp, boolean lock) {
         List<Stored> rows=jdbc.query("""
@@ -116,7 +119,7 @@ public class OrdersSyncService {
                   (id,tenant_id,seller_marketplace_id,mode,state,window_after,window_before)
                 VALUES (?,?,?,'MOCK','READY',?,?)
                 ON CONFLICT (tenant_id,seller_marketplace_id) DO NOTHING
-                """,proposed,tenant,marketplace,after,before);
+                """,proposed,tenant,marketplace,dbTime(after),dbTime(before));
             Stored current=row(tenant,marketplace,true);
             if ("SUCCEEDED".equals(current.state())) {
                 Instant resume=current.safe()==null?after:current.safe().minus(OVERLAP);
@@ -126,7 +129,7 @@ public class OrdersSyncService {
                       token_issued_at=NULL,retry_count=0,next_attempt_at=NULL,
                       lease_owner=NULL,lease_expires_at=NULL,last_failure_code=NULL,updated_at=now()
                     WHERE tenant_id=? AND id=?
-                    """,resume,before,tenant,current.jobId());
+                    """,dbTime(resume),dbTime(before),tenant,current.jobId());
             } else if ("PAUSED".equals(current.state())
                 || ("RUNNING".equals(current.state()) && current.leaseExpires()!=null
                     && current.leaseExpires().isAfter(now))) {
@@ -167,7 +170,7 @@ public class OrdersSyncService {
                 UPDATE orders_sync_job SET state='RUNNING',lease_owner=?,
                     lease_expires_at=?,lease_epoch=?,updated_at=now()
                 WHERE tenant_id=? AND id=?
-                """,owner,now.plus(LEASE),epoch,tenant,stored.jobId());
+                """,owner,dbTime(now.plus(LEASE)),epoch,tenant,stored.jobId());
             return new Claim(tenant,marketplace,scope,stored,owner,epoch);
         });
 
@@ -204,7 +207,7 @@ public class OrdersSyncService {
                       AND (sales_order.source_updated_at IS NULL
                            OR sales_order.source_updated_at<=EXCLUDED.source_updated_at)
                     """,UUID.randomUUID(),tenant,marketplace,order.orderId(),
-                    order.fulfillment(),order.updatedAt());
+                    order.fulfillment(),dbTime(order.updatedAt()));
             }
             jdbc.update("""
                 INSERT INTO orders_sync_page_commit
@@ -222,10 +225,10 @@ public class OrdersSyncService {
                     updated_at=now()
                 WHERE tenant_id=? AND id=? AND lease_epoch=? AND lease_owner=?
                 """,complete?"SUCCEEDED":"READY",page.nextToken(),
-                complete?null:(current.tokenIssuedAt()==null?clock.instant():current.tokenIssuedAt()),
+                dbTime(complete?null:(current.tokenIssuedAt()==null?clock.instant():current.tokenIssuedAt())),
                 complete,
-                complete || "MOCK".equals(source.dataOrigin())?null:
-                    clock.instant().plus(Duration.ofSeconds(180)),
+                dbTime(complete || "MOCK".equals(source.dataOrigin())?null:
+                    clock.instant().plus(Duration.ofSeconds(180))),
                 tenant,current.jobId(),claim.epoch(),claim.owner());
             return status(tenant,marketplace);
         });
@@ -268,7 +271,7 @@ public class OrdersSyncService {
                     updated_at=now()
                 WHERE tenant_id=? AND id=? AND lease_epoch=? AND lease_owner=?
                 """,retry?"WAITING_RETRY":"PAUSED",attempt,
-                retry?clock.instant().plusSeconds(delay):null,code,
+                dbTime(retry?clock.instant().plusSeconds(delay):null),code,
                 expiredCursor,expiredCursor,expiredCursor,expiredCursor,
                 claim.tenant(),current.jobId(),claim.epoch(),claim.owner());
         });

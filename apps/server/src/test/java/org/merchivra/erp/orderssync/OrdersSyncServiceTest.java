@@ -37,7 +37,7 @@ class OrdersSyncServiceTest {
         verifyNoInteractions(jdbc,tx);
     }
 
-    @Test void foreignMarketplaceIsNeverReadFromSource() {
+    @Test void foreignMarketplaceIsNeverReadFromSource() throws Exception {
         OrdersSyncSource source=mock(OrdersSyncSource.class);
         when(source.allowed()).thenReturn(true);
         var service=new OrdersSyncService(jdbc,tx,source);
