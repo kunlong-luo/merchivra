@@ -47,6 +47,15 @@ describe('Seller connection UI API contracts', () => {
     expect(request.headers).toMatchObject({ 'X-CSRF-TOKEN': 'synthetic-csrf-123456' })
     expect(request.body).toBeUndefined()
   })
+  it('passes explicit beta opt-in only for Amazon Draft application consent', async () => {
+    const mock = vi.fn().mockResolvedValueOnce(csrf).mockResolvedValueOnce({
+      ok: true, json: async () => ({ authorizationUrl: consent + '&version=beta', expiresAt: '2026-10-31T01:00:00Z' })
+    })
+    vi.stubGlobal('fetch', mock)
+    expect((await startSellerOauth(account, true)).authorizationUrl).toContain('version=beta')
+    expect(mock.mock.calls[1][0]).toBe('/api/v1/seller-accounts/' + account + '/oauth/start?beta=true')
+    expect(mock.mock.calls[1][1].method).toBe('POST')
+  })
   it('never navigates to a non-Amazon URL returned by an intermediary', async () => {
     const mock = vi.fn().mockResolvedValueOnce(csrf).mockResolvedValueOnce({
       ok: true, json: async () => ({

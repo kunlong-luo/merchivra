@@ -30,6 +30,7 @@ export default function SellerConnections({ tenantId, currentUserId }: {
   const [selection, setSelection] = useState('')
   const [message, setMessage] = useState('')
   const [failure, setFailure] = useState('')
+  const [beta, setBeta] = useState(false)
   const [digest, setDigest] = useState('')
   const [caseRef, setCaseRef] = useState('')
   const returnFromOauth = new URLSearchParams(window.location.search).get('amazon_oauth') === 'pending_verification'
@@ -60,7 +61,7 @@ export default function SellerConnections({ tenantId, currentUserId }: {
     void client.invalidateQueries({ queryKey: ['core', 'marketplaces'] })
   }
   const start = useMutation({
-    mutationFn: () => startSellerOauth(selectedId),
+    mutationFn: () => startSellerOauth(selectedId, beta),
     onSuccess: result => {
       // A short-lived HttpOnly handoff cookie was set by the same-origin POST.
       // Navigate only to a strictly validated Seller Central consent URL.
@@ -154,6 +155,13 @@ export default function SellerConnections({ tenantId, currentUserId }: {
                 <div><span>区域</span><strong>{oauth.data.region ?? selected?.region ?? '—'}</strong></div>
                 <div><span>站点权限</span><strong>{oauth.data.status === 'VERIFIED' ? '仍需核对 24h 时效及角色' : '未满足正式准入'}</strong></div>
               </div>
+              {((oauth.data.status === 'NOT_CONNECTED' && selected?.connectionStatus === 'UNCONFIGURED') ||
+                (oauth.data.status === 'REVOKED' && selected?.connectionStatus === 'REVOKED')) &&
+                <label className="setup-hint" htmlFor="oauth-beta">
+                  <input id="oauth-beta" type="checkbox" checked={beta}
+                    onChange={e => setBeta(e.target.checked)} />
+                  以 Amazon Draft 公有应用测试授权（version=beta）；已发布应用请勿勾选
+                </label>}
               <div className="sandbox-actions">
                 {((oauth.data.status === 'NOT_CONNECTED' && selected?.connectionStatus === 'UNCONFIGURED')
                     || (oauth.data.status === 'REVOKED' && selected?.connectionStatus === 'REVOKED')) &&

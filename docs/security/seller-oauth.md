@@ -107,3 +107,8 @@ Amazon OAuth 回跳只提示“等待验证”，绝不直接标为 `CONNECTED`�
 6. React “卖家授权”页对 `REVOKED` 状态显示 **重新授权原 Seller**，并明确解释旧角色和站点证据不会沿用。
 
 **边界：**这是公有应用 OAuth 的代码和离线契约验证；私有应用的 Seller Central 自授权仍应作为另一个独立入口设计，不得用公有网站 OAuth 冒充。正式生产前须有 Amazon Developer 资格、App ID、LWA Client ID/Secret、注册 HTTPS Login URI + Redirect URI、Seller 站点、批准的应用角色与独立 HTTPS/密钥管理部署。所有秘密由服务端环境/Secret Manager 提供，禁止粘贴到 GitHub 或聊天。
+
+
+## Amazon Draft 授权测试入口（V18 追加）
+
+React Owner 页提供 **Draft 应用测试** 复选框；仅用户明确选择时，向后端 `POST /oauth/start?beta=true`，由后端为 Seller Central consent URL 添加 `version=beta`。后续 Login URI / Amazon 回调均保留并严格验证 `version=beta`。应用发布后不应使用 beta 选项。官方参考 [Website Authorization Workflow](https://developer-docs.amazon.com/sp-api/docs/website-authorization-workflow)；需要在应用配置中分别登记 HTTPS Login URI `https://<host>/api/v1/spapi/oauth/login` 和 HTTPS Redirect URI `https://<host>/api/v1/spapi/oauth/callback`。

@@ -76,8 +76,9 @@ export function sellerCentralConsentUrl(value: string): string {
   }
   return url.toString()
 }
-export async function startSellerOauth(accountId: string) {
-  const result = await post(path(accountId, '/oauth/start'), oauthStartSchema)
+export async function startSellerOauth(accountId: string, beta = false) {
+  const result = await post(path(accountId, '/oauth/start') +
+    (beta ? '?beta=true' : ''), oauthStartSchema)
   return { authorizationUrl: sellerCentralConsentUrl(result.authorizationUrl), expiresAt: result.expiresAt }
 }
 export function verifySellerOauth(accountId: string) {
