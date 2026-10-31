@@ -47,6 +47,13 @@ jobs:
             sleep 2
           done
           test "$ready" = 1
+      - name: Assert PostgreSQL 18 and new versioned mount
+        run: |
+          major=$(docker compose --env-file .env -f deploy/compose.yaml exec -T postgres \
+            psql -U merchivra -d merchivra -Atc "SHOW server_version_num")
+          test "${major:0:2}" = 18
+          docker compose --env-file .env -f deploy/compose.yaml exec -T postgres \
+            sh -c 'test "$PGDATA" = /var/lib/postgresql/18/docker'
       - name: Verify V7-V11 schemas migrated and live routes stay off
         run: |
           # The regular local Demo must never automatically enable real Seller OAuth.

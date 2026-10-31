@@ -50,3 +50,7 @@
 - [Vite 8 官网](https://vite.dev/)
 - [Node.js 版本发布计划](https://github.com/nodejs/Release)
 - [Vitest 5 迁移指南](https://vitest.dev/guide/migration/)
+
+## 2026-10-31 修订：PostgreSQL 18
+
+Compose 容器升级为官方 `postgres:18-alpine`，数据目录改为 `/var/lib/postgresql/18/docker`，新命名卷 `pgdata18` 挂载于 `/var/lib/postgresql`。旧 PostgreSQL 17 数据卷单独保留，须显式迁移，详见 [升级手册](../deployment/postgresql-18-upgrade.md)。历史 17 的 CI 证据仍保持原版本，不应改写。

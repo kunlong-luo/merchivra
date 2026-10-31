@@ -1,12 +1,12 @@
 services:
   postgres:
-    image: postgres:17-alpine
+    image: postgres:18-alpine
     environment:
       POSTGRES_DB: merchivra
       POSTGRES_USER: merchivra
       POSTGRES_PASSWORD: ${MERCHIVRA_DB_PASSWORD:?Set MERCHIVRA_DB_PASSWORD in .env}
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - pgdata18:/var/lib/postgresql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U merchivra -d merchivra"]
       interval: 5s
@@ -65,5 +65,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  pgdata:
+  pgdata18:
   redisdata:

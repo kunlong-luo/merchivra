@@ -74,3 +74,7 @@ docker compose --env-file .env -f deploy/compose.yaml up --build
 - [竞品能力矩阵与路线图](docs/product/competitor-gap-and-automation.md)：对照 Sellercloud、Linnworks 和 Helium 10 的订单自动化、库存风险、采购与财务模块，标记已完成、待集成和高风险写入能力。
 - [OPS-001](docs/operations/ops-automation.md)：提供只读事实上的异常识别、持久待办、认领完成、审计与显式开启的定期巡检；默认无需调用真实 Amazon。建议先在本地模拟导入数据，然后通过“运营自动化”工作台手动执行巡检。
 - **没有**实现物流发货、广告自动调价、正式补货单/采购审批、财务对账或正式 Amazon Orders Worker；功能对标不是宣称生产连接已全部完成。
+
+## PostgreSQL 18 数据卷升级提示（2026-10-31）
+
+Compose 使用 `postgres:18-alpine`，新卷 `pgdata18:/var/lib/postgresql`。此前 17 的 `pgdata` **不自动升级、不自动删除**。已有数据须先按 [PostgreSQL 17→18 迁移指南](docs/deployment/postgresql-18-upgrade.md) 备份和恢复；不能将 17 的数据文件直接挂载到 18 或执行 `down -v` 处理生产数据。
