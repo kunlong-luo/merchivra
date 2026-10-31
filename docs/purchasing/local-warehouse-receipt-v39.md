@@ -30,3 +30,7 @@ Owner → 采购与供应商：新增仓库创建表单、已审批待收货表�
 ## 下一阶段
 
 本地出库/仓间调拨、盘点调整、实物在途/ASN、供应商 MOQ、库位/批次、仓储运营异常和与 FBA Inbound 的只读关联需另行开发。没有真实 Amazon OAuth/货件 API 连接的成功声明。验证状态应以 CI/Flyway/PG18 Compose 的实际运行记录为准。
+
+## V40 后续实现
+
+V40 增加本地出库、仓间调拨、盘点和带符号库存台账，保留 V39 收货原始记录。由于 V39 仅有采购收货的旧字段 `recordedReceivedQuantity`，V40 新增 `onHandQuantity` 作为已记录移动的代数合计，并将 `warehouse-ledger` 的数量允许正负、`purchaseReceiptId` 允许为空。详见 [PO-003](local-stock-operations-v40.md)，这些台账仍不代表 Amazon FBA/FBM 可售库存。
