@@ -155,11 +155,17 @@ export default function SellerConnections({ tenantId, currentUserId }: {
                 <div><span>站点权限</span><strong>{oauth.data.status === 'VERIFIED' ? '仍需核对 24h 时效及角色' : '未满足正式准入'}</strong></div>
               </div>
               <div className="sandbox-actions">
-                {oauth.data.status === 'NOT_CONNECTED' && selected?.connectionStatus === 'UNCONFIGURED' &&
+                {((oauth.data.status === 'NOT_CONNECTED' && selected?.connectionStatus === 'UNCONFIGURED')
+                    || (oauth.data.status === 'REVOKED' && selected?.connectionStatus === 'REVOKED')) &&
                   <button type="button" className="primary-button" disabled={start.isPending}
                     onClick={() => { setFailure(''); start.mutate() }}>
-                    {start.isPending ? '创建授权请求中…' : '前往 Amazon 授权'}
+                    {start.isPending ? '创建授权请求中…' :
+                      oauth.data.status === 'REVOKED' ? '重新授权原 Seller' : '前往 Amazon 授权'}
                   </button>}
+                {oauth.data.status === 'REVOKED' && <p className="setup-hint">
+                  只能重新授权此前绑定的同一个 Amazon Seller，旧的 Orders 角色审核与站点核验证据不会沿用。
+                  如需接入其他 Seller，请新建店铺记录，避免混用历史订单和库存。
+                </p>}
                 {['PENDING_VERIFICATION', 'VERIFICATION_FAILED', 'VERIFIED'].includes(oauth.data.status) &&
                   <button type="button" className="refresh-button" disabled={verify.isPending}
                     onClick={() => { setFailure(''); verify.mutate() }}>

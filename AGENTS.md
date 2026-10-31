@@ -270,3 +270,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 后端成功 Marketplace 核验后，必须在同一事务内将 `seller_account.seller_id` 绑定经过两阶段 OAuth 校验的 Seller ID；服务端 Vault/Orders Worker 要求本地账户、授权与站点证据三者身份一致。
 - Amazon OAuth 返回并不等于 Seller VERIFIED，Seller VERIFIED 不等于 Orders 角色已获批准，Owner 自己不能审核自己的 Orders 申请，失败与撤销必须不可绕过。
 - 本轮新增 Java 单元测试和前端 Vitest 必须随现有 Java CI、React CI 及 PostgreSQL Compose 验证；测试中的 Amazon 数据全为合成值。
+
+
+## V18 · P0 Seller 授权验收第一（2026-10-31）
+
+- 以 FR-SHOP-01/02 + SEC-004/005 为第一阶段：先把 Amazon 店铺接入、OAuth、Seller Marketplace 核验和撤销/重授权全部跑通并验证后，才继续 LIVE Orders/Listing/FBA。运营自动化和报表不是当前阻断点。
+- 公有应用 OAuth 和私有应用自授权不得混用。没有真实 Amazon 注册应用、生产卖家账号与明确批准角色，只能声称完成**代码和离线测试**，不能声称真实授权成功。
+- 同一 `seller_account` 只能恢复此前授权过的 Amazon Seller；换 Seller 必须新建店铺记录，不复用订单/库存历史。撤销时同时销毁密文、旧站点与角色资格、未决审批，并确保任务后续鉴权 fail-closed。
+- 在 React 中仅展示服务端允许的 Seller Central OAuth 链接，遵守 CSRF/Session；不允许浏览器录入或存储 Refresh Token/LWA Secret。默认 SP-API 网络关闭，不向 CI 写真实令牌。

@@ -73,3 +73,11 @@ G2 全部为**设计验收规范**，并未执行任何数据库/HTTP 测试，�
 [TEST-002](../testing/end-to-end-scenarios.md) 将 P0 功能组合为 8 条业务链路。此处的 `关联 AC` 是**设计覆盖**，没有执行记录。G1/G2/G3 全部尚未签署；物理 DDL、最终 OpenAPI 3.1 和真实 API 权限仍待确认。
 
 修改 FR 必须同步修改流程/ADR、数据模型、API/UI、AC、E2E、风险及发布说明。
+
+
+## V18 · FR-SHOP-01/02 实现与剩余验收（2026-10-31）
+
+- FR-SHOP-01：公有应用 OAuth State/Callback、AES-GCM 保存、Seller/Marketplace 核验、脱敏审计、本地撤销及同 Seller 重授权已经编码。不可切换历史 Seller；撤销同步使角色/Marketplace 证据失效。
+- FR-SHOP-02：本地 Marketplace 预设与区域校验、Seller v1 参与状态和 24h 时效门禁已有代码。
+- Gate：必须用真实 Amazon 应用、Seller 和已批准角色验证生产 OAuth 与 Sellers v1；此前这些条款均为**离线模拟覆盖**，不得关闭需求验收项。
+- 依赖：正式 Orders、Listing、FBA 的数据同步只有在上述 gate 通过后才可算“已接入”。

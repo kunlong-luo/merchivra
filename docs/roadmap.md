@@ -90,3 +90,13 @@
 - 修复 Seller v1 核验通过后 `seller_account.seller_id` 仍为 `LOCAL-` 的断点；仅在全部 Marketplace 证据验证与事务 claim 成功时绑定 Amazon OAuth Seller ID。
 - 在内部凭证 Vault 增加账号真实 Seller ID 与授权身份匹配校验，保持跨租户和失效证据拒绝。
 - React Owner 导航新增授权状态/启动/核验/本地撤销、OAuth 审计和独立 Orders 角色审核（全程 CSRF/同源、默认关闭）；待真实 Amazon/角色/负载/密钥验收。
+
+## V18 · P0 以 Seller 授权闭环优先（2026-10-31）
+
+- [x] 代码：本地店铺 → 公有网站 OAuth → 一次性 State → 加密 Refresh Token → Marketplace 核验 → 状态/脱敏审计 → 本地撤销 → **同 Seller 重新授权**。V18 禁止更换 Seller 重用同一记录；撤销时同步清除旧站点及 Orders 角色证据。
+- [x] React Owner 面板：初次授权/已撤销重新授权/手动验证/审计/角色证据审批；默认无 Amazon 出站，绝不把 UI 当成生产授权成功证明。
+- [ ] 使用已获批准的 Amazon 生产应用与卖家开展真实网站 OAuth 浏览器回跳、Sellers v1 验证、LWA 密钥与网络、撤销期间 Worker fencing 和安全验收。
+- [ ] 私有应用自授权是独立的后续路径，需另行设计仅管理员可用、服务端安全导入的 Token 入库方式。
+- [ ] 后续才是 Orders LIVE 增量、Listing、FBA、Finances；未经授权和来源验证，不开启新的自动读取和财务核算。
+
+受控验收依据：[FR-SHOP-01/02](requirements/functional.md)、[SEC-004 OAuth](security/seller-oauth.md)、[SEC-005 验证](security/seller-verification.md)、[ARCH-003 一致性](architecture/consistency-boundaries.md)。

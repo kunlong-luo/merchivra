@@ -94,3 +94,16 @@ Amazon OAuth 回跳只提示“等待验证”，绝不直接标为 `CONNECTED`�
 由另一名满足 `SECURITY_REVIEWER` 的 Owner 审批（服务端强制不同人），支持审计与撤销。
 模块未启用时给出原因，不伪造角色授权或允许绕开审核。
 默认配置不启用真实 OAuth、验证或 Orders 审核；需要人工审批生产权限、HTTPS、真实 Amazon 资质与安全检查。
+
+## V18 · 撤销后重新授权（2026-10-31）
+
+这次按 FR-SHOP-01 / FR-SHOP-02 把**授权闭环**放回 P0，不增加新报表功能。
+
+1. 原 `UNCONFIGURED` 本地店铺仍从 Amazon Seller Central 发起标准公有应用网站 OAuth。
+2. Owner 本地撤销时，数据库原子清除加密 Refresh Token、撤销 Orders 角色证据、清理 Marketplace 验证记录、将未决角色审批置为 `STALE`，避免授权恢复后复用旧资格。
+3. `REVOKED` 店铺可再次使用 **同一个 Amazon Seller ID** 发起公有应用授权。新 State 一次性、10 分钟有效，登录交接与回调阶段均限制对同一 Seller ID；更换 Seller 必须创建新的店铺账号，不能把旧订单/SKU/库存归属于另一 Seller。
+4. 授权 Code 换取的新 Refresh Token 重新用 AES-256-GCM 加密、随机 nonce 和当前密钥版本覆盖**已撤销**的原记录，清空旧 verifiedAt / verification claim，不会直接恢复 `CONNECTED`。状态恢复到 `PENDING_VERIFICATION`，需要人工重新校验 Marketplace，并针对 Orders 单独复审应用角色。
+5. 旧状态、并发回调、租户/Owner 不符、Seller ID 错配、Code 兑换失败或出站关闭都不得重用/曝光凭证。回调在 LWA 交换前检查是否仍为同一店铺和原 Seller。
+6. React “卖家授权”页对 `REVOKED` 状态显示 **重新授权原 Seller**，并明确解释旧角色和站点证据不会沿用。
+
+**边界：**这是公有应用 OAuth 的代码和离线契约验证；私有应用的 Seller Central 自授权仍应作为另一个独立入口设计，不得用公有网站 OAuth 冒充。正式生产前须有 Amazon Developer 资格、App ID、LWA Client ID/Secret、注册 HTTPS Login URI + Redirect URI、Seller 站点、批准的应用角色与独立 HTTPS/密钥管理部署。所有秘密由服务端环境/Secret Manager 提供，禁止粘贴到 GitHub 或聊天。

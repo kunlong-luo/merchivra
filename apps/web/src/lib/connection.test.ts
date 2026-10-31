@@ -11,6 +11,17 @@ const csrf = { ok: true, json: async () => ({
 const consent = 'https://sellercentral.amazon.com/apps/authorize/consent?application_id=amzn1.sellerapps.app.synthetic&state=synthetic-state'
 
 describe('Seller connection UI API contracts', () => {
+  it('recognizes revoked grant status as a separate reauthorization state', async () => {
+    const mock = vi.fn().mockResolvedValue({
+      ok: true, json: async () => ({ status: 'REVOKED', sellerId: 'A1SYNTHETIC', region: 'NA' })
+    })
+    vi.stubGlobal('fetch', mock)
+    const status = await getOauthStatus(account)
+    expect(status.status).toBe('REVOKED')
+    expect(status.sellerId).toBe('A1SYNTHETIC')
+    expect(mock.mock.calls[0][1]).toMatchObject({ cache: 'no-store', credentials: 'same-origin' })
+  })
+
   it('refuses unapproved consent origins, userinfo, ports and paths', () => {
     expect(sellerCentralConsentUrl(consent)).toBe(consent)
     for (const input of [

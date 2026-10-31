@@ -65,9 +65,19 @@ public final class SellerOauthService {
 
     public Start start(UUID tenant, UUID actor, UUID account, boolean beta) {
         String region = tx.execute(status -> jdbc.query("""
-            SELECT region FROM seller_account
-            WHERE tenant_id = ? AND id = ? AND connection_status = 'UNCONFIGURED'
-              AND seller_id LIKE 'LOCAL-%'
+            SELECT sa.region FROM seller_account sa
+            WHERE sa.tenant_id = ? AND sa.id = ?
+              AND (
+                (sa.connection_status = 'UNCONFIGURED' AND sa.seller_id LIKE 'LOCAL-%'
+                  AND NOT EXISTS (SELECT 1 FROM spapi_seller_authorization g
+                    WHERE g.tenant_id=sa.tenant_id AND g.seller_account_id=sa.id))
+                OR
+                (sa.connection_status = 'REVOKED'
+                  AND EXISTS (SELECT 1 FROM spapi_seller_authorization g
+                    WHERE g.tenant_id=sa.tenant_id AND g.seller_account_id=sa.id
+                      AND g.status='REVOKED' AND g.region=sa.region
+                      AND (sa.seller_id LIKE 'LOCAL-%' OR sa.seller_id=g.seller_id)))
+              )
               AND EXISTS (
                 SELECT 1 FROM membership m JOIN app_user u ON u.id = m.user_id
                 JOIN tenant t ON t.id = m.tenant_id
@@ -118,6 +128,20 @@ public final class SellerOauthService {
                 WHERE a.state_hash=? AND a.status='STARTED'
                   AND a.expires_at > now() AND a.created_at > now() - interval '10 minutes'
                   AND EXISTS (
+                    SELECT 1 FROM seller_account sa
+                    WHERE sa.tenant_id=a.tenant_id AND sa.id=a.seller_account_id
+                      AND ((sa.connection_status='UNCONFIGURED'
+                            AND sa.seller_id LIKE 'LOCAL-%'
+                            AND NOT EXISTS (SELECT 1 FROM spapi_seller_authorization g
+                              WHERE g.tenant_id=sa.tenant_id AND g.seller_account_id=sa.id))
+                        OR (sa.connection_status='REVOKED'
+                            AND EXISTS (SELECT 1 FROM spapi_seller_authorization g
+                              WHERE g.tenant_id=sa.tenant_id AND g.seller_account_id=sa.id
+                                AND g.status='REVOKED' AND g.seller_id=?
+                                AND g.region=sa.region
+                                AND (sa.seller_id LIKE 'LOCAL-%' OR sa.seller_id=g.seller_id))))
+                  )
+                  AND EXISTS (
                     SELECT 1 FROM membership m JOIN app_user u ON u.id=m.user_id
                     JOIN tenant t ON t.id=m.tenant_id WHERE m.tenant_id=a.tenant_id
                       AND m.user_id=a.actor_user_id AND m.status='ACTIVE'
@@ -125,7 +149,7 @@ public final class SellerOauthService {
                       AND EXISTS(SELECT 1 FROM role_binding rb
                         WHERE rb.tenant_id=m.tenant_id AND rb.user_id=m.user_id
                           AND rb.role_code='OWNER' AND rb.seller_account_id IS NULL))
-                """, sellerId, digest);
+                """, sellerId, digest, sellerId);
             if (count == 1) jdbc.update("""
                 INSERT INTO spapi_oauth_audit
                 (id,tenant_id,actor_user_id,seller_account_id,event_type)
@@ -160,6 +184,20 @@ public final class SellerOauthService {
                 WHERE a.state_hash=? AND a.status='HANDOFF' AND a.consumed_at IS NULL
                   AND a.expires_at > now() AND a.expected_seller_id=?
                   AND EXISTS (
+                    SELECT 1 FROM seller_account sa
+                    WHERE sa.tenant_id=a.tenant_id AND sa.id=a.seller_account_id
+                      AND ((sa.connection_status='UNCONFIGURED'
+                            AND sa.seller_id LIKE 'LOCAL-%'
+                            AND NOT EXISTS (SELECT 1 FROM spapi_seller_authorization g
+                              WHERE g.tenant_id=sa.tenant_id AND g.seller_account_id=sa.id))
+                        OR (sa.connection_status='REVOKED'
+                            AND EXISTS (SELECT 1 FROM spapi_seller_authorization g
+                              WHERE g.tenant_id=sa.tenant_id AND g.seller_account_id=sa.id
+                                AND g.status='REVOKED' AND g.seller_id=?
+                                AND g.region=sa.region
+                                AND (sa.seller_id LIKE 'LOCAL-%' OR sa.seller_id=g.seller_id))))
+                  )
+                  AND EXISTS (
                     SELECT 1 FROM membership m JOIN tenant t ON t.id=m.tenant_id
                     JOIN app_user u ON u.id=m.user_id
                     WHERE m.tenant_id=a.tenant_id AND m.user_id=a.actor_user_id
@@ -172,7 +210,7 @@ public final class SellerOauthService {
                     rs.getObject("tenant_id",UUID.class),
                     rs.getObject("actor_user_id",UUID.class),
                     rs.getObject("seller_account_id",UUID.class),
-                    rs.getString("expected_seller_id")), digest, sellerId);
+                    rs.getString("expected_seller_id")), digest, sellerId, sellerId);
             return found.stream().findFirst().orElse(null);
         });
         if (claim == null) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "OAuth grant already used or expired");
@@ -186,28 +224,53 @@ public final class SellerOauthService {
             throw new ResponseStatusException(HttpStatus.BAD_GATEWAY, "Authorization exchange failed");
         }
         tx.executeWithoutResult(s -> {
-            String region = jdbc.query("""
-                SELECT region FROM seller_account
-                WHERE tenant_id=? AND id=? AND connection_status='UNCONFIGURED'
-                AND seller_id LIKE 'LOCAL-%'
+            record Account(String region, String state, String sellerId) {}
+            Account account=jdbc.query("""
+                SELECT region,connection_status,seller_id FROM seller_account
+                WHERE tenant_id=? AND id=? AND connection_status IN ('UNCONFIGURED','REVOKED')
                 FOR UPDATE
-                """, (rs,n)->rs.getString("region"), claim.tenant(),claim.account())
-                .stream().findFirst().orElse(null);
-            if (region == null) throw new ResponseStatusException(HttpStatus.CONFLICT, "Seller account state changed");
-            var sealed = cipher.encrypt(claim.tenant(),claim.account(),claim.sellerId(),refresh);
-            int written = jdbc.update("""
-                INSERT INTO spapi_seller_authorization
-                (id,tenant_id,seller_account_id,seller_id,region,status,ciphertext,nonce,key_version)
-                VALUES (?,?,?,?,?,'PENDING_VERIFICATION',?,?,?)
-                ON CONFLICT (tenant_id,seller_account_id) DO NOTHING
-                """, UUID.randomUUID(),claim.tenant(),claim.account(),claim.sellerId(),
-                region,sealed.ciphertext(),sealed.nonce(),sealed.version());
-            if (written != 1) throw new ResponseStatusException(HttpStatus.CONFLICT,
-                "Seller authorization already exists");
-            jdbc.update("""
+                """, (rs,n)->new Account(rs.getString("region"),
+                    rs.getString("connection_status"),rs.getString("seller_id")),
+                claim.tenant(),claim.account()).stream().findFirst().orElse(null);
+            if(account==null)throw new ResponseStatusException(
+                HttpStatus.CONFLICT,"Seller account state changed");
+            boolean reauthorize="REVOKED".equals(account.state());
+            if(!account.sellerId().startsWith("LOCAL-")
+                && !account.sellerId().equals(claim.sellerId()))
+                throw new ResponseStatusException(HttpStatus.CONFLICT,"Seller identity mismatch");
+            var sealed=cipher.encrypt(claim.tenant(),claim.account(),claim.sellerId(),refresh);
+            int written;
+            if(reauthorize) {
+                // Same seller only: an account's old Orders, SKU and inventory
+                // records cannot be reclassified as belonging to a new seller.
+                written=jdbc.update("""
+                    UPDATE spapi_seller_authorization
+                    SET status='PENDING_VERIFICATION',ciphertext=?,nonce=?,key_version=?,
+                        verified_at=NULL,verification_attempt_id=NULL,
+                        verification_started_at=NULL,verification_error_code=NULL,
+                        revoked_at=NULL,updated_at=now()
+                    WHERE tenant_id=? AND seller_account_id=? AND status='REVOKED'
+                      AND seller_id=? AND region=?
+                    """,sealed.ciphertext(),sealed.nonce(),sealed.version(),
+                    claim.tenant(),claim.account(),claim.sellerId(),account.region());
+            } else if("UNCONFIGURED".equals(account.state())
+                && account.sellerId().startsWith("LOCAL-")) {
+                written=jdbc.update("""
+                    INSERT INTO spapi_seller_authorization
+                    (id,tenant_id,seller_account_id,seller_id,region,status,ciphertext,nonce,key_version)
+                    VALUES (?,?,?,?,?,'PENDING_VERIFICATION',?,?,?)
+                    ON CONFLICT (tenant_id,seller_account_id) DO NOTHING
+                    """,UUID.randomUUID(),claim.tenant(),claim.account(),claim.sellerId(),
+                    account.region(),sealed.ciphertext(),sealed.nonce(),sealed.version());
+            } else throw new ResponseStatusException(HttpStatus.CONFLICT,"Seller account not eligible");
+            if(written!=1)throw new ResponseStatusException(
+                HttpStatus.CONFLICT,"Seller authorization changed");
+            int changed=jdbc.update("""
                 UPDATE seller_account SET connection_status='AUTHORIZATION_PENDING'
-                WHERE tenant_id=? AND id=? AND connection_status='UNCONFIGURED'
-                """, claim.tenant(),claim.account());
+                WHERE tenant_id=? AND id=? AND connection_status=?
+                """,claim.tenant(),claim.account(),account.state());
+            if(changed!=1)throw new ResponseStatusException(
+                HttpStatus.CONFLICT,"Seller account changed during authorization");
             audit(claim.tenant(),claim.actor(),claim.account(),"CODE_EXCHANGED");
         });
     }
@@ -237,13 +300,31 @@ public final class SellerOauthService {
             int updated=jdbc.update("""
                 UPDATE spapi_seller_authorization
                 SET status='REVOKED',ciphertext=NULL,nonce=NULL,
+                    verification_attempt_id=NULL,verification_started_at=NULL,
+                    verification_error_code=NULL,verified_at=NULL,
                     revoked_at=now(),updated_at=now()
                 WHERE tenant_id=? AND seller_account_id=? AND status<>'REVOKED'
                 """, tenant,account);
-            if (updated != 1) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-            jdbc.update("""
+            if(updated!=1)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            int changed=jdbc.update("""
                 UPDATE seller_account SET connection_status='REVOKED'
                 WHERE tenant_id=? AND id=? AND connection_status IN ('AUTHORIZATION_PENDING','CONNECTED')
+                """,tenant,account);
+            if(changed!=1)throw new ResponseStatusException(
+                HttpStatus.CONFLICT,"Seller account state changed during revocation");
+            // Invalidate prior proof and pending manual approvals atomically with
+            // credential destruction. Old role evidence must NEVER survive reauth.
+            jdbc.update("""
+                DELETE FROM spapi_marketplace_verification
+                WHERE tenant_id=? AND seller_account_id=?
+                """,tenant,account);
+            jdbc.update("""
+                UPDATE spapi_orders_role_evidence SET revoked_at=now()
+                WHERE tenant_id=? AND seller_account_id=? AND revoked_at IS NULL
+                """,tenant,account);
+            jdbc.update("""
+                UPDATE spapi_orders_role_review_request SET state='STALE'
+                WHERE tenant_id=? AND seller_account_id=? AND state='PENDING'
                 """,tenant,account);
             audit(tenant,actor,account,"REVOKED");
         });
