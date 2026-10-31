@@ -413,3 +413,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 采购收货、订单状态与 `erp_local_stock_movement` 追加式入库流水共享单事务；`(tenant_id,purchase_receipt_id)` 唯一防止同一收货重复记库存。旧 V20 无仓库的收货不可自动分配或回填库存。
 - 仓库 `recordedReceivedQuantity` 是**历史累计采购入库量，不是实际可用量/在途/FBA/FBM**；待收货仅为批准采购行剩余量，不等于供应商发货。
 - 按 Session 当前租户和 OWNER / CSRF 隔离所有仓库读写，保持已上架 Amazon 数据与本地仓库操作严格分开。详见 `docs/purchasing/local-warehouse-receipt-v39.md`，验收须有真实 CI/PG18 证据。
+
+## V40 · 本地仓储有符号流水与库存安全（2026-10-31）
+
+- 库存台账 `onHandQuantity` 只累加已记录的本地采购收货与人工移动，`recordedReceivedQuantity` 是历史采购入库合计；二者均不表示 Amazon FBA/FBM、可售/预留、在途或完整的实物库存。
+- 本地 `OUTBOUND`、`TRANSFER`、`COUNT` 必须显式 Owner 操作（Session/CSRF）、带 UUID 幂等键、原库存余额快照、仓库/内部 SKU 同租户锁与业务原因。库存不足和快照不一致返回冲突，不能覆盖移动事实。
+- 转仓同事务记负数 `TRANSFER_OUT` 和正数 `TRANSFER_IN`；仓库操作在排序仓库锁下读余额，和 V39 收货共用仓库锁；所有操作不可通过 Amazon API 写入。
+- `docs/purchasing/local-stock-operations-v40.md` 规定接口和边界。单测、CI 成功不等于正式 PostgreSQL 并发/真实 Seller 验收。
