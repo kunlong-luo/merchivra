@@ -38,3 +38,8 @@
 - Scheduler 每隔 `MERCHIVRA_CATALOG_SYNC_SCHEDULER_MS`（默认 10 秒，以满足 FBA 官方约 30 秒的分页 token 有效期）读取最多 5 个已存在并处于 READY/RETRY 的任务，再逐一执行一页。不会自己创建或重启 Seller 授权、任务或更改 Amazon Listing/FBA。
 - Owner 先通过 `start` 建立扫描任务，后续会按租约/游标持续推进到 SUCCEEDED。429/5xx 进入延迟重试，权限失效 PAUSED。跨进程并发仍由 DB Lease/Epoch 栅栏阻断。
 - Scheduler 的运行状态本身不证明获得了 Seller Central 真实角色或真实数据已同步；必须有独立证据和部署开关。
+
+
+## 租约恢复补丁
+
+进程异常退出时，原 `RUNNING` 任务在 Lease 超时后也会由定时器自动重新领取并增加 epoch；不需人工先将状态改回 READY，也不会误接收旧 Worker 的迟到页。

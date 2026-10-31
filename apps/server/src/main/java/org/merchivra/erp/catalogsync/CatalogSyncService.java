@@ -295,7 +295,8 @@ public class CatalogSyncService {
         return jdbc.query("""
             SELECT tenant_id,seller_marketplace_id,stream
             FROM spapi_catalog_sync_job
-            WHERE state IN ('READY','RETRY')
+            WHERE (state IN ('READY','RETRY')
+                   OR (state='RUNNING' AND lease_expires_at<=now()))
               AND (retry_at IS NULL OR retry_at<=now())
               AND (lease_expires_at IS NULL OR lease_expires_at<=now())
             ORDER BY updated_at LIMIT ?
