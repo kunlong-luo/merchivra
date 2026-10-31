@@ -52,3 +52,22 @@ CHROME_BIN=google-chrome node scripts/smoke_browser_layout.mjs apps/web/dist bro
 - Do not add this to the default CI matrix until M3/M4 needs justify it.
 - If Chrome or DevTools is unavailable in the runner, mark the workflow failed;
   never replace real browser validation with a claimed successful static check.
+
+
+## Confirmed run · 2026-10-31
+
+- [Completed successful Chrome 156 / Node 24 layout run](https://github.com/kunlong-luo/merchivra/actions/runs/41150873626), commit [fdff8d62](https://github.com/kunlong-luo/merchivra/commit/fdff8d62b4b6190882f3868413c8530cf341e804).
+  GitHub Actions produced 11 PNG screenshots (artifact:
+  [merchivra-synthetic-browser-screenshots](https://github.com/kunlong-luo/merchivra/actions/runs/41150873626#artifacts)).
+  CJK Noto fonts were installed **only in the disposable CI runner** so that Chinese strings render as Chinese characters rather than missing-glyph squares. Nothing was added to the frontend lockfile.
+- [Completed successful Java 25 Maven / Vue TypeScript-Vitest-Vite CI](https://github.com/kunlong-luo/merchivra/actions/runs/41150873629), same commit.
+- Manual visual inspection of these CI screenshots confirmed readable Chinese at
+  360px and 1280px, plus visible **table-local** overflow at 360px
+  for Listing, Orders and FBA. The FBA screen shows `未知` separately from
+  the observed reserved value `0`. The fixed Orders source is also asserted
+  by the browser runner against synthetic `MOCK` rows, although hidden columns
+  are reached via horizontal scrolling rather than in one screenshot.
+- This constitutes **limited Chromium screenshot/layout review**; real
+  keyboard traversal, screen reader, WCAG contrast, 200% zoom, Safari/Firefox,
+  responsive performance and live backend Amazon checks still require
+  separate acceptance and are not claimed completed.

@@ -89,3 +89,17 @@
 - [TEST-005](docs/testing/browser-ui.md) 新增独立可选 Chromium 浏览器响应式冒烟：使用 CI runner 已装 Chrome + Node 24 内置 WebSocket/CDP，通过仅本机模拟 API 观察 Vue 实际渲染，覆盖 360/390/768/1280 屏宽、屏幕级溢出、表格局部滚动、列对齐、MOCK 来源和未知库存 ≠ 0；**不添加 Impeccable、Playwright 或 npm 浏览器依赖**。
 - 保持前端快速 CI，不将独立 Chrome 任务变为每次提交必跑的门禁。工作流成功之前不得宣称已验收；完成以后也只能称 Chromium + 虚构数据的有限布局冒烟，不能称真实登录、真实卖家、跨浏览器或 WCAG/读屏器审核通过。
 - Core/SellerSetup/Sandbox/Demo 的长表格必须保留原生 table 语义、带 scope 的列头和可聚焦水平滚动容器；跨端设计变化需尊重键盘焦点、文本状态、Mock/UNVERIFIED 区分与 UNKNOWN ≠ 0。
+
+
+## UI 浏览器真实运行记录（2026-10-31）
+
+- Chrome 156 / Node 24 可选响应式检查已在
+  [run 41150873626](https://github.com/kunlong-luo/merchivra/actions/runs/41150873626)
+  成功；相同提交的
+  [Java/Vue CI run 41150873629](https://github.com/kunlong-luo/merchivra/actions/runs/41150873629)
+  也成功。产出 11 张可下载截图；已人工查看中文 360px/1280px 的
+  关键布局及 360px Listing/Orders/FBA 表格本体。详见 [TEST-005](docs/testing/browser-ui.md)。
+- Runner 缺少中文字体导致最初截图乱码，已在**临时 CI Runner**
+  安装 Noto CJK 字体并重测，未加入产品字体、Impeccable 或 npm 依赖。
+- 本验收只证明虚构 localhost API 下 Chromium UI 布局/基础语义，
+  不意味着真实 Seller、全量键盘导航、读屏器、WCAG AA、Safari/Firefox 或生产 IAM 已验收。

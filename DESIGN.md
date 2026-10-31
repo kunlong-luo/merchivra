@@ -77,3 +77,18 @@ Acceptance evidence must include the actual GitHub Actions Vue typecheck/Vitest/
 - Treat screenshot capture and CDP assertions as a **limited UI smoke**, not
   manual aesthetic approval, 200% zoom, WCAG, assistive-technology or
   cross-browser acceptance. Only claim passing after a completed workflow run.
+
+
+## Verified acceptance · Responsive Chromium smoke, 2026-10-31
+
+The [TEST-005 browser smoke](docs/testing/browser-ui.md) successfully ran
+against the Vue build under Chrome 156 on GitHub Actions
+([Chrome run](https://github.com/kunlong-luo/merchivra/actions/runs/41150873626) /
+[fast CI](https://github.com/kunlong-luo/merchivra/actions/runs/41150873629)).
+Generated 360/390/768/1280 synthetic UI captures were saved as workflow
+artifacts. The 360px Listing, Orders and FBA table-region screenshots and
+1280px Listing view have been manually inspected for visible Chinese copy and
+layout/scroll boundaries. Noto CJK fonts exist **in the test runner only**.
+
+This is a small, actual browser-based acceptance step, not completion of a
+multi-browser matrix, screen-reader assessment, focus order review or WCAG AA.
