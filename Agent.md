@@ -406,3 +406,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - Owner 可用补货建议主动创建**本地** `DRAFT` 采购单，但不得静默自动提交、批准或写入 Amazon。复用 PO-001 创建与双人审批；库存来源质量标记 `OBSERVED` 不等于真实 Seller 认证。
 - 必须重新验证 ACTIVE Listing/内部 SKU 映射、最新 FBA 观测 ID、策略更新时间与建议量；原币单价由用户填写。V37 持久保留来源、SKU、库存、策略、数量、供应商和价格快照，使用租户内唯一请求 UUID 保障幂等；不将采购收货计入 FBA。
 - 版本与操作定义见 `docs/inventory/replenishment-policy-v22.md`；未实际测试的 CI/Flyway/并发结果不得称通过。
+
+## V39 · 采购收货与本地仓库流水（2026-10-31）
+
+- `POST /api/v1/purchasing/orders/{id}/receive` 的新请求必须带 `warehouseId`，仅在 APPROVED/RECEIVING、已选同租户 ACTIVE 仓库时允许收货；原 V20 行锁与超收防护继续有效。
+- 采购收货、订单状态与 `erp_local_stock_movement` 追加式入库流水共享单事务；`(tenant_id,purchase_receipt_id)` 唯一防止同一收货重复记库存。旧 V20 无仓库的收货不可自动分配或回填库存。
+- 仓库 `recordedReceivedQuantity` 是**历史累计采购入库量，不是实际可用量/在途/FBA/FBM**；待收货仅为批准采购行剩余量，不等于供应商发货。
+- 按 Session 当前租户和 OWNER / CSRF 隔离所有仓库读写，保持已上架 Amazon 数据与本地仓库操作严格分开。详见 `docs/purchasing/local-warehouse-receipt-v39.md`，验收须有真实 CI/PG18 证据。
