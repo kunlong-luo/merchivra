@@ -22,7 +22,7 @@
 
 - `spapi_catalog_sync_job` 保留已提交页、代次、Lease Epoch、独占 Owner、重试时间、opaque cursor。外网请求在事务外，DB 操作在事务内；提交前重新锁住 tenant、Seller Account、Role Evidence、Grant 和 Marketplace verification 并重新从 Vault 查明授权有效。
 - 页写入与 cursor 更新 / `spapi_catalog_page_commit` 同事务；旧 Lease 的页永远不能推进当前 checkpoint；状态有 `READY/RUNNING/RETRY/PAUSED/SUCCEEDED`，对 429/5xx 按延迟重试，认证失败暂停。
-- 25 分钟的本地分页 token 有效期门槛，到期从完整新代次重扫，利用来源时间/原始键保护写入。每次完整扫描不会把没有返回的 Listing 解释为删除，也不会把未出现 SKU 的库存变成零。
+- Listing 25 分钟、FBA 20 秒的本地分页 token 安全门槛，到期从完整新代次重扫，利用来源时间/原始键保护写入。每次完整扫描不会把没有返回的 Listing 解释为删除，也不会把未出现 SKU 的库存变成零。
 - Listing 当前映射状态和内部 SKU 映射历史保持原样，来源 `MOCK` 不能升格为 `LIVE`；FBA 每条观测保留生成代次/页/SKU 对应的稳定幂等键，且标记 `LIVE`。
 - 若库存缺少 fulfillable、reserved 或 lastUpdatedTime，`quality=PARTIAL`，补货策略不会凭它建议订货量。仅明确完整 `OBSERVED` 的源观测会触发已有补货策略计算。
 - 严格拒绝大于界限的数据页、无效来源 SKU、负库存、跨 Marketplace Listing 与可疑分页 token，不记录官方响应原始 JSON、LWA 凭证或供应商个人资料。
@@ -35,6 +35,6 @@
 ## 可选自动分页调度（V24B）
 
 - `MERCHIVRA_CATALOG_SYNC_SCHEDULER_ENABLED=false` 默认关闭，只有 `MERCHIVRA_CATALOG_SYNC_ENABLED=true` 且显式打开 scheduler 才会启动。
-- Scheduler 每隔 `MERCHIVRA_CATALOG_SYNC_SCHEDULER_MS`（默认 60 秒）读取最多 5 个已存在并处于 READY/RETRY 的任务，再逐一执行一页。不会自己创建或重启 Seller 授权、任务或更改 Amazon Listing/FBA。
+- Scheduler 每隔 `MERCHIVRA_CATALOG_SYNC_SCHEDULER_MS`（默认 10 秒，以满足 FBA 官方约 30 秒的分页 token 有效期）读取最多 5 个已存在并处于 READY/RETRY 的任务，再逐一执行一页。不会自己创建或重启 Seller 授权、任务或更改 Amazon Listing/FBA。
 - Owner 先通过 `start` 建立扫描任务，后续会按租约/游标持续推进到 SUCCEEDED。429/5xx 进入延迟重试，权限失效 PAUSED。跨进程并发仍由 DB Lease/Epoch 栅栏阻断。
 - Scheduler 的运行状态本身不证明获得了 Seller Central 真实角色或真实数据已同步；必须有独立证据和部署开关。

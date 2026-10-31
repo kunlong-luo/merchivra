@@ -16,6 +16,7 @@ import software.amazon.spapi.models.fba.inventory.v1.GetInventorySummariesResult
 import software.amazon.spapi.models.fba.inventory.v1.InventorySummaries;
 import software.amazon.spapi.models.fba.inventory.v1.InventorySummary;
 import software.amazon.spapi.models.fba.inventory.v1.InventoryDetails;
+import software.amazon.spapi.models.fba.inventory.v1.Granularity;
 import software.amazon.spapi.models.fba.inventory.v1.ReservedQuantity;
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -43,7 +44,9 @@ class TypedCatalogSdkReaderTest {
                     .reservedQuantity(new ReservedQuantity().totalReservedQuantity(3))));
             stock.add(new InventorySummary().sellerSku("SKU-NO-DATA"));
             return new GetInventorySummariesResponse().payload(
-                new GetInventorySummariesResult().inventorySummaries(stock));
+                new GetInventorySummariesResult()
+                    .granularity(new Granularity().granularityType("Marketplace")
+                        .granularityId(MP)).inventorySummaries(stock));
         });
     }
     @Test void typedListingsRetainMarketplaceAndSkuOnly() throws Exception {
@@ -72,6 +75,17 @@ class TypedCatalogSdkReaderTest {
         assertThrows(SecurityException.class,()->reader().fetchInventory(scope(false),null));
         assertThrows(IllegalArgumentException.class,()->
             reader().fetchListings(scope(true),"x".repeat(4097)));
+    }
+
+    @Test void mismatchedInventoryGranularityRejected() {
+        var bad=new TypedCatalogSdkReader((seller,token)->null,(seller,token)->
+            new GetInventorySummariesResponse().payload(
+                new GetInventorySummariesResult()
+                    .granularity(new Granularity().granularityType("Marketplace")
+                        .granularityId("A1PA6795UKMFR9"))
+                    .inventorySummaries(new InventorySummaries())));
+        assertThrows(IllegalArgumentException.class,()->
+            bad.fetchInventory(scope(true),null));
     }
     @Test void foreignMarketplaceListingsRejected() {
         var foreign=new TypedCatalogSdkReader((seller,token)->{

@@ -324,3 +324,5 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 
 - CatalogSyncScheduler 默认关闭，且不允许在 catalog-sync 主开关关闭时独立运行；只继续处理已有 Owner 创建的 READY/RETRY 任务。不得主动注册 Seller、新建定期全量重扫、绕过租约或者自动提交 Amazon 修改。
 - 所有自动页在事务外读取官方 SDK，事务内复查角色/授权再提交；429/5xx 延迟，不把错误/未知库存清零；日志不得包含 refresh token、source JSON 或 cursor。
+
+- V24 安全修订：FBA Inventory 官方 nextToken 约 30 秒过期，本地 20 秒后必须重启完整新代次；Listing 采用单独 25 分钟阈值，自动调度默认 10 秒轮询。禁止把 FBA token 当成长寿命 Orders/Listing 游标。FBA 响应 granularity 必须匹配当前 Marketplace。

@@ -95,4 +95,4 @@ merchivra:
     enabled: ${MERCHIVRA_CATALOG_SYNC_ENABLED:false}
     # Automatically progress only jobs started by a tenant Owner. OFF by default.
     scheduler-enabled: ${MERCHIVRA_CATALOG_SYNC_SCHEDULER_ENABLED:false}
-    scheduler-ms: ${MERCHIVRA_CATALOG_SYNC_SCHEDULER_MS:60000}
+    scheduler-ms: ${MERCHIVRA_CATALOG_SYNC_SCHEDULER_MS:10000}

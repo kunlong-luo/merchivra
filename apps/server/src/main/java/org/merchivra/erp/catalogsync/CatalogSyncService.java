@@ -28,7 +28,9 @@ import org.springframework.web.server.ResponseStatusException;
 @ConditionalOnProperty(prefix="merchivra.catalog-sync",name="enabled",havingValue="true")
 public class CatalogSyncService {
     private static final Duration LEASE=Duration.ofMinutes(3);
-    private static final Duration TOKEN_AGE=Duration.ofMinutes(25);
+    // Amazon FBA Inventory nextToken expires after about 30 seconds.
+    private static final Duration FBA_TOKEN_AGE=Duration.ofSeconds(20);
+    private static final Duration LISTING_TOKEN_AGE=Duration.ofMinutes(25);
     private final JdbcTemplate jdbc;
     private final TransactionTemplate tx;
     private final SpApiSellerGrantVault vault;
@@ -180,7 +182,8 @@ public class CatalogSyncService {
             if(current.retryAt()!=null && current.retryAt().isAfter(now))
                 throw new ResponseStatusException(HttpStatus.CONFLICT,"Retry not due");
             if(current.cursor()!=null && (current.cursorIssued()==null ||
-               current.cursorIssued().plus(TOKEN_AGE).isBefore(now))) {
+               current.cursorIssued().plus(stream==Stream.FBA?FBA_TOKEN_AGE:LISTING_TOKEN_AGE)
+                   .isBefore(now))) {
                 // Restart snapshot because opaque Amazon token can expire.
                 jdbc.update("""
                     UPDATE spapi_catalog_sync_job SET next_token=NULL,token_issued_at=NULL,

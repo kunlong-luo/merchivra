@@ -117,6 +117,10 @@ public final class TypedCatalogSdkReader {
            || response.getPayload().getInventorySummaries()==null
            || response.getPayload().getInventorySummaries().size()>10000)
             throw new IllegalArgumentException("Invalid FBA inventory page");
+        var granularity=response.getPayload().getGranularity();
+        if(granularity==null || !"Marketplace".equals(granularity.getGranularityType())
+           || !scope.marketplaceId().equals(granularity.getGranularityId()))
+            throw new IllegalArgumentException("FBA inventory marketplace scope mismatch");
         var facts=new ArrayList<StockFact>();
         Set<String> seen=new HashSet<>();
         for(var row:response.getPayload().getInventorySummaries()) {

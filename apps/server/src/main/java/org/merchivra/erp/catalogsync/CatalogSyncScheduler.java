@@ -17,7 +17,7 @@ public class CatalogSyncScheduler {
     private final CatalogSyncService service;
     public CatalogSyncScheduler(CatalogSyncService service){this.service=service;}
 
-    @Scheduled(fixedDelayString="${merchivra.catalog-sync.scheduler-ms:60000}",
+    @Scheduled(fixedDelayString="${merchivra.catalog-sync.scheduler-ms:10000}",
         initialDelayString="15000")
     public void poll() {
         for(var job:service.due(5)) {
