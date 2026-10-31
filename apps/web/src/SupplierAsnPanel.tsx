@@ -2,7 +2,7 @@ import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {PurchaseLine,LocalWarehouse} from './lib/purchasing'
 import {
- fetchSupplierAsns,createSupplierAsn,supplierAsnAction,updateSupplierAsnEta,
+ fetchSupplierAsns,fetchSupplierAsnEvents,createSupplierAsn,supplierAsnAction,updateSupplierAsnEta,
  fetchSupplierAsnFindings,scanSupplierAsns,supplierAsnFindingState,
  type NewSupplierAsn,type SupplierAsnFindingState
 } from './lib/supplier-asns'
@@ -23,6 +23,7 @@ export default function SupplierAsnPanel({tenantId,orderId,orderStatus,lines,
 }){
  const client=useQueryClient()
  const [lineId,setLineId]=useState(''),[warehouseId,setWarehouseId]=useState('')
+ const [viewEvents,setViewEvents]=useState('')
  const [quantity,setQuantity]=useState(1)
  const [eta,setEta]=useState(()=>new Date(Date.now()+86400000).toISOString().slice(0,10))
  const [tracking,setTracking]=useState('')
@@ -35,6 +36,9 @@ export default function SupplierAsnPanel({tenantId,orderId,orderStatus,lines,
  const root=['purchasing',tenantId]
  const asns=useQuery({queryKey:[...root,'asns',orderId],
   queryFn:()=>fetchSupplierAsns(orderId),enabled:!!orderId,retry:false})
+ const events=useQuery({queryKey:[...root,'asn-events',orderId,viewEvents],
+  queryFn:()=>fetchSupplierAsnEvents(orderId,viewEvents),
+  enabled:!!orderId&&!!viewEvents,retry:false})
  const findings=useQuery({queryKey:[...root,'asn-findings',filter],
   queryFn:()=>fetchSupplierAsnFindings(filter),retry:false})
  const refresh=()=>void client.invalidateQueries({queryKey:root})
@@ -134,6 +138,9 @@ export default function SupplierAsnPanel({tenantId,orderId,orderStatus,lines,
        <td>{a.status==='SHIPPED'?'供应商申报已发货':
         a.status==='DRAFT'?'通知草稿':'已取消'}</td>
        <td><div className="sandbox-actions">
+        <button type="button" className="refresh-button"
+         onClick={()=>setViewEvents(x=>x===a.id?'':a.id)}>
+         {viewEvents===a.id?'收起变更历史':'查看变更历史'}</button>
         {a.status==='DRAFT'&&activeOrder&&
          <button type="button" className="primary-button" disabled={action.isPending}
           onClick={()=>{if(window.confirm('确认供应商已报告发货？此操作不验证承运商物流状态。'))
@@ -170,6 +177,24 @@ export default function SupplierAsnPanel({tenantId,orderId,orderStatus,lines,
       </tr>)}
      </tbody></table>
     </div>}
+   {!!viewEvents&&<div aria-label="ASN 不可覆盖的审计历史">
+    <h3>ASN {viewEvents.slice(0,8)} · 事件历史</h3>
+    {events.isPending?<p className="empty-state">读取供应商 ASN 事件…</p>:
+     events.isError?<p className="setup-error" role="alert">{String(events.error)}</p>:
+     !events.data?.length?<p className="empty-state">尚无该 ASN 审计事件。</p>:
+     <div className="table-scroll" role="region" tabIndex={0}>
+      <table><thead><tr><th scope="col">时间</th><th scope="col">来源事件</th>
+       <th scope="col">件数</th><th scope="col">预计日期变化</th>
+       <th scope="col">业务备注</th></tr></thead><tbody>
+       {events.data.map(e=><tr key={e.id}>
+        <td>{new Date(e.createdAt).toLocaleString('zh-CN')}</td>
+        <td>{e.eventType}</td><td>{e.quantity??'—'}</td>
+        <td>{e.oldEta??'—'} → {e.newEta??'—'}</td>
+        <td>{e.note??'—'}</td>
+       </tr>)}
+      </tbody></table>
+     </div>}
+   </div>}
   </>}
   <div className="panel-heading"><div><h3>供应商预到货异常待办</h3>
    <p>仅对申报已发货且尚未完全关联收货的 ASN 提醒，预计三日内到货或已逾期。
