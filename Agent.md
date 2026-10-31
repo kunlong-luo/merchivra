@@ -67,3 +67,9 @@
 - [SEC-006](docs/security/seller-key-rotation.md)：V7 单密钥向多版本密钥环兼容升级，OAuth 写入、V8 验证与 Worker Vault 使用同一 cipher Bean。缺失旧密钥、重复版本、解密认证失败都必须拒绝，不能尝试降级。
 - 新增 OWNER + Session/CSRF 的 `POST /api/v1/seller-accounts/{accountId}/oauth/rotate-key`，只有 OAuth/SP-API 显式启用且 Demo 关闭时生效。按店铺数据库行锁 + 原版本 CAS + 新随机 nonce + 单事务 `KEY_REWRAPPED` 审计，已撤销凭证不可轮换。
 - **本地密钥重新加密不等于 Amazon LWA Refresh Token 周期续期**，不能因此扩大 Seller 权限。当前尚无 KMS Envelope Encryption、全局自动轮换、跨节点演练、真实 Seller 网络验收或生产 Worker；Compose V1–V9 应依据最终实际运行证据记录。
+
+## UI / UX 设计纪律（2026-10-31）
+
+- 根目录 [DESIGN.md](DESIGN.md) 定义 Merchivra 的界面设计规范与质量检查清单。保留 Vue/TypeScript 业务代码、现有蓝黑品牌风格和 Core/Mock 数据边界；除非维护者同意，不安装 Impeccable 或其他设计插件、Hook、npm 依赖。
+- 可直接参考公开的 Impeccable critique/audit/typeset/polish 方法进行**人工源码审查和小步修整**，但不可将此描述为已运行 Impeccable 专属检测器、浏览器截图比对、WCAG/性能认证。先解决操作信息层级、表格可读性、加载/错误/空状态、键盘焦点、手机触控、减少动画。
+- 状态标签与功能开关必须和真实权限一致。顶部“API 已连接”仅代表后端 API 可用，不代表 Amazon Seller 连接成功；Mock 不得暗示真实收入，未知库存不可写为0。所有 UX 更改需通过现有 Vue 类型检查、Vitest、构建，再做浏览器级验收。

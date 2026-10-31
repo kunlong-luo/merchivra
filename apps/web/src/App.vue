@@ -131,6 +131,7 @@ function tabTitle() {
 
 <template>
   <div class="workspace">
+    <a class="skip-link" href="#main-content">跳转到主要内容</a>
     <aside class="sidebar">
       <div class="brand-wrap">
         <div class="brand-icon">M</div>
@@ -154,19 +155,19 @@ function tabTitle() {
       <div class="sidebar-spacer"></div>
       <div class="sidebar-info">
         <span class="local-indicator"></span>
-        <div><strong>本地演示环境</strong><small>纯虚构数据 · 无真实连接</small></div>
+        <div><strong>{{ activeView === 'core' ? '核心业务工作台' : '本地演示环境' }}</strong><small>{{ activeView === 'core' ? '会话租户隔离 · 业务数据与 Mock 分离' : '纯虚构数据 · 无真实连接' }}</small></div>
       </div>
       <a class="sidebar-repo" href="https://github.com/kunlong-luo/merchivra" target="_blank" rel="noopener noreferrer">
         GitHub 源代码 <span aria-hidden="true">↗</span>
       </a>
     </aside>
 
-    <main class="main-panel">
+    <main id="main-content" class="main-panel" tabindex="-1">
       <header class="topbar">
         <div class="breadcrumb">工作空间 <span>/</span> <strong>{{ tabTitle() }}</strong></div>
         <div class="topbar-right">
-          <span :class="['connection', { connectionError: pingError }]"><span class="connection-dot"></span>{{ apiStatus }}</span>
-          <span class="avatar" aria-label="已登录">✓</span>
+          <span :class="['connection', { connectionError: pingError }]" role="status" aria-label="后端 API 连接状态"><span class="connection-dot" aria-hidden="true"></span>{{ apiStatus }}</span>
+          <span class="avatar" aria-label="已登录的工作台">✓</span>
           <button type="button" class="logout-control" :disabled="signingOut"
             @click="emit('logout')">{{ signingOut ? '退出中…' : '退出登录' }}</button>
         </div>
