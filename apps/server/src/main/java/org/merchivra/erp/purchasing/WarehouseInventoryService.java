@@ -23,7 +23,8 @@ public class WarehouseInventoryService {
                         long recordedReceivedQuantity,long onHandQuantity) {}
     public record Movement(String id,String warehouseId,String productSkuId,
                            String internalSku,String purchaseReceiptId,String operationId,
-                           int quantity,String movementType,String reason,String createdAt) {}
+                           String inspectionId,int quantity,String movementType,String reason,
+                           String createdAt) {}
     public record PendingReceipt(String purchaseOrderId,String orderNumber,
                                  String purchaseOrderLineId,String productSkuId,
                                  String internalSku,String status,int orderedQuantity,
@@ -127,17 +128,20 @@ public class WarehouseInventoryService {
         requireReadable(tenant,warehouseId);
         return jdbc.query("""
             SELECT m.id,m.warehouse_id,m.product_sku_id,s.internal_sku,
-                   m.purchase_receipt_id,m.operation_id,m.quantity,m.movement_type,
-                   o.reason,m.created_at
+                   m.purchase_receipt_id,m.operation_id,m.inspection_id,
+                   m.quantity,m.movement_type,COALESCE(o.reason,q.reason) AS reason,m.created_at
             FROM erp_local_stock_movement m
             JOIN product_sku s ON s.tenant_id=m.tenant_id AND s.id=m.product_sku_id
             LEFT JOIN erp_local_stock_operation o
               ON o.tenant_id=m.tenant_id AND o.id=m.operation_id
+            LEFT JOIN erp_purchase_receipt_qc q
+              ON q.tenant_id=m.tenant_id AND q.id=m.inspection_id
             WHERE m.tenant_id=? AND m.warehouse_id=?
             ORDER BY m.created_at DESC,m.id DESC LIMIT 100
             """,(rs,i)->{
                 UUID receipt=rs.getObject("purchase_receipt_id",UUID.class);
                 UUID operation=rs.getObject("operation_id",UUID.class);
+                UUID inspection=rs.getObject("inspection_id",UUID.class);
                 return new Movement(
                     rs.getObject("id",UUID.class).toString(),
                     rs.getObject("warehouse_id",UUID.class).toString(),
@@ -145,6 +149,7 @@ public class WarehouseInventoryService {
                     rs.getString("internal_sku"),
                     receipt==null?null:receipt.toString(),
                     operation==null?null:operation.toString(),
+                    inspection==null?null:inspection.toString(),
                     rs.getInt("quantity"),rs.getString("movement_type"),rs.getString("reason"),
                     rs.getObject("created_at",OffsetDateTime.class).toInstant().toString());
             },
