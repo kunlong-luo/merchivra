@@ -42,6 +42,63 @@ class PurchasingWarehouseReceiptTest {
         verifyNoInteractions(warehouses);
         verify(jdbc,never()).update(anyString(),any(Object[].class));
     }
+    @Test void unverifiedOrForeignAsnCannotReceiveOrPostLocalStock() {
+        UUID asn=UUID.fromString("77777777-7777-4777-8777-777777777777");
+        var approved=new PurchasingService.Order(orderId.toString(),"PO-T",skuId.toString(),
+            "APPROVED","USD",actor.toString(),null,null,"2026-10-31T00:00:00Z");
+        var line=new PurchasingService.Line(lineId.toString(),skuId.toString(),10,0,"4.0");
+        when(jdbc.query(contains("FROM erp_purchase_order WHERE tenant_id=?"),
+            any(RowMapper.class),eq(tenant),eq(orderId))).thenReturn(List.of(approved));
+        when(jdbc.query(contains("FROM erp_purchase_order_line l"),
+            any(RowMapper.class),eq(tenant),eq(orderId))).thenReturn(List.of(line));
+        when(jdbc.query(contains("FROM erp_purchase_asn a"),
+            any(RowMapper.class),eq(tenant),eq(orderId),eq(lineId),eq(warehouseId),eq(asn)))
+            .thenReturn(List.of());
+        assertEquals(HttpStatus.NOT_FOUND,assertThrows(ResponseStatusException.class,
+            ()->service.receive(tenant,actor,orderId,lineId,2,warehouseId,asn))
+            .getStatusCode());
+        verify(jdbc,never()).update(anyString(),any(Object[].class));
+        verify(warehouses,never()).recordReceipt(any(),any(),any(),any(),any(),anyInt());
+    }
+    @Test void linkedAsnReceiptNeverExceedsSupplierDeclaredRemainingUnits() {
+        UUID asn=UUID.fromString("77777777-7777-4777-8777-777777777777");
+        var approved=new PurchasingService.Order(orderId.toString(),"PO-T",skuId.toString(),
+            "RECEIVING","USD",actor.toString(),null,null,"2026-10-31T00:00:00Z");
+        var line=new PurchasingService.Line(lineId.toString(),skuId.toString(),10,3,"4.0");
+        when(jdbc.query(contains("FROM erp_purchase_order WHERE tenant_id=?"),
+            any(RowMapper.class),eq(tenant),eq(orderId))).thenReturn(List.of(approved));
+        when(jdbc.query(contains("FROM erp_purchase_order_line l"),
+            any(RowMapper.class),eq(tenant),eq(orderId))).thenReturn(List.of(line));
+        when(jdbc.query(contains("FROM erp_purchase_asn a"),
+            any(RowMapper.class),eq(tenant),eq(orderId),eq(lineId),eq(warehouseId),eq(asn)))
+            .thenReturn(List.of(1));
+        assertEquals(HttpStatus.CONFLICT,assertThrows(ResponseStatusException.class,
+            ()->service.receive(tenant,actor,orderId,lineId,2,warehouseId,asn))
+            .getStatusCode());
+        verify(jdbc,never()).update(anyString(),any(Object[].class));
+        verify(warehouses,never()).recordReceipt(any(),any(),any(),any(),any(),anyInt());
+    }
+    @Test void linkedAsnReceiptWritesSourceAndAuditWithTheSameTransaction() {
+        UUID asn=UUID.fromString("77777777-7777-4777-8777-777777777777");
+        var approved=new PurchasingService.Order(orderId.toString(),"PO-T",skuId.toString(),
+            "APPROVED","USD",actor.toString(),null,null,"2026-10-31T00:00:00Z");
+        var line=new PurchasingService.Line(lineId.toString(),skuId.toString(),10,0,"4.0");
+        when(jdbc.query(contains("FROM erp_purchase_order WHERE tenant_id=?"),
+            any(RowMapper.class),eq(tenant),eq(orderId))).thenReturn(List.of(approved));
+        when(jdbc.query(contains("FROM erp_purchase_order_line l"),
+            any(RowMapper.class),eq(tenant),eq(orderId))).thenReturn(List.of(line));
+        when(jdbc.query(contains("FROM erp_purchase_asn a"),
+            any(RowMapper.class),eq(tenant),eq(orderId),eq(lineId),eq(warehouseId),eq(asn)))
+            .thenReturn(List.of(6));
+        service.receive(tenant,actor,orderId,lineId,2,warehouseId,asn);
+        verify(jdbc).update(contains("INSERT INTO erp_purchase_receipt"),
+            any(UUID.class),eq(tenant),eq(orderId),eq(lineId),eq(2),eq(actor),
+            eq(warehouseId),eq(asn));
+        verify(jdbc).update(contains("INSERT INTO erp_purchase_asn_event"),
+            any(UUID.class),eq(tenant),eq(asn),eq(actor),eq(2));
+        verify(warehouses).recordReceipt(eq(tenant),eq(actor),eq(warehouseId),
+            eq(skuId),any(UUID.class),eq(2));
+    }
     @Test void approvedReceiptPostsMatchingSkuAndQuantityExactlyOnce() {
         var approved=new PurchasingService.Order(orderId.toString(),"PO-T",skuId.toString(),
             "APPROVED","USD",actor.toString(),null,null,"2026-10-31T00:00:00Z");
@@ -53,7 +110,8 @@ class PurchasingWarehouseReceiptTest {
         service.receive(tenant,actor,orderId,lineId,3,warehouseId);
         verify(warehouses).requireActive(tenant,warehouseId);
         verify(jdbc).update(contains("INSERT INTO erp_purchase_receipt"),
-            any(UUID.class),eq(tenant),eq(orderId),eq(lineId),eq(3),eq(actor),eq(warehouseId));
+            any(UUID.class),eq(tenant),eq(orderId),eq(lineId),eq(3),eq(actor),
+            eq(warehouseId),isNull());
         verify(warehouses).recordReceipt(eq(tenant),eq(actor),eq(warehouseId),
             eq(skuId),any(UUID.class),eq(3));
     }
