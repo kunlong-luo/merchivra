@@ -2,7 +2,9 @@ import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchSkus} from './lib/catalog'
 import {createSupplier,fetchSuppliers,createPurchaseOrder,fetchPurchaseOrders,
- fetchPurchaseOrder,purchaseAction,receivePurchase,type NewPurchaseLine} from './lib/purchasing'
+ fetchPurchaseOrder,purchaseAction,receivePurchase,fetchWarehouses,createWarehouse,
+ fetchWarehouseStock,fetchWarehouseLedger,fetchPendingReceipts,
+ type NewPurchaseLine} from './lib/purchasing'
 
 export default function PurchasingWorkspace({tenantId,currentUserId}:{
  tenantId:string;currentUserId:string
@@ -15,13 +17,28 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  const [draft,setDraft]=useState<NewPurchaseLine[]>([])
  const [selectedId,setSelectedId]=useState(''),[receiveLine,setReceiveLine]=useState('')
  const [receiveQty,setReceiveQty]=useState(1)
+ const [warehouseCode,setWarehouseCode]=useState(''),[warehouseName,setWarehouseName]=useState('')
+ const [warehouseId,setWarehouseId]=useState(''),[stockWarehouseId,setStockWarehouseId]=useState('')
  const [message,setMessage]=useState(''),[failure,setFailure]=useState('')
+ const warehouses=useQuery({queryKey:['purchasing',tenantId,'warehouses'],queryFn:fetchWarehouses})
+ const stock=useQuery({queryKey:['purchasing',tenantId,'stock',stockWarehouseId],
+  queryFn:()=>fetchWarehouseStock(stockWarehouseId),enabled:!!stockWarehouseId,retry:false})
+ const movements=useQuery({queryKey:['purchasing',tenantId,'ledger',stockWarehouseId],
+  queryFn:()=>fetchWarehouseLedger(stockWarehouseId),enabled:!!stockWarehouseId,retry:false})
+ const pending=useQuery({queryKey:['purchasing',tenantId,'pending'],
+  queryFn:fetchPendingReceipts,retry:false})
  const suppliers=useQuery({queryKey:['purchasing',tenantId,'suppliers'],queryFn:fetchSuppliers})
  const orders=useQuery({queryKey:['purchasing',tenantId,'orders'],queryFn:fetchPurchaseOrders})
  const skus=useQuery({queryKey:['catalog',tenantId,'for-purchase'],queryFn:()=>fetchSkus()})
  const selected=useQuery({queryKey:['purchasing',tenantId,'detail',selectedId],
   queryFn:()=>fetchPurchaseOrder(selectedId),enabled:!!selectedId})
  const refresh=()=>void client.invalidateQueries({queryKey:['purchasing',tenantId]})
+ const warehouseCreated=useMutation({
+  mutationFn:()=>createWarehouse(warehouseCode,warehouseName),
+  onSuccess:w=>{setWarehouseCode('');setWarehouseName('');setWarehouseId(w.id);
+    setStockWarehouseId(w.id);setMessage('本地仓库已创建：'+w.code);setFailure('');refresh()},
+  onError:(e:Error)=>setFailure(e.message)
+ })
  const supplier=useMutation({mutationFn:()=>createSupplier(supplierCode,supplierName),
   onSuccess:()=>{setMessage('供应商已创建');setFailure('');setSupplierCode('');
     setSupplierName('');refresh()},onError:(e:Error)=>setFailure(e.message)})
@@ -32,18 +49,38 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
   purchaseAction(id,kind),onSuccess:d=>{
     setMessage('采购单状态已更新：'+d.order.status);setFailure('');refresh()
   },onError:(e:Error)=>setFailure(e.message)})
- const receipt=useMutation({mutationFn:()=>receivePurchase(selectedId,receiveLine,receiveQty),
-  onSuccess:d=>{setMessage('收货记录已追加：'+d.order.status);setFailure('');refresh()},
+ const receipt=useMutation({mutationFn:()=>receivePurchase(selectedId,receiveLine,receiveQty,warehouseId),
+  onSuccess:d=>{setMessage('本地仓库收货和库存流水已追加：'+d.order.status);setFailure('');refresh()},
   onError:(e:Error)=>setFailure(e.message)})
  function addSupplier(e:FormEvent){e.preventDefault();supplier.mutate()}
+ function addWarehouse(e:FormEvent){e.preventDefault();warehouseCreated.mutate()}
  function create(e:FormEvent){e.preventDefault();if(draft.length&&supplierId)created.mutate()}
  const remaining=selected.data?.lines.filter(l=>l.receivedQuantity<l.orderedQuantity)??[]
  const supplierOptions=suppliers.data?.filter(s=>s.status==='ACTIVE')??[]
  const activeSkus=skus.data?.filter(s=>s.status==='ACTIVE')??[]
+ const activeWarehouses=warehouses.data?.filter(w=>w.status==='ACTIVE')??[]
  return <div className="core-workspace">
   <div className="core-intro"><strong>采购与供应商 · 本地业务</strong><p>
-   支持采购草稿、提交、独立管理员审批与分批收货。采购数量不得冒充 FBA 已入仓库存；
-   金额仅为原币采购约定，并非 Amazon 财务结算。</p></div>
+   支持采购审批、指定本地仓库后分批收货，并记录不可覆盖的入库流水。
+   本地累计入库不是可售库存，也不代表 Amazon FBA 已入仓；采购金额不等于平台结算。</p></div>
+  <section className="panel full-panel" aria-label="本地仓库">
+   <div className="panel-heading"><div><h2>本地仓库</h2>
+    <p>收货时必须选定实际本地仓库；原有未分配仓库的历史收货不会计入仓库流水。</p></div></div>
+   <form className="team-invite-form" onSubmit={addWarehouse}>
+    <label htmlFor="warehouse-code">仓库编号</label>
+    <input id="warehouse-code" required minLength={2} maxLength={60}
+     pattern="[A-Z0-9][A-Z0-9_-]{1,59}" value={warehouseCode}
+     onChange={e=>setWarehouseCode(e.target.value.toUpperCase())}/>
+    <label htmlFor="warehouse-name">仓库名称</label>
+    <input id="warehouse-name" required minLength={2} maxLength={200}
+     value={warehouseName} onChange={e=>setWarehouseName(e.target.value)}/>
+    <button type="submit" className="primary-button"
+     disabled={warehouseCreated.isPending}>建立本地仓库</button>
+   </form>
+   {warehouses.isPending?<p className="empty-state">读取仓库中…</p>:
+    warehouses.isError?<p className="setup-error" role="alert">{String(warehouses.error)}</p>:
+    <p className="setup-hint">已创建 {warehouses.data?.length??0} 个仓库；请在采购收货时选择实际接收仓库。</p>}
+  </section>
   <section className="panel full-panel"><div className="panel-heading"><h2>供应商</h2></div>
    <form className="team-invite-form" onSubmit={addSupplier}>
     <label htmlFor="purchase-supplier-code">供应商编号</label>
@@ -105,6 +142,26 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
    <form onSubmit={create}><button type="submit" className="primary-button"
      disabled={!supplierId||!draft.length||created.isPending}>保存采购单草稿</button></form>
   </section>
+  <section className="panel full-panel" aria-label="已审批待收货">
+   <div className="panel-heading"><div><h2>已审批待收货</h2>
+    <p>仅统计 APPROVED / RECEIVING 采购单的剩余数量，不代表供应商已发货或真实在途。</p></div></div>
+   {pending.isPending?<p className="empty-state">读取待收货记录中…</p>:
+    pending.isError?<p className="setup-error" role="alert">{String(pending.error)}</p>:
+    !pending.data?.length?<p className="empty-state">当前没有已审批的待收货明细。</p>:
+    <div className="table-scroll" role="region" tabIndex={0} aria-label="采购待收货明细">
+     <table><thead><tr><th scope="col">采购单号</th><th scope="col">内部 SKU</th>
+      <th scope="col">已收 / 订购</th><th scope="col">待收货</th>
+      <th scope="col">原币单价</th><th scope="col">操作</th></tr></thead><tbody>
+      {pending.data.map(p=><tr key={p.purchaseOrderLineId}>
+       <td>{p.orderNumber}</td><td>{p.internalSku}</td>
+       <td>{p.receivedQuantity} / {p.orderedQuantity}</td>
+       <td>{p.remainingQuantity}</td><td>{p.currency} {p.unitCost}</td>
+       <td><button type="button" className="refresh-button" onClick={()=>{
+        setSelectedId(p.purchaseOrderId);setReceiveLine(p.purchaseOrderLineId)}}>打开收货</button></td>
+      </tr>)}
+     </tbody></table>
+    </div>}
+  </section>
   <section className="panel full-panel"><div className="panel-heading"><div><h2>采购单列表与流程</h2>
    <p>批准人必须是另一名 Owner；收货可以分批，但不能超过每行订购数量。</p></div>
    <button className="refresh-button" onClick={refresh}>刷新</button></div>
@@ -145,6 +202,13 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
       </div>
       {['APPROVED','RECEIVING'].includes(selected.data.order.status)&&
        <div className="team-invite-form">
+        <label htmlFor="receipt-warehouse">实际收货仓库（必选）</label>
+        <select id="receipt-warehouse" value={warehouseId}
+         onChange={e=>setWarehouseId(e.target.value)}>
+         <option value="">选择本地仓库</option>
+         {activeWarehouses.map(w=><option value={w.id} key={w.id}>
+          {w.code} · {w.name}</option>)}
+        </select>
         <label htmlFor="receipt-line">待收货明细</label>
         <select id="receipt-line" value={receiveLine} onChange={e=>setReceiveLine(e.target.value)}>
          <option value="">选择未收完的行</option>
@@ -156,7 +220,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
         <input id="receipt-qty" type="number" min={1}
           max={remaining.find(l=>l.id===receiveLine)?.orderedQuantity??1000000}
           value={receiveQty} onChange={e=>setReceiveQty(Number(e.target.value))}/>
-        <button className="primary-button" type="button" disabled={!receiveLine||
+        <button className="primary-button" type="button" disabled={!warehouseId||!receiveLine||
           !Number.isInteger(receiveQty)||receiveQty<1||
           receiveQty>(remaining.find(l=>l.id===receiveLine)?.orderedQuantity??0)-
             (remaining.find(l=>l.id===receiveLine)?.receivedQuantity??0)||receipt.isPending}
@@ -164,6 +228,44 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
        </div>}
       </>}
    </div>}
+  </section>
+  <section className="panel full-panel" aria-label="仓库入库流水与累计数量">
+   <div className="panel-heading"><div><h2>本地仓库入库流水</h2>
+    <p>仅展示明确分配到所选仓库的采购收货。累计数量尚未扣除出库、损耗或退货，
+     因此不是实际可用库存。</p></div></div>
+   <label htmlFor="warehouse-stock-select">选择仓库查看</label>
+   <select id="warehouse-stock-select" value={stockWarehouseId}
+    onChange={e=>setStockWarehouseId(e.target.value)}>
+    <option value="">选择仓库</option>
+    {(warehouses.data??[]).map(w=><option key={w.id} value={w.id}>
+     {w.code} · {w.name}</option>)}
+   </select>
+   {stockWarehouseId&&<>
+    {stock.isPending?<p className="empty-state">加载累计入库数量…</p>:
+     stock.isError?<p className="setup-error" role="alert">{String(stock.error)}</p>:
+     !stock.data?.length?<p className="empty-state">所选仓库还没有入库流水。</p>:
+     <div className="table-scroll" role="region" tabIndex={0} aria-label="仓库累计入库">
+      <table><thead><tr><th scope="col">内部 SKU</th>
+       <th scope="col">累计采购收货件数</th></tr></thead><tbody>
+       {stock.data.map(s=><tr key={s.productSkuId}><td>{s.internalSku}</td>
+        <td>{s.recordedReceivedQuantity}</td></tr>)}
+      </tbody></table>
+     </div>}
+    <h3>最近 100 条本地收货流水</h3>
+    {movements.isPending?<p className="empty-state">加载流水中…</p>:
+     movements.isError?<p className="setup-error" role="alert">{String(movements.error)}</p>:
+     !movements.data?.length?<p className="empty-state">暂无入库流水。</p>:
+     <div className="table-scroll" role="region" tabIndex={0} aria-label="仓库入库历史">
+      <table><thead><tr><th scope="col">时间</th><th scope="col">内部 SKU</th>
+       <th scope="col">数量</th><th scope="col">来源收货 ID</th></tr></thead><tbody>
+       {movements.data.map(m=><tr key={m.id}>
+        <td>{new Date(m.createdAt).toLocaleString('zh-CN')}</td>
+        <td>{m.internalSku}</td><td>+{m.quantity}</td>
+        <td>{m.purchaseReceiptId}</td>
+       </tr>)}
+      </tbody></table>
+     </div>}
+   </>}
   </section>
   {message&&<p className="panel-caption" role="status">{message}</p>}
   {failure&&<p className="setup-error" role="alert">{failure}</p>}
