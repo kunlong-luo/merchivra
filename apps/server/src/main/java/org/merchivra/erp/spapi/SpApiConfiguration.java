@@ -25,7 +25,7 @@ public class SpApiConfiguration {
 
 
     @Bean
-    @ConditionalOnProperty(prefix="merchivra.spapi.oauth", name="enabled", havingValue="true")
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnExpression("${merchivra.spapi.oauth.enabled:false} or ${merchivra.spapi.private.enabled:false}")
     SellerTokenCipher sellerTokenCipher(
         @Value("${merchivra.spapi.oauth.encryption-keyring:}") String keyring,
         @Value("${merchivra.spapi.oauth.encryption-key-base64:}") String legacyKey,
@@ -34,14 +34,14 @@ public class SpApiConfiguration {
     }
 
     @Bean
-    @ConditionalOnProperty(prefix="merchivra.spapi.oauth", name="enabled", havingValue="true")
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnExpression("${merchivra.spapi.oauth.enabled:false} or ${merchivra.spapi.private.enabled:false}")
     SpApiSellerGrantVault spApiSellerGrantVault(
         org.springframework.jdbc.core.JdbcTemplate jdbc, SellerTokenCipher cipher) {
         return new SpApiSellerGrantVault(jdbc,cipher);
     }
 
     @Bean
-    @ConditionalOnProperty(prefix="merchivra.spapi.oauth", name="enabled", havingValue="true")
+    @org.springframework.boot.autoconfigure.condition.ConditionalOnExpression("${merchivra.spapi.oauth.enabled:false} or ${merchivra.spapi.private.enabled:false}")
     SellerGrantKeyRotationService sellerGrantKeyRotationService(
         org.springframework.jdbc.core.JdbcTemplate jdbc,
         org.springframework.transaction.support.TransactionTemplate transactions,
@@ -89,13 +89,25 @@ public class SpApiConfiguration {
     }
 
     @Bean
+    @ConditionalOnProperty(prefix="merchivra.spapi.private",name="enabled",havingValue="true")
+    PrivateSellerGrantService privateSellerGrantService(
+        org.springframework.jdbc.core.JdbcTemplate jdbc,
+        org.springframework.transaction.support.TransactionTemplate transactions,
+        SellerTokenCipher cipher,
+        @Value("${merchivra.demo.enabled:false}") boolean demo) {
+        if(demo)throw new IllegalStateException("Private Seller mode cannot run in Demo");
+        return new PrivateSellerGrantService(jdbc,transactions,cipher);
+    }
+
+    @Bean
     @ConditionalOnProperty(prefix="merchivra.spapi.verification", name="enabled", havingValue="true")
     SellerMarketplaceGateway sellerMarketplaceGateway(
         SpApiOfficialSdkFactory sdk,
         @Value("${merchivra.spapi.sandbox:true}") boolean sandbox,
         @Value("${merchivra.spapi.oauth.enabled:false}") boolean oauthEnabled,
+        @Value("${merchivra.spapi.private.enabled:false}") boolean privateEnabled,
         @Value("${merchivra.demo.enabled:false}") boolean demo) {
-        if (sandbox || !oauthEnabled || demo)
+        if (sandbox || (!oauthEnabled && !privateEnabled) || demo)
             throw new IllegalStateException(
                 "Live Seller verification requires production endpoint, OAuth and Demo disabled");
         return new OfficialSellerMarketplaceGateway(sdk);

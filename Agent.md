@@ -270,3 +270,12 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 后端成功 Marketplace 核验后，必须在同一事务内将 `seller_account.seller_id` 绑定经过两阶段 OAuth 校验的 Seller ID；服务端 Vault/Orders Worker 要求本地账户、授权与站点证据三者身份一致。
 - Amazon OAuth 返回并不等于 Seller VERIFIED，Seller VERIFIED 不等于 Orders 角色已获批准，Owner 自己不能审核自己的 Orders 申请，失败与撤销必须不可绕过。
 - 本轮新增 Java 单元测试和前端 Vitest 必须随现有 Java CI、React CI 及 PostgreSQL Compose 验证；测试中的 Amazon 数据全为合成值。
+
+
+## V19 · 用户指定「功能优先，集中验收」（2026-10-31）
+
+- 当前交付按实际**代码是否具备服务/API/UI 路径**推进；先实现真实店铺私有自授权、SKU CRUD/人工映射，再拓展订单行、Listing、FBA、财务、采购与补货等。不要把一次 Mock 验证当成生产完成，也不要将全部 SDK 类型声明成 ERP 已实现所有功能。
+- 本轮优先编码，**未执行测试/CI/数据库/真实 Amazon 验收时必须在变更说明中明确标注未验收**；不能预填成功。
+- V17 服务端私有导入：必须使用临时进程环境/Secrets、明确显式开启、默认 Demo/OAuth/出站/远程写都隔离；不能在浏览器或日志暴露 token；导入后待 Sellers v1 验证、Orders 角色仍需独立审核。私有和公有不是一个授权流程。
+- V18 主数据修改仅 Owner 能写入，SKU 的原始来源/映射历史不能破坏，不能自动写 Amazon，归档活跃引用必须拒绝；保留人工操作审计。
+- 本次功能实现之后应再核验 Java 编译、TypeScript、Flyway、PG18 与安全验收，不能用编写代码替代运行证明。

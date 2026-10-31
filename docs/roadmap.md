@@ -100,3 +100,15 @@
 - [ ] 后续才是 Orders LIVE 增量、Listing、FBA、Finances；未经授权和来源验证，不开启新的自动读取和财务核算。
 
 受控验收依据：[FR-SHOP-01/02](requirements/functional.md)、[SEC-004 OAuth](security/seller-oauth.md)、[SEC-005 验证](security/seller-verification.md)、[ARCH-003 一致性](architecture/consistency-boundaries.md)。
+
+
+## V19 · 先完成代码，再集中验收（2026-10-31）
+
+维护者要求先实现尽量完整的产品功能，不再把每一轮完整 CI/E2E/真实 Amazon 验收当作开发前置。继续保持 Secret 安全、租户隔离和危险操作禁用；未测试的代码不能标记为「可上线」。
+
+- [x] **代码已加入，未验收**：独立于公有 OAuth 的私有应用 Seller Central 自授权服务器一次性加密导入、相同 Seller 重导入、本地撤销、脱敏状态/审计；V17 记录 authorization_method。部署 Production Compose overlay 与服务端环境配置已新增。
+- [x] **代码已加入，未验收**：内部 SKU 主数据创建/改名/归档/恢复、Listing 活跃映射的事务化版本历史/解绑、操作审计，以及 React Owner 操作页；V18 迁移。
+- [ ] 待开发：真实 Listing/FBA 只读 Worker 全链、订单行、Finances 交易及对账、历史成本与利润、采购/补货审批、通知与运营规则管理、报表/导出、仓储/发货、广告等。
+- [ ] 集中验证：所有 V17/V18 迁移、Java 编译、React 类型与构建、PostgreSQL 18 多租户 HTTP/CSRF、虚构私有导入、Amazon 真实 Seller 授权、生产权限与备份。
+
+[INT-005 私有应用导入](integrations/private-seller-import.md) · [CAT-001 商品/SKU](catalog/sku-management.md)

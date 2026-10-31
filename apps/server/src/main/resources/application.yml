@@ -50,6 +50,15 @@ merchivra:
     verification:
       # Separate explicit live-only gate. No sandbox/Demo verification.
       enabled: ${MERCHIVRA_SPAPI_VERIFICATION_ENABLED:false}
+    private:
+      # Private Seller Central self-authorization: server-only one-shot import.
+      enabled: ${MERCHIVRA_SPAPI_PRIVATE_ENABLED:false}
+    private-import:
+      enabled: ${MERCHIVRA_SPAPI_PRIVATE_IMPORT_ENABLED:false}
+      tenant-id: ${MERCHIVRA_SPAPI_PRIVATE_IMPORT_TENANT_ID:}
+      account-id: ${MERCHIVRA_SPAPI_PRIVATE_IMPORT_ACCOUNT_ID:}
+      seller-id: ${MERCHIVRA_SPAPI_PRIVATE_IMPORT_SELLER_ID:}
+      refresh-token: ${MERCHIVRA_SPAPI_PRIVATE_IMPORT_REFRESH_TOKEN:}
     lwa-client-id: ${MERCHIVRA_LWA_CLIENT_ID:}
     lwa-client-secret: ${MERCHIVRA_LWA_CLIENT_SECRET:}
     oauth:

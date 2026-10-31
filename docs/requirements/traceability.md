@@ -81,3 +81,12 @@ G2 全部为**设计验收规范**，并未执行任何数据库/HTTP 测试，�
 - FR-SHOP-02：本地 Marketplace 预设与区域校验、Seller v1 参与状态和 24h 时效门禁已有代码。
 - Gate：必须用真实 Amazon 应用、Seller 和已批准角色验证生产 OAuth 与 Sellers v1；此前这些条款均为**离线模拟覆盖**，不得关闭需求验收项。
 - 依赖：正式 Orders、Listing、FBA 的数据同步只有在上述 gate 通过后才可算“已接入”。
+
+
+### V19 代码优先交付（未进行测试/生产验收）
+
+- `FR-SHOP-01`：新增私有 Seller 应用的一次性服务端凭证导入/状态/撤销，可与公有 OAuth 明确区分，状态待 Sellers v1 验证。见 V17 SQL 与 INT-005。
+- `FR-CAT-01`：新增 Owner 内部 SKU 增改归档恢复业务 API 和 React 页面。
+- `FR-CAT-03`：新增 Listing→内部 SKU 显式人工确认/解除，历史版本闭合而不硬删除。
+- `FR-API-01`：租户/Owner 从服务端 Session 获取；Catalog 写接口由 CSRF 守卫。
+- 未测量覆盖率、未执行 Java/React CI、未做实际 PostgreSQL 迁移或 Amazon 实时 API 调用，不得关闭对应生产验收项。

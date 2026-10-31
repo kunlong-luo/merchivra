@@ -30,6 +30,7 @@ public class OrdersSyncConfiguration {
         @Value("${merchivra.spapi.sandbox:true}") boolean sandbox,
         @Value("${merchivra.spapi.allow-writes:false}") boolean allowWrites,
         @Value("${merchivra.spapi.oauth.enabled:false}") boolean oauthEnabled,
+        @Value("${merchivra.spapi.private.enabled:false}") boolean privateEnabled,
         @Value("${merchivra.spapi.verification.enabled:false}") boolean verificationEnabled) {
 
         if("MOCK".equals(mode)) {
@@ -41,7 +42,7 @@ public class OrdersSyncConfiguration {
         }
 
         if(!"LIVE".equals(mode) || !liveApproved || demoEnabled || !outboundEnabled
-           || sandbox || allowWrites || !oauthEnabled || !verificationEnabled) {
+           || sandbox || allowWrites || (!oauthEnabled && !privateEnabled) || !verificationEnabled) {
             throw new IllegalStateException(
                 "LIVE Orders requires explicit approval, production read-only SP-API, verified OAuth and no Demo");
         }

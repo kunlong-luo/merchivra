@@ -3,7 +3,8 @@ import { csrfHeader } from './auth'
 
 const base = '/api/v1/seller-accounts'
 export const oauthStatusSchema = z.object({
-  status: z.string(), sellerId: z.string().nullable(), region: z.string().nullable()
+  status: z.string(), sellerId: z.string().nullable(), region: z.string().nullable(),
+  authorizationMethod: z.enum(['PUBLIC_OAUTH','PRIVATE_SELF']).nullable().optional()
 })
 export const oauthAuditSchema = z.array(z.object({
   type: z.string(), occurredAt: z.string()
@@ -56,11 +57,26 @@ async function post<T>(url: string, schema: z.ZodType<T>, body?: unknown): Promi
   })
   return response(res, schema)
 }
-export function getOauthStatus(accountId: string) {
-  return get(path(accountId, '/oauth/status'), oauthStatusSchema)
+/**
+ * The public-app endpoint and private self-authorization status are separate.
+ * A 404 from public OAuth can indicate private-mode deployment; never submit
+ * a refresh token via the browser.
+ */
+export async function getOauthStatus(accountId: string) {
+  const url=path(accountId,'/oauth/status')
+  const res=await fetch(url, {credentials:'same-origin',cache:'no-store',
+    headers:{Accept:'application/json'}})
+  if(res.status===404)
+    return get(path(accountId,'/private-authorization/status'),oauthStatusSchema)
+  return response(res,oauthStatusSchema)
 }
-export function getOauthAudit(accountId: string) {
-  return get(path(accountId, '/oauth/audit'), oauthAuditSchema)
+export async function getOauthAudit(accountId: string) {
+  const res=await fetch(path(accountId,'/oauth/audit'), {
+    credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}
+  })
+  if(res.status===404)
+    return get(path(accountId,'/private-authorization/audit'),oauthAuditSchema)
+  return response(res,oauthAuditSchema)
 }
 /**
  * No arbitrary external redirect: the server controls the Amazon consent URL.
@@ -84,8 +100,9 @@ export async function startSellerOauth(accountId: string, beta = false) {
 export function verifySellerOauth(accountId: string) {
   return post(path(accountId, '/oauth/verify'), verificationSchema)
 }
-export async function revokeSellerOauth(accountId: string): Promise<void> {
-  const res = await fetch(path(accountId, '/oauth/revoke'), {
+export async function revokeSellerOauth(accountId: string, privateSelf = false): Promise<void> {
+  const res = await fetch(path(accountId,
+    privateSelf ? '/private-authorization/revoke' : '/oauth/revoke'), {
     method: 'POST', credentials: 'same-origin', cache: 'no-store', headers: await csrfHeader()
   })
   if (!res.ok) {

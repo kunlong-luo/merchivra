@@ -79,7 +79,8 @@ export default function SellerConnections({ tenantId, currentUserId }: {
     onError: error => { setFailure(errorText(error)); refresh() }
   })
   const revoke = useMutation({
-    mutationFn: () => revokeSellerOauth(selectedId),
+    mutationFn: () => revokeSellerOauth(selectedId,
+      oauth.data?.authorizationMethod === 'PRIVATE_SELF'),
     onSuccess: () => {
       setFailure('')
       setMessage('已清除本地加密授权并阻止后续使用；Amazon Seller Central 的授权不受此操作影响。')
@@ -151,11 +152,18 @@ export default function SellerConnections({ tenantId, currentUserId }: {
             </div> : oauth.data && <>
               <div className="orders-sync-grid">
                 <div><span>授权状态</span><strong>{oauthLabels[oauth.data.status] ?? oauth.data.status}</strong></div>
+                <div><span>应用授权方式</span><strong>{oauth.data.authorizationMethod === 'PRIVATE_SELF'
+                  ? 'Seller Central 私有应用自授权' : '公有应用 OAuth'}</strong></div>
                 <div><span>授权 Seller ID（遮蔽）</span><strong>{maskSeller(oauth.data.sellerId)}</strong></div>
                 <div><span>区域</span><strong>{oauth.data.region ?? selected?.region ?? '—'}</strong></div>
                 <div><span>站点权限</span><strong>{oauth.data.status === 'VERIFIED' ? '仍需核对 24h 时效及角色' : '未满足正式准入'}</strong></div>
               </div>
-              {((oauth.data.status === 'NOT_CONNECTED' && selected?.connectionStatus === 'UNCONFIGURED') ||
+              {oauth.data.authorizationMethod === 'PRIVATE_SELF' && <p className="setup-hint">
+                私有应用授权须由管理员在 Seller Central 自授权后，通过服务端一次性导入程序写入
+                加密 Vault。这里不会提供 Refresh Token 输入框。导入后重新刷新状态并验证 Marketplace。
+              </p>}
+              {oauth.data.authorizationMethod !== 'PRIVATE_SELF' &&
+                ((oauth.data.status === 'NOT_CONNECTED' && selected?.connectionStatus === 'UNCONFIGURED') ||
                 (oauth.data.status === 'REVOKED' && selected?.connectionStatus === 'REVOKED')) &&
                 <label className="setup-hint" htmlFor="oauth-beta">
                   <input id="oauth-beta" type="checkbox" checked={beta}
@@ -163,7 +171,8 @@ export default function SellerConnections({ tenantId, currentUserId }: {
                   以 Amazon Draft 公有应用测试授权（version=beta）；已发布应用请勿勾选
                 </label>}
               <div className="sandbox-actions">
-                {((oauth.data.status === 'NOT_CONNECTED' && selected?.connectionStatus === 'UNCONFIGURED')
+                {oauth.data.authorizationMethod !== 'PRIVATE_SELF' &&
+                  ((oauth.data.status === 'NOT_CONNECTED' && selected?.connectionStatus === 'UNCONFIGURED')
                     || (oauth.data.status === 'REVOKED' && selected?.connectionStatus === 'REVOKED')) &&
                   <button type="button" className="primary-button" disabled={start.isPending}
                     onClick={() => { setFailure(''); start.mutate() }}>

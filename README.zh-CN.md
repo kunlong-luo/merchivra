@@ -129,3 +129,11 @@ Compose 使用 `postgres:18-alpine`，新卷 `pgdata18:/var/lib/postgresql`。�
 ## 前端技术栈迁移：React-only（2026-10-31）
 
 项目维护者已确定弃用 Vue 系列。当前前端使用 **React 19.3 + React DOM + TypeScript 6 + Vite 8 + TanStack React Query + Zod**，所有 UI 入口和业务组件迁移到 TSX，不再保留 Vue 运行依赖与 SFC；Java25/Spring Boot4.1.2/PostgreSQL18/Maven 保持不变。详情：[React 迁移决策](docs/architecture/react-migration-2026-10-31.md)。历史文档中提到 Vue 的旧 CI 结果仅代表迁移前，不是当前技术栈。
+
+
+## V19 开发新增（尚未集中验收）
+
+- 私有 Seller 应用 Seller Central 自授权的 Refresh Token **服务端一次性加密导入**：不从浏览器提交秘密，导入后仍须验证 Seller/Marketplace；详见 [INT-005](docs/integrations/private-seller-import.md)。
+- 内部 SKU 新增/改名/归档/恢复、Listing 人工绑定/解绑及历史审计，React 业务界面；详见 [CAT-001](docs/catalog/sku-management.md)。
+- `deploy/compose.production.yaml` 仅为独立非 Demo 部署覆盖层的**代码配置**，不自带公网 TLS、备份、Secrets Manager 或生产验收。
+- 根据维护者新指示，这批功能只提交代码，暂不运行测试或真实 Amazon 连接；**不应据此宣称已经正式可用**。
