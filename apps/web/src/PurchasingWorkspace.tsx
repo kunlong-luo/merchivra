@@ -1,6 +1,7 @@
 import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchSkus} from './lib/catalog'
+import WarehouseAlertsPanel from './WarehouseAlertsPanel'
 import {createSupplier,fetchSuppliers,createPurchaseOrder,fetchPurchaseOrders,
  fetchPurchaseOrder,purchaseAction,receivePurchase,fetchWarehouses,createWarehouse,
  fetchWarehouseStock,fetchWarehouseLedger,fetchPendingReceipts,postStockOperation,
@@ -344,6 +345,8 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
      </div>}
    </>}
   </section>
+  {stockWarehouseId&&<WarehouseAlertsPanel key={stockWarehouseId}
+   tenantId={tenantId} warehouseId={stockWarehouseId} skus={activeSkus}/>}
   {message&&<p className="panel-caption" role="status">{message}</p>}
   {failure&&<p className="setup-error" role="alert">{failure}</p>}
  </div>
