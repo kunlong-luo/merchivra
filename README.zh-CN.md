@@ -78,3 +78,8 @@ docker compose --env-file .env -f deploy/compose.yaml up --build
 ## PostgreSQL 18 数据卷升级提示（2026-10-31）
 
 Compose 使用 `postgres:18-alpine`，新卷 `pgdata18:/var/lib/postgresql`。此前 17 的 `pgdata` **不自动升级、不自动删除**。已有数据须先按 [PostgreSQL 17→18 迁移指南](docs/deployment/postgresql-18-upgrade.md) 备份和恢复；不能将 17 的数据文件直接挂载到 18 或执行 `down -v` 处理生产数据。
+
+
+## PostgreSQL 18 / V11B 验证（2026-10-31）
+
+[PG18 + V1–V12 Compose](https://github.com/kunlong-luo/merchivra/actions/runs/41154500844) 与 [Java/Vue CI](https://github.com/kunlong-luo/merchivra/actions/runs/41154501014) 已通过。V11B 已加入 Orders 角色审核证据结构和仅服务端的只读网关，**并未开放真实 Amazon Orders 同步**；原 PostgreSQL 17 数据卷需要另外迁移。详见 [V11B 文档](docs/integrations/orders-worker-v11.md)。

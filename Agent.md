@@ -163,3 +163,11 @@ come from the completed GitHub Actions workflow, not inferred from code.
 - 单元测试覆盖缺少 Seller/角色拒绝出站、无效时间窗口、市场错配、请求途中撤销授权、响应结构与无 PII 读取；PostgreSQL 18 Compose 检查 V1–V12 全部迁移且默认角色证据表为空。
 
 Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders-api 。
+
+
+## 2026-10-31 · PostgreSQL 18 + V12 实际验收证据
+
+- [Java 25 + Vue CI 成功（run 41154501014）](https://github.com/kunlong-luo/merchivra/actions/runs/41154501014)，包含 V11B Orders 只读网关的缺失权限、错误 Marketplace、过期/撤销后拒绝等单测。
+- [PostgreSQL 18 + Spring Boot + Nginx Compose 成功（run 41154500844）](https://github.com/kunlong-luo/merchivra/actions/runs/41154500844)：实际断言服务器版本 18 和默认 PGDATA；V1–V12 Flyway 全部迁移、V12 角色证据为空；Mock Session/CSRF、旧 V6 与 V11A 逐页提交→重启→恢复均成功。
+- **仍未验收真实 PostgreSQL 17 数据卷到 18 的升级**。本次使用全新的、一次性 `pgdata18` 卷。若已有真实 PostgreSQL 17 数据，必须先依 [17→18 数据迁移手册](docs/deployment/postgresql-18-upgrade.md) 备份并人工迁移。
+- **仍未接通真实 Amazon Orders**：V11B 的证据表仅提供“拒绝未审核角色”的基础，尚未实现独立角色证据审核登记、完成全部正式接入前置条件或开启 Live Worker。所有生产 SP-API 出站开关保持默认关闭。

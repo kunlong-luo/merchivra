@@ -124,3 +124,10 @@ come from the completed GitHub Actions workflow, not inferred from code.
 - 单元测试覆盖缺少 Seller/角色拒绝出站、无效时间窗口、市场错配、请求途中撤销授权、响应结构与无 PII 读取；PostgreSQL 18 Compose 检查 V1–V12 全部迁移且默认角色证据表为空。
 
 Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders-api 。
+
+
+## Verified PG18 / V11B (2026-10-31)
+
+- [Java/Vue CI 41154501014](https://github.com/kunlong-luo/merchivra/actions/runs/41154501014): success.
+- [PostgreSQL 18 / V1–V12 full-chain 41154500844](https://github.com/kunlong-luo/merchivra/actions/runs/41154500844): success, actual PG18 mount, 0 preseeded Orders permissions, Mock replay + restart recovery.
+- Older PostgreSQL 17 data volumes were **not upgraded** by this test. See [migration procedure](../deployment/postgresql-18-upgrade.md). Production Amazon Orders still blocked pending independently reviewed application roles and live-source authorization.
