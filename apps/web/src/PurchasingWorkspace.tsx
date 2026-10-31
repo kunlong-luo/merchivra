@@ -3,6 +3,7 @@ import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchSkus} from './lib/catalog'
 import WarehouseAlertsPanel from './WarehouseAlertsPanel'
 import SupplierPurchasePlanningPanel from './SupplierPurchasePlanningPanel'
+import SupplierAsnPanel from './SupplierAsnPanel'
 import {createSupplier,fetchSuppliers,createPurchaseOrder,fetchPurchaseOrders,
  fetchPurchaseOrder,purchaseAction,receivePurchase,fetchWarehouses,createWarehouse,
  fetchWarehouseStock,fetchWarehouseLedger,fetchPendingReceipts,postStockOperation,
@@ -19,6 +20,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  const [draft,setDraft]=useState<NewPurchaseLine[]>([])
  const [selectedId,setSelectedId]=useState(''),[receiveLine,setReceiveLine]=useState('')
  const [receiveQty,setReceiveQty]=useState(1)
+ const [receiveAsnId,setReceiveAsnId]=useState('')
  const [warehouseCode,setWarehouseCode]=useState(''),[warehouseName,setWarehouseName]=useState('')
  const [warehouseId,setWarehouseId]=useState(''),[stockWarehouseId,setStockWarehouseId]=useState('')
  const [operationType,setOperationType]=useState<StockOperationRequest['type']>('OUTBOUND')
@@ -64,8 +66,10 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
     setOperationSku('');setOperationQuantity(1);refresh()},
   onError:(e:Error)=>setFailure(e.message)
  })
- const receipt=useMutation({mutationFn:()=>receivePurchase(selectedId,receiveLine,receiveQty,warehouseId),
-  onSuccess:d=>{setMessage('本地仓库收货和库存流水已追加：'+d.order.status);setFailure('');refresh()},
+ const receipt=useMutation({mutationFn:()=>receivePurchase(selectedId,receiveLine,receiveQty,
+   warehouseId,receiveAsnId||null),
+  onSuccess:d=>{setMessage('本地仓库收货和库存流水已追加：'+d.order.status);
+    setReceiveAsnId('');setFailure('');refresh()},
   onError:(e:Error)=>setFailure(e.message)})
  function addSupplier(e:FormEvent){e.preventDefault();supplier.mutate()}
  function addWarehouse(e:FormEvent){e.preventDefault();warehouseCreated.mutate()}
@@ -240,18 +244,24 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
        <div className="team-invite-form">
         <label htmlFor="receipt-warehouse">实际收货仓库（必选）</label>
         <select id="receipt-warehouse" value={warehouseId}
-         onChange={e=>setWarehouseId(e.target.value)}>
+         onChange={e=>{setWarehouseId(e.target.value);setReceiveAsnId('')}}>
          <option value="">选择本地仓库</option>
          {activeWarehouses.map(w=><option value={w.id} key={w.id}>
           {w.code} · {w.name}</option>)}
         </select>
         <label htmlFor="receipt-line">待收货明细</label>
-        <select id="receipt-line" value={receiveLine} onChange={e=>setReceiveLine(e.target.value)}>
+        <select id="receipt-line" value={receiveLine} onChange={e=>{setReceiveLine(e.target.value);setReceiveAsnId('')}}>
          <option value="">选择未收完的行</option>
          {remaining.map(l=><option value={l.id} key={l.id}>
           {activeSkus.find(s=>s.id===l.productSkuId)?.internalSku??l.productSkuId}
           {' · 剩余 '+(l.orderedQuantity-l.receivedQuantity)}</option>)}
         </select>
+        {receiveAsnId&&<p className="setup-hint">
+         本次与供应商 ASN {receiveAsnId.slice(0,8)} 关联，
+         只在实际收到后提交。选择新仓库或采购明细会清除关联。
+         <button className="refresh-button" type="button"
+          onClick={()=>setReceiveAsnId('')}>改为不关联 ASN 收货</button>
+        </p>}
         <label htmlFor="receipt-qty">本次收货数量</label>
         <input id="receipt-qty" type="number" min={1}
           max={remaining.find(l=>l.id===receiveLine)?.orderedQuantity??1000000}
@@ -346,6 +356,13 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
      </div>}
    </>}
   </section>
+  <SupplierAsnPanel tenantId={tenantId} orderId={selectedId}
+   orderStatus={selected.data?.order.status??''}
+   lines={selected.data?.lines??[]} warehouses={warehouses.data??[]}
+   onOpenOrder={orderId=>{setSelectedId(orderId);setReceiveAsnId('')}}
+   onPrepareReceipt={v=>{setReceiveAsnId(v.asnId);setReceiveLine(v.lineId);
+    setWarehouseId(v.warehouseId);setReceiveQty(v.quantity);
+    setMessage('已选择 ASN '+v.asnId.slice(0,8)+'；请核对实物收货件数后提交。')}}/>
   {stockWarehouseId&&<WarehouseAlertsPanel key={stockWarehouseId}
    tenantId={tenantId} warehouseId={stockWarehouseId} skus={activeSkus}/>}
   <SupplierPurchasePlanningPanel tenantId={tenantId} warehouseId={stockWarehouseId}
