@@ -41,8 +41,19 @@ public final class ReadOnlyStaffGuardFilter extends OncePerRequestFilter {
         boolean coreRead="GET".equals(request.getMethod()) &&
             (path.equals("/api/v1/seller-marketplaces") ||
              path.matches("^/api/v1/seller-marketplaces/[0-9a-fA-F-]{36}/(orders|listings|inventory/fba)$"));
-        if(!coreRead && access.accessibleTenants(auth).isEmpty()) {
-            response.sendError(HttpServletResponse.SC_FORBIDDEN);return;
+        if(!coreRead) {
+            // Owner in another tenant cannot use that role to authorize a
+            // privileged request while the current workspace selects a staff
+            // role in this tenant.
+            java.util.UUID current;
+            try {
+                current=access.currentReadTenant(auth,request);
+            } catch(org.springframework.web.server.ResponseStatusException denied) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN);return;
+            }
+            if(!access.isOwner(auth,current)) {
+                response.sendError(HttpServletResponse.SC_FORBIDDEN);return;
+            }
         }
         chain.doFilter(request,response);
     }

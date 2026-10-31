@@ -56,12 +56,26 @@ class ReadOnlyStaffGuardFilterTest {
 
     @Test void sessionOwnerContinuesUsingLegacyRoutes() throws Exception {
         Authentication a=staff();
-        when(access.accessibleTenants(a)).thenReturn(List.of(UUID.randomUUID()));
+        var tenant=UUID.randomUUID();
+        when(access.currentReadTenant(eq(a),any())).thenReturn(tenant);
+        when(access.isOwner(a,tenant)).thenReturn(true);
         var req=req("POST","/api/v1/operations/scan");
         var res=new MockHttpServletResponse();
         guard.doFilter(req,res,chain);
         assertEquals(200,res.getStatus());
         verify(chain).doFilter(req,res);
+    }
+
+    @Test void crossTenantOwnerCannotAuthorizePrivilegedStaffTenant() throws Exception {
+        Authentication a=staff();
+        var current=UUID.randomUUID();
+        when(access.currentReadTenant(eq(a),any())).thenReturn(current);
+        when(access.isOwner(a,current)).thenReturn(false);
+        var req=req("POST","/api/v1/operations/scan");
+        var res=new MockHttpServletResponse();
+        guard.doFilter(req,res,chain);
+        assertEquals(403,res.getStatus());
+        verifyNoInteractions(chain);
     }
 
     @Test void staffCannotTriggerDemoSyncOrAccountSetup() throws Exception {
