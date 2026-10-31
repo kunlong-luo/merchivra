@@ -14,7 +14,7 @@ on:
       - apps/server/src/main/resources/db/migration/V11__orders_sync_checkpoint.sql
       - 'apps/server/src/main/java/org/merchivra/erp/orderssync/**'
       - 'apps/server/src/test/java/org/merchivra/erp/orderssync/**'
-      - apps/web/src/OrdersSyncPanel.vue
+      - apps/web/src/OrdersSyncPanel.tsx
       - apps/web/src/lib/order-sync.ts
       - apps/server/src/main/resources/db/migration/V12__orders_read_role_evidence.sql
       - 'apps/server/src/main/java/org/merchivra/erp/spapi/**'
@@ -24,14 +24,20 @@ on:
       - apps/server/src/main/resources/db/migration/V15__local_team_and_invitations.sql
       - apps/server/src/main/resources/db/migration/V16__scoped_staff_read_roles.sql
       - apps/server/src/main/java/org/merchivra/erp/catalog/MarketplaceReadController.java
-      - apps/web/src/CoreWorkspace.vue
+      - apps/web/src/CoreWorkspace.tsx
       - 'apps/server/src/main/java/org/merchivra/erp/security/**'
       - 'apps/server/src/test/java/org/merchivra/erp/security/**'
       - scripts/smoke_team.py
-      - apps/web/src/TeamWorkspace.vue
+      - apps/web/src/TeamWorkspace.tsx
       - apps/web/src/lib/team.ts
-      - apps/web/src/Root.vue
-      - apps/web/src/App.vue
+      - apps/web/src/Root.tsx
+      - apps/web/src/App.tsx
+      - 'apps/web/src/**/*.tsx'
+      - apps/web/package.json
+      - apps/web/package-lock.json
+      - apps/web/vite.config.ts
+      - apps/web/tsconfig.json
+      - apps/web/index.html
       - deploy/compose.yaml
 jobs:
   mock-chain:
