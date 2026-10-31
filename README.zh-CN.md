@@ -185,3 +185,8 @@ V27 增加 Finances 原始 breakdown 父子层级保存与查阅，防止把已�
 ### V29 · 订单历史成本覆盖率
 
 Orders 读取增加真实创建时间，订单项带来源标记；财务页面可查看订单当地业务日的内部 SKU 历史成本匹配情况。仅在所有 LIVE 订单项齐全、映射有效、金额币种一致时显示暂定 COGS；不是利润或结算。详见 [V29](docs/finance/order-cost-readiness-v29.md)。
+
+
+### V30 · 本地结算参考与财务来源对账
+
+财务工作台可创建人工结算参考单，显式选择同站点同原币的 SP-API 来源交易，检查有符号金额差异并保留分配审计。**金额匹配仍然不是银行到账验证**，不要求现在进行真实 Seller 授权。见 [V30](docs/finance/settlement-reconciliation-v30.md)。

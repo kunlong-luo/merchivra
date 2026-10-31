@@ -2,6 +2,7 @@ import {useEffect,useState,type FormEvent} from 'react'
 import FinancesSyncPanel from './FinancesSyncPanel'
 import FinanceClassificationPanel from './FinanceClassificationPanel'
 import OrderCostReadinessPanel from './OrderCostReadinessPanel'
+import SettlementWorkspace from './SettlementWorkspace'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchCoreMarketplaces,fetchCoreOrders} from './lib/core'
 import {createManualFinanceEvent,fetchFinanceBuckets,fetchFinanceEvents,
@@ -91,6 +92,9 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
        <td>{b.currency} {b.amount}</td><td>{b.eventCount}</td></tr>)}</tbody></table>
     </div>}
   </section>
+  {currentId&&<SettlementWorkspace key={currentId} tenantId={tenantId}
+     marketplaceId={currentId}
+     currency={markets.data?.find(m=>m.id===currentId)?.currency??'USD'}/>}
   <section className="panel full-panel">
    <div className="panel-heading"><div><h2>录入人工待核对事件</h2>
     <p>录入的只是 ERP 未核验参考事实；不会伪装为 SP-API 回执、会计凭证或结算款。</p>

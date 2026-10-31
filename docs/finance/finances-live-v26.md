@@ -37,3 +37,8 @@
 ## V28 后续：规则分类与来源核平
 
 新增[人工分类规则与核平契约](finance-classification-v28.md)：业务人员明确审批原文 breakdown sourceType，不能对父子金额重复加总，只有所有末级原币与来源交易总额核平才显示待复核类别金额；原始 UNCLASSIFIED 财务事件仍不变。
+
+
+### V30 本地结算参考层
+
+[结算参考及差异核对](settlement-reconciliation-v30.md) 支持把 FINANCES/LIVE 交易分配到人工参考批次，对原币签名总额做差异检查。此层没有银行验真或 Amazon 官方 Settlement ID，不会将核平误称为结算完成。

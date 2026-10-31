@@ -359,3 +359,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - Orders v2026 createdTime 和 lastUpdatedTime 不得混作同一时点；首个已知 createdTime 写入 order_time，缺失不猜。OrderItem 必须明确 LIVE/MOCK provenance，旧来源不一致必须阻断该页写入。
 - COGS 只读预览必须满足订单 LIVE、订单项已观测、业务日期已知、当地日期有效成本、当前 Seller SKU 的当时映射、数量和成本原币一致；任何缺失返回 NULL 合计和行级原因。不得用历史 SKU 成本冒充真实 FIFO 成本，更不能标记最终利润。
 - 用户明确选择“所有核心功能代码完成后，才在本地授权并自行调用真实 API 测试”：不要提前请求 Seller 账号、Token 或真实 Amazon 环境；继续使用 synthetic fixtures + CI，生产开关保持默认关闭。本地实测步骤应单独留待功能阶段收尾。
+
+
+## V30 · 本地结算参考与对账隔离
+
+- 参考结算单来源为 `MANUAL_UNVERIFIED`，只做 Owner 可审计的候选交易匹配；不得冒充 Amazon settlement、银行到账或会计过账。无银行/真实授权情况下，金额核平仍只能标记 `SIGNED_TOTAL_MATCHES_UNVERIFIED`，`bankVerified=false`。
+- 同个 LIVE Finances 来源事件在一个 tenant 中只能分配一次，不能用 MANUAL_UNVERIFIED 事件拼凑结算；必须强制 tenant、Marketplace、币种、原始来源完整性。原币交易金额不可被 reference 值反向改写。
+- 差异核算只加总每笔已绑定来源交易的 signed totalAmount，不许把 V27 的 breakdown 父项及子项再加一次。期间外单据必须异常提示。解除分配需保留审计，禁止强制复用已经分配的交易。
+- 用户本地授权及真实 SP-API 测试留到所有核心功能完成后；此阶段服务默认无真实调用。修改任何旧版 Flyway migration 需确认开发环境和迁移 checksum 影响，不可无视生产升级风险。

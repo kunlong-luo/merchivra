@@ -154,3 +154,10 @@ G2 全部为**设计验收规范**，并未执行任何数据库/HTTP 测试，�
 - `FR-ORD-01`：source createdTime 与 order_item provenance 同步；缺失数据保持 NULL，LIVE/MOCK 隔离。
 - `FR-FIN-02`：以 Marketplace 当地业务日和有效期 SKU 成本覆盖当前订单项，缺映射/时间/成本/币种时不计算整体 COGS。
 - `FR-FIN-03`：暂定成本仅为 read-only 运营评估，不自动变为 Finances 交易、已结算利润或账务凭证。
+
+
+### V30 · 结算参考与来源交易核对
+
+- `FR-FIN-04`：本地参考单时窗、原币 signed 总额、同站点 SPAPI_FINANCES/LIVE 交易唯一绑定，解除关联有审计，不得自动改原始金额。
+- `FR-FIN-05`：显示原币净额差异、期间外事件和未分配计数，不把金额相等称为支付到账证明。
+- `FR-SYS-01`：Owner/Session/CSRF、跨 tenant/Marketplace 隔离、同交易不能跨结算参考单重复计费。
