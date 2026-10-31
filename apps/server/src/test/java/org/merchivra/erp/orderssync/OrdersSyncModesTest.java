@@ -27,6 +27,16 @@ class OrdersSyncModesTest {
             mode,approval,demo,spapi,sandbox,writes,oauth,verification);
     }
 
+    @Test void scheduledJobsNeverCrossMockAndLiveModes() {
+        var src=mock(OrdersSyncSource.class);
+        when(src.dataOrigin()).thenReturn("LIVE");
+        var worker=new OrdersSyncService(jdbc,
+            mock(org.springframework.transaction.support.TransactionTemplate.class),src);
+        worker.due(5);
+        verify(jdbc).query(contains("AND mode=?"),any(org.springframework.jdbc.core.RowMapper.class),
+            eq("LIVE"),eq(5));
+    }
+
     @Test void mockNeverCoexistsWithLiveEgressOrLiveApproval() {
         assertEquals("MOCK",source("MOCK",false,true,false,true,false,false,false).dataOrigin());
         assertThrows(IllegalStateException.class,()->

@@ -344,7 +344,9 @@ public class OrdersSyncService {
             WHERE state IN ('READY','WAITING_RETRY')
               AND (next_attempt_at IS NULL OR next_attempt_at<=now())
               AND (lease_expires_at IS NULL OR lease_expires_at<=now())
+              AND mode=?
             ORDER BY updated_at LIMIT ?
-            """,(rs,n)->new UUID[]{rs.getObject(1,UUID.class),rs.getObject(2,UUID.class)},max);
+            """,(rs,n)->new UUID[]{rs.getObject(1,UUID.class),rs.getObject(2,UUID.class)},
+            mode(),max);
     }
 }
