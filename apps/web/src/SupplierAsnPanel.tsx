@@ -15,10 +15,11 @@ const findingLabels:Record<string,string>={
  OPEN:'待处理',ACKNOWLEDGED:'已认领',DONE:'人工已处理',CLEARED:'条件已消失'
 }
 export default function SupplierAsnPanel({tenantId,orderId,orderStatus,lines,
- warehouses,onPrepareReceipt}:{
+ warehouses,onPrepareReceipt,onOpenOrder}:{
  tenantId:string;orderId:string;orderStatus:string;lines:PurchaseLine[];
  warehouses:LocalWarehouse[];
  onPrepareReceipt:(value:{asnId:string;lineId:string;warehouseId:string;quantity:number})=>void
+ onOpenOrder:(orderId:string)=>void
 }){
  const client=useQueryClient()
  const [lineId,setLineId]=useState(''),[warehouseId,setWarehouseId]=useState('')
@@ -194,10 +195,8 @@ export default function SupplierAsnPanel({tenantId,orderId,orderStatus,lines,
       <td>{f.expectedArrivalDate}</td>
       <td>{findingLabels[f.state]??f.state}</td>
       <td><div className="sandbox-actions">
-       <button type="button" className="refresh-button" onClick={()=>{
-        // Parent selection is changed by browsing its purchase orders.
-        window.scrollTo({top:0,behavior:'smooth'})
-       }} title="可在上方采购单列表打开关联订单">查看采购单列表</button>
+       <button type="button" className="refresh-button"
+        onClick={()=>onOpenOrder(f.orderId)}>打开关联采购单</button>
        {f.state==='OPEN'&&<button type="button" className="text-button"
         disabled={!!editing} onClick={()=>changeFinding.mutate({
          id:f.id,state:'ACKNOWLEDGED'})}>认领</button>}
