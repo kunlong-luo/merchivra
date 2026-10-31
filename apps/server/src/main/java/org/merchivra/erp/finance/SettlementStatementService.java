@@ -27,7 +27,7 @@ public class SettlementStatementService {
         String periodEnd,String reportedNet,String currency,String evidenceOrigin,
         String createdAt) {}
     public record Candidate(String id,String sourceKey,String sourceType,
-        String amount,String currency,String postedAt) {}
+        String amount,String currency,String postedAt,String matchedReferenceKind) {}
     public record Audit(String action,String eventId,String actorId,String occurredAt) {}
 
     private static Instant at(java.sql.ResultSet r,String name)
@@ -52,7 +52,7 @@ public class SettlementStatementService {
         return new Candidate(r.getObject("id",UUID.class).toString(),
             r.getString("source_event_key"),r.getString("source_type"),
             r.getBigDecimal("amount").toPlainString(),r.getString("currency_code").trim(),
-            time(r,"posted_at"));
+            time(r,"posted_at"),r.getString("matched_kind"));
     }
     private void requireMarketplace(UUID tenant,UUID mp) {
         Integer count=jdbc.queryForObject("""
@@ -127,7 +127,14 @@ public class SettlementStatementService {
     public List<Candidate> candidates(UUID tenant,UUID mp,UUID statementId) {
         Statement s=get(tenant,mp,statementId,false);
         return jdbc.query("""
-            SELECT f.id,f.source_event_key,f.source_type,f.amount,f.currency_code,f.posted_at
+            SELECT f.id,f.source_event_key,f.source_type,f.amount,f.currency_code,f.posted_at,
+              (SELECT ref.reference_kind FROM finance_transaction_reference ref
+                WHERE ref.tenant_id=f.tenant_id AND ref.event_id=f.id
+                  AND ref.reference_value=?
+                  AND ref.reference_kind IN
+                    ('SETTLEMENT_ID','DISBURSEMENT_ID','FINANCIAL_EVENT_GROUP_ID')
+                ORDER BY CASE ref.reference_kind WHEN 'SETTLEMENT_ID' THEN 0
+                  WHEN 'DISBURSEMENT_ID' THEN 1 ELSE 2 END LIMIT 1) matched_kind
             FROM finance_source_event f
             WHERE f.tenant_id=? AND f.seller_marketplace_id=?
               AND f.source_family='SPAPI_FINANCES' AND f.data_origin='LIVE'
@@ -135,9 +142,9 @@ public class SettlementStatementService {
               AND f.posted_at>=? AND f.posted_at<?
               AND NOT EXISTS (SELECT 1 FROM finance_settlement_event_link l
                 WHERE l.tenant_id=f.tenant_id AND l.event_id=f.id)
-            ORDER BY f.posted_at DESC,f.id DESC LIMIT 100
+            ORDER BY matched_kind NULLS LAST,f.posted_at DESC,f.id DESC LIMIT 100
             """,SettlementStatementService::candidate,
-            tenant,mp,s.currency(),OffsetDateTime.parse(s.periodStart()),
+            s.reference(),tenant,mp,s.currency(),OffsetDateTime.parse(s.periodStart()),
             OffsetDateTime.parse(s.periodEnd()));
     }
     /** Source row must be trusted, same tenant/Marketplace/currency, not allocated elsewhere. */
@@ -146,7 +153,8 @@ public class SettlementStatementService {
         if(actor==null)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         Statement batch=get(tenant,mp,statementId,true);
         List<Candidate> found=jdbc.query("""
-            SELECT id,source_event_key,source_type,amount,currency_code,posted_at
+            SELECT id,source_event_key,source_type,amount,currency_code,posted_at,
+              NULL::varchar AS matched_kind
             FROM finance_source_event
             WHERE tenant_id=? AND seller_marketplace_id=? AND id=?
               AND source_family='SPAPI_FINANCES' AND data_origin='LIVE'

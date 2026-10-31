@@ -367,3 +367,9 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 同个 LIVE Finances 来源事件在一个 tenant 中只能分配一次，不能用 MANUAL_UNVERIFIED 事件拼凑结算；必须强制 tenant、Marketplace、币种、原始来源完整性。原币交易金额不可被 reference 值反向改写。
 - 差异核算只加总每笔已绑定来源交易的 signed totalAmount，不许把 V27 的 breakdown 父项及子项再加一次。期间外单据必须异常提示。解除分配需保留审计，禁止强制复用已经分配的交易。
 - 用户本地授权及真实 SP-API 测试留到所有核心功能完成后；此阶段服务默认无真实调用。修改任何旧版 Flyway migration 需确认开发环境和迁移 checksum 影响，不可无视生产升级风险。
+
+
+## V31 · Finances 结算文档标识来源
+
+- 只读取 `SETTLEMENT_ID`、`DISBURSEMENT_ID`、`FINANCIAL_EVENT_GROUP_ID` 这三类官方非 PII relatedIdentifiers，独立保存到 `finance_transaction_reference`；不保存买家/支付账号，不将订单 ID 与结算 ID 混淆，拒绝非法引用值。
+- 来源引用必须同 LIVE Finances 源交易与页 checkpoint 原子提交，重复导入幂等；只读列表受 tenant/Marketplace/Owner 限制。对人工结算参考号的完全相等匹配只能用于候选排序，不可自动连结或判定已结算，更不是银行到账证明。

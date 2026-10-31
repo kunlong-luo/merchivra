@@ -127,10 +127,12 @@ export default function SettlementWorkspace({tenantId,marketplaceId,currency}:{
     !candidates.data?.length?<p>此期间暂无未分配的受信来源记录。</p>:
     <div className="table-scroll" tabIndex={0} role="region" aria-label="结算候选交易">
      <table><thead><tr><th>来源交易键</th><th>类型</th><th>有符号金额</th>
-      <th>发生时间</th><th>操作</th></tr></thead>
+      <th>发生时间</th><th>匹配证据</th><th>操作</th></tr></thead>
       <tbody>{candidates.data.map(e=><tr key={e.id}>
        <td>{e.sourceKey}</td><td>{e.sourceType}</td>
        <td>{e.currency} {e.amount}</td><td>{time(e.postedAt)}</td>
+       <td>{e.matchedReferenceKind?
+         '来源 '+e.matchedReferenceKind+' 编号精确匹配（仍需核对）':'无相同来源编号'}</td>
        <td><button type="button" className="refresh-button" disabled={link.isPending}
         onClick={()=>link.mutate(e.id)}>分配到参考结算单</button></td>
       </tr>)}</tbody></table></div>}

@@ -212,3 +212,13 @@
 - [ ] 真正 Settlement/Disbursement ID 及 Amazon 报告数据导入、银行流水、退款/税费最终归类、正式利润报表仍待实现。
 
 [结算参考及差异核对](finance/settlement-reconciliation-v30.md)
+
+
+## V31 · Finances 结算文档来源引用（2026-10-31）
+
+- [x] **代码已加入待 CI**：Finances v2024 交易 `SETTLEMENT_ID/DISBURSEMENT_ID/FINANCIAL_EVENT_GROUP_ID` 原始业务标识独立存储，来源与页提交原子幂等。
+- [x] **代码已加入**：V30 同站点同原币参考账单按来源 ID 精确匹配优先提示，运营人工确认才分配，不自动声称结算/银行已到账。
+- [x] **代码已加入**：Owner 的来源 ID 只读查询、synthetic 官方 SDK 引用测试。
+- [ ] 真实 Amazon 报告/银行入账/Settlement 明细验真及来源覆盖率仍待实现。
+
+[结算来源引用](finance/settlement-source-references-v31.md)

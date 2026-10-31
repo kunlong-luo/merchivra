@@ -42,3 +42,8 @@
 ### V30 本地结算参考层
 
 [结算参考及差异核对](settlement-reconciliation-v30.md) 支持把 FINANCES/LIVE 交易分配到人工参考批次，对原币签名总额做差异检查。此层没有银行验真或 Amazon 官方 Settlement ID，不会将核平误称为结算完成。
+
+
+### V31 Finances 来源业务标识
+
+官方 Finances `relatedIdentifiers` 中仅选取结算/拨款/事件组文档 ID 作为独立来源证据，并在 V30 结算参考工作台提出精确匹配建议，不把 Business ID 当作完成支付凭证。[详见 V31](settlement-source-references-v31.md)

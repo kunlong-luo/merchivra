@@ -161,3 +161,9 @@ G2 全部为**设计验收规范**，并未执行任何数据库/HTTP 测试，�
 - `FR-FIN-04`：本地参考单时窗、原币 signed 总额、同站点 SPAPI_FINANCES/LIVE 交易唯一绑定，解除关联有审计，不得自动改原始金额。
 - `FR-FIN-05`：显示原币净额差异、期间外事件和未分配计数，不把金额相等称为支付到账证明。
 - `FR-SYS-01`：Owner/Session/CSRF、跨 tenant/Marketplace 隔离、同交易不能跨结算参考单重复计费。
+
+
+### V31 · 结算来源文档 ID 辅助匹配
+
+- `FR-FIN-04/05`：Finances 交易保留 Settlement/Disbursement/Financial Event Group 引用，精确匹配同站点同币种人工参考账单，不做自动分配或结算确认。
+- `FR-SYS-01`：非 LIVE 来源拒绝写入业务标识，Owner/Session/Marketplace、事务页 checkpoint 联动审计。

@@ -34,10 +34,16 @@ public final class TypedFinancesSdkReader {
     }
     public record BreakdownNode(String path,String parent,String type,
                                 String amount,String currency,boolean leaf) {}
+    public record Reference(String kind,String value) {}
     public record Page(List<FinanceEventService.SourceEvent> events,String nextToken,
-                       Map<String,List<BreakdownNode>> breakdowns) {
+                       Map<String,List<BreakdownNode>> breakdowns,
+                       Map<String,List<Reference>> references) {
         public Page(List<FinanceEventService.SourceEvent> events,String nextToken) {
-            this(events,nextToken,Map.of());
+            this(events,nextToken,Map.of(),Map.of());
+        }
+        public Page(List<FinanceEventService.SourceEvent> events,String nextToken,
+                    Map<String,List<BreakdownNode>> breakdowns) {
+            this(events,nextToken,breakdowns,Map.of());
         }
     }
     private final ReadCall call;
@@ -123,6 +129,7 @@ public final class TypedFinancesSdkReader {
         var result=new ArrayList<FinanceEventService.SourceEvent>();
         Set<String> seen=new HashSet<>();
         Map<String,List<BreakdownNode>> detail=new LinkedHashMap<>();
+        Map<String,List<Reference>> references=new LinkedHashMap<>();
         for(var entry:response.getPayload().getTransactions()) {
             if(entry==null || entry.getTransactionId()==null
                 || entry.getPostedDate()==null || entry.getTotalAmount()==null
@@ -151,9 +158,26 @@ public final class TypedFinancesSdkReader {
                 !currency.matches("[A-Z]{3}"))
                 throw new IllegalArgumentException("Unsafe source amount or currency");
             String orderId=null;
+            var refs=new ArrayList<Reference>();
+            var seenRefs=new HashSet<String>();
             if(entry.getRelatedIdentifiers()!=null) {
                 for(var id:entry.getRelatedIdentifiers()) {
                     if(id==null)continue;
+                    var kind=id.getRelatedIdentifierName();
+                    if(kind==software.amazon.spapi.models.finances.v2024_06_19
+                           .RelatedIdentifier.RelatedIdentifierNameEnum.SETTLEMENT_ID
+                       || kind==software.amazon.spapi.models.finances.v2024_06_19
+                           .RelatedIdentifier.RelatedIdentifierNameEnum.DISBURSEMENT_ID
+                       || kind==software.amazon.spapi.models.finances.v2024_06_19
+                           .RelatedIdentifier.RelatedIdentifierNameEnum.FINANCIAL_EVENT_GROUP_ID) {
+                        String value=id.getRelatedIdentifierValue();
+                        if(value==null || !value.matches("[A-Za-z0-9][A-Za-z0-9._:/-]{0,159}"))
+                            throw new IllegalArgumentException("Unsafe Finances settlement reference");
+                        String combined=kind.getValue()+":"+value;
+                        if(seenRefs.add(combined))refs.add(new Reference(kind.getValue(),value));
+                        if(refs.size()>30)
+                            throw new IllegalArgumentException("Too many financial reference IDs");
+                    }
                     if(id.getRelatedIdentifierName()==
                         software.amazon.spapi.models.finances.v2024_06_19
                             .RelatedIdentifier.RelatedIdentifierNameEnum.ORDER_ID) {
@@ -171,12 +195,14 @@ public final class TypedFinancesSdkReader {
             List<BreakdownNode> nodes=new ArrayList<>();
             breakdowns(entry.getBreakdowns(),"",null,0,nodes);
             detail.put(key,List.copyOf(nodes));
+            references.put(key,List.copyOf(refs));
             result.add(new FinanceEventService.SourceEvent(key,"UNCLASSIFIED",
                 amount.toPlainString(),currency,entry.getPostedDate(),orderId,type));
         }
         String next=response.getPayload().getNextToken();
         if(next!=null && (next.isBlank() || next.length()>4096))
             throw new IllegalArgumentException("Unsafe Finances cursor");
-        return new Page(List.copyOf(result),next,Map.copyOf(detail));
+        return new Page(List.copyOf(result),next,Map.copyOf(detail),
+            Map.copyOf(references));
     }
 }

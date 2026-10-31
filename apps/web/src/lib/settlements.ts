@@ -8,7 +8,8 @@ const statement=z.object({
 })
 const event=z.object({
  id:z.string().uuid(),sourceKey:z.string(),sourceType:z.string(),
- amount:z.string(),currency:z.string(),postedAt:z.string()
+ amount:z.string(),currency:z.string(),postedAt:z.string(),
+ matchedReferenceKind:z.string().nullable()
 })
 const line=z.object({
  eventId:z.string().uuid(),sourceEventKey:z.string(),sourceType:z.string(),

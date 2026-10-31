@@ -36,3 +36,8 @@
 ## 数据库迁移注意
 
 此前 V25 使用了与 V14 相同的索引名，导致新建 PG18 数据库 Flyway 中断；已在开发主分支修正 V25 索引名称。已执行过旧版 V25 的持久化数据库需要按 Flyway checksum 管理规范手动检查/修复，不能在生产环境直接删表或盲目执行 `repair`。本项目尚未进行真实 Seller 数据迁移验收。
+
+
+## V31 官方来源文档编号匹配
+
+V31 增加 `SETTLEMENT_ID`、`DISBURSEMENT_ID`、`FINANCIAL_EVENT_GROUP_ID` 精确候选优先提示。显示“来源 ID 匹配”并不自动确认银行到账或改变本地参考单；详情见 [V31 说明](settlement-source-references-v31.md)。

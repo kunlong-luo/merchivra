@@ -21,10 +21,11 @@ public class FinancesSyncService {
  private final TypedFinancesSdkReader api;
  private final FinanceEventService events;
  private final FinancesBreakdownService breakdowns;
+ private final FinancesReferenceService references;
  private final Clock clock;
  @Autowired public FinancesSyncService(JdbcTemplate j,TransactionTemplate t,
    SpApiSellerGrantVault v,SpApiOfficialSdkFactory sdk,FinanceEventService e,
-   FinancesBreakdownService details,
+   FinancesBreakdownService details,FinancesReferenceService referenceService,
    @Value("${merchivra.demo.enabled:false}") boolean demo,
    @Value("${merchivra.spapi.enabled:false}") boolean outbound,
    @Value("${merchivra.spapi.sandbox:true}") boolean sandbox,
@@ -35,7 +36,7 @@ public class FinancesSyncService {
     if(demo||!outbound||sandbox||writes||(!oauth&&!priv)||!verified)
       throw new IllegalStateException("Real Finances read requires verified read-only Seller");
     jdbc=j;tx=t;vault=v;api=new TypedFinancesSdkReader(sdk);events=e;
-    breakdowns=details;clock=Clock.systemUTC();
+    breakdowns=details;references=referenceService;clock=Clock.systemUTC();
  }
  public record Status(String jobId,String state,int committedPages,int generation,
    String nextRetryAt,String lastFailureCode) {}
@@ -175,6 +176,8 @@ public class FinancesSyncService {
          var saved=events.recordTrusted(scope,event);
          breakdowns.save(tenant,UUID.fromString(saved.id()),
            page.breakdowns().getOrDefault(event.eventKey(),List.of()));
+         references.save(tenant,UUID.fromString(saved.id()),
+           page.references().getOrDefault(event.eventKey(),List.of()));
        }
        jdbc.update("""
          INSERT INTO spapi_finances_page_commit

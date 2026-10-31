@@ -91,6 +91,46 @@ class TypedFinancesSdkReaderTest {
   assertEquals("-3.00",nodes.get(1).amount());
   assertEquals("UNCLASSIFIED",result.events().getFirst().category());
  }
+ @Test void retainsDocumentIdsAsSourceEvidenceWithoutPayoutConfirmation()throws Exception {
+  var ids=new RelatedIdentifiers();
+  ids.add(new RelatedIdentifier()
+    .relatedIdentifierName(RelatedIdentifier.RelatedIdentifierNameEnum.SETTLEMENT_ID)
+    .relatedIdentifierValue("SETTLEMENT-TEST-001"));
+  ids.add(new RelatedIdentifier()
+    .relatedIdentifierName(RelatedIdentifier.RelatedIdentifierNameEnum.DISBURSEMENT_ID)
+    .relatedIdentifierValue("DISBURSEMENT-TEST-002"));
+  ids.add(new RelatedIdentifier()
+    .relatedIdentifierName(RelatedIdentifier.RelatedIdentifierNameEnum.ORDER_ID)
+    .relatedIdentifierValue("ORDER-TEST-001"));
+  var reader=new TypedFinancesSdkReader((scope,a,b,c)->{
+   var response=page(SITE);
+   response.getPayload().getTransactions().getFirst().setRelatedIdentifiers(ids);
+   return response;
+  });
+  var result=reader.fetch(grant(true),AFTER,BEFORE,null);
+  var event=result.events().getFirst();
+  var refs=result.references().get(event.eventKey());
+  assertEquals(2,refs.size());
+  assertTrue(refs.contains(new TypedFinancesSdkReader.Reference(
+    "SETTLEMENT_ID","SETTLEMENT-TEST-001")));
+  assertTrue(refs.contains(new TypedFinancesSdkReader.Reference(
+    "DISBURSEMENT_ID","DISBURSEMENT-TEST-002")));
+  assertEquals("ORDER-TEST-001",event.externalOrderId());
+  assertEquals("UNCLASSIFIED",event.category());
+ }
+ @Test void invalidExternalSettlementIdentifierFailsClosed() {
+  var ids=new RelatedIdentifiers();
+  ids.add(new RelatedIdentifier()
+    .relatedIdentifierName(RelatedIdentifier.RelatedIdentifierNameEnum.SETTLEMENT_ID)
+    .relatedIdentifierValue("Bad identifier containing whitespace"));
+  var reader=new TypedFinancesSdkReader((scope,a,b,c)->{
+   var response=page(SITE);
+   response.getPayload().getTransactions().getFirst().setRelatedIdentifiers(ids);
+   return response;
+  });
+  assertThrows(IllegalArgumentException.class,()->
+    reader.fetch(grant(true),AFTER,BEFORE,null));
+ }
  @Test void missingCurrencyNeverInventsZero(){
   var reader=new TypedFinancesSdkReader((scope,a,b,c)->{
    Transactions rows=new Transactions();
