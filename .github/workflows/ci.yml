@@ -31,7 +31,7 @@ jobs:
         run: mvn -B -f apps/server/pom.xml test
 
   frontend:
-    name: Vue / TypeScript / Vitest / Vite
+    name: React / TypeScript / Vitest / Vite
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -47,6 +47,8 @@ jobs:
           package-manager-cache: false
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
+      - name: Enforce React-only frontend
+        run: node ../../scripts/check_react_only.mjs
       - name: Typecheck
         run: npm run typecheck
       - name: Unit tests

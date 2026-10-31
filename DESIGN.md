@@ -23,7 +23,7 @@ An open-source, self-hosted Amazon Seller ERP for operations staff. Prioritize o
 - Respect `prefers-reduced-motion`; transitions are enhancements, not required to interpret system state.
 - Never blur the trust boundary of the Core workbench (session-verified tenant resources) versus Mock fictional datasets. Sidebar environment copy must follow active view.
 - Make navigation/task hierarchy explicit: selected view, selected Marketplace and currently selected Core data subtype. Label each filter in text; do not rely on an icon.
-- Preserve existing Vue 3 + TypeScript + Vite architecture, real auth/session, CSRF, API contracts, field semantics and test behaviors.
+- Preserve the React 19 + TypeScript 6 + Vite 8 architecture, real auth/session, CSRF, API contracts, field semantics and test behaviors.
 
 ## Reviewed 2026-10-31
 
@@ -58,7 +58,7 @@ Second manual code audit using the public Impeccable audit/polish criteria (no I
 - P2 · Loading, empty, no-match, error/retry feedback now distinguishes upstream availability from missing records. Unknown FBA quantity remains unknown; statuses retain unrecognized upstream codes rather than inventing meanings.
 - P2 · Added table-local keyboard scroll, text status labels, FBA mock-page progress, semantic column headers, and a proper setup audit loading state. Tests cover pure filtering and provenance/time formatting.
 
-Acceptance evidence must include the actual GitHub Actions Vue typecheck/Vitest/Vite result. Manual responsive/browser screenshots, keyboard traversal, real ARIA screen-reader and WCAG evaluation are still pending.
+Acceptance evidence must include the actual GitHub Actions React typecheck/Vitest/Vite result. Manual responsive/browser screenshots, keyboard traversal, real ARIA screen-reader and WCAG evaluation are still pending.
 
 
 ## Iteration 3 · Responsive CSS and Chromium smoke (2026-10-31)
@@ -82,7 +82,7 @@ Acceptance evidence must include the actual GitHub Actions Vue typecheck/Vitest/
 ## Verified acceptance · Responsive Chromium smoke, 2026-10-31
 
 The [TEST-005 browser smoke](docs/testing/browser-ui.md) successfully ran
-against the Vue build under Chrome 156 on GitHub Actions
+against the React build under Chrome 156 on GitHub Actions
 ([Chrome run](https://github.com/kunlong-luo/merchivra/actions/runs/41150873626) /
 [fast CI](https://github.com/kunlong-luo/merchivra/actions/runs/41150873629)).
 Generated 360/390/768/1280 synthetic UI captures were saved as workflow

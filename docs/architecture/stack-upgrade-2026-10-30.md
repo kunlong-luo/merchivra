@@ -54,3 +54,6 @@
 ## 2026-10-31 修订：PostgreSQL 18
 
 Compose 容器升级为官方 `postgres:18-alpine`，数据目录改为 `/var/lib/postgresql/18/docker`，新命名卷 `pgdata18` 挂载于 `/var/lib/postgresql`。旧 PostgreSQL 17 数据卷单独保留，须显式迁移，详见 [升级手册](../deployment/postgresql-18-upgrade.md)。历史 17 的 CI 证据仍保持原版本，不应改写。
+
+
+> 2026-10-31: Frontend framework changed to React 19 + React Query 5 + TSX + @vitejs/plugin-react 6, retaining Vite 8/TypeScript 6/Node 24. Historical Vue references above reflect the 2026-10-30 baseline; consult AGENTS.md for current policy.

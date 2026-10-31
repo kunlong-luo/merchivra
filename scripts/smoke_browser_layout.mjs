@@ -179,7 +179,7 @@ async function select(send, name) {
   assert.equal(cols[0], cols[1], name+' header/data columns')
 }
 async function main() {
-  assert.ok(existsSync(join(dist,'index.html')), 'Build Vue first')
+  assert.ok(existsSync(join(dist,'index.html')), 'Build React first')
   await mkdir(output,{recursive:true})
   await new Promise(ok => server.listen(0,'127.0.0.1',ok))
   const url = 'http://127.0.0.1:' + server.address().port + '/'

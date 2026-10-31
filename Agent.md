@@ -1,3 +1,11 @@
+## 前端框架约束（2026-10-31 更新）
+
+- **只允许 React 技术栈**：React 19、React DOM、TypeScript 6、Vite 8、`@vitejs/plugin-react`、TanStack React Query 5、Zod 4、Vitest。使用 React 函数组件、Hooks、TSX。
+- **禁止新增 Vue 及其相关包或源码**：不使用 `vue`、`@vue/*`、`@vitejs/plugin-vue`、`vue-tsc`、`@tanstack/vue-query`、Pinia、Vue Router、Nuxt、`.vue` 单文件组件；代码审核和 CI 检查禁止回归。
+- 不改变 Java 25 + Spring Boot 4、PostgreSQL 18、现有会话/CSRF/后端租户授权；客户端不能成为租户/角色权限真相来源。按账号隔离/注销清理 TanStack Query 敏感缓存。
+- 安装用 Node 24、`npm ci`、提交的 npm lockfile；前端门禁至少 `npm run typecheck`、`npm test`、`npm run build`，再进行受控浏览器冒烟。
+- 历史 Vue CI 记录仅作历史证据，不等于新 React 版本已验收。
+
 # Merchivra · Agent 开发策略
 
 > 本文件是本仓库的长期开发约定，适用于自动化 Agent 和人工贡献者。
@@ -9,13 +17,13 @@
 - 按维护者现行指示：**直接在 `main` 开发、逐步提交并验证 CI**；不再创建长寿命分支或 Draft PR，除非维护者更改要求。更新相关文档与 GitHub Issue，报告确切提交/检查结果。
 - Amazon SP-API 接入**优先使用官方 Java SDK `software.amazon.spapi:spapi-sdk:1.13.0` 与官方 OpenAPI 模型**；已有 `SpApiOfficialSdkFactory` / `SpApiOfficialModules` 和保守 Core Read Adapter。未来新增模块不应优先手写无类型的 URL 接口，须按操作审查 DTO/角色/速率/权限。见 [INT-004](docs/integrations/sp-api-code-integration.md)。
 - 优先使用经过广泛验证的官方 Starter/成熟库；不要重复实现基础设施，不因新潮就加入 Kafka、微服务、重型前端框架或与业务无关的依赖。
-- 可参考 [Pagevela](https://github.com/kunlong-luo/pagevela) 的构建、依赖更新、持久化并发纪律，但不照搬其 React / Dexie 浏览器状态设计。
+- 可参考 [Pagevela](https://github.com/kunlong-luo/pagevela) 的构建、依赖更新、持久化并发纪律，但不照搬其 Dexie 浏览器状态设计。
 
 ## 当前工程基线（2026-10-30）
 
 - **后端**：Java 25 LTS、Spring Boot 4.1.2、Spring Security 7、Jackson 3、Maven、Spring JDBC + Flyway、PostgreSQL 18。
-- **前端**：Node 24 LTS、Vue 3.5、TypeScript 6、Vite 8、TanStack Vue Query 5、Zod 4、Vitest；使用已提交的 `apps/web/package-lock.json` 与 **`npm ci`**，不要改回无锁安装。
-- **部署**：单体 API + Vue 静态页面、Docker Compose；Redis 预留而非所有功能都必须用。Dockerfile 与 GitHub Actions 必须和本地版本一致。
+- **前端**：Node 24 LTS、React 19.3、TypeScript 6、Vite 8、TanStack React Query 5、Zod 4、Vitest；使用已提交的 `apps/web/package-lock.json` 与 **`npm ci`**，不要改回无锁安装。
+- **部署**：单体 API + React 静态页面、Docker Compose；Redis 预留而非所有功能都必须用。Dockerfile 与 GitHub Actions 必须和本地版本一致。
 - 不迁移到 Gradle，除非存在实质工程收益并经维护者确认；添加依赖前先判断当前阶段是否真正使用。
 
 ## 测试与开发节奏
@@ -70,23 +78,23 @@
 
 ## UI / UX 设计纪律（2026-10-31）
 
-- 根目录 [DESIGN.md](DESIGN.md) 定义 Merchivra 的界面设计规范与质量检查清单。保留 Vue/TypeScript 业务代码、现有蓝黑品牌风格和 Core/Mock 数据边界；除非维护者同意，不安装 Impeccable 或其他设计插件、Hook、npm 依赖。
+- 根目录 [DESIGN.md](DESIGN.md) 定义 Merchivra 的界面设计规范与质量检查清单。保留 React/TypeScript 业务代码、现有蓝黑品牌风格和 Core/Mock 数据边界；除非维护者同意，不安装 Impeccable 或其他设计插件、Hook、npm 依赖。
 - 可直接参考公开的 Impeccable critique/audit/typeset/polish 方法进行**人工源码审查和小步修整**，但不可将此描述为已运行 Impeccable 专属检测器、浏览器截图比对、WCAG/性能认证。先解决操作信息层级、表格可读性、加载/错误/空状态、键盘焦点、手机触控、减少动画。
-- 状态标签与功能开关必须和真实权限一致。顶部“API 已连接”仅代表后端 API 可用，不代表 Amazon Seller 连接成功；Mock 不得暗示真实收入，未知库存不可写为0。所有 UX 更改需通过现有 Vue 类型检查、Vitest、构建，再做浏览器级验收。
+- 状态标签与功能开关必须和真实权限一致。顶部“API 已连接”仅代表后端 API 可用，不代表 Amazon Seller 连接成功；Mock 不得暗示真实收入，未知库存不可写为0。所有 UX 更改需通过现有 React/TypeScript 类型检查、Vitest、构建，再做浏览器级验收。
 
 
 ## Core 页面设计与数据完整性（2026-10-31）
 
-- 第二轮不安装 Impeccable，继续按照公开 audit/polish 原则直接审查现有 Vue 组件，并在 [DESIGN.md](DESIGN.md) 记录发现与边界。
+- 第二轮不安装 Impeccable，继续按照公开 audit/polish 原则直接审查现有 React 组件，并在 [DESIGN.md](DESIGN.md) 记录发现与边界。
 - Core 首页任务优先：未配置 Marketplace 时明确引导创建本地占位店铺；已有站点时展示当前数据和筛选，将本地配置、纯模拟回放放入可展开的辅助工具区。不能把 UNCONFIGURED 误当 CONNECTED，也不能将 API 可用当作 Amazon 已授权。
 - Core Listing/Orders/FBA 在客户端只筛选已从服务端读取的最多 50 行，显式展示命中数/已加载数，不能暗示已实现服务器搜索或分页。
 - 所有列标题必须和数据单元格对应，订单必须显式展示 dataOrigin；UNVERIFIED 不许显示为真实核验数据。保留 UNKNOWN ≠ 0 与 Finance NOT_OBSERVED/NOT_AUTHORIZED 语义。
-- 修改 Core UX 必须至少检查离线筛选/来源标签测试和 Vue typecheck、Vitest、Vite build。不可声称已做浏览器截图/自动 Impeccable audit 或完成生产验收。
+- 修改 Core UX 必须至少检查离线筛选/来源标签测试和 React typecheck、Vitest、Vite build。不可声称已做浏览器截图/自动 Impeccable audit 或完成生产验收。
 
 
 ## V3 前端 UI 验收（2026-10-31）
 
-- [TEST-005](docs/testing/browser-ui.md) 新增独立可选 Chromium 浏览器响应式冒烟：使用 CI runner 已装 Chrome + Node 24 内置 WebSocket/CDP，通过仅本机模拟 API 观察 Vue 实际渲染，覆盖 360/390/768/1280 屏宽、屏幕级溢出、表格局部滚动、列对齐、MOCK 来源和未知库存 ≠ 0；**不添加 Impeccable、Playwright 或 npm 浏览器依赖**。
+- [TEST-005](docs/testing/browser-ui.md) 新增独立可选 Chromium 浏览器响应式冒烟：使用 CI runner 已装 Chrome + Node 24 内置 WebSocket/CDP，通过仅本机模拟 API 观察 React 实际渲染，覆盖 360/390/768/1280 屏宽、屏幕级溢出、表格局部滚动、列对齐、MOCK 来源和未知库存 ≠ 0；**不添加 Impeccable、Playwright 或 npm 浏览器依赖**。
 - 保持前端快速 CI，不将独立 Chrome 任务变为每次提交必跑的门禁。工作流成功之前不得宣称已验收；完成以后也只能称 Chromium + 虚构数据的有限布局冒烟，不能称真实登录、真实卖家、跨浏览器或 WCAG/读屏器审核通过。
 - Core/SellerSetup/Sandbox/Demo 的长表格必须保留原生 table 语义、带 scope 的列头和可聚焦水平滚动容器；跨端设计变化需尊重键盘焦点、文本状态、Mock/UNVERIFIED 区分与 UNKNOWN ≠ 0。
 
@@ -110,7 +118,7 @@
 - 对标 [docs/product/competitor-gap-and-automation.md](docs/product/competitor-gap-and-automation.md)，以 Sellercloud/Linnworks/Helium 10 的订单工作流、异常管理、库存风险为参考，优先实现可落地的基础功能；不宣称已实现竞品所有能力。
 - 详见 [OPS-001](docs/operations/ops-automation.md)：V10 Flyway 持久待办、规则巡检、4 类异常、重复巡检幂等、自动恢复条件已消失的异常、用户认领/完成/重开与事务审计；工作台开放“运营自动化”入口。低库存必须满足最近来源观测 quality=OBSERVED 且非 NULL，UNKNOWN 永远不等于 0；待办数据源仅 MOCK/UNVERIFIED，不能自动补货/发货/写 Amazon/财务记账。
 - 用户端只允许 Owner Session 导出所属租户待办和触发扫描/变更状态。POST 受 Security CSRF 保护；请求没有 tenantId，foreign ID 返回 404。调度器环境开关 `MERCHIVRA_OPS_SCHEDULER_ENABLED=false` 默认关闭；打开才周期巡检；读业务事实不意味着 Seller 角色已核验。
-- 实际交付必须经 Java 25/Vue CI + 独立 PostgreSQL Compose Session/CSRF Mock 全链路验证。调度器大规模多租户负载、规则配置/人员权限及真实 SP-API Worker 尚未完成，不能将 V10 巡检当作正式订单同步。
+- 实际交付必须经 Java 25/React CI（迁移后） + 独立 PostgreSQL Compose Session/CSRF Mock 全链路验证。调度器大规模多租户负载、规则配置/人员权限及真实 SP-API Worker 尚未完成，不能将 V10 巡检当作正式订单同步。
 
 
 ## V10 运营异常自动化验收证据（2026-10-31）
