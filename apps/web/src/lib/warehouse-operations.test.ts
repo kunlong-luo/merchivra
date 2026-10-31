@@ -14,7 +14,7 @@ describe('warehouse stock mutations',()=>{
   vi.stubGlobal('fetch',vi.fn(async(url:string,options?:RequestInit)=>{
    requests.push({url,options})
    if(url.endsWith('/auth/csrf'))return new Response(JSON.stringify({
-    token:'test-csrf',headerName:'X-CSRF-TOKEN'}),{status:200})
+    token:'test-csrf-token',headerName:'X-CSRF-TOKEN'}),{status:200})
    return new Response(JSON.stringify({
     id:operation,type:'TRANSFER',warehouseId:warehouse,
     destinationWarehouseId:destination,productSkuId:sku,
@@ -30,7 +30,7 @@ describe('warehouse stock mutations',()=>{
   const post=requests.find(r=>r.options?.method==='POST')
   expect(post?.url).toBe('/api/v1/purchasing/warehouse-operations')
   expect(JSON.parse(String(post?.options?.body))).toEqual(input)
-  expect(post?.options?.headers).toMatchObject({'X-CSRF-TOKEN':'test-csrf'})
+  expect(post?.options?.headers).toMatchObject({'X-CSRF-TOKEN':'test-csrf-token'})
  })
  it('parses signed movements separately from historical purchase receipts',async()=>{
   vi.stubGlobal('fetch',vi.fn(async(url:string)=>{
