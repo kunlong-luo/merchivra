@@ -41,3 +41,8 @@
 ## V35 退款金额审核不等于退款成本已证明
 
 [退款金额人工归属](refund-amount-allocation-v35.md) 能提供按项原币 signed 分配、数量审核与差额，但仍无独立返仓和库存 COGS 回转凭证；V33 遇到 `PRODUCT_REFUND` 仍然阻断，不因金额匹配而推断最终利润。
+
+
+## V36 广告手工费用与订单贡献仍隔离
+
+V36 [广告费用人工来源与 SKU 分摊](ad-spend-sku-attribution-v36.md) 只用于运营参考。Ads API 尚未授权与可信核对，V33 不将这些手工广告费用当作已验证交易扣除，防止误算正式利润或与 Finances 已存费用重复。

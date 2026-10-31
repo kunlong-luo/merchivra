@@ -4,6 +4,7 @@ import FinanceClassificationPanel from './FinanceClassificationPanel'
 import OrderCostReadinessPanel from './OrderCostReadinessPanel'
 import OrderContributionPanel from './OrderContributionPanel'
 import RefundReviewPanel from './RefundReviewPanel'
+import AdSpendPanel from './AdSpendPanel'
 import SettlementWorkspace from './SettlementWorkspace'
 import FinanceExceptionQueuePanel from './FinanceExceptionQueuePanel'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
@@ -98,6 +99,9 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
     </div>}
   </section>
   {currentId&&<SettlementWorkspace key={currentId} tenantId={tenantId}
+     marketplaceId={currentId}
+     currency={markets.data?.find(m=>m.id===currentId)?.currency??'USD'}/>}
+  {currentId&&<AdSpendPanel key={currentId} tenantId={tenantId}
      marketplaceId={currentId}
      currency={markets.data?.find(m=>m.id===currentId)?.currency??'USD'}/>}
   <section className="panel full-panel">

@@ -393,3 +393,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 不允许用 `finance_source_event.amount` 全部净额直接当作商品退款；必须基于 V28 完整已核对的原币 `PRODUCT_REFUND` 分类部分，归属到 V34 已审核正数量的同一来源订单项。所有 signed amounts 原样保存，不反向、混币种或分配超额。
 - 记录金额归属的当前状态和完整追加审计；不得改写 Finances transaction、V34 数量、Amazon 退款、库存货量或历史 COGS；金额对平不自动证明库存入库、银行已付、会计过账、最终利润。
 - V34 删除存在 V35 分配的商品审核前必须要求先撤销金额；V35 修改遵守与 V34 一致的订单→Finances 事件行锁顺序。Seller 真实授权仍留至功能完成后用户本地测试。
+
+
+## V36 · 广告费用不可假装 Amazon Ads 已验证
+
+- Amazon Ads API 与 SP-API Seller 授权独立。本阶段所有广告支出只允许 `MANUAL_UNVERIFIED`，不得伪装已从 Ads API 抓取，也不允许未知签名/广告币种向财务利润自动过账。
+- 站点内人工广告来源 key 重复内容必须一致，否则拒绝；原币与站点一致，支出非负。SKU basisPoints 总和上限 10000，修改需持有支出来源行锁，追加审核操作审计。
+- V36 广告分配总额和未分配余额是人工参考，只能用于核对，不等于真实 Ads 报表、ROAS/ACOS、银行已支付广告款。任何未来真实广告费用必须单独证明其来源并核对与 Finances 的费用是否重叠，才能进入正式利润。
