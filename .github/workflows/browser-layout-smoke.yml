@@ -36,6 +36,8 @@ jobs:
       - name: Install locked frontend dependencies
         working-directory: apps/web
         run: npm ci --no-audit --no-fund
+      - name: Ensure React-only frontend
+        run: node scripts/check_frontend_stack.mjs
       - name: Build frontend and check TypeScript
         working-directory: apps/web
         run: npm run build

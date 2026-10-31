@@ -47,6 +47,8 @@ jobs:
           package-manager-cache: false
       - name: Install locked dependencies
         run: npm ci --no-audit --no-fund
+      - name: Ensure React-only frontend
+        run: node ../../scripts/check_frontend_stack.mjs
       - name: Typecheck
         run: npm run typecheck
       - name: Unit tests
