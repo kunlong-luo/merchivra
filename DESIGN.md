@@ -45,3 +45,17 @@ Run `npm ci`, `npm run build` and the existing Vitest/typecheck workflow. At M3/
 ## Working without an Impeccable plugin
 
 Read the publicly available `critique`, `audit`, `typeset` and `polish` documentation for techniques, then inspect existing components and commit small changes through normal repo tools. Do **not** install npm packages, import Impeccable hooks or ship Impeccable binaries/assets unless the maintainer explicitly opts in. Changes must remain reviewable in a normal Git diff.
+
+
+## Iteration 2 · Core workbench (2026-10-31)
+
+Second manual code audit using the public Impeccable audit/polish criteria (no Impeccable runtime or detector run):
+
+- P1 · Core Orders had seven table headers but only six body cells: the **Source** cell was missing and timestamps appeared under the wrong header. Fixed the column alignment and explicit MOCK/UNVERIFIED provenance.
+- P1 · "No connected Marketplace" wrongly described an initial **unconfigured** tenant. The onboarding state now asks for local shop and Marketplace configuration, while explicitly noting that this is not Amazon authorization.
+- P2 · Local shop form and Mock replay overshadowed the read-only data task. Data is now first when a site exists, with setup/replay in native keyboard-accessible `details`. Initial tenant onboarding continues to show the setup form directly.
+- P2 · Introduced on-page-only search for loaded Listing / Order / FBA rows with visible `filtered / loaded` counts. Filtering is client-side and **does not claim to search beyond the first 50 server rows**. Query resets on Marketplace or category change.
+- P2 · Loading, empty, no-match, error/retry feedback now distinguishes upstream availability from missing records. Unknown FBA quantity remains unknown; statuses retain unrecognized upstream codes rather than inventing meanings.
+- P2 · Added table-local keyboard scroll, text status labels, FBA mock-page progress, semantic column headers, and a proper setup audit loading state. Tests cover pure filtering and provenance/time formatting.
+
+Acceptance evidence must include the actual GitHub Actions Vue typecheck/Vitest/Vite result. Manual responsive/browser screenshots, keyboard traversal, real ARIA screen-reader and WCAG evaluation are still pending.

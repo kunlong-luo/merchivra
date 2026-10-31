@@ -18,7 +18,7 @@ const failure = ref('')
 const { data: accounts, isPending: loadingAccounts, isError: accountsError } = useQuery({
   queryKey: ['setup', props.tenantId, 'accounts'], queryFn: fetchLocalAccounts, staleTime: 15_000
 })
-const { data: audit, isError: auditError } = useQuery({
+const { data: audit, isPending: auditPending, isError: auditError } = useQuery({
   queryKey: ['setup', props.tenantId, 'audit'], queryFn: fetchSetupAudit, staleTime: 15_000
 })
 const localAccounts = computed(() =>
@@ -68,7 +68,7 @@ const add = useMutation({
       <span class="status-chip chip-amber">未连接</span>
     </div>
     <div class="setup-forms">
-      <form class="setup-form" @submit.prevent="create.mutate()">
+      <form class="setup-form" :aria-busy="create.isPending.value" @submit.prevent="create.mutate()">
         <strong>创建店铺占位记录</strong>
         <label for="local-shop-name">店铺名称</label>
         <input id="local-shop-name" v-model.trim="displayName" required minlength="2" maxlength="100"
@@ -82,7 +82,7 @@ const add = useMutation({
         </button>
       </form>
 
-      <form class="setup-form" @submit.prevent="add.mutate()">
+      <form class="setup-form" :aria-busy="add.isPending.value" @submit.prevent="add.mutate()">
         <strong>添加 Marketplace 配置</strong>
         <p v-if="loadingAccounts" class="setup-hint">加载店铺列表中…</p>
         <p v-else-if="accountsError" class="setup-hint">店铺列表加载失败，请刷新页面。</p>
@@ -111,10 +111,11 @@ const add = useMutation({
         <strong>配置审计 · 最近 30 条</strong>
         <button type="button" class="text-button" @click="refresh()">刷新</button>
       </div>
-      <p v-if="auditError" class="setup-hint">审计读取失败</p>
+      <p v-if="auditPending" class="setup-hint" role="status">正在读取配置审计…</p>
+      <p v-else-if="auditError" class="setup-hint" role="alert">审计读取失败，请尝试刷新。</p>
       <p v-else-if="!audit?.length" class="setup-hint">暂无配置操作记录。</p>
       <div v-else class="table-scroll">
-        <table><thead><tr><th>操作</th><th>资源标识</th><th>发生时间</th></tr></thead>
+        <table><thead><tr><th scope="col">操作</th><th>资源标识</th><th>发生时间</th></tr></thead>
           <tbody><tr v-for="event in audit" :key="event.id">
             <td>{{ event.action === 'LOCAL_SELLER_ACCOUNT_CREATED' ? '创建店铺' : '添加站点' }}</td>
             <td>{{ event.resourceId.slice(0, 8) }}…</td>

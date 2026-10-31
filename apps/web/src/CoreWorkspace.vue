@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import SellerSetup from './SellerSetup.vue'
 import SandboxReplay from './SandboxReplay.vue'
+import { coreStatusLabel, filterLoadedRows, formatSourceTime, sourceLabel } from './lib/core-view'
 import {
   fetchCoreMarketplaces, fetchCoreListings, fetchCoreOrders, fetchCoreInventory
 } from './lib/core'
@@ -11,6 +12,8 @@ type Section = 'listings' | 'orders' | 'inventory'
 const props = defineProps<{ tenantId: string }>()
 const marketplaceId = ref('')
 const section = ref<Section>('listings')
+const searchText = ref('')
+watch([marketplaceId, section], () => { searchText.value = '' })
 const { data: marketplaces, isPending: marketplacePending, isError: marketplaceError,
   error: marketplaceFailure, refetch: reloadMarketplaces } = useQuery({
   queryKey: ['core', 'marketplaces', props.tenantId],
@@ -26,6 +29,8 @@ watch(marketplaces, rows => {
 }, { immediate: true })
 
 const activeMarketplace = computed(() => marketplaces.value?.find(m => m.id === marketplaceId.value))
+const searchPlaceholder = computed(() => section.value === 'orders'
+  ? '搜索已加载订单号' : '搜索已加载 SKU、ASIN')
 
 const { data: listings, isPending: listingPending, isError: listingError, error: listingFailure,
   refetch: reloadListings } = useQuery({
@@ -52,6 +57,13 @@ const { data: inventory, isPending: stockPending, isError: stockError, error: st
   retry: 1
 })
 
+const filteredListings = computed(() => filterLoadedRows(listings.value, searchText.value,
+  row => [row.sellerSku, row.asin, row.internalSku]))
+const filteredOrders = computed(() => filterLoadedRows(orders.value, searchText.value,
+  row => [row.externalOrderId]))
+const filteredInventory = computed(() => filterLoadedRows(inventory.value, searchText.value,
+  row => [row.sellerSku]))
+
 function reloadCurrent() {
   if (section.value === 'listings') void reloadListings()
   if (section.value === 'orders') void reloadOrders()
@@ -60,20 +72,14 @@ function reloadCurrent() {
 function observed(value: number | null) {
   return value === null ? '未知' : String(value)
 }
-function isoTime(value: string | null) {
-  if (!value) return '来源时间未知'
-  return new Date(value).toLocaleString('zh-CN', { timeZone: 'UTC', hour12: false }) + ' UTC'
-}
 </script>
 
 <template>
   <div class="core-workspace">
     <div class="core-intro">
       <strong>已认证租户 · PostgreSQL 结构化数据</strong>
-      <p>这里直接读取核心业务表，不读取虚构 Mock 快照。租户由后端会话确定；当前只支持 Owner 范围内的只读操作。</p>
+      <p>这里读取当前会话租户的核心业务表。测试记录会明确标注 MOCK；来源未核验的记录不会被展示为真实 Amazon 数据。</p>
     </div>
-
-    <SellerSetup :tenant-id="tenantId" />
 
     <div v-if="marketplacePending" class="state-panel">
       <strong>正在加载可访问的 Marketplace…</strong>
@@ -83,12 +89,14 @@ function isoTime(value: string | null) {
       <p>{{ marketplaceFailure instanceof Error ? marketplaceFailure.message : '请检查登录会话与服务' }}</p>
       <button class="refresh-button" type="button" @click="reloadMarketplaces()">重试</button>
     </div>
-    <div v-else-if="!marketplaces?.length" class="state-panel core-empty">
-      <div class="core-empty-icon">▧</div>
-      <h2>当前租户还没有已连接的 Marketplace</h2>
-      <p>这是正常的初始状态。首次 Owner 账户不会自动拥有其他租户的数据，也不会自动导入演示店铺。</p>
-      <p>后续接入真实 Seller 授权后，可在此查看商品、订单与 FBA 观测。在此之前不要使用任何真实卖家凭据。</p>
-      <button class="refresh-button" type="button" @click="reloadMarketplaces()">重新检查</button>
+    <div v-else-if="!marketplaces?.length" class="core-onboarding">
+      <div class="state-panel core-empty">
+        <div class="core-empty-icon" aria-hidden="true">▧</div>
+        <h2>当前租户尚未配置 Marketplace</h2>
+        <p>先创建本地占位店铺并添加站点，之后即可读取当前租户的业务表。配置站点不等于授权 Amazon。</p>
+        <button class="refresh-button" type="button" @click="reloadMarketplaces()">重新检查站点</button>
+      </div>
+      <SellerSetup :tenant-id="tenantId" />
     </div>
     <template v-else>
       <div class="core-controls">
@@ -103,15 +111,13 @@ function isoTime(value: string | null) {
         <button class="refresh-button" type="button" @click="reloadCurrent()">刷新当前数据</button>
       </div>
 
-      <div v-if="activeMarketplace" class="section-meta">
-        <span><span class="data-dot"></span>{{ activeMarketplace.marketplaceId }} · {{ activeMarketplace.region }} · {{ activeMarketplace.currency }}</span>
-        <span>连接状态：{{ activeMarketplace.connectionStatus }}</span>
+      <div v-if="activeMarketplace" class="core-marketplace-summary" role="status">
+        <div><strong>{{ activeMarketplace.marketplaceId }}</strong>
+          <span>{{ activeMarketplace.region }} · {{ activeMarketplace.currency }} · {{ activeMarketplace.timezone }}</span></div>
+        <span class="status-chip" :class="activeMarketplace.connectionStatus === 'CONNECTED' ? 'chip-green' : 'chip-amber'">
+          账户状态：{{ coreStatusLabel(activeMarketplace.connectionStatus) }}
+        </span>
       </div>
-
-      <SandboxReplay v-if="activeMarketplace" :key="activeMarketplace.id"
-        :tenant-id="tenantId" :marketplace-id="activeMarketplace.id"
-        :marketplace-code="activeMarketplace.marketplaceId"
-        :connection-status="activeMarketplace.connectionStatus" />
       <div class="core-subtabs" role="group" aria-label="核心数据分类">
         <button v-for="tab in [
           { id: 'listings', label: 'Listing' },
@@ -123,37 +129,56 @@ function isoTime(value: string | null) {
           @click="section = tab.id">{{ tab.label }}</button>
       </div>
 
+      <div class="core-table-controls">
+        <label class="core-search-field" for="core-record-search">
+          <span>筛选本页记录</span>
+          <input id="core-record-search" v-model="searchText" type="search"
+            :placeholder="searchPlaceholder" autocomplete="off" aria-describedby="core-search-scope" />
+        </label>
+        <p id="core-search-scope" class="core-search-scope">仅筛选已读取的最多 50 条记录，不搜索服务端其他页。</p>
+      </div>
       <section v-if="section === 'listings'" class="panel full-panel">
         <div class="panel-heading"><div><h2>Listing（核心业务表）</h2><p>独立展示 Seller SKU 和已确认的内部 SKU 映射</p></div>
-          <span class="count-pill">本页 {{ listings?.length ?? 0 }} 条 · 最多 50 条</span></div>
-        <div v-if="listingPending" class="empty-state">查询 Listing 中…</div>
-        <div v-else-if="listingError" class="empty-state" role="alert">{{ listingFailure instanceof Error ? listingFailure.message : '读取失败' }}</div>
-        <div v-else-if="!listings?.length" class="empty-state">当前 Marketplace 尚无 Listing 记录</div>
-        <div v-else class="table-scroll">
-          <table><thead><tr><th>Seller SKU</th><th>ASIN</th><th>内部 SKU</th><th>映射状态</th><th>来源</th><th>来源更新时间</th></tr></thead>
-            <tbody><tr v-for="item in listings" :key="item.id">
+          <span class="count-pill" role="status">显示 {{ filteredListings.length }} / {{ listings?.length ?? 0 }} 条 · 最多读取 50 条</span></div>
+        <div v-if="listingPending" class="empty-state" role="status">正在读取 Listing…</div>
+        <div v-else-if="listingError" class="core-query-error" role="alert">
+          <strong>Listing 读取失败</strong>
+          <p>{{ listingFailure instanceof Error ? listingFailure.message : '请检查访问权限或稍后重试' }}</p>
+          <button class="refresh-button" type="button" @click="reloadListings()">重新读取</button>
+        </div>
+        <div v-else-if="!listings?.length" class="empty-state">当前站点尚无 Listing 记录；本地占位配置不会自动产生业务数据。</div>
+        <div v-else-if="!filteredListings.length" class="empty-state">本页没有匹配的 Listing。 <button class="text-button" type="button" @click="searchText = ''">清除筛选</button></div>
+        <div v-else class="table-scroll" tabindex="0" aria-label="可水平滚动的 Listing 表格">
+          <table><thead><tr><th scope="col">Seller SKU</th><th scope="col">ASIN</th><th scope="col">内部 SKU</th><th scope="col">映射状态</th><th scope="col">来源</th><th scope="col">来源更新时间</th></tr></thead>
+            <tbody><tr v-for="item in filteredListings" :key="item.id">
               <td class="strong-cell">{{ item.sellerSku }}</td>
               <td>{{ item.asin ?? '未知' }}</td><td>{{ item.internalSku ?? '未确认' }}</td>
-              <td><span class="status-chip" :class="item.mappingStatus === 'ACTIVE' ? 'chip-green' : 'chip-amber'">{{ item.mappingStatus }}</span></td>
-              <td><span :class="['status-chip', item.dataOrigin === 'MOCK' ? 'chip-amber' : 'chip-muted']">{{ item.dataOrigin }}</span></td>
-              <td class="small-cell">{{ isoTime(item.sourceUpdatedAt) }}</td>
+              <td><span class="status-chip" :class="item.mappingStatus === 'ACTIVE' ? 'chip-green' : 'chip-amber'">{{ coreStatusLabel(item.mappingStatus) }}</span></td>
+              <td><span :class="['status-chip', item.dataOrigin === 'MOCK' ? 'chip-amber' : 'chip-muted']">{{ sourceLabel(item.dataOrigin) }}</span></td>
+              <td class="small-cell">{{ formatSourceTime(item.sourceUpdatedAt) }}</td>
             </tr></tbody></table>
         </div>
       </section>
 
       <section v-else-if="section === 'orders'" class="panel full-panel">
         <div class="panel-heading"><div><h2>订单（核心业务表）</h2><p>独立展示履约、退款与财务状态；不推测结算收入</p></div>
-          <span class="count-pill">本页 {{ orders?.length ?? 0 }} 笔 · 最多 50 笔</span></div>
-        <div v-if="orderPending" class="empty-state">查询订单中…</div>
-        <div v-else-if="orderError" class="empty-state" role="alert">{{ orderFailure instanceof Error ? orderFailure.message : '读取失败' }}</div>
-        <div v-else-if="!orders?.length" class="empty-state">当前 Marketplace 尚无订单记录</div>
-        <div v-else class="table-scroll">
-          <table><thead><tr><th>外部订单号</th><th>订单项数量</th><th>履约</th><th>退款</th><th>财务</th><th>来源</th><th>来源时间</th></tr></thead>
-            <tbody><tr v-for="item in orders" :key="item.id">
+          <span class="count-pill" role="status">显示 {{ filteredOrders.length }} / {{ orders?.length ?? 0 }} 笔 · 最多读取 50 笔</span></div>
+        <div v-if="orderPending" class="empty-state" role="status">正在读取订单…</div>
+        <div v-else-if="orderError" class="core-query-error" role="alert">
+          <strong>订单读取失败</strong>
+          <p>{{ orderFailure instanceof Error ? orderFailure.message : '请检查访问权限或稍后重试' }}</p>
+          <button class="refresh-button" type="button" @click="reloadOrders()">重新读取</button>
+        </div>
+        <div v-else-if="!orders?.length" class="empty-state">当前站点尚无订单记录；未授权来源不自动生成真实订单。</div>
+        <div v-else-if="!filteredOrders.length" class="empty-state">本页没有匹配的订单。 <button class="text-button" type="button" @click="searchText = ''">清除筛选</button></div>
+        <div v-else class="table-scroll" tabindex="0" aria-label="可水平滚动的订单表格">
+          <table><thead><tr><th scope="col">外部订单号</th><th scope="col">订单项数量</th><th scope="col">履约</th><th scope="col">退款</th><th scope="col">财务</th><th scope="col">来源</th><th scope="col">来源时间</th></tr></thead>
+            <tbody><tr v-for="item in filteredOrders" :key="item.id">
               <td class="strong-cell">{{ item.externalOrderId }}</td><td>{{ item.itemCount }}</td>
-              <td>{{ item.fulfillmentStatus }}</td><td>{{ item.refundStatus }}</td>
-              <td><span class="status-chip chip-muted">{{ item.financialStatus }}</span></td>
-              <td class="small-cell">{{ isoTime(item.sourceUpdatedAt) }}</td>
+              <td>{{ coreStatusLabel(item.fulfillmentStatus) }}</td><td>{{ coreStatusLabel(item.refundStatus) }}</td>
+              <td><span class="status-chip chip-muted">{{ coreStatusLabel(item.financialStatus) }}</span></td>
+              <td><span :class="['status-chip', item.dataOrigin === 'MOCK' ? 'chip-amber' : 'chip-muted']">{{ sourceLabel(item.dataOrigin) }}</span></td>
+              <td class="small-cell">{{ formatSourceTime(item.sourceUpdatedAt) }}</td>
             </tr></tbody></table>
         </div>
       </section>
@@ -161,26 +186,41 @@ function isoTime(value: string | null) {
       <section v-else class="panel full-panel">
         <div class="panel-heading"><div><h2>最新 FBA 观测（核心业务表）</h2>
           <p>每个 Seller SKU 只显示最新一次观测；未知数量不等于零</p></div>
-          <span class="count-pill">本页 {{ inventory?.length ?? 0 }} 条 · 最多 50 条</span></div>
-        <div v-if="stockPending" class="empty-state">查询库存观测中…</div>
-        <div v-else-if="stockError" class="empty-state" role="alert">{{ stockFailure instanceof Error ? stockFailure.message : '读取失败' }}</div>
-        <div v-else-if="!inventory?.length" class="empty-state">当前 Marketplace 尚无 FBA 库存观测</div>
-        <div v-else class="table-scroll">
-          <table><thead><tr><th>Seller SKU</th><th>可售</th><th>预留</th><th>质量</th><th>来源</th><th>观测时间</th></tr></thead>
-            <tbody><tr v-for="item in inventory" :key="item.id">
+          <span class="count-pill" role="status">显示 {{ filteredInventory.length }} / {{ inventory?.length ?? 0 }} 条 · 最多读取 50 条</span></div>
+        <div v-if="stockPending" class="empty-state" role="status">正在读取 FBA 库存观测…</div>
+        <div v-else-if="stockError" class="core-query-error" role="alert">
+          <strong>FBA 库存读取失败</strong>
+          <p>{{ stockFailure instanceof Error ? stockFailure.message : '请检查访问权限或稍后重试' }}</p>
+          <button class="refresh-button" type="button" @click="reloadInventory()">重新读取</button>
+        </div>
+        <div v-else-if="!inventory?.length" class="empty-state">当前站点尚无 FBA 观测，未知库存不等于零。</div>
+        <div v-else-if="!filteredInventory.length" class="empty-state">本页没有匹配的 SKU。 <button class="text-button" type="button" @click="searchText = ''">清除筛选</button></div>
+        <div v-else class="table-scroll" tabindex="0" aria-label="可水平滚动的 FBA 库存表格">
+          <table><thead><tr><th scope="col">Seller SKU</th><th scope="col">可售</th><th scope="col">预留</th><th scope="col">质量</th><th scope="col">来源</th><th scope="col">观测时间</th></tr></thead>
+            <tbody><tr v-for="item in filteredInventory" :key="item.id">
               <td class="strong-cell">{{ item.sellerSku }}</td>
               <td class="quantity-cell">{{ observed(item.fulfillable) }}</td>
               <td>{{ observed(item.reserved) }}</td>
-              <td><span class="status-chip" :class="item.quality === 'OBSERVED' ? 'chip-green' : 'chip-amber'">{{ item.quality }}</span></td>
-              <td><span :class="['status-chip', item.dataOrigin === 'MOCK' ? 'chip-amber' : 'chip-muted']">{{ item.dataOrigin }}</span></td>
-              <td class="small-cell">{{ isoTime(item.observedAt) }}</td>
+              <td><span class="status-chip" :class="item.quality === 'OBSERVED' ? 'chip-green' : 'chip-amber'">{{ coreStatusLabel(item.quality) }}</span></td>
+              <td><span :class="['status-chip', item.dataOrigin === 'MOCK' ? 'chip-amber' : 'chip-muted']">{{ sourceLabel(item.dataOrigin) }}</span></td>
+              <td class="small-cell">{{ formatSourceTime(item.observedAt) }}</td>
             </tr></tbody></table>
         </div>
       </section>
       <div class="note-panel"><span class="note-mark">i</span><div>
         <strong>数据完整性提醒</strong>
-        <p>最多读取前 50 条；分页与真实 Amazon 数据接入尚未完成。没有真实 Seller 连接时返回空列表是正确结果，不应回退到虚构演示数据。</p>
+        <p>每类最多读取 50 条，筛选仅作用于本页；分页与真实 Amazon 同步尚未完成。测试数据必须标注 MOCK，未知库存不能按 0 处理。</p>
       </div></div>
+      <details class="core-tools">
+        <summary><strong>本地店铺配置与测试工具</strong><span>添加 Marketplace、手动 Mock 回放 · 不连接 Amazon</span></summary>
+        <div class="core-tools-content">
+          <SellerSetup :tenant-id="tenantId" />
+          <SandboxReplay v-if="activeMarketplace" :key="activeMarketplace.id"
+            :tenant-id="tenantId" :marketplace-id="activeMarketplace.id"
+            :marketplace-code="activeMarketplace.marketplaceId"
+            :connection-status="activeMarketplace.connectionStatus" />
+        </div>
+      </details>
     </template>
   </div>
 </template>

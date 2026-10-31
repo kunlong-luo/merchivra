@@ -64,7 +64,7 @@ const replay = useMutation({
     <div class="sandbox-panel-top">
       <div><strong>模拟 SP-API 操作链 · Sandbox</strong>
         <p>显式触发，使用固定纯虚构数据模拟 searchOrders 分页、Listing 与 getInventorySummaries；
-          严格标记 MOCK，**不连接 Amazon、不请求买家信息、没有财务授权**。</p>
+          严格标记 MOCK，不连接 Amazon、不请求买家信息、没有财务授权。</p>
       </div>
       <span class="status-chip chip-amber">MOCK ONLY</span>
     </div>
@@ -87,6 +87,8 @@ const replay = useMutation({
         <p>第 {{ pageProgress?.nextPage ?? 0 }} / {{ pageProgress?.totalPages ?? '—' }} 页 ·
           状态 {{ pageProgress?.status ?? '读取中' }} · 事务代数 {{ pageProgress?.leaseEpoch ?? 0 }}
           （不会连接真实 Amazon）</p>
+        <progress v-if="pageProgress?.totalPages" :value="pageProgress.nextPage"
+          :max="pageProgress.totalPages" aria-label="已持久提交的模拟订单页进度" />
         <div class="sandbox-actions">
           <button class="refresh-button" type="button"
             :disabled="advance.isPending.value || pageProgress?.status === 'SUCCEEDED' || pageError"
@@ -104,7 +106,7 @@ const replay = useMutation({
       <div v-else-if="runs?.length" class="sandbox-history">
         <strong>模拟同步记录（最近 20 次）</strong>
         <div class="table-scroll"><table>
-          <thead><tr><th>时间</th><th>状态</th><th>Orders 页</th><th>Listing</th><th>订单</th><th>FBA</th><th>财务</th></tr></thead>
+          <thead><tr><th scope="col">时间</th><th>状态</th><th>Orders 页</th><th>Listing</th><th>订单</th><th>FBA</th><th>财务</th></tr></thead>
           <tbody><tr v-for="run in runs" :key="run.id">
             <td class="small-cell">{{ run.createdAt }}</td>
             <td><span :class="['status-chip', run.status === 'SUCCEEDED' ? 'chip-green' : 'chip-amber']">{{ run.status }}</span></td>

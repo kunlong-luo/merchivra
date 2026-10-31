@@ -73,3 +73,12 @@
 - 根目录 [DESIGN.md](DESIGN.md) 定义 Merchivra 的界面设计规范与质量检查清单。保留 Vue/TypeScript 业务代码、现有蓝黑品牌风格和 Core/Mock 数据边界；除非维护者同意，不安装 Impeccable 或其他设计插件、Hook、npm 依赖。
 - 可直接参考公开的 Impeccable critique/audit/typeset/polish 方法进行**人工源码审查和小步修整**，但不可将此描述为已运行 Impeccable 专属检测器、浏览器截图比对、WCAG/性能认证。先解决操作信息层级、表格可读性、加载/错误/空状态、键盘焦点、手机触控、减少动画。
 - 状态标签与功能开关必须和真实权限一致。顶部“API 已连接”仅代表后端 API 可用，不代表 Amazon Seller 连接成功；Mock 不得暗示真实收入，未知库存不可写为0。所有 UX 更改需通过现有 Vue 类型检查、Vitest、构建，再做浏览器级验收。
+
+
+## Core 页面设计与数据完整性（2026-10-31）
+
+- 第二轮不安装 Impeccable，继续按照公开 audit/polish 原则直接审查现有 Vue 组件，并在 [DESIGN.md](DESIGN.md) 记录发现与边界。
+- Core 首页任务优先：未配置 Marketplace 时明确引导创建本地占位店铺；已有站点时展示当前数据和筛选，将本地配置、纯模拟回放放入可展开的辅助工具区。不能把 UNCONFIGURED 误当 CONNECTED，也不能将 API 可用当作 Amazon 已授权。
+- Core Listing/Orders/FBA 在客户端只筛选已从服务端读取的最多 50 行，显式展示命中数/已加载数，不能暗示已实现服务器搜索或分页。
+- 所有列标题必须和数据单元格对应，订单必须显式展示 dataOrigin；UNVERIFIED 不许显示为真实核验数据。保留 UNKNOWN ≠ 0 与 Finance NOT_OBSERVED/NOT_AUTHORIZED 语义。
+- 修改 Core UX 必须至少检查离线筛选/来源标签测试和 Vue typecheck、Vitest、Vite build。不可声称已做浏览器截图/自动 Impeccable audit 或完成生产验收。
