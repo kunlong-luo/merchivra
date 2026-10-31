@@ -22,7 +22,7 @@ public class PurchasingController {
     public record NewSupplier(String supplierCode,String displayName) {}
     public record NewOrder(UUID supplierId,String currency,String notes,
                            List<PurchasingService.RequestedLine> lines) {}
-    public record Receive(UUID lineId,int quantity,UUID warehouseId) {}
+    public record Receive(UUID lineId,int quantity,UUID warehouseId,UUID asnId) {}
     public record NewWarehouse(String warehouseCode,String displayName) {}
 
     @GetMapping("/warehouses")
@@ -102,6 +102,6 @@ public class PurchasingController {
                                              @PathVariable UUID id,@RequestBody Receive body){
         return purchasing.receive(access.currentTenant(auth,req),
             access.authenticatedUser(auth),id,body.lineId(),body.quantity(),
-            body.warehouseId());
+            body.warehouseId(),body.asnId());
     }
 }
