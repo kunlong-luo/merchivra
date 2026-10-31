@@ -20,7 +20,7 @@ export default function CoreWorkspace({tenantId,isOwner=true}:{tenantId:string;i
  const filteredInventory=useMemo(()=>filterLoadedRows(inventory.data,search,r=>[r.sellerSku]),[inventory.data,search])
  function changeSection(id:Section){setSection(id);setSearch('')}
  function reload(){if(section==='listings')void listings.refetch();if(section==='orders')void orders.refetch();if(section==='inventory')void inventory.refetch()}
- const status=(origin:string)=><span className={`status-chip ${origin==='MOCK'?'chip-amber':'chip-muted'}`}>{sourceLabel(origin)}</span>
+ const status=(origin:Parameters<typeof sourceLabel>[0])=><span className={`status-chip ${origin==='MOCK'?'chip-amber':'chip-muted'}`}>{sourceLabel(origin)}</span>
  const panel=(title:string,subtitle:string,count:number,total:number,loading:boolean,error:Error|null|undefined,empty:string,children:React.ReactNode,refresh:()=>void)=>
   <section className="panel full-panel" id={`core-panel-${section}`}>
    <div className="panel-heading"><div><h2>{title}</h2><p>{subtitle}</p></div><span className="count-pill" role="status">显示 {count} / {total} 条 · 最多读取 50 条</span></div>
