@@ -110,7 +110,12 @@ async function waitFor(send, expression, label) {
   }
   throw new Error('Timed out: ' + label)
 }
-async function screenshot(send, name) {
+async function screenshot(send, name, table=false) {
+  if (table) {
+    await evaluate(send,
+      "document.querySelector('.core-data-scroll')?.scrollIntoView({block:'center'})")
+    await sleep(120)
+  }
   const result = await send('Page.captureScreenshot', {
     format:'png', fromSurface:true, captureBeyondViewport:false
   })
@@ -189,6 +194,7 @@ async function main() {
       'listing '+width)
     await layout(send,width,'core-listings-'+width,true)
     await screenshot(send,'core-listings-'+width+'.png')
+    await screenshot(send,'core-listings-table-'+width+'.png',true)
     if(width===360){
       await select(send,'订单')
       await layout(send,width,'core-orders-360',true)
@@ -196,7 +202,7 @@ async function main() {
         "[...document.querySelectorAll('.core-data-scroll tbody tr:first-child td')]" +
         ".some(x=>x.textContent.includes('模拟测试'))"),true,
         'Order dataOrigin must be present')
-      await screenshot(send,'core-orders-360.png')
+      await screenshot(send,'core-orders-360.png',true)
       await select(send,'FBA 库存')
       await layout(send,width,'core-inventory-360',true)
       const cells=await evaluate(send,
@@ -204,7 +210,7 @@ async function main() {
         ".map(x=>x.textContent.trim())")
       assert.ok(cells.includes('未知'),'Unknown inventory must stay unknown')
       assert.ok(cells.includes('0'),'Observed zero must stay zero')
-      await screenshot(send,'core-inventory-360.png')
+      await screenshot(send,'core-inventory-360.png',true)
     }
   }
   console.log('Chromium responsive UI smoke PASS (synthetic backend only).')

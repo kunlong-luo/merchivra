@@ -126,7 +126,6 @@ function observed(value: number | null) {
         ] as const" :key="tab.id" type="button"
           :class="['core-subtab', { selected: section === tab.id }]"
           :aria-pressed="section === tab.id"
-          :aria-controls="`core-panel-${tab.id}`"
           @click="section = tab.id">{{ tab.label }}</button>
       </div>
 
