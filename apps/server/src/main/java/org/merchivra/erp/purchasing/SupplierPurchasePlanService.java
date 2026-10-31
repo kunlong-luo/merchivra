@@ -174,7 +174,7 @@ public class SupplierPurchasePlanService {
                p.updated_at AS policy_updated_at,r.updated_at AS rule_updated_at,
                p.reorder_point,p.target_stock,r.minimum_order_quantity,r.pack_multiple,
                r.lead_time_days,r.currency_code,r.unit_cost,
-               observed.on_hand,observed.source_movement_id
+               observed.on_hand,latest.source_movement_id
         FROM erp_local_stock_policy p
         JOIN erp_local_warehouse w
           ON w.tenant_id=p.tenant_id AND w.id=p.warehouse_id AND w.status='ACTIVE'
@@ -185,15 +185,18 @@ public class SupplierPurchasePlanService {
         JOIN erp_supplier sup
           ON sup.tenant_id=r.tenant_id AND sup.id=r.supplier_id AND sup.status='ACTIVE'
         LEFT JOIN LATERAL (
-          SELECT SUM(m.quantity)::bigint AS on_hand,
-                 (SELECT x.id FROM erp_local_stock_movement x
-                    WHERE x.tenant_id=p.tenant_id AND x.warehouse_id=p.warehouse_id
-                      AND x.product_sku_id=p.product_sku_id
-                    ORDER BY x.created_at DESC,x.id DESC LIMIT 1) AS source_movement_id
+          SELECT SUM(m.quantity)::bigint AS on_hand
           FROM erp_local_stock_movement m
           WHERE m.tenant_id=p.tenant_id AND m.warehouse_id=p.warehouse_id
             AND m.product_sku_id=p.product_sku_id
         ) observed ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT m.id AS source_movement_id
+          FROM erp_local_stock_movement m
+          WHERE m.tenant_id=p.tenant_id AND m.warehouse_id=p.warehouse_id
+            AND m.product_sku_id=p.product_sku_id
+          ORDER BY m.created_at DESC,m.id DESC LIMIT 1
+        ) latest ON TRUE
         WHERE p.tenant_id=? AND p.warehouse_id=?
         """;
     private static Recommendation mapRecommendation(ResultSet rs,int row) throws SQLException {
