@@ -54,6 +54,12 @@ const server = createServer(async (req, res) => {
       : respond(res, { userId: account, activeTenantId: tenant, availableTenantIds:[tenant] })
   }
   if (url.pathname === '/api/v1/ping') return respond(res, { status:'ok' })
+  if (url.pathname === '/api/v1/orders-sync/' + market)
+    return respond(res, {
+      jobId:null,state:'NOT_STARTED',committedPages:0,leaseEpoch:0,
+      windowAfter:null,windowBefore:null,lastSafeWatermark:null,
+      nextAttemptAt:null,lastFailureCode:null
+    })
   if (url.pathname === '/api/v1/operations/summary')
     return respond(res, { open:1, acknowledged:0, done:0, cleared:0 })
   if (url.pathname === '/api/v1/operations/findings')
@@ -205,6 +211,19 @@ async function main() {
     await layout(send,width,'core-listings-'+width,true)
     await screenshot(send,'core-listings-'+width+'.png')
     await screenshot(send,'core-listings-table-'+width+'.png',true)
+    if(width===360){
+      await evaluate(send,
+        "document.querySelector('.core-tools summary')?.click()")
+      await waitFor(send,
+        "document.querySelector('.orders-sync-panel')?.textContent?.includes('NOT_STARTED')",
+        'V11A local sync status')
+      assert.equal(await evaluate(send,
+        "document.querySelector('.orders-sync-panel')?.textContent?.includes('MOCK ONLY')"),
+        true, 'V11A source safety label')
+      await evaluate(send,
+        "document.querySelector('.orders-sync-panel')?.scrollIntoView({block:'center'})")
+      await screenshot(send,'v11-local-orders-worker-360.png')
+    }
     if(width===360){
       await select(send,'订单')
       await layout(send,width,'core-orders-360',true)
