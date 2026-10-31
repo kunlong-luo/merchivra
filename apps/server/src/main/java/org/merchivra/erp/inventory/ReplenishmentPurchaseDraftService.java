@@ -125,6 +125,17 @@ public class ReplenishmentPurchaseDraftService {
             return purchasing.detail(tenant,old.orderId());
         }
 
+        // Different request keys cannot create multiple drafts from one observed snapshot.
+        // This check is serialized by the tenant lock; V38 also enforces it in PostgreSQL.
+        Integer alreadyDrafted=jdbc.queryForObject("""
+            SELECT COUNT(*) FROM erp_replenishment_purchase_draft_source
+            WHERE tenant_id=? AND seller_marketplace_id=? AND seller_sku=?
+              AND observation_id=?
+            """,Integer.class,tenant,marketplace,req.sellerSku(),req.expectedObservationId());
+        if(alreadyDrafted!=null && alreadyDrafted>0)
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "This inventory observation already generated a purchase draft");
+
         // Catalog mapping can be edited only with an exclusive lock on this Listing.
         // An ACTIVE mapping alone is insufficient if the internal SKU was archived.
         List<UUID> mapped=jdbc.query("""
