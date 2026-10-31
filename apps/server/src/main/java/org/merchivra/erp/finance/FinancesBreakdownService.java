@@ -18,7 +18,8 @@ public class FinancesBreakdownService {
  public record Node(String path,String parent,String sourceType,String amount,
                     String currency,boolean leaf) {}
  private static Node map(java.sql.ResultSet r,int i)throws java.sql.SQLException{
-  var amount=r.getBigDecimal("original_amount"),currency=r.getString("currency_code");
+  var amount=r.getBigDecimal("original_amount");
+  var currency=r.getString("currency_code");
   return new Node(r.getString("source_path"),r.getString("parent_path"),
     r.getString("source_type"),amount==null?null:amount.toPlainString(),
     currency==null?null:currency.trim(),r.getBoolean("is_leaf"));
