@@ -61,3 +61,9 @@
   `approvedRoles` 继续为空，禁止自动宣称角色已获批准。
 - V8 为代码与离线单测交付，尚未实现自动凭证轮换、KMS 多版本密钥、
   后台实时 Worker、安全运营与真实卖家环境测试；后续 Issue 不能据此关闭生产验收。
+
+## V9 · Seller Vault AES 密钥环及手动重加密（2026-10-31）
+
+- [SEC-006](docs/security/seller-key-rotation.md)：V7 单密钥向多版本密钥环兼容升级，OAuth 写入、V8 验证与 Worker Vault 使用同一 cipher Bean。缺失旧密钥、重复版本、解密认证失败都必须拒绝，不能尝试降级。
+- 新增 OWNER + Session/CSRF 的 `POST /api/v1/seller-accounts/{accountId}/oauth/rotate-key`，只有 OAuth/SP-API 显式启用且 Demo 关闭时生效。按店铺数据库行锁 + 原版本 CAS + 新随机 nonce + 单事务 `KEY_REWRAPPED` 审计，已撤销凭证不可轮换。
+- **本地密钥重新加密不等于 Amazon LWA Refresh Token 周期续期**，不能因此扩大 Seller 权限。当前尚无 KMS Envelope Encryption、全局自动轮换、跨节点演练、真实 Seller 网络验收或生产 Worker；Compose V1–V9 应依据最终实际运行证据记录。

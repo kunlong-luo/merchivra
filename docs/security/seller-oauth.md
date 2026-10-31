@@ -74,3 +74,10 @@ Worker Vault 仅接受 24 小时内的证据。撤销、并发 claim、失效证
 仍来自 OAuth callback，Sellers API 不独立返回 Seller ID，也不证明 Finance 等角色。**
 此文前述的「未完成状态提升」是 V7 当时的状态，现以 V8 的受限实现和
 [SEC-005](seller-verification.md) 中的验收限制为准。
+
+## V9 · AES 密钥版本轮换
+
+[SEC-006](seller-key-rotation.md) 新增 V9 多版本 keyring 与按店铺手动原子
+rewrap，并保留旧密钥解密兼容。V7 前述固定 key_version=1 的限制现已
+部分解决，但这**不是 KMS Envelope Encryption、Amazon OAuth Token 续期
+或生产级全局密钥轮换验收**。

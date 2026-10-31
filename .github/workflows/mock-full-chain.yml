@@ -1,4 +1,4 @@
-# Regression focus: V7 OAuth schema must migrate without enabling live credentials.
+# Regression focus: V7-V9 OAuth/verification/rotation schemas must migrate without enabling live credentials.
 # V6 page-one durable commit survives container restart before page two.
 # Shared US/DE internal SKU remains tenant-scoped.
 name: Mock full-chain Compose validation
@@ -37,11 +37,15 @@ jobs:
             sleep 2
           done
           test "$ready" = 1
-      - name: Verify V7 encrypted OAuth tables migrated and live routes stay off
+      - name: Verify V7-V9 schemas migrated and live routes stay off
         run: |
           # The regular local Demo must never automatically enable real Seller OAuth.
-          applied=$(docker compose --env-file .env -f deploy/compose.yaml exec -T postgres             psql -U merchivra -d merchivra -Atc             "SELECT count(*) FROM flyway_schema_history WHERE version = '7' AND success")
-          test "$applied" = 1
+          applied=$(docker compose --env-file .env -f deploy/compose.yaml exec -T postgres             psql -U merchivra -d merchivra -Atc             "SELECT count(*) FROM flyway_schema_history WHERE version IN ('7','8','9') AND success")
+          test "$applied" = 3
+          verification_table=$(docker compose --env-file .env -f deploy/compose.yaml exec -T postgres \
+            psql -U merchivra -d merchivra -Atc \
+            "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='spapi_marketplace_verification'")
+          test "$verification_table" = 1
           status=$(curl -sS -o /dev/null -w '%{http_code}'             http://127.0.0.1:3000/api/v1/spapi/oauth/callback)
           # Spring Security may guard the /error dispatch after an absent
           # controller; either anonymous 401 or route 404 is fail-closed.

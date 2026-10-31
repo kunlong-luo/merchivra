@@ -44,4 +44,48 @@ class SellerTokenCipherTest {
         assertThrows(IllegalStateException.class, () -> c.decrypt(t,a,"SELLER-EXAMPLE",
             new SellerTokenCipher.Sealed(token.ciphertext(),token.nonce(),2)));
     }
+
+    private static String key(byte fill) {
+        byte[] bytes=new byte[32];
+        java.util.Arrays.fill(bytes,fill);
+        return Base64.getEncoder().encodeToString(bytes);
+    }
+
+    @Test
+    void v9CanReadOldCiphertextAndRewrapUnderNewActiveKey() {
+        UUID tenant=UUID.randomUUID(), account=UUID.randomUUID();
+        var old=new SellerTokenCipher(key((byte)1),1);
+        var first=old.encrypt(tenant,account,"SELLER-EXAMPLE","fake-grant");
+        var next=SellerTokenCipher.configured(
+            "1:"+key((byte)1)+",2:"+key((byte)2), "", 2);
+        assertEquals(2,next.activeVersion());
+        assertEquals("fake-grant",next.decrypt(tenant,account,"SELLER-EXAMPLE",first));
+        var sealed=next.encrypt(tenant,account,"SELLER-EXAMPLE",
+            next.decrypt(tenant,account,"SELLER-EXAMPLE",first));
+        assertEquals(2,sealed.version());
+        assertEquals("fake-grant",next.decrypt(tenant,account,"SELLER-EXAMPLE",sealed));
+        assertThrows(IllegalStateException.class, () ->
+            old.decrypt(tenant,account,"SELLER-EXAMPLE",sealed));
+        assertThrows(SecurityException.class, () ->
+            next.decrypt(tenant,UUID.randomUUID(),"SELLER-EXAMPLE",sealed));
+    }
+
+    @Test
+    void keyringConfigFailsClosedOnMissingOrDuplicateVersionsAndTampering() {
+        assertThrows(IllegalArgumentException.class, () ->
+            SellerTokenCipher.configured("1:"+key((byte)1),"also-provided",1));
+        assertThrows(IllegalArgumentException.class, () ->
+            SellerTokenCipher.configured("1:"+key((byte)1)+",1:"+key((byte)2),"",1));
+        assertThrows(IllegalArgumentException.class, () ->
+            SellerTokenCipher.configured("1:"+key((byte)1),"",2));
+        assertThrows(IllegalArgumentException.class, () ->
+            SellerTokenCipher.configured("",key((byte)1),2));
+        assertThrows(IllegalArgumentException.class, () ->
+            SellerTokenCipher.configured("1:malformed","",1));
+        var newOnly=SellerTokenCipher.configured("2:"+key((byte)2),"",2);
+        var first=new SellerTokenCipher(key((byte)1),1)
+            .encrypt(UUID.randomUUID(),UUID.randomUUID(),"SELLER","fake");
+        assertThrows(IllegalStateException.class, () ->
+            newOnly.decrypt(UUID.randomUUID(),UUID.randomUUID(),"SELLER",first));
+    }
 }

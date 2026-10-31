@@ -51,5 +51,8 @@ merchivra:
       application-id: ${MERCHIVRA_SPAPI_APP_ID:}
       redirect-uri: ${MERCHIVRA_SPAPI_OAUTH_REDIRECT_URI:}
       encryption-key-base64: ${MERCHIVRA_SPAPI_OAUTH_ENCRYPTION_KEY_BASE64:}
+      # Alternative to legacy key: comma-separated version:Base64Key entries.
+      encryption-keyring: ${MERCHIVRA_SPAPI_OAUTH_ENCRYPTION_KEYRING:}
+      active-key-version: ${MERCHIVRA_SPAPI_OAUTH_ACTIVE_KEY_VERSION:1}
       allowed-amazon-origins: ${MERCHIVRA_SPAPI_OAUTH_AMAZON_ORIGINS:}
       secure-cookie: ${MERCHIVRA_SPAPI_OAUTH_SECURE_COOKIE:true}

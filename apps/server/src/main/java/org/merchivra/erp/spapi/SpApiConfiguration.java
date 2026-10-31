@@ -23,12 +23,33 @@ public class SpApiConfiguration {
         return new SpApiOfficialSdkFactory(clientId, clientSecret, true, sandbox);
     }
 
+
+    @Bean
+    @ConditionalOnProperty(prefix="merchivra.spapi.oauth", name="enabled", havingValue="true")
+    SellerTokenCipher sellerTokenCipher(
+        @Value("${merchivra.spapi.oauth.encryption-keyring:}") String keyring,
+        @Value("${merchivra.spapi.oauth.encryption-key-base64:}") String legacyKey,
+        @Value("${merchivra.spapi.oauth.active-key-version:1}") int activeVersion) {
+        return SellerTokenCipher.configured(keyring,legacyKey,activeVersion);
+    }
+
     @Bean
     @ConditionalOnProperty(prefix="merchivra.spapi.oauth", name="enabled", havingValue="true")
     SpApiSellerGrantVault spApiSellerGrantVault(
+        org.springframework.jdbc.core.JdbcTemplate jdbc, SellerTokenCipher cipher) {
+        return new SpApiSellerGrantVault(jdbc,cipher);
+    }
+
+    @Bean
+    @ConditionalOnProperty(prefix="merchivra.spapi.oauth", name="enabled", havingValue="true")
+    SellerGrantKeyRotationService sellerGrantKeyRotationService(
         org.springframework.jdbc.core.JdbcTemplate jdbc,
-        @Value("${merchivra.spapi.oauth.encryption-key-base64:}") String key) {
-        return new SpApiSellerGrantVault(jdbc,new SellerTokenCipher(key,1));
+        org.springframework.transaction.support.TransactionTemplate transactions,
+        SellerTokenCipher cipher,
+        @Value("${merchivra.demo.enabled:false}") boolean demoEnabled) {
+        if (demoEnabled) throw new IllegalStateException(
+            "Real Seller vault operations cannot run in Demo mode");
+        return new SellerGrantKeyRotationService(jdbc,transactions,cipher);
     }
 
     @Bean
@@ -36,7 +57,7 @@ public class SpApiConfiguration {
     SellerOauthService sellerOauthService(
         org.springframework.jdbc.core.JdbcTemplate jdbc,
         org.springframework.transaction.support.TransactionTemplate transactions,
-        @Value("${merchivra.spapi.oauth.encryption-key-base64:}") String key,
+        SellerTokenCipher cipher,
         @Value("${merchivra.spapi.oauth.application-id:}") String appId,
         @Value("${merchivra.spapi.oauth.redirect-uri:}") String redirectUri,
         @Value("${merchivra.spapi.oauth.allowed-amazon-origins:}") String origins,
@@ -45,7 +66,6 @@ public class SpApiConfiguration {
         @Value("${merchivra.demo.enabled:false}") boolean demoEnabled) {
         if (demoEnabled) throw new IllegalStateException(
             "Real Seller OAuth cannot be enabled together with synthetic Demo mode");
-        var cipher = new SellerTokenCipher(key, 1);
         var exchanger = LwaAuthorizationCodeClient.official(clientId,clientSecret,redirectUri);
         var allowed = java.util.Arrays.stream(origins.split(","))
             .map(String::trim).filter(v -> !v.isBlank())
@@ -86,9 +106,8 @@ public class SpApiConfiguration {
     SellerConnectionVerificationService sellerConnectionVerificationService(
         org.springframework.jdbc.core.JdbcTemplate jdbc,
         org.springframework.transaction.support.TransactionTemplate transactions,
-        SellerMarketplaceGateway gateway,
-        @Value("${merchivra.spapi.oauth.encryption-key-base64:}") String key) {
+        SellerMarketplaceGateway gateway, SellerTokenCipher cipher) {
         return new SellerConnectionVerificationService(jdbc,transactions,
-            new SellerTokenCipher(key,1),gateway,java.time.Clock.systemUTC());
+            cipher,gateway,java.time.Clock.systemUTC());
     }
 }
