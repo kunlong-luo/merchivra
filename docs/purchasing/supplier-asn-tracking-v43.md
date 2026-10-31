@@ -24,6 +24,7 @@
 | 方法 | 路径 | 说明 |
 |---|---|---|
 | GET/POST | `/api/v1/purchasing/supplier-asns/orders/{orderId}` | 本地采购单 ASN 列表 / 创建 ASN；提交 `requestKey,lineId,warehouseId,quantity,expectedArrivalDate,trackingReference` |
+| GET | `/api/v1/purchasing/supplier-asns/orders/{orderId}/{asnId}/events` | 读取该采购单 ASN 的最近 200 条追加式来源事件，包括申报、ETA 变化、关联收货，不合并或推定实际物流状态 |
 | POST | `/api/v1/purchasing/supplier-asns/orders/{orderId}/{asnId}/ship` | Owner 人工记录供应商已申报发货（非承运商确认） |
 | POST | `/api/v1/purchasing/supplier-asns/orders/{orderId}/{asnId}/cancel` | 取消尚未发生实际关联收货的 ASN |
 | POST | `/api/v1/purchasing/supplier-asns/orders/{orderId}/{asnId}/eta` | `expectedArrivalDate,expectedPreviousEta,reason` 有审计的 ETA 更新 |
