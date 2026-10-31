@@ -428,3 +428,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - `erp_local_stock_finding` 状态更改必须 Owner + CSRF、Session tenant 隔离、带审计，扫描幂等；DONE 状态仅在实际条件消失并再次出现后重新打开。
 - 仓储计划扫描默认关闭；只有配置 `merchivra.warehouse-alerts.scheduler-enabled=true` 才允许启动本地-only 巡检。没有 Amazon 写入、自动采购或外部消息。
 - V41 约束与接口见 `docs/purchasing/local-stock-alerts-v41.md`；CI 不替代 PG18/Flyway/多实例真实验收。
+
+## V42 · 供应商规则与采购计划安全边界（2026-10-31）
+
+- 供应商 SKU 条款按租户隔离，包含 MOQ、包装倍数、交期自然日、原币采购单价；不得将其解释为 Amazon 货件 ETA 或真实平台成本。
+- 本地采购计划只允许仓库/SKU 有库存流水证据且 V41 本地策略触发低库存时提出；数量 = `ceil(max(targetStock-onHand,MOQ)/packMultiple)*packMultiple`，最大 PO 单行 1,000,000 件。
+- 人工保存计划和人工转采购单 DRAFT 是两次不同的 Owner + CSRF 动作；转换前必须重新检查仓库最后流水 ID、本地库存、策略和供应商版本。请求 UUID 幂等，同一仓库 SKU 库存流水证据全生命周期不可重复计划/创建 PO；变更一经保存保留来源快照/审计。
+- 后续继续既有双人审批，不自动向 Amazon、供应商、支付或 FBA Inbound 写入。未按仓分配的采购待收货仅供参考不能冲减本地仓库建议。V42 见 `docs/purchasing/supplier-purchase-planning-v42.md`；未经 PG18/HTTP 并发验收勿声称生产完工。
