@@ -54,6 +54,16 @@ const server = createServer(async (req, res) => {
       : respond(res, { userId: account, activeTenantId: tenant, availableTenantIds:[tenant] })
   }
   if (url.pathname === '/api/v1/ping') return respond(res, { status:'ok' })
+  if (url.pathname === '/api/v1/operations/summary')
+    return respond(res, { open:1, acknowledged:0, done:0, cleared:0 })
+  if (url.pathname === '/api/v1/operations/findings')
+    return respond(res, [{
+      id:'77777777-7777-4777-8777-777777777777',
+      marketplaceId:market, ruleCode:'INVENTORY_UNKNOWN',
+      sourceKey:'TEST-SKU-100', title:'FBA 库存数据不完整',
+      severity:'WARNING', state:'OPEN', dataOrigin:'MOCK',
+      lastSeenAt:'2026-10-31T00:00:00Z'
+    }])
   if (url.pathname.startsWith('/api/v1/')) {
     if (mock.has(url.pathname)) return respond(res, mock.get(url.pathname))
     if (url.pathname.endsWith('/pages')) return respond(res,
@@ -211,6 +221,16 @@ async function main() {
       assert.ok(cells.includes('未知'),'Unknown inventory must stay unknown')
       assert.ok(cells.includes('0'),'Observed zero must stay zero')
       await screenshot(send,'core-inventory-360.png',true)
+      await evaluate(send, "(() => {const btn=[...document.querySelectorAll('.nav-link')]" +
+        ".find(b=>b.textContent.includes('运营自动化'));if(!btn)throw Error('Missing operations navigation');btn.click();})()")
+      await waitFor(send,
+        "document.querySelector('.ops-workspace tbody tr')?.textContent?.includes('模拟测试')",
+        'operations triage')
+      assert.equal(await evaluate(send,
+        "document.querySelector('.ops-workspace tbody tr')?.textContent?.includes('FBA 库存数据不完整')"),
+        true, 'operations rule label')
+      await layout(send,width,'operations-360')
+      await screenshot(send,'operations-360.png')
     }
   }
   console.log('Chromium responsive UI smoke PASS (synthetic backend only).')
