@@ -20,7 +20,7 @@ async function api<T>(marketplace:string,action:string,schema:z.ZodType<T>,
  if(!res.ok){
   if(res.status===403)throw Error('仅 Owner 可配置补货建议')
   if(res.status===404)throw Error('Listing 或补货策略未找到')
-  if(res.status===409)throw Error('建议、映射或库存观测已变化，请刷新后重新确认；或该请求编号已被使用')
+  if(res.status===409)throw Error('库存建议/映射已变化，或这条观测已生成采购草稿；请查看来源历史并刷新后确认')
   throw Error('补货接口 HTTP '+res.status)
  }
  return res.status===204?undefined as T:schema.parse(await res.json())
