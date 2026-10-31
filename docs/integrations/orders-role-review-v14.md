@@ -33,3 +33,10 @@ Java 25 单测检查坏证据格式不写库、无 Seller grant 拒绝申请、�
 当前**没有**真实 Amazon 审核材料，也没有实际角色批准证据，因此任何生产 LIVE Orders 请求仍默认禁止。不能把这种离线双人批准逻辑当作 Amazon 已核验或生产已经安全上线。
 
 参考： https://developer-docs.amazon.com/sp-api/docs/orders-api
+
+
+## 2026-10-31 · V11D / V14 已执行的验证
+
+- [Java 25 Maven 单测 + Vue TypeScript/Vitest/Vite CI 通过](https://github.com/kunlong-luo/merchivra/actions/runs/41156896032)：包含官方 SDK 类型化合成订单模型、缺失 Orders 角色拒绝、Marketplaces 归属错误拒绝、履约缺失不推断、V14 双人审批权限与审计测试。
+- [PostgreSQL 18 + Spring Boot + Nginx Compose 全链路通过](https://github.com/kunlong-luo/merchivra/actions/runs/41156896071)：实际执行 Flyway V1–V14，断言 V12 已批准角色为空、V14 申请/审核审计均为空，继续测试模拟 Session/CSRF、先提交页1→真实重启后端→恢复页2/水位/去重。
+- **这些全部是离线/模拟数据验收**：没有使用真实 Seller refresh token，也没有任何真实 Amazon 开发者后台角色证据、两位生产审核员或 LIVE 网络同步。在运营角色管理员 UI 完整、外部角色核验以及实际 Seller 授权验收前，V11D/V14 不能称为生产就绪。

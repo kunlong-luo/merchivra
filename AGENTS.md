@@ -208,3 +208,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - [V14 Orders 角色双人审核](docs/integrations/orders-role-review-v14.md)：Flyway V14 `spapi_orders_role_review_request` / `spapi_orders_role_review_audit`；默认关闭 `MERCHIVRA_SPAPI_ORDERS_ROLE_REVIEW_ENABLED=false`，必须由当前租户 OWNER 提交真实外部角色材料的 SHA-256 与非敏感 case reference，再由**另一位**拥有独立 `SECURITY_REVIEWER` 角色的有效 OWNER 人工复核。不能自动给审核人角色、不能申请者自批、不能因 Seller OAuth 或 Marketplace 核验自动生成 Orders role evidence。
 - 审批生成 V12 的 7 天有效角色证据，经过当前 Seller grant 版本核验与历史审计；Owner 可紧急撤销。默认无任何角色、证据或审批记录。尚无受信任的账号开通/审核角色授予 UI，因此在外部管理权限、真实 Amazon 角色审批证据未验收前不得进入 LIVE 生产。
 - [V11D Typed SDK](docs/integrations/orders-worker-v11.md) 的 LIVE 读取改用官方 Java SDK `SearchOrdersApi.searchOrders`，不请求 BUYER/RECIPIENT，审批门禁仍在内部网关和事务内复核；真实 Seller API 流量尚未验收。
+
+
+## 2026-10-31 · V11D / V14 已执行的验证
+
+- [Java 25 Maven 单测 + Vue TypeScript/Vitest/Vite CI 通过](https://github.com/kunlong-luo/merchivra/actions/runs/41156896032)：包含官方 SDK 类型化合成订单模型、缺失 Orders 角色拒绝、Marketplaces 归属错误拒绝、履约缺失不推断、V14 双人审批权限与审计测试。
+- [PostgreSQL 18 + Spring Boot + Nginx Compose 全链路通过](https://github.com/kunlong-luo/merchivra/actions/runs/41156896071)：实际执行 Flyway V1–V14，断言 V12 已批准角色为空、V14 申请/审核审计均为空，继续测试模拟 Session/CSRF、先提交页1→真实重启后端→恢复页2/水位/去重。
+- **这些全部是离线/模拟数据验收**：没有使用真实 Seller refresh token，也没有任何真实 Amazon 开发者后台角色证据、两位生产审核员或 LIVE 网络同步。在运营角色管理员 UI 完整、外部角色核验以及实际 Seller 授权验收前，V11D/V14 不能称为生产就绪。
