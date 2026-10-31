@@ -31,6 +31,7 @@ public class OrdersSyncService {
     private final OrdersSyncSource source;
     private final Clock clock;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public OrdersSyncService(JdbcTemplate jdbc, TransactionTemplate tx, OrdersSyncSource source) {
         this(jdbc, tx, source, Clock.systemUTC());
     }
