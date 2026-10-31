@@ -102,6 +102,29 @@ class SupplierPurchasePlanServiceTest {
         verify(jdbc,never()).update(anyString(),any(Object[].class));
         verifyNoInteractions(purchasing);
     }
+    @Test void otherOpenSkuPurchaseBlocksDuplicateLocalPlanning(){
+        tenantAndWarehouse();
+        when(jdbc.queryForList(contains("FROM erp_local_purchase_plan"),
+            eq(UUID.class),eq(tenant),eq(key))).thenReturn(List.of());
+        current(source(5L,evidence.toString()));
+        when(jdbc.queryForObject(contains("FROM erp_purchase_order_line l"),
+            eq(Integer.class),eq(tenant),eq(sku))).thenReturn(1);
+        assertEquals(HttpStatus.CONFLICT,assertThrows(ResponseStatusException.class,
+            ()->service.propose(tenant,actor,request())).getStatusCode());
+        verify(jdbc,never()).update(anyString(),any(Object[].class));
+        verifyNoInteractions(purchasing);
+    }
+    @Test void unconvertedPlanForAnotherWarehouseCannotCauseSecondSkuPlan(){
+        tenantAndWarehouse();
+        when(jdbc.queryForList(contains("FROM erp_local_purchase_plan"),
+            eq(UUID.class),eq(tenant),eq(key))).thenReturn(List.of());
+        current(source(5L,evidence.toString()));
+        when(jdbc.queryForObject(contains("FROM erp_local_purchase_plan"),
+            eq(Integer.class),eq(tenant),eq(sku))).thenReturn(1);
+        assertEquals(HttpStatus.CONFLICT,assertThrows(ResponseStatusException.class,
+            ()->service.propose(tenant,actor,request())).getStatusCode());
+        verify(jdbc,never()).update(anyString(),any(Object[].class));
+    }
     @Test void exactIdempotentPlanReplayDoesNotInsertOrMakePurchaseOrder(){
         when(jdbc.queryForList(contains("FROM tenant"),eq(UUID.class),eq(tenant)))
             .thenReturn(List.of(tenant));
