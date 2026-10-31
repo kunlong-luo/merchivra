@@ -51,7 +51,8 @@ const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', 'http://127.0.0.1')
   if (url.pathname === '/api/v1/auth/me') {
     return mode === 'guest' ? respond(res, { error:'Not authenticated' }, 401)
-      : respond(res, { userId: account, activeTenantId: tenant, availableTenantIds:[tenant] })
+      : respond(res, { userId: account, activeTenantId: tenant, availableTenantIds:[tenant],
+          isOwner: mode !== 'staff' })
   }
   if (url.pathname === '/api/v1/ping') return respond(res, { status:'ok' })
   if (url.pathname === '/api/v1/team/members') return respond(res, [
@@ -214,6 +215,21 @@ async function main() {
       'login '+width)
     await layout(send,width,'guest-'+width)
     if(width===360)await screenshot(send,'guest-360.png')
+    if(width===360) {
+      mode='staff'
+      await send('Page.navigate',{url:url+'?staff='+width})
+      await waitFor(send,
+        "document.querySelectorAll('.core-data-scroll tbody tr').length===2",
+        'V16 read-only staff core data')
+      assert.equal(await evaluate(send,
+        "document.querySelectorAll('.nav-link').length"),1,
+        'staff navigation must only show core data')
+      assert.equal(await evaluate(send,
+        "!!document.querySelector('.team-workspace, .core-tools, .orders-sync-panel')"),false,
+        'staff must not see admin tools or sync actions')
+      await layout(send,width,'scoped-staff-360')
+      await screenshot(send,'scoped-staff-360.png')
+    }
     mode='core'
     await send('Page.navigate',{url:url+'?core='+width})
     await waitFor(send,"document.querySelectorAll('.core-data-scroll tbody tr').length===2",

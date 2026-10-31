@@ -23,7 +23,10 @@ public final class ReadOnlyStaffGuardFilter extends OncePerRequestFilter {
         HttpServletResponse response,FilterChain chain) throws ServletException,IOException {
         String path=request.getServletPath();
         if(!path.startsWith("/api/v1/") || path.equals("/api/v1/ping")
-          || path.startsWith("/api/v1/auth/")
+          || path.equals("/api/v1/auth/csrf") || path.equals("/api/v1/auth/me")
+          || path.equals("/api/v1/auth/login") || path.equals("/api/v1/auth/logout")
+          || path.equals("/api/v1/auth/active-tenant")
+          || path.equals("/api/v1/auth/invitations/accept")
           || path.equals("/api/v1/spapi/oauth/login")
           || path.equals("/api/v1/spapi/oauth/callback")) {
             chain.doFilter(request,response);return;
@@ -37,7 +40,7 @@ public final class ReadOnlyStaffGuardFilter extends OncePerRequestFilter {
         // Staff can only GET tenant/scoped read facts; no POST, no unscoped APIs.
         boolean coreRead="GET".equals(request.getMethod()) &&
             (path.equals("/api/v1/seller-marketplaces") ||
-             path.startsWith("/api/v1/seller-marketplaces/"));
+             path.matches("^/api/v1/seller-marketplaces/[0-9a-fA-F-]{36}/(orders|listings|inventory/fba)$"));
         if(!coreRead && access.accessibleTenants(auth).isEmpty()) {
             response.sendError(HttpServletResponse.SC_FORBIDDEN);return;
         }
