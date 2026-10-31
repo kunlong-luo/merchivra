@@ -314,3 +314,12 @@
 - [x] 新增 JUnit/Vitest 算法、来源快照、幂等和 CSRF 用例；以对应提交 CI 结果确认验证状态。
 - [ ] V42 PostgreSQL 18 迁移与并发、跨租户 HTTP，以及供应商报价阶梯、物流 ASN、到货预测与真实 Amazon Inbound 接入需另行验收/开发。
 - 文档：[PO-005 供应商采购计划](purchasing/supplier-purchase-planning-v42.md)。
+
+## V43 · 供应商预到货通知 ASN 与交期异常（2026-10-31）
+
+- [x] V43 数据迁移：采购行关联目标本地仓的供应商 ASN、来源请求幂等 UUID、计划到货日期、人工供应商申报状态、历史事件、可选 `erp_purchase_receipt.asn_id` 复合约束及持久交期异常审计。
+- [x] 新增明确供应商发货上报、ETA 更新（旧值匹配/原因审计）、取消未收货 ASN、查看真实链接入库量；采购收货在同一事务锁定 PO / ASN，防超量和不匹配仓库、采购行。
+- [x] 本地 ASN 未来三天到货及逾期待办，已完成/不匹配自动清除，Owner 可人工处理，按租户可选的计划巡检默认关闭。
+- [x] React 采购 ASN 管理、ETA 变更、关联实物收货、工作队列和单元契约测试；以对应最终 CI 记录为验证依据。
+- [ ] 真实 PostgreSQL 18 V43 Flyway/Compose、跨租户 HTTP、并发串行化及完整业务流程尚须专项验收；实际供应商 EDI、承运商 Tracking、真实 Amazon Inbound 尚未接入。
+- 参考：[PO-006 供应商 ASN 预到货与交期管理](purchasing/supplier-asn-tracking-v43.md)。
