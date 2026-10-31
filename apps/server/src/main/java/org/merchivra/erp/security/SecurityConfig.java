@@ -33,6 +33,7 @@ public class SecurityConfig {
                 .csrfTokenRequestHandler(csrfHandler))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/spapi/oauth/login", "/api/v1/spapi/oauth/callback").permitAll()
+                .requestMatchers("/api/v1/auth/invitations/accept").permitAll()
                 .requestMatchers("/api/v1/ping", "/api/v1/auth/csrf",
                     "/actuator/health", "/actuator/info").permitAll()
                 .anyRequest().authenticated())

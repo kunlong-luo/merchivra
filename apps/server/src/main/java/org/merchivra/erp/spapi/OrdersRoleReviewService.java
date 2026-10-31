@@ -86,6 +86,9 @@ public class OrdersRoleReviewService {
             JOIN role_binding rb ON rb.tenant_id=m.tenant_id AND rb.user_id=m.user_id
             WHERE m.tenant_id=? AND m.user_id=? AND m.status='ACTIVE'
               AND rb.role_code='SECURITY_REVIEWER'
+              AND EXISTS (SELECT 1 FROM role_binding owner
+                WHERE owner.tenant_id=m.tenant_id AND owner.user_id=m.user_id
+                  AND owner.role_code='OWNER' AND owner.seller_account_id IS NULL)
               AND (rb.seller_account_id IS NULL OR rb.seller_account_id=?)
             """,Integer.class,tenant,actor,account);
         if(count==null || count<1) throw new ResponseStatusException(

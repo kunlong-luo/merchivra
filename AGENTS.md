@@ -215,3 +215,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - [Java 25 Maven 单测 + Vue TypeScript/Vitest/Vite CI 通过](https://github.com/kunlong-luo/merchivra/actions/runs/41156896032)：包含官方 SDK 类型化合成订单模型、缺失 Orders 角色拒绝、Marketplaces 归属错误拒绝、履约缺失不推断、V14 双人审批权限与审计测试。
 - [PostgreSQL 18 + Spring Boot + Nginx Compose 全链路通过](https://github.com/kunlong-luo/merchivra/actions/runs/41156896071)：实际执行 Flyway V1–V14，断言 V12 已批准角色为空、V14 申请/审核审计均为空，继续测试模拟 Session/CSRF、先提交页1→真实重启后端→恢复页2/水位/去重。
 - **这些全部是离线/模拟数据验收**：没有使用真实 Seller refresh token，也没有任何真实 Amazon 开发者后台角色证据、两位生产审核员或 LIVE 网络同步。在运营角色管理员 UI 完整、外部角色核验以及实际 Seller 授权验收前，V11D/V14 不能称为生产就绪。
+
+
+## V15 多管理员团队与 SECURITY_REVIEWER 授权（2026-10-31）
+
+- 新增 `local_owner_invitation` + `local_team_audit`（Flyway V15）。默认 `MERCHIVRA_TEAM_ENABLED=false`；开启后当前 OWNER 生成 256-bit 24h 单次邀请令牌（SQL 只存 SHA256），受邀用户在匿名但 CSRF 防护的 `/api/v1/auth/invitations/accept` 自设 16+ 位 BCrypt 密码，获得同租户 OWNER 权限。只适用于**另一位全权限管理员**，不是普通员工 RBAC。
+- `LocalTeamService` 通过数据库事务、租户行锁和当前 OWNER Session 控制邀请、撤销、审核员角色授权。OWNER 不能给自己授予 `SECURITY_REVIEWER`，移除成员立即失去租户访问且不能移除最后一个 OWNER。所有变更写 `local_team_audit`，原始 token 不入库、不记日志、不在列表查询返回。
+- 独立的有效 OWNER+SECURITY_REVIEWER 才可执行 V14 Orders 应用角色审核。V12 Vault 与 V14 审核增加 Reviewer OWNER 角色要求。团队页面在前端单独展示，未启用时清晰提示；激活入口位于登录页。尚无员工细粒度权限、OIDC/MFA/邮件、正式 Amazon LIVE 验收。
+- [V15 说明与安全边界](docs/security/team-v15.md)。CI 包括 PostgreSQL 18 HTTP 双管理员邀请激活、身份/CSRF、审核员授予/撤销、成员撤销旧会话立刻失效，未经实际运行不得宣称通过。

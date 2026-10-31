@@ -30,6 +30,7 @@ services:
       DB_NAME: merchivra
       DB_USER: merchivra
       DB_PASSWORD: ${MERCHIVRA_DB_PASSWORD:?Set MERCHIVRA_DB_PASSWORD in .env}
+      MERCHIVRA_TEAM_ENABLED: ${MERCHIVRA_TEAM_ENABLED:-false}
       MERCHIVRA_DEMO_ENABLED: 'true' # Only invented fixtures; real OAuth fails closed in Demo mode.
       MERCHIVRA_ORDERS_SYNC_ENABLED: ${MERCHIVRA_ORDERS_SYNC_ENABLED:-false}
       MERCHIVRA_ORDERS_SYNC_MODE: ${MERCHIVRA_ORDERS_SYNC_MODE:-MOCK}

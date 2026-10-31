@@ -28,6 +28,9 @@ management:
       show-details: never
 
 merchivra:
+  team:
+    # Explicitly opt in to multi-owner invitations and reviewer permissions.
+    enabled: ${MERCHIVRA_TEAM_ENABLED:false}
   demo:
     enabled: ${MERCHIVRA_DEMO_ENABLED:false}
   bootstrap:

@@ -36,7 +36,9 @@ public class TenantAccessService {
         return jdbc.queryForList("""
             SELECT m.tenant_id FROM membership m
             JOIN tenant t ON t.id = m.tenant_id
-            WHERE m.user_id = ? AND m.status = 'ACTIVE' AND t.status = 'ACTIVE'
+            JOIN app_user u ON u.id=m.user_id
+            WHERE m.user_id = ? AND m.status = 'ACTIVE'
+              AND u.status='ACTIVE' AND t.status = 'ACTIVE'
               AND EXISTS (
                 SELECT 1 FROM role_binding rb WHERE rb.tenant_id = m.tenant_id
                 AND rb.user_id = m.user_id AND rb.role_code = 'OWNER'
