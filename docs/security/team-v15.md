@@ -37,3 +37,11 @@ V15 包含 `local_team_audit`，记录 INVITED、INVITE_ACCEPTED、INVITE_REVOKE
 测试应以真实 PostgreSQL 18 / Java 25 / Nginx Compose 执行：Owner 登录 → 创建邀请 → 第二个会话激活/不可重放 → 第二个独立 Owner 登录 → 不能自授审核员 → Owner 授予并撤销另一位审核员 → 撤销成员后旧 Session 被拒绝，最后一个 OWNER 不可被删除 → 匿名/CSRF 拒绝。Java/Vue CI 另测输入、Schema、角色边界，浏览器验收独立进行。
 
 未实现：邀请邮件发送、企业 SSO/MFA、审计导出、邀请滥用限速、普通员工权限矩阵、生产凭证恢复、安全审核员对外部 Amazon 角色证据的自动真实性核验。正式 Amazon SP-API LIVE 仍默认关闭，且独立要求审核证据和运营验收。
+
+
+## V15 实际验收证据（2026-10-31）
+
+- [Java 25 / Vue TypeScript / Vitest / Vite CI 41159636629](https://github.com/kunlong-luo/merchivra/actions/runs/41159636629) **成功**。
+- [PostgreSQL 18 + Java25 + Nginx Compose 41159526524](https://github.com/kunlong-luo/merchivra/actions/runs/41159526524) **成功**，执行 Flyway V1–V15，继续验证此前业务 Mock、订单双页 checkpoint、后端真实容器重启；包含 V15 一次性邀请、匿名/CSRF 拒绝、令牌重放失败、另一位 OWNER 独立账号登录、自授权 reviewer 拒绝、授予/撤销 reviewer、撤销 OWNER 后已登录旧 Session 拒绝访问、仍保留有效 OWNER。日志有 `PASS V15: PG18 2-Owner invitation ... membership immediate revocation`。
+- [Chrome 360px responsive UI 41159636546](https://github.com/kunlong-luo/merchivra/actions/runs/41159636546) **成功**，合成双管理员数据验证「团队与权限」成员表、Reviewer 标记、邀请入口和移动端布局，并保留此前 Mock/LIVE 订单面板的响应式检查。
+- 上述测试**不代表**生产安全审计、邮件邀请、MFA、SSO、员工/财务分权或 Amazon 正式角色审批；团队管理需显式开启，LIVE SP-API 仍默认关闭。
