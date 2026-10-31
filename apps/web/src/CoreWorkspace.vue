@@ -3,6 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { useQuery } from '@tanstack/vue-query'
 import SellerSetup from './SellerSetup.vue'
 import SandboxReplay from './SandboxReplay.vue'
+import OrdersSyncPanel from './OrdersSyncPanel.vue'
 import { coreStatusLabel, filterLoadedRows, formatSourceTime, sourceLabel } from './lib/core-view'
 import {
   fetchCoreMarketplaces, fetchCoreListings, fetchCoreOrders, fetchCoreInventory
@@ -215,6 +216,9 @@ function observed(value: number | null) {
         <summary><strong>本地店铺配置与测试工具</strong><span>添加 Marketplace、手动 Mock 回放 · 不连接 Amazon</span></summary>
         <div class="core-tools-content">
           <SellerSetup :tenant-id="tenantId" />
+          <OrdersSyncPanel v-if="activeMarketplace && activeMarketplace.connectionStatus === 'UNCONFIGURED'"
+            :key="'orders-'+activeMarketplace.id"
+            :tenant-id="tenantId" :marketplace-id="activeMarketplace.id" />
           <SandboxReplay v-if="activeMarketplace" :key="activeMarketplace.id"
             :tenant-id="tenantId" :marketplace-id="activeMarketplace.id"
             :marketplace-code="activeMarketplace.marketplaceId"

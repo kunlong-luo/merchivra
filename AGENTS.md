@@ -122,3 +122,11 @@
 - 后续参见 [#23 运营规则配置与通知](https://github.com/kunlong-luo/merchivra/issues/23)、
   [#24 补货采购审批](https://github.com/kunlong-luo/merchivra/issues/24)；
   真正 Amazon Orders Worker 继续受 #6/#8 的 P0 前置授权与角色审查约束。
+
+
+## V11A 订单增量 Worker 边界（2026-10-31）
+
+- [V11A 设计与验收](docs/integrations/orders-worker-v11.md)：Flyway V11 + `orders_sync_job` 持久化窗口、分页 Token、UUID 租约和 fencing epoch、每页事务提交、分页重放代数、429/5xx 延迟重试、20h Token 预期失效时重新扫描原窗口、完成时才推进安全水位。
+- **V11A 仅接 Mock 订单源**：`MERCHIVRA_ORDERS_SYNC_ENABLED=false` 默认关闭；开启必须 Demo=true 且真实 SP-API 出站=false，账号还必须是当前租户 LOCAL/UNCONFIGURED。Core 的测试工具面板显示分页/水位状态；没有真实 Seller Orders 请求、买家 PII、财务结算或自动发货。
+- 正式 Orders 同步在独立验证 Amazon Seller 的 Inventory and Order Tracking 等合规角色之前不得启动；`SpApiSellerGrantVault` 当前未持久化已获批角色，严禁伪造 approvedRoles 或绕过生产开关以偷跑实时 API。
+- 验收需 Java/Vue CI、真实 PG Compose Mock HTTP/CSRF/多页任务与重启，以及受控浏览器检查证据。未经执行不得宣称验证通过；生产角色/网络/流量与真实数据仍未验收。
