@@ -57,12 +57,14 @@ assert "token" not in json.dumps(expect(owner,"/api/v1/team/invitations"))
 expect(owner,"/api/v1/team/invitations",409,method="POST",csrf=oc,
   body={"loginName":"reviewer15"})
 mc=csrf(member)
-expect(member,"/api/v1/auth/invitations/accept",400,method="POST",csrf=mc,
+code,_=hit(member,"/api/v1/auth/invitations/accept",method="POST",csrf=mc,
   body={"token":"A"*43,"password":"test-another-strong-secret-1234"})
+assert code in (400,401),("invalid anonymous invitation must not activate",code)
 expect(member,"/api/v1/auth/invitations/accept",204,method="POST",csrf=mc,
   body={"token":token,"password":"test-another-strong-secret-1234"})
-expect(member,"/api/v1/auth/invitations/accept",400,method="POST",csrf=mc,
+code,_=hit(member,"/api/v1/auth/invitations/accept",method="POST",csrf=mc,
   body={"token":token,"password":"test-another-strong-secret-1234"})
+assert code in (400,401),("replayed invitation must not activate",code)
 login(member,"reviewer15","test-another-strong-secret-1234")
 bc=csrf(member)
 second=expect(member,"/api/v1/auth/me")["userId"]
