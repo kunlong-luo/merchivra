@@ -267,7 +267,7 @@ async function main() {
         ".find(x=>x.textContent.includes('团队与权限'));if(!b)throw Error('Missing V15 navigation');b.click();})()")
       try {
         await waitFor(send,
-          "document.querySelector('.team-workspace tbody tr')?.textContent?.includes('ops-reviewer')",
+          "[...document.querySelectorAll('.team-workspace tbody tr')].some(x=>x.textContent.includes('ops-reviewer'))",
           'V15 team role list')
       } catch (e) {
         const state=await evaluate(send,
