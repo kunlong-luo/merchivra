@@ -52,4 +52,33 @@ public final class SpApiSellerGrantVault {
         return Optional.of(new SpApiSellerScope(tenant,account,g.seller(),marketplaceId,
             SpApiRegion.valueOf(g.region()),refresh,Set.of()));
     }
+
+    /**
+     * Orders read scope requires both verified Seller participation and
+     * independently reviewed, non-expired Orders role evidence. No endpoint
+     * or Seller Marketplace verification auto-creates this evidence.
+     */
+    public Optional<SpApiSellerScope> loadOrdersApproved(
+        UUID tenant, UUID account, String marketplaceId) {
+        Optional<SpApiSellerScope> base=loadVerified(tenant,account,marketplaceId);
+        if(base.isEmpty()) return Optional.empty();
+        SpApiSellerScope scope=base.get();
+        List<String> roles=jdbc.query("""
+            SELECT e.role_code FROM spapi_orders_role_evidence e
+            JOIN spapi_seller_authorization g
+              ON g.tenant_id=e.tenant_id AND g.seller_account_id=e.seller_account_id
+            WHERE e.tenant_id=? AND e.seller_account_id=?
+              AND e.role_code='Inventory and Order Tracking'
+              AND e.evidence_kind='EXTERNAL_APP_ROLE_REVIEW'
+              AND e.revoked_at IS NULL AND e.expires_at > now()
+              AND e.grant_verified_at = g.verified_at
+              AND g.status='VERIFIED' AND g.seller_id=? AND g.region=?
+            """, (rs,n)->rs.getString(1),tenant,account,
+            scope.sellerId(),scope.region().name());
+        if(!roles.contains("Inventory and Order Tracking")) return Optional.empty();
+        return Optional.of(new SpApiSellerScope(
+            scope.tenantId(),scope.sellerAccountId(),scope.sellerId(),
+            scope.marketplaceId(),scope.region(),scope.refreshToken(),
+            Set.of("Inventory and Order Tracking")));
+    }
 }

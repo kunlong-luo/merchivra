@@ -1,4 +1,4 @@
-# Regression focus: V7-V11 schemas migrate without enabling real Amazon credentials.
+# Regression focus: V7-V12 schemas migrate without enabling real Amazon credentials.
 # V6 page-one durable commit survives container restart before page two.
 # Shared US/DE internal SKU remains tenant-scoped.
 name: Mock full-chain Compose validation
@@ -16,6 +16,9 @@ on:
       - 'apps/server/src/test/java/org/merchivra/erp/orderssync/**'
       - apps/web/src/OrdersSyncPanel.vue
       - apps/web/src/lib/order-sync.ts
+      - apps/server/src/main/resources/db/migration/V12__orders_read_role_evidence.sql
+      - 'apps/server/src/main/java/org/merchivra/erp/spapi/**'
+      - 'apps/server/src/test/java/org/merchivra/erp/spapi/**'
       - deploy/compose.yaml
 jobs:
   mock-chain:
@@ -54,11 +57,11 @@ jobs:
           test "${major:0:2}" = 18
           docker compose --env-file .env -f deploy/compose.yaml exec -T postgres \
             sh -c 'test "$PGDATA" = /var/lib/postgresql/18/docker'
-      - name: Verify V7-V11 schemas migrated and live routes stay off
+      - name: Verify V7-V12 schemas migrated and live routes stay off
         run: |
           # The regular local Demo must never automatically enable real Seller OAuth.
-          applied=$(docker compose --env-file .env -f deploy/compose.yaml exec -T postgres             psql -U merchivra -d merchivra -Atc             "SELECT count(*) FROM flyway_schema_history WHERE version IN ('7','8','9','10','11') AND success")
-          test "$applied" = 5
+          applied=$(docker compose --env-file .env -f deploy/compose.yaml exec -T postgres             psql -U merchivra -d merchivra -Atc             "SELECT count(*) FROM flyway_schema_history WHERE version IN ('7','8','9','10','11','12') AND success")
+          test "$applied" = 6
           verification_table=$(docker compose --env-file .env -f deploy/compose.yaml exec -T postgres \
             psql -U merchivra -d merchivra -Atc \
             "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='spapi_marketplace_verification'")
@@ -75,6 +78,17 @@ jobs:
             psql -U merchivra -d merchivra -Atc \
             "SELECT count(*) FROM spapi_seller_authorization")
           test "$credential_rows" = 0
+          # Seller participation is NOT an independent Orders operation role
+          # approval. There must be no seeded/stale evidence in disposable Demo.
+          role_rows=$(docker compose --env-file .env -f deploy/compose.yaml exec -T postgres \
+            psql -U merchivra -d merchivra -Atc \
+            "SELECT count(*) FROM spapi_orders_role_evidence")
+          test "$role_rows" = 0
+          role_table=$(docker compose --env-file .env -f deploy/compose.yaml exec -T postgres \
+            psql -U merchivra -d merchivra -Atc \
+            "SELECT count(*) FROM information_schema.tables
+             WHERE table_schema='public' AND table_name='spapi_orders_role_evidence'")
+          test "$role_table" = 1
       - name: Verify Mock operations through real HTTP and PostgreSQL
         run: |
           set -a

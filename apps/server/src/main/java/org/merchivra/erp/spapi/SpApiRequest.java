@@ -26,6 +26,10 @@ public record SpApiRequest(
         query = Map.copyOf(query);
         grantedRoles = Set.copyOf(grantedRoles);
         operation.checkQuery(query);
+        if (operation.requiresOrdersReadRole()
+            && !grantedRoles.contains("Inventory and Order Tracking")) {
+            throw new SecurityException("Orders role not verified; outbound read denied");
+        }
         if (operation.requiresFinanceRole() && !grantedRoles.contains("Finance and Accounting")) {
             throw new SecurityException("Finances role not verified; do not request transactions");
         }

@@ -43,7 +43,7 @@ class SpApiClientTest {
         }, refresh -> { tokens.incrementAndGet(); return "fake-token"; },
             r -> URI.create("https://sellingpartnerapi-na.amazon.com"), false, false);
         assertThrows(IllegalStateException.class, () -> new SpApiReadOperations(client)
-            .getOrder(scope(Set.of()), "ORDER-001"));
+            .getOrder(scope(Set.of("Inventory and Order Tracking")), "ORDER-001"));
         assertEquals(0, sent.get());
         assertEquals(0, tokens.get());
     }
@@ -65,7 +65,7 @@ class SpApiClientTest {
         assertTrue(captured.get().uri().getRawPath().endsWith("/AMZ%2F123%20A"));
         assertEquals("unit-access-token",
             captured.get().headers().firstValue("x-amz-access-token").orElseThrow());
-        operations.searchOrders(scope(Set.of()), Instant.parse("2026-10-01T00:00:00Z"),
+        operations.searchOrders(scope(Set.of("Inventory and Order Tracking")), Instant.parse("2026-10-01T00:00:00Z"),
             Instant.parse("2026-10-02T00:00:00Z"), "token+ /=");
         assertTrue(captured.get().uri().getRawQuery().contains("paginationToken=token%2B%20%2F%3D"));
         assertFalse(captured.get().uri().getRawQuery().contains("BUYER"));
@@ -76,6 +76,13 @@ class SpApiClientTest {
         assertThrows(IllegalArgumentException.class, () -> SpApiRequest.read(
             SpApiRegion.NA, SpApiOperation.SEARCH_ORDERS, Map.of(),
             Map.of("includedData", "FULFILLMENT,BUYER"), Set.of()));
+        assertThrows(SecurityException.class, () -> SpApiRequest.read(
+            SpApiRegion.NA, SpApiOperation.SEARCH_ORDERS, Map.of(),
+            Map.of("marketplaceIds", "ATVPDKIKX0DER"), Set.of()));
+        assertDoesNotThrow(() -> SpApiRequest.read(
+            SpApiRegion.NA, SpApiOperation.SEARCH_ORDERS, Map.of(),
+            Map.of("marketplaceIds", "ATVPDKIKX0DER"),
+            Set.of("Inventory and Order Tracking")));
         assertThrows(SecurityException.class, () -> SpApiRequest.read(
             SpApiRegion.EU, SpApiOperation.LIST_TRANSACTIONS, Map.of(),
             Map.of("postedAfter", "2026-10-01T00:00:00Z"), Set.of()));

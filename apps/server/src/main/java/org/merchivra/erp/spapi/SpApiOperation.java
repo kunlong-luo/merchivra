@@ -79,6 +79,8 @@ public enum SpApiOperation {
     public Set<String> queryParameters() { return params; }
     public boolean mutatesRemoteState() { return !"GET".equals(method); }
     public boolean requiresFinanceRole() { return this == LIST_TRANSACTIONS; }
+    /** Explicitly narrower than Amazon's complete approved-role list. */
+    public boolean requiresOrdersReadRole() { return this == SEARCH_ORDERS || this == GET_ORDER; }
 
     public void checkQuery(Map<String, String> query) {
         if (query.keySet().stream().anyMatch(k -> !params.contains(k))) {

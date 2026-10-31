@@ -21,7 +21,12 @@ class SpApiSellerGrantVaultTest {
         // Empty results represent: missing, revoked, PENDING_VERIFICATION,
         // disconnected account, suspended tenant or foreign Marketplace.
         assertTrue(vault.loadVerified(tenant,account,"ATVPDKIKX0DER").isEmpty());
-        verify(jdbc).query(anyString(), any(RowMapper.class),
+        assertTrue(vault.loadOrdersApproved(tenant,account,"ATVPDKIKX0DER").isEmpty());
+        // Role evidence must never be consulted as a substitute for
+        // a missing/revoked Seller grant.
+        verify(jdbc,never()).query(contains("spapi_orders_role_evidence"),
+            any(RowMapper.class),any(),any(),any(),any());
+        verify(jdbc,times(2)).query(anyString(), any(RowMapper.class),
             eq(tenant),eq(account),eq("ATVPDKIKX0DER"));
         assertThrows(IllegalArgumentException.class, () ->
             vault.loadVerified(tenant,account,""));

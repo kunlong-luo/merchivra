@@ -30,8 +30,18 @@ public final class SpApiOfficialModules {
     private final SpApiOfficialSdkFactory sdk;
     public SpApiOfficialModules(SpApiOfficialSdkFactory sdk) { this.sdk=sdk; }
 
-    public SearchOrdersApi searchOrders(SpApiSellerScope scope) { return sdk.create(SearchOrdersApi.class, scope); }
-    public GetOrderApi ordersDetail(SpApiSellerScope scope) { return sdk.create(GetOrderApi.class, scope); }
+    public SearchOrdersApi searchOrders(SpApiSellerScope scope) {
+        requireOrdersRole(scope);
+        return sdk.create(SearchOrdersApi.class, scope);
+    }
+    public GetOrderApi ordersDetail(SpApiSellerScope scope) {
+        requireOrdersRole(scope);
+        return sdk.create(GetOrderApi.class, scope);
+    }
+    private static void requireOrdersRole(SpApiSellerScope scope) {
+        if (scope==null || !scope.approvedRoles().contains("Inventory and Order Tracking"))
+            throw new SecurityException("Orders role not verified");
+    }
     public ListingsApi listings(SpApiSellerScope scope) { return sdk.create(ListingsApi.class, scope); }
     public FbaInventoryApi fbaInventory(SpApiSellerScope scope) { return sdk.create(FbaInventoryApi.class, scope); }
     public CatalogApi catalog(SpApiSellerScope scope) { return sdk.create(CatalogApi.class, scope); }
