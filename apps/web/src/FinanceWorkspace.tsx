@@ -1,5 +1,6 @@
 import {useEffect,useState,type FormEvent} from 'react'
 import FinancesSyncPanel from './FinancesSyncPanel'
+import FinanceClassificationPanel from './FinanceClassificationPanel'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchCoreMarketplaces,fetchCoreOrders} from './lib/core'
 import {createManualFinanceEvent,fetchFinanceBuckets,fetchFinanceEvents,
@@ -175,6 +176,10 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
         <td>{b.amount===null?'未知':b.currency+' '+b.amount}</td>
         <td>{b.leaf?'末级明细':'包含子项，勿重复汇总'}</td>
        </tr>)}</tbody></table></div>}
+    {current.dataOrigin==='LIVE'&&<FinanceClassificationPanel
+      key={current.id} tenantId={tenantId} marketplaceId={currentId}
+      eventId={current.id} origin={current.dataOrigin}
+      rawBreakdowns={breakdowns.data}/>}
     <div className="sandbox-actions">
      <button className="primary-button" type="button" disabled={!selectedOrder||
       reviewed.isPending} onClick={()=>reviewed.mutate(selectedOrder)}>确认关联</button>

@@ -345,3 +345,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 
 
 - V27 财务 breakdown 一律保留 `source_path`/`parent_path` 层级及原币来源，不能同时加总父节点和子节点；旧来源重放数据不一致时必须冲突退出，不能覆盖。主财务汇总保持 UNCLASSIFIED 事实隔离，未取得明细不等于零费用。
+
+
+## V28 · 财务只读分类安全边界
+
+- `finance_source_event` 的原币 signed amount/sourceType/category 始终是不可变来源事实；`finance_breakdown_rule` 是当前人工解释规则，改变规则只能改变只读预览，不能自动写入原始事件、结算或记账总账。
+- 只有 source breakdown 的 `is_leaf=true` 可用于临时类别求和；必须排除父节点，验证所有末级已完整获得金额、币种与来源总额一致、全部明细已分类；任何缺口不得返回类别合计。
+- Marketplace+tenant+Owner 权限从 Session 推导，分类规则精准匹配 sourceType，变更创建/撤销有追加审计；无真实会计归属证明之前，不可称为最终利润、退款已核销或银行结算。

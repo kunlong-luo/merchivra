@@ -32,3 +32,8 @@
 `finance_transaction_breakdown` 用 `source_path` 和 `parent_path` 保留官方 `breakdowns[]` 嵌套父子节点、sourceType、可选原币有符号金额和末级标记。主财务汇总仍**只统计** `finance_source_event.totalAmount` 对应的 UNCLASSIFIED 来源事实，不额外把 breakdown 父子金额加进去。
 
 工作台可展开某个真实来源事件的明细，`GET /api/v1/finance/marketplaces/{marketplaceId}/events/{eventId}/breakdowns` 只允许当前租户 Owner 查看同站点事件。重放同键来源时，如果已有 breakdown 的父子、金额/类别不同，停止本页提交并保留先前可信内容；缺少 breakdown 不视为零费用。V27 是来源拆解基础，**并未自动证明佣金、税金、退款、结算类型和卖家可得净利润**。
+
+
+## V28 后续：规则分类与来源核平
+
+新增[人工分类规则与核平契约](finance-classification-v28.md)：业务人员明确审批原文 breakdown sourceType，不能对父子金额重复加总，只有所有末级原币与来源交易总额核平才显示待复核类别金额；原始 UNCLASSIFIED 财务事件仍不变。
