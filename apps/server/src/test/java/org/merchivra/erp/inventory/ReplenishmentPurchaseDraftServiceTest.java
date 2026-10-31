@@ -62,6 +62,19 @@ class ReplenishmentPurchaseDraftServiceTest {
         verify(jdbc,never()).update(anyString(),any(Object[].class));
     }
 
+    @Test void secondRequestKeyForSameObservationCannotProduceAnotherOrder() {
+        when(jdbc.queryForList(contains("FROM tenant"),eq(UUID.class),eq(tenant)))
+            .thenReturn(List.of(tenant));
+        when(jdbc.query(contains("erp_replenishment_purchase_draft_source"),
+            any(RowMapper.class),eq(tenant),eq(key))).thenReturn(List.of());
+        when(jdbc.queryForObject(contains("observation_id=?"),eq(Integer.class),
+            eq(tenant),eq(marketplace),eq("SKU-A"),eq(evidence))).thenReturn(1);
+        assertEquals(HttpStatus.CONFLICT,
+            assertThrows(ResponseStatusException.class,
+                ()->service.create(tenant,actor,marketplace,request())).getStatusCode());
+        verifyNoInteractions(purchasing);
+    }
+
     @Test void foreignOrSuspendedTenantCannotAcquireDraftLock() {
         when(jdbc.queryForList(contains("FROM tenant"),eq(UUID.class),eq(tenant)))
             .thenReturn(List.of());
