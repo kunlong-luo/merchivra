@@ -10,8 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
- * Local physical receipt evidence. This ledger tracks ONLY explicitly assigned
- * purchase receipts; it is not Amazon inventory, sellable stock, or an inbound ETA.
+ * Local warehouse ledger for assigned purchase receipts and explicit manual movements.
+ * Neither this ledger nor the resulting on-hand count is Amazon FBA/FBM inventory.
  */
 @Service
 public class WarehouseInventoryService {
@@ -20,10 +20,10 @@ public class WarehouseInventoryService {
 
     public record Warehouse(String id,String code,String name,String status) {}
     public record Stock(String warehouseId,String productSkuId,String internalSku,
-                        long recordedReceivedQuantity) {}
+                        long recordedReceivedQuantity,long onHandQuantity) {}
     public record Movement(String id,String warehouseId,String productSkuId,
-                           String internalSku,String purchaseReceiptId,int quantity,
-                           String movementType,String createdAt) {}
+                           String internalSku,String purchaseReceiptId,String operationId,
+                           int quantity,String movementType,String reason,String createdAt) {}
     public record PendingReceipt(String purchaseOrderId,String orderNumber,
                                  String purchaseOrderLineId,String productSkuId,
                                  String internalSku,String status,int orderedQuantity,
@@ -108,7 +108,9 @@ public class WarehouseInventoryService {
         requireReadable(tenant,warehouseId);
         return jdbc.query("""
             SELECT m.warehouse_id,m.product_sku_id,s.internal_sku,
-                   SUM(m.quantity)::bigint AS received_units
+                   SUM(CASE WHEN m.movement_type='PURCHASE_RECEIPT'
+                     THEN m.quantity ELSE 0 END)::bigint AS received_units,
+                   SUM(m.quantity)::bigint AS on_hand_units
             FROM erp_local_stock_movement m
             JOIN product_sku s ON s.tenant_id=m.tenant_id AND s.id=m.product_sku_id
             WHERE m.tenant_id=? AND m.warehouse_id=?
@@ -117,26 +119,35 @@ public class WarehouseInventoryService {
             """,(rs,i)->new Stock(
                 rs.getObject("warehouse_id",UUID.class).toString(),
                 rs.getObject("product_sku_id",UUID.class).toString(),
-                rs.getString("internal_sku"),rs.getLong("received_units")),
+                rs.getString("internal_sku"),rs.getLong("received_units"),
+                rs.getLong("on_hand_units")),
             tenant,warehouseId);
     }
     public List<Movement> ledger(UUID tenant,UUID warehouseId) {
         requireReadable(tenant,warehouseId);
         return jdbc.query("""
             SELECT m.id,m.warehouse_id,m.product_sku_id,s.internal_sku,
-                   m.purchase_receipt_id,m.quantity,m.movement_type,m.created_at
+                   m.purchase_receipt_id,m.operation_id,m.quantity,m.movement_type,
+                   o.reason,m.created_at
             FROM erp_local_stock_movement m
             JOIN product_sku s ON s.tenant_id=m.tenant_id AND s.id=m.product_sku_id
+            LEFT JOIN erp_local_stock_operation o
+              ON o.tenant_id=m.tenant_id AND o.id=m.operation_id
             WHERE m.tenant_id=? AND m.warehouse_id=?
             ORDER BY m.created_at DESC,m.id DESC LIMIT 100
-            """,(rs,i)->new Movement(
-                rs.getObject("id",UUID.class).toString(),
-                rs.getObject("warehouse_id",UUID.class).toString(),
-                rs.getObject("product_sku_id",UUID.class).toString(),
-                rs.getString("internal_sku"),
-                rs.getObject("purchase_receipt_id",UUID.class).toString(),
-                rs.getInt("quantity"),rs.getString("movement_type"),
-                rs.getObject("created_at",OffsetDateTime.class).toInstant().toString()),
+            """,(rs,i)->{
+                UUID receipt=rs.getObject("purchase_receipt_id",UUID.class);
+                UUID operation=rs.getObject("operation_id",UUID.class);
+                return new Movement(
+                    rs.getObject("id",UUID.class).toString(),
+                    rs.getObject("warehouse_id",UUID.class).toString(),
+                    rs.getObject("product_sku_id",UUID.class).toString(),
+                    rs.getString("internal_sku"),
+                    receipt==null?null:receipt.toString(),
+                    operation==null?null:operation.toString(),
+                    rs.getInt("quantity"),rs.getString("movement_type"),rs.getString("reason"),
+                    rs.getObject("created_at",OffsetDateTime.class).toInstant().toString());
+            },
             tenant,warehouseId);
     }
 
