@@ -4,6 +4,7 @@ import {fetchSkus} from './lib/catalog'
 import WarehouseAlertsPanel from './WarehouseAlertsPanel'
 import SupplierPurchasePlanningPanel from './SupplierPurchasePlanningPanel'
 import SupplierAsnPanel from './SupplierAsnPanel'
+import PurchaseQualityPanel from './PurchaseQualityPanel'
 import {createSupplier,fetchSuppliers,createPurchaseOrder,fetchPurchaseOrders,
  fetchPurchaseOrder,purchaseAction,receivePurchase,fetchWarehouses,createWarehouse,
  fetchWarehouseStock,fetchWarehouseLedger,fetchPendingReceipts,postStockOperation,
@@ -351,13 +352,15 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
        {movements.data.map(m=><tr key={m.id}>
         <td>{new Date(m.createdAt).toLocaleString('zh-CN')}</td>
         <td>{m.internalSku}</td><td>{m.quantity>0?'+':''}{m.quantity}</td>
-        <td>{m.movementType} · {m.purchaseReceiptId??m.operationId??'无来源'}</td>
+        <td>{m.movementType} · {m.purchaseReceiptId??m.operationId??m.inspectionId??'无来源'}</td>
         <td>{m.reason??'采购已审批收货'}</td>
        </tr>)}
       </tbody></table>
      </div>}
    </>}
   </section>
+  <PurchaseQualityPanel key={'qc-'+(selectedId||'no-order')}
+   tenantId={tenantId} orderId={selectedId} warehouses={warehouses.data??[]}/>
   <SupplierAsnPanel key={selectedId||'no-order'} tenantId={tenantId} orderId={selectedId}
    orderStatus={selected.data?.order.status??''}
    lines={selected.data?.lines??[]} warehouses={warehouses.data??[]}
