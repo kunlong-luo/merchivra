@@ -1,4 +1,4 @@
--- V25: fail-closed, operation-specific Orders v2026 read role evidence.
+-- V25: fail-closed, operation-specific Finances v2024 read role evidence.
 -- Sellers marketplace participation does NOT prove Amazon application roles.
 -- No automatic evidence insertion, no public attestation endpoint.
 CREATE TABLE spapi_finances_role_evidence (
@@ -54,7 +54,7 @@ CREATE TABLE spapi_finances_role_review_request (
         (state IN ('PENDING','STALE'))),
   CHECK(reviewed_by IS NULL OR reviewed_by <> requested_by)
 );
-CREATE UNIQUE INDEX spapi_orders_review_one_pending
+CREATE UNIQUE INDEX spapi_finances_review_one_pending
   ON spapi_finances_role_review_request(tenant_id,seller_account_id)
   WHERE state='PENDING';
 
