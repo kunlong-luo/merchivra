@@ -24,14 +24,6 @@ jobs:
       - name: Regenerate lockfile for React
         working-directory: apps/web
         run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
-      - name: Verify React stack and build
-        run: |
-          node scripts/check_react_only.mjs
-          cd apps/web
-          npm ci --no-audit --no-fund
-          npm run typecheck
-          npm test
-          npm run build
       - name: Commit only regenerated lockfile
         run: |
           git config user.name "github-actions[bot]"
@@ -41,3 +33,11 @@ jobs:
             git commit -m "chore(web): regenerate npm lockfile for React"
             git push origin HEAD:migration/react-only-frontend-2026-10-31
           fi
+      - name: Verify React stack and build
+        run: |
+          node scripts/check_react_only.mjs
+          cd apps/web
+          npm ci --no-audit --no-fund
+          npm run typecheck
+          npm test
+          npm run build
