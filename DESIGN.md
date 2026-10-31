@@ -105,3 +105,7 @@ Chrome synthetic navigation to this page and layout at 360px passed:
 [run 41151964910](https://github.com/kunlong-luo/merchivra/actions/runs/41151964910).
 The browser checks only explicitly exercised DOM rules; screen-reader,
 multi-browser and full keyboard path acceptance remain pending.
+
+## 2026-10-31 React implementation
+
+Component framework is React TSX (React 19.3), replacing Vue SFC. Preserve existing semantic class names, layout, 360px mobile tables, labels, source-origin indicators and CSRF-backed actions. Historical Vue-specific guidance is superseded. See [React ADR](docs/architecture/react-migration-2026-10-31.md).

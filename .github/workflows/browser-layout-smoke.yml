@@ -9,10 +9,14 @@ on:
     paths:
       - .github/workflows/browser-layout-smoke.yml
       - scripts/smoke_browser_layout.mjs
-      - apps/web/src/TeamWorkspace.vue
-      - apps/web/src/Root.vue
-      - apps/web/src/App.vue
+      - apps/web/src/TeamWorkspace.tsx
+      - apps/web/src/Root.tsx
+      - apps/web/src/App.tsx
       - apps/web/src/lib/team.ts
+      - 'apps/web/src/**/*.tsx'
+      - apps/web/package.json
+      - apps/web/package-lock.json
+      - apps/web/vite.config.ts
 
 permissions:
   contents: read

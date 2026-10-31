@@ -14,8 +14,8 @@
 ## 当前工程基线（2026-10-30）
 
 - **后端**：Java 25 LTS、Spring Boot 4.1.2、Spring Security 7、Jackson 3、Maven、Spring JDBC + Flyway、PostgreSQL 18。
-- **前端**：Node 24 LTS、Vue 3.5、TypeScript 6、Vite 8、TanStack Vue Query 5、Zod 4、Vitest；使用已提交的 `apps/web/package-lock.json` 与 **`npm ci`**，不要改回无锁安装。
-- **部署**：单体 API + Vue 静态页面、Docker Compose；Redis 预留而非所有功能都必须用。Dockerfile 与 GitHub Actions 必须和本地版本一致。
+- **前端（2026-10-31 React 迁移覆盖早期 Vue 决策）**：Node 24 LTS、React 19.3、React DOM、TypeScript 6、Vite 8、TanStack React Query 5、Zod 4、Vitest；使用已提交的 `apps/web/package-lock.json` 与 **`npm ci`**，不要改回无锁安装。
+- **部署**：单体 API + React 静态页面、Docker Compose；Redis 预留而非所有功能都必须用。Dockerfile 与 GitHub Actions 必须和本地版本一致。
 - 不迁移到 Gradle，除非存在实质工程收益并经维护者确认；添加依赖前先判断当前阶段是否真正使用。
 
 ## 测试与开发节奏
@@ -70,7 +70,7 @@
 
 ## UI / UX 设计纪律（2026-10-31）
 
-- 根目录 [DESIGN.md](DESIGN.md) 定义 Merchivra 的界面设计规范与质量检查清单。保留 Vue/TypeScript 业务代码、现有蓝黑品牌风格和 Core/Mock 数据边界；除非维护者同意，不安装 Impeccable 或其他设计插件、Hook、npm 依赖。
+- 根目录 [DESIGN.md](DESIGN.md) 定义 Merchivra 的界面设计规范与质量检查清单。保留 React/TypeScript 业务代码、现有蓝黑品牌风格和 Core/Mock 数据边界；除非维护者同意，不安装 Impeccable 或其他设计插件、Hook、npm 依赖。
 - 可直接参考公开的 Impeccable critique/audit/typeset/polish 方法进行**人工源码审查和小步修整**，但不可将此描述为已运行 Impeccable 专属检测器、浏览器截图比对、WCAG/性能认证。先解决操作信息层级、表格可读性、加载/错误/空状态、键盘焦点、手机触控、减少动画。
 - 状态标签与功能开关必须和真实权限一致。顶部“API 已连接”仅代表后端 API 可用，不代表 Amazon Seller 连接成功；Mock 不得暗示真实收入，未知库存不可写为0。所有 UX 更改需通过现有 Vue 类型检查、Vitest、构建，再做浏览器级验收。
 
@@ -249,3 +249,7 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - [Chromium 360px 员工界面验收 41162279336](https://github.com/kunlong-luo/merchivra/actions/runs/41162279336) **成功**；假设员工具有受限角色，验证仅有核心数据入口，团队/模拟导入/同步面板不展示；页面截图存放于 workflow artifacts。
 - 本轮还有显式安全收紧：服务端仅放行精确已审核的 Marketplace GET 读路径，OWNER 权限必须属于**当前 Session 所选租户**，而不是其他租户中的 OWNER 权限。生产真实 Amazon API 出站默认关闭。
 - **已完成的是初级 OPERATOR_READ 角色，不是全量员工 RBAC**。运营写入、采购、财务、SSO/MFA、外部生产安全审核均未完成，不能将模拟测试结果称作生产权限认证。
+
+## ADR React-only（2026-10-31，最新约束）
+
+用户已明确选择 **React 19** 替换 Vue：所有新 UI 用 React TSX、`@tanstack/react-query`、Vite React 插件、TypeScript + Zod。**禁止再新增 Vue SFC、vue-tsc、@vitejs/plugin-vue、@tanstack/vue-query、Pinia 或 Vue Router**。早期文件中的 Vue 描述仅为历史证据，**被本节覆盖**。保留 Spring Boot 4.1.2、Java 25、PostgreSQL 18、Maven、Flyway、租户 RBAC、Amazon 安全门禁。详见 [React 迁移 ADR](docs/architecture/react-migration-2026-10-31.md)。锁文件必须经过真实 npm registry 解析并提交，Docker 和 CI 用 npm ci。React 页面需执行类型检查、Vitest、Chromium 360/390/768/1280 冒烟与 PG18 Mock 全链路后方可视为验收。

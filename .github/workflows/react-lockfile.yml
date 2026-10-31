@@ -1,0 +1,45 @@
+name: React migration lockfile regeneration (one-time)
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/web/package.json
+      - .github/workflows/react-lockfile.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: merchivra-react-lockfile
+  cancel-in-progress: false
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+          package-manager-cache: false
+      - name: Resolve React-only dependency graph from npm registry
+        working-directory: apps/web
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Ensure no Vue dependencies remain in lockfile
+        run: |
+          node - <<'NODE'
+          const lock=require('./apps/web/package-lock.json')
+          const vue=Object.keys(lock.packages||{}).filter(p=>/node_modules\/(?:@vue\/|vue(?:$|\/)|vue-tsc|@tanstack\/vue-query|@vitejs\/plugin-vue)/.test(p))
+          if(vue.length)throw Error('Unexpected Vue in production lockfile: '+vue.join(', '))
+          NODE
+      - name: Commit fully resolved lockfile to main
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/web/package-lock.json
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'chore(web): regenerate npm lockfile for React 19'
+          git push origin HEAD:main

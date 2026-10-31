@@ -44,3 +44,7 @@ Pagevela 的集中写入协调器思想可用于 ERP 的 **Sync Stream + lease/f
 ## 版权与许可
 
 只借鉴公开工程策略，不直接复制 Pagevela 的品牌、UI 或业务文件；第三方依赖需确认 MIT/Apache 等许可证和后续安全更新策略。GitHub Actions 的依赖检查按可用版本升级，生产部署前固定操作 action SHA 和容器镜像 digest。
+
+## Superseding decision (2026-10-31): React-only
+
+The maintainer explicitly chose **React 19.3** over Vue. The earlier "Vue remains" decision is superseded. Replace TanStack Vue Query with TanStack React Query; keep Vite 8, TypeScript 6, Zod and Vitest; remove Vue SFC and related build dependencies. No requirement to migrate Spring Boot or PostgreSQL. [ADR](react-migration-2026-10-31.md).

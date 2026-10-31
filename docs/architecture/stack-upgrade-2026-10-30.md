@@ -54,3 +54,7 @@
 ## 2026-10-31 修订：PostgreSQL 18
 
 Compose 容器升级为官方 `postgres:18-alpine`，数据目录改为 `/var/lib/postgresql/18/docker`，新命名卷 `pgdata18` 挂载于 `/var/lib/postgresql`。旧 PostgreSQL 17 数据卷单独保留，须显式迁移，详见 [升级手册](../deployment/postgresql-18-upgrade.md)。历史 17 的 CI 证据仍保持原版本，不应改写。
+
+## 2026-10-31 React-only supersession
+
+Earlier Vue versions in this document represent the October 30 baseline only. The maintainer replaced Vue with **React 19.3 + React DOM + @vitejs/plugin-react + TanStack React Query** while retaining Vite 8, TS6, Node24, npm lockfile, Java25 and PostgreSQL18. See [current ADR](react-migration-2026-10-31.md). Do not add Vue packages to the active application.

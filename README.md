@@ -15,11 +15,11 @@
 
 ## Technology
 
-**Java 25 LTS / Spring Boot 4.1.2 / Spring Security 7 / Jackson 3 / Maven**, **Vue 3.5 / TypeScript 6.0.3 / Vite 8.3.5 / Vitest 5 / Node.js 24 LTS / npm ci**, TanStack Vue Query / Zod, PostgreSQL 18, Redis 7, Docker Compose.
+**Java 25 LTS / Spring Boot 4.1.2 / Spring Security 7 / Jackson 3 / Maven**, **React 19.3 / React DOM / TypeScript 6.0.3 / Vite 8.3.5 / Vitest 5 / Node.js 24 LTS / npm ci**, TanStack React Query / Zod, PostgreSQL 18, Redis 7, Docker Compose.
 
 See [October 2026 toolchain migration notes](docs/architecture/stack-upgrade-2026-10-30.md) and [Agent engineering policies](Agent.md). Frontend dependencies are now locked in `apps/web/package-lock.json`.
 
-Engineering conventions are informed by [Pagevela](https://github.com/kunlong-luo/pagevela) (CI, dependency hygiene and persistence coordination), while retaining the ERP-specific Java/Vue architecture. See [dependency decisions](docs/architecture/dependency-adoption.md).
+Engineering conventions are informed by [Pagevela](https://github.com/kunlong-luo/pagevela) (CI, dependency hygiene and persistence coordination), while retaining the ERP-specific Java/React architecture. See [dependency decisions](docs/architecture/dependency-adoption.md).
 
 ## Quick start (local Mock demonstration only)
 
@@ -142,3 +142,7 @@ Compose 使用 `postgres:18-alpine`，新卷 `pgdata18:/var/lib/postgresql`。�
 - [Chromium 360px 员工界面验收 41162279336](https://github.com/kunlong-luo/merchivra/actions/runs/41162279336) **成功**；假设员工具有受限角色，验证仅有核心数据入口，团队/模拟导入/同步面板不展示；页面截图存放于 workflow artifacts。
 - 本轮还有显式安全收紧：服务端仅放行精确已审核的 Marketplace GET 读路径，OWNER 权限必须属于**当前 Session 所选租户**，而不是其他租户中的 OWNER 权限。生产真实 Amazon API 出站默认关闭。
 - **已完成的是初级 OPERATOR_READ 角色，不是全量员工 RBAC**。运营写入、采购、财务、SSO/MFA、外部生产安全审核均未完成，不能将模拟测试结果称作生产权限认证。
+
+## React-only UI baseline (2026-10-31)
+
+The maintainer selected React, replacing the former Vue SPA. All live UI components now use React 19.3 TSX; no Vue runtime or SFC is supported. TanStack React Query replaces Vue Query; TypeScript/Vite/Zod remain. See [React migration ADR](docs/architecture/react-migration-2026-10-31.md) for details and acceptance caveats. Earlier CI entries mentioning Vue describe historical versions, not the current frontend. PostgreSQL 18 and the Amazon live-read safety gates are unchanged.

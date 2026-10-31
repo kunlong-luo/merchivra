@@ -13,7 +13,7 @@
 ## 技术栈
 
 - 后端：**Java 25 LTS / Spring Boot 4.1.2 / Spring Security 7 / Jackson 3 / Maven**
-- 前端：**Node.js 24 LTS / Vue 3.5 / Vite 8.3.5 / TypeScript 6.0.3 / Vitest 5**（npm lockfile 已提交）
+- 前端：**Node.js 24 LTS / React 19.3 / Vite 8.3.5 / TypeScript 6.0.3 / Vitest 5**（npm lockfile 已提交）
 - 数据库：PostgreSQL；缓存预留 Redis
 - 架构：模块化单体，后续根据业务量拆分 Worker
 - 部署：Docker Compose；CI：GitHub Actions（`npm ci` + Maven 快速单测，不运行 E2E）
@@ -125,3 +125,7 @@ Compose 使用 `postgres:18-alpine`，新卷 `pgdata18:/var/lib/postgresql`。�
 - [Chromium 360px 员工界面验收 41162279336](https://github.com/kunlong-luo/merchivra/actions/runs/41162279336) **成功**；假设员工具有受限角色，验证仅有核心数据入口，团队/模拟导入/同步面板不展示；页面截图存放于 workflow artifacts。
 - 本轮还有显式安全收紧：服务端仅放行精确已审核的 Marketplace GET 读路径，OWNER 权限必须属于**当前 Session 所选租户**，而不是其他租户中的 OWNER 权限。生产真实 Amazon API 出站默认关闭。
 - **已完成的是初级 OPERATOR_READ 角色，不是全量员工 RBAC**。运营写入、采购、财务、SSO/MFA、外部生产安全审核均未完成，不能将模拟测试结果称作生产权限认证。
+
+## 前端技术栈迁移：React-only（2026-10-31）
+
+项目维护者已确定弃用 Vue 系列。当前前端使用 **React 19.3 + React DOM + TypeScript 6 + Vite 8 + TanStack React Query + Zod**，所有 UI 入口和业务组件迁移到 TSX，不再保留 Vue 运行依赖与 SFC；Java25/Spring Boot4.1.2/PostgreSQL18/Maven 保持不变。详情：[React 迁移决策](docs/architecture/react-migration-2026-10-31.md)。历史文档中提到 Vue 的旧 CI 结果仅代表迁移前，不是当前技术栈。
