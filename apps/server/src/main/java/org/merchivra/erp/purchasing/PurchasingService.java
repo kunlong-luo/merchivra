@@ -19,7 +19,11 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class PurchasingService {
     private final JdbcTemplate jdbc;
-    public PurchasingService(JdbcTemplate jdbc){this.jdbc=jdbc;}
+    private final WarehouseInventoryService warehouses;
+    public PurchasingService(JdbcTemplate jdbc,WarehouseInventoryService warehouses){
+        this.jdbc=jdbc;
+        this.warehouses=warehouses;
+    }
 
     public record Supplier(String id,String code,String name,String status) {}
     public record Order(String id,String orderNumber,String supplierId,String status,
@@ -206,19 +210,27 @@ public class PurchasingService {
         return detail(tenant,orderId);
     }
     @Transactional
-    public Detail receive(UUID tenant,UUID actor,UUID orderId,UUID lineId,int quantity) {
+    public Detail receive(UUID tenant,UUID actor,UUID orderId,UUID lineId,int quantity,
+                          UUID warehouseId) {
         if(quantity<1 || quantity>1_000_000)throw bad("Receive quantity out of range");
+        if(warehouseId==null)throw bad("Local warehouse is required");
         Order order=requireOrder(tenant,orderId,true);
         if(!List.of("APPROVED","RECEIVING").contains(order.status()))throw invalidState();
         Detail previous=detail(tenant,orderId);
         Line line=previous.lines().stream().filter(l->l.id().equals(lineId.toString()))
             .findFirst().orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND));
         if(quantity>line.orderedQuantity()-line.receivedQuantity())throw invalidState();
+        warehouses.requireActive(tenant,warehouseId);
+        UUID receiptId=UUID.randomUUID();
         jdbc.update("""
             INSERT INTO erp_purchase_receipt
-              (id,tenant_id,purchase_order_id,purchase_order_line_id,quantity,received_by)
-            VALUES (?,?,?,?,?,?)
-            """,UUID.randomUUID(),tenant,orderId,lineId,quantity,actor);
+              (id,tenant_id,purchase_order_id,purchase_order_line_id,quantity,
+               received_by,warehouse_id)
+            VALUES (?,?,?,?,?,?,?)
+            """,receiptId,tenant,orderId,lineId,quantity,actor,warehouseId);
+        // In the same transaction as the receipt and PO transition: no partial stock posting.
+        warehouses.recordReceipt(tenant,actor,warehouseId,
+            UUID.fromString(line.productSkuId()),receiptId,quantity);
         boolean complete=previous.lines().stream().allMatch(l->
             l.receivedQuantity()+(l.id().equals(lineId.toString())?quantity:0)==l.orderedQuantity());
         String next=complete?"RECEIVED":"RECEIVING";
