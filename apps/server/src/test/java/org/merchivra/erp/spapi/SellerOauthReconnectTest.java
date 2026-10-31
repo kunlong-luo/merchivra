@@ -10,7 +10,7 @@ import java.util.function.Consumer;
 import org.junit.jupiter.api.Test;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.transaction.TransactionCallback;
+import org.springframework.transaction.support.TransactionCallback;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
