@@ -272,3 +272,10 @@
 - [ ] Ads API 独立 OAuth/报告、广告费用与 Finances 去重、SKU 广告归因及最终毛利/净利仍待开发。
 
 [广告费用 SKU 分摊](finance/ad-spend-sku-attribution-v36.md)
+
+## V37 · 补货建议转换本地采购草稿（2026-10-31）
+
+- [x] 代码提交：Owner 人工从 FBA 补货建议生成本地采购 `DRAFT`，创建前验证最新观测/策略版本/ACTIVE 内部 SKU 映射、采购价和供应商；同租户 UUID 请求幂等与 V37 不可变来源快照，React 操作与来源历史。
+- [x] 增加后端补货决策及拒绝测试，前端请求契约测试；**实际测试结论以 GitHub CI 为准**。
+- [ ] 待完整验收：PostgreSQL 18 Flyway V37、并发幂等/隔离、跨租户 HTTP/CSRF、浏览器实际操作；后续预测算法、MOQ、仓库履约、官方 Shipment API 均未实现。
+- **不自动采购**：只创建本地草稿，沿用 PO-001 提交和不同 Owner 审批，不使用 Amazon 写入 API。
