@@ -31,6 +31,12 @@ jobs:
       - name: Build frontend and check TypeScript
         working-directory: apps/web
         run: npm run build
+      - name: Install CJK fonts in disposable runner for faithful Chinese screenshots
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fonts-noto-cjk
+          fc-cache -f
+          fc-match -f '%{family}\n' 'Noto Sans CJK SC'
       - name: Browser layout and table provenance smoke with synthetic API
         run: |
           set -euo pipefail
