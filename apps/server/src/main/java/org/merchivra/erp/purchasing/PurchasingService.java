@@ -212,6 +212,12 @@ public class PurchasingService {
     @Transactional
     public Detail receive(UUID tenant,UUID actor,UUID orderId,UUID lineId,int quantity,
                           UUID warehouseId) {
+        return receive(tenant,actor,orderId,lineId,quantity,warehouseId,null);
+    }
+
+    @Transactional
+    public Detail receive(UUID tenant,UUID actor,UUID orderId,UUID lineId,int quantity,
+                          UUID warehouseId,UUID asnId) {
         if(quantity<1 || quantity>1_000_000)throw bad("Receive quantity out of range");
         if(warehouseId==null)throw bad("Local warehouse is required");
         Order order=requireOrder(tenant,orderId,true);
@@ -221,13 +227,38 @@ public class PurchasingService {
             .findFirst().orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND));
         if(quantity>line.orderedQuantity()-line.receivedQuantity())throw invalidState();
         warehouses.requireActive(tenant,warehouseId);
+        if(asnId!=null) {
+            // PO lock is already held, serializing ASN creation, changes and
+            // linked receipts. A supplier-reported shipment cannot over-receive.
+            List<Integer> asnRemaining=jdbc.query("""
+                SELECT a.quantity-COALESCE((SELECT SUM(r.quantity)
+                  FROM erp_purchase_receipt r WHERE r.tenant_id=a.tenant_id
+                  AND r.asn_id=a.id),0)::integer AS remaining
+                FROM erp_purchase_asn a
+                WHERE a.tenant_id=? AND a.purchase_order_id=?
+                  AND a.purchase_order_line_id=? AND a.warehouse_id=?
+                  AND a.id=? AND a.status='SHIPPED' FOR UPDATE
+                """,(rs,i)->rs.getInt("remaining"),tenant,orderId,lineId,warehouseId,asnId);
+            if(asnRemaining.size()!=1)
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Supplier ASN was not dispatched or does not match this PO/warehouse");
+            if(asnRemaining.getFirst()<quantity)
+                throw invalidState();
+        }
         UUID receiptId=UUID.randomUUID();
         jdbc.update("""
             INSERT INTO erp_purchase_receipt
               (id,tenant_id,purchase_order_id,purchase_order_line_id,quantity,
-               received_by,warehouse_id)
-            VALUES (?,?,?,?,?,?,?)
-            """,receiptId,tenant,orderId,lineId,quantity,actor,warehouseId);
+               received_by,warehouse_id,asn_id)
+            VALUES (?,?,?,?,?,?,?,?)
+            """,receiptId,tenant,orderId,lineId,quantity,actor,warehouseId,asnId);
+        if(asnId!=null) {
+            jdbc.update("""
+                INSERT INTO erp_purchase_asn_event
+                  (id,tenant_id,asn_id,event_type,actor_user_id,quantity,note)
+                VALUES (?,?,?,'RECEIPT_LINKED',?,?,'Actual local warehouse receipt')
+                """,UUID.randomUUID(),tenant,asnId,actor,quantity);
+        }
         // In the same transaction as the receipt and PO transition: no partial stock posting.
         warehouses.recordReceipt(tenant,actor,warehouseId,
             UUID.fromString(line.productSkuId()),receiptId,quantity);
