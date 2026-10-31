@@ -57,7 +57,7 @@ class SpApiClientTest {
         SpApiClient client = new SpApiClient(transport, refresh -> "unit-access-token",
             r -> r.endpoint(true), true, false);
         var operations = new SpApiReadOperations(client);
-        var response = operations.getOrder(scope(Set.of()), "AMZ/123 A");
+        var response = operations.getOrder(scope(Set.of("Inventory and Order Tracking")), "AMZ/123 A");
         assertEquals(200, response.statusCode());
         assertEquals("safe-request-123", response.requestId());
         assertEquals("sandbox.sellingpartnerapi-na.amazon.com",
@@ -104,7 +104,7 @@ class SpApiClientTest {
             attempts.incrementAndGet(); return response(429, "token=SECRET buyer-info=SECRET");
         }, refresh -> "fake-access", r -> r.endpoint(true), true, false);
         SpApiHttpException e = assertThrows(SpApiHttpException.class, () ->
-            new SpApiReadOperations(client).getOrder(scope(Set.of()), "123"));
+            new SpApiReadOperations(client).getOrder(scope(Set.of("Inventory and Order Tracking")), "123"));
         assertEquals(429, e.status());
         assertEquals(1, attempts.get());
         assertFalse(e.getMessage().contains("SECRET"));
