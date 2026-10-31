@@ -20,9 +20,11 @@ public class FinancesSyncService {
  private final SpApiSellerGrantVault vault;
  private final TypedFinancesSdkReader api;
  private final FinanceEventService events;
+ private final FinancesBreakdownService breakdowns;
  private final Clock clock;
  @Autowired public FinancesSyncService(JdbcTemplate j,TransactionTemplate t,
    SpApiSellerGrantVault v,SpApiOfficialSdkFactory sdk,FinanceEventService e,
+   FinancesBreakdownService details,
    @Value("${merchivra.demo.enabled:false}") boolean demo,
    @Value("${merchivra.spapi.enabled:false}") boolean outbound,
    @Value("${merchivra.spapi.sandbox:true}") boolean sandbox,
@@ -32,7 +34,8 @@ public class FinancesSyncService {
    @Value("${merchivra.spapi.verification.enabled:false}") boolean verified){
     if(demo||!outbound||sandbox||writes||(!oauth&&!priv)||!verified)
       throw new IllegalStateException("Real Finances read requires verified read-only Seller");
-    jdbc=j;tx=t;vault=v;api=new TypedFinancesSdkReader(sdk);events=e;clock=Clock.systemUTC();
+    jdbc=j;tx=t;vault=v;api=new TypedFinancesSdkReader(sdk);events=e;
+    breakdowns=details;clock=Clock.systemUTC();
  }
  public record Status(String jobId,String state,int committedPages,int generation,
    String nextRetryAt,String lastFailureCode) {}
@@ -168,7 +171,11 @@ public class FinancesSyncService {
            ||!c.owner().equals(j.owner())||j.lease()==null||
            !j.lease().isAfter(clock.instant()))
          throw new ResponseStatusException(HttpStatus.CONFLICT,"Stale Finances lease");
-       for(var event:page.events())events.recordTrusted(scope,event);
+       for(var event:page.events()){
+         var saved=events.recordTrusted(scope,event);
+         breakdowns.save(tenant,UUID.fromString(saved.id()),
+           page.breakdowns().getOrDefault(event.eventKey(),List.of()));
+       }
        jdbc.update("""
          INSERT INTO spapi_finances_page_commit
            (id,tenant_id,job_id,generation,page_index,event_count)

@@ -54,3 +54,13 @@ export function reviewFinanceEvent(eventId:string,marketplaceId:string,orderId:s
  return request(base+'/events/'+encodeURIComponent(eventId)+'/review',reviewSchema,'POST',
   {marketplaceId,orderId})
 }
+
+const breakdownSchema=z.object({
+ path:z.string(),parent:z.string().nullable(),sourceType:z.string(),
+ amount:z.string().nullable(),currency:z.string().nullable(),leaf:z.boolean()
+})
+export type FinanceBreakdown=z.infer<typeof breakdownSchema>
+export function fetchFinanceBreakdowns(marketplaceId:string,eventId:string){
+ return request(base+'/marketplaces/'+encodeURIComponent(marketplaceId)+
+  '/events/'+encodeURIComponent(eventId)+'/breakdowns',z.array(breakdownSchema))
+}

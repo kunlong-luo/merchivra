@@ -65,6 +65,32 @@ class TypedFinancesSdkReaderTest {
   assertThrows(IllegalArgumentException.class,()->
     reader.fetch(grant(true),AFTER,BEFORE,null));
  }
+ @Test void preservesParentChildBreakdownsWithoutSummingThem()throws Exception{
+  var child=new Breakdown().breakdownType("Commission")
+    .breakdownAmount(new Currency().currencyCode("USD")
+      .currencyAmount(new BigDecimal("-3.00")));
+  var parent=new Breakdown().breakdownType("OrderFees")
+    .breakdownAmount(new Currency().currencyCode("USD")
+      .currencyAmount(new BigDecimal("-3.00")))
+    .breakdowns(java.util.List.of(child));
+  var reader=new TypedFinancesSdkReader((scope,a,b,c)->{
+   var response=page(SITE);
+   response.getPayload().getTransactions().getFirst()
+     .setBreakdowns(java.util.List.of(parent));
+   return response;
+  });
+  var result=reader.fetch(grant(true),AFTER,BEFORE,null);
+  var nodes=result.breakdowns().get(result.events().getFirst().eventKey());
+  assertEquals(2,nodes.size());
+  assertEquals("0",nodes.getFirst().path());
+  assertNull(nodes.getFirst().parent());
+  assertFalse(nodes.getFirst().leaf());
+  assertEquals("0.0",nodes.get(1).path());
+  assertEquals("0",nodes.get(1).parent());
+  assertTrue(nodes.get(1).leaf());
+  assertEquals("-3.00",nodes.get(1).amount());
+  assertEquals("UNCLASSIFIED",result.events().getFirst().category());
+ }
  @Test void missingCurrencyNeverInventsZero(){
   var reader=new TypedFinancesSdkReader((scope,a,b,c)->{
    Transactions rows=new Transactions();

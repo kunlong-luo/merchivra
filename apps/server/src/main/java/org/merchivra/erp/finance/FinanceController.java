@@ -15,8 +15,10 @@ import org.springframework.web.bind.annotation.*;
 public class FinanceController {
     private final FinanceEventService service;
     private final TenantAccessService access;
-    public FinanceController(FinanceEventService service,TenantAccessService access) {
-        this.service=service;this.access=access;
+    private final FinancesBreakdownService breakdowns;
+    public FinanceController(FinanceEventService service,TenantAccessService access,
+                             FinancesBreakdownService breakdowns) {
+        this.service=service;this.access=access;this.breakdowns=breakdowns;
     }
     public record ManualRecord(UUID marketplaceId,String eventKey,String category,
         String amount,String currency,OffsetDateTime postedAt,
@@ -35,6 +37,12 @@ public class FinanceController {
     public List<FinanceEventService.Bucket> buckets(Authentication auth,HttpServletRequest request,
                                                     @PathVariable UUID marketplaceId) {
         return service.buckets(access.currentTenant(auth,request),marketplaceId);
+    }
+
+    @GetMapping("/marketplaces/{marketplaceId}/events/{eventId}/breakdowns")
+    public List<FinancesBreakdownService.Node> details(Authentication auth,
+        HttpServletRequest request,@PathVariable UUID marketplaceId,@PathVariable UUID eventId) {
+        return breakdowns.list(access.currentTenant(auth,request),marketplaceId,eventId);
     }
 
     @PostMapping("/manual-events")

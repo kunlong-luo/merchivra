@@ -25,3 +25,10 @@
 ## 后续重点
 
 真正的 Finances 全角色与实际账号联调、原始 breakdown 分层/税费与卖家收入归属、退款/赔偿/仓储费分类规则、结算/支付关联、银行流水匹配、时间窗回补、财务审计异常清单、贡献额与成本/费用说明、通用报表及跨币种 FX。当前交易汇总是**未分类来源事实**，不能叫净利润或结算。
+
+
+## V27 · Finances 来源拆分层级（仍不进行自动会计分类）
+
+`finance_transaction_breakdown` 用 `source_path` 和 `parent_path` 保留官方 `breakdowns[]` 嵌套父子节点、sourceType、可选原币有符号金额和末级标记。主财务汇总仍**只统计** `finance_source_event.totalAmount` 对应的 UNCLASSIFIED 来源事实，不额外把 breakdown 父子金额加进去。
+
+工作台可展开某个真实来源事件的明细，`GET /api/v1/finance/marketplaces/{marketplaceId}/events/{eventId}/breakdowns` 只允许当前租户 Owner 查看同站点事件。重放同键来源时，如果已有 breakdown 的父子、金额/类别不同，停止本页提交并保留先前可信内容；缺少 breakdown 不视为零费用。V27 是来源拆解基础，**并未自动证明佣金、税金、退款、结算类型和卖家可得净利润**。

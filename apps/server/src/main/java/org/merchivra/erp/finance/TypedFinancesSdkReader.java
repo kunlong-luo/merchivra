@@ -8,6 +8,8 @@ import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
@@ -30,7 +32,14 @@ public final class TypedFinancesSdkReader {
         ListTransactionsResponse fetch(SpApiSellerScope scope,OffsetDateTime after,
             OffsetDateTime before,String cursor) throws Exception;
     }
-    public record Page(List<FinanceEventService.SourceEvent> events,String nextToken) {}
+    public record BreakdownNode(String path,String parent,String type,
+                                String amount,String currency,boolean leaf) {}
+    public record Page(List<FinanceEventService.SourceEvent> events,String nextToken,
+                       Map<String,List<BreakdownNode>> breakdowns) {
+        public Page(List<FinanceEventService.SourceEvent> events,String nextToken) {
+            this(events,nextToken,Map.of());
+        }
+    }
     private final ReadCall call;
 
     public TypedFinancesSdkReader(SpApiOfficialSdkFactory factory) {
@@ -52,6 +61,41 @@ public final class TypedFinancesSdkReader {
             throw new IllegalStateException("SHA-256 unavailable",e);
         }
     }
+    /**
+     * Raw hierarchy only. Parent totals may include child totals, therefore
+     * never add these rows to `finance_source_event` or the main aggregates.
+     */
+    private static void breakdowns(List<software.amazon.spapi.models.finances.v2024_06_19.Breakdown> source,
+        String prefix,String parent,int depth,List<BreakdownNode> out) {
+        if(source==null)return;
+        if(depth>8 || source.size()>500 || out.size()+source.size()>2000)
+            throw new IllegalArgumentException("Financial breakdown hierarchy exceeds safe limits");
+        for(int i=0;i<source.size();i++) {
+            var value=source.get(i);
+            if(value==null)throw new IllegalArgumentException("Null financial breakdown");
+            String path=prefix.isEmpty()?Integer.toString(i):prefix+"."+i;
+            String type=value.getBreakdownType();
+            if(type==null||type.isBlank()||type.length()>160
+              || type.chars().anyMatch(Character::isISOControl))
+                type="UNRECOGNIZED";
+            String amount=null,currency=null;
+            var money=value.getBreakdownAmount();
+            if(money!=null) {
+                if(money.getCurrencyAmount()!=null && money.getCurrencyCode()!=null) {
+                    BigDecimal n=money.getCurrencyAmount();
+                    if(n.precision()>20 || n.scale()>6 ||
+                      !money.getCurrencyCode().matches("[A-Z]{3}"))
+                        throw new IllegalArgumentException("Unsafe financial breakdown amount");
+                    amount=n.toPlainString();currency=money.getCurrencyCode();
+                } else if(money.getCurrencyAmount()!=null || money.getCurrencyCode()!=null)
+                    throw new IllegalArgumentException("Partial financial breakdown money");
+            }
+            boolean leaf=value.getBreakdowns()==null || value.getBreakdowns().isEmpty();
+            out.add(new BreakdownNode(path,parent,type,amount,currency,leaf));
+            if(!leaf)breakdowns(value.getBreakdowns(),path,path,depth+1,out);
+        }
+    }
+
     public Page fetch(SpApiSellerScope scope,Instant after,Instant before,
                       String cursor) throws Exception {
         if(scope==null || !scope.approvedRoles().contains("Finance and Accounting"))
@@ -78,6 +122,7 @@ public final class TypedFinancesSdkReader {
             throw new IllegalArgumentException("Invalid Finances response page");
         var result=new ArrayList<FinanceEventService.SourceEvent>();
         Set<String> seen=new HashSet<>();
+        Map<String,List<BreakdownNode>> detail=new LinkedHashMap<>();
         for(var entry:response.getPayload().getTransactions()) {
             if(entry==null || entry.getTransactionId()==null
                 || entry.getPostedDate()==null || entry.getTotalAmount()==null
@@ -123,12 +168,15 @@ public final class TypedFinancesSdkReader {
             String type=entry.getTransactionType();
             if(type==null || !type.matches("[A-Za-z0-9][A-Za-z0-9._:/-]{0,119}"))
                 type="UNRECOGNIZED";
+            List<BreakdownNode> nodes=new ArrayList<>();
+            breakdowns(entry.getBreakdowns(),"",null,0,nodes);
+            detail.put(key,List.copyOf(nodes));
             result.add(new FinanceEventService.SourceEvent(key,"UNCLASSIFIED",
                 amount.toPlainString(),currency,entry.getPostedDate(),orderId,type));
         }
         String next=response.getPayload().getNextToken();
         if(next!=null && (next.isBlank() || next.length()>4096))
             throw new IllegalArgumentException("Unsafe Finances cursor");
-        return new Page(List.copyOf(result),next);
+        return new Page(List.copyOf(result),next,Map.copyOf(detail));
     }
 }

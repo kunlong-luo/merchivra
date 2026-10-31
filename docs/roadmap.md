@@ -175,3 +175,10 @@
 - [ ] 真实 Seller Finances 正式数据验收、历史补录、未分类交易 breakdown、退款/费用/结算识别、利润报表与税务口径仍未实现。
 
 [FIN-006](finance/finances-live-v26.md)
+
+
+### V27 · Finances 原始交易明细层级（2026-10-31）
+
+- [x] 代码新增：官方 Finances Transaction 的 breakdown 嵌套路径、类型、原币金额和父子关系持久化，重复来源不可静默改变明细事实。
+- [x] React 财务工作台展示来源事件的 breakdown 树形路径，无论顶层还是末级都不自动加总或推断净利润。
+- [ ] 费用业务字典、退款/税金归属、可审计结算关联、成本和广告汇总的利润模型及真实 Amazon 联调尚待实现。

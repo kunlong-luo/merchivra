@@ -3,7 +3,7 @@ import FinancesSyncPanel from './FinancesSyncPanel'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchCoreMarketplaces,fetchCoreOrders} from './lib/core'
 import {createManualFinanceEvent,fetchFinanceBuckets,fetchFinanceEvents,
- reviewFinanceEvent,type FinanceEvent} from './lib/finance'
+ reviewFinanceEvent,fetchFinanceBreakdowns,type FinanceEvent} from './lib/finance'
 
 const categories={
  PRODUCT_SALES:'销售入账分类',PRODUCT_REFUND:'退款',AMAZON_FEE:'平台费用',
@@ -32,6 +32,9 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
   queryFn:()=>fetchFinanceEvents(currentId,cursor),enabled:!!currentId,retry:false})
  const buckets=useQuery({queryKey:['finance','buckets',tenantId,currentId],
   queryFn:()=>fetchFinanceBuckets(currentId),enabled:!!currentId,retry:false})
+ const breakdowns=useQuery({queryKey:['finance','breakdowns',tenantId,currentId,selectedEvent],
+  queryFn:()=>fetchFinanceBreakdowns(currentId,selectedEvent),
+  enabled:!!currentId&&!!selectedEvent,retry:false})
  const orders=useQuery({queryKey:['finance','order-options',tenantId,currentId],
   queryFn:()=>fetchCoreOrders(currentId),enabled:!!currentId,retry:false})
  useEffect(()=>{setCursor(undefined);setSelectedEvent('');setSelectedOrder('')},[currentId])
@@ -154,6 +157,24 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
      {(orders.data??[]).map(o=><option key={o.id} value={o.id}>
       {o.externalOrderId} · {o.dataOrigin}</option>)}
     </select>
+    <h3>官方交易原始拆分（来源层级，不参与金额汇总）</h3>
+    {current.dataOrigin!=='LIVE'?<p className="setup-hint">
+      人工未核验财务记录没有 Amazon 原始 breakdown。</p>:
+     breakdowns.isPending?<p className="empty-state">正在读取原始费用层级…</p>:
+     breakdowns.isError?<p className="setup-error" role="alert">
+       {String(breakdowns.error)}</p>:
+     !breakdowns.data?.length?<p className="empty-state">
+       此来源事件尚未取得可用 breakdown；不能据此断言费用为 0。</p>:
+     <div className="table-scroll" role="region" tabIndex={0}
+        aria-label="原始财务拆分层级"><table><thead><tr>
+       {['路径 / 层级','来源类别','原币金额','子项状态'].map(h=>
+         <th key={h} scope="col">{h}</th>)}</tr></thead><tbody>
+       {breakdowns.data.map(b=><tr key={b.path}>
+        <td>{b.path}{b.parent===null?' · 根节点':''}</td>
+        <td>{b.sourceType}</td>
+        <td>{b.amount===null?'未知':b.currency+' '+b.amount}</td>
+        <td>{b.leaf?'末级明细':'包含子项，勿重复汇总'}</td>
+       </tr>)}</tbody></table></div>}
     <div className="sandbox-actions">
      <button className="primary-button" type="button" disabled={!selectedOrder||
       reviewed.isPending} onClick={()=>reviewed.mutate(selectedOrder)}>确认关联</button>
