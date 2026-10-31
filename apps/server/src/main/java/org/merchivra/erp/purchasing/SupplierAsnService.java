@@ -115,10 +115,11 @@ public class SupplierAsnService {
             ORDER BY e.created_at DESC,e.id DESC LIMIT 200
             """,(rs,i)->{
                 int count=rs.getInt("quantity");
+                boolean quantityMissing=rs.wasNull();
                 return new Event(rs.getObject("id",UUID.class).toString(),
                     rs.getString("event_type"),
                     rs.getObject("actor_user_id",UUID.class).toString(),
-                    rs.wasNull()?null:count,
+                    quantityMissing?null:count,
                     rs.getObject("old_eta",LocalDate.class)==null?null:
                       rs.getObject("old_eta",LocalDate.class).toString(),
                     rs.getObject("new_eta",LocalDate.class)==null?null:
