@@ -34,7 +34,7 @@ public final class MockOrdersSyncSource implements OrdersSyncSource {
         if (index >= pages.size()) throw new IllegalArgumentException("Synthetic token expired");
         var part = pages.get(index);
         List<OrderFact> facts = part.records().stream()
-            .map(o -> new OrderFact(o.externalOrderId(), scope.marketplaceCode(),
+            .map(o -> new OrderFact("SANDBOX-" + o.externalOrderId(), scope.marketplaceCode(),
                 Instant.parse(o.sourceUpdatedAt()), o.fulfillmentStatus())).toList();
         return new Page(facts,
             index + 1 < pages.size() ? "MOCK-ORDERS-PAGE-" + (index + 1) : null);

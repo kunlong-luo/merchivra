@@ -63,7 +63,7 @@ class OrdersSyncServiceTest {
         var scope=new OrdersSyncSource.Scope(tenant,marketplace,"ATVPDKIKX0DER");
         var first=source.fetch(scope,Instant.parse("2026-10-29T00:00:00Z"),
             Instant.parse("2026-10-31T00:00:00Z"),null);
-        assertEquals("TEST-ORDER-1",first.orders().getFirst().orderId());
+        assertEquals("SANDBOX-TEST-ORDER-1",first.orders().getFirst().orderId());
         assertEquals("MOCK-ORDERS-PAGE-1",first.nextToken());
         assertNull(source.fetch(scope,Instant.EPOCH,Instant.now(),first.nextToken()).nextToken());
         assertThrows(IllegalArgumentException.class,()->source.fetch(scope,
