@@ -197,7 +197,7 @@ function tabTitle() {
           </div>
         </div>
 
-        <div v-if="activeView !== 'core' && activeView !== 'ops'" class="mock-banner" role="status">
+        <div v-if="activeView !== 'core' && activeView !== 'ops' && activeView !== 'team'" class="mock-banner" role="status">
           <span class="mock-banner-icon" aria-hidden="true">✦</span>
           <div><strong>MOCK 演示模式</strong><span>全部商品、订单、账户和库存均为虚构数据；无 Amazon 凭证、实际财务入账或实时库存。请勿用于经营决策。</span></div>
           <span class="mock-pill">DEMO ONLY</span>

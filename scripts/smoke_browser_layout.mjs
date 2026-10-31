@@ -265,9 +265,16 @@ async function main() {
       await evaluate(send,
         "(() => {const b=[...document.querySelectorAll('.nav-link')]" +
         ".find(x=>x.textContent.includes('团队与权限'));if(!b)throw Error('Missing V15 navigation');b.click();})()")
-      await waitFor(send,
-        "document.querySelector('.team-workspace tbody tr')?.textContent?.includes('ops-reviewer')",
-        'V15 team role list')
+      try {
+        await waitFor(send,
+          "document.querySelector('.team-workspace tbody tr')?.textContent?.includes('ops-reviewer')",
+          'V15 team role list')
+      } catch (e) {
+        const state=await evaluate(send,
+          "({body:document.querySelector('#main-content')?.textContent?.slice(0,1800),team:document.querySelector('.team-workspace')?.textContent?.slice(0,1200)})")
+        console.error('V15 browser debug:',JSON.stringify(state))
+        throw e
+      }
       assert.equal(await evaluate(send,
         "document.querySelector('.team-workspace')?.textContent?.includes('生成邀请')"),
         true,'V15 invite UI should exist')
