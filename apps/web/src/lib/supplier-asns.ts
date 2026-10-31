@@ -13,6 +13,12 @@ const finding=z.object({id:z.string().uuid(),asnId:z.string().uuid(),
  ruleCode:z.enum(['SUPPLIER_ASN_OVERDUE','SUPPLIER_ASN_DUE_SOON']),
  state:z.enum(['OPEN','ACKNOWLEDGED','DONE','CLEARED']),
  expectedArrivalDate:z.string(),lastSeenAt:z.string()})
+const event=z.object({id:z.string().uuid(),eventType:z.enum([
+ 'CREATED','SHIPMENT_REPORTED','ETA_UPDATED','CANCELLED','RECEIPT_LINKED']),
+ actorUserId:z.string().uuid(),quantity:z.number().int().nullable(),
+ oldEta:z.string().nullable(),newEta:z.string().nullable(),note:z.string().nullable(),
+ createdAt:z.string()})
+export type SupplierAsnEvent=z.infer<typeof event>
 const scan=z.object({id:z.string().uuid(),triggerType:z.literal('MANUAL'),
  matchedCount:z.number().int().nonnegative(),clearedCount:z.number().int().nonnegative()})
 export type SupplierAsn=z.infer<typeof asn>
@@ -36,6 +42,9 @@ async function api<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown)
 }
 export const fetchSupplierAsns=(orderId:string)=>api(
  base+'/orders/'+encodeURIComponent(orderId),z.array(asn))
+export const fetchSupplierAsnEvents=(orderId:string,asnId:string)=>api(
+ base+'/orders/'+encodeURIComponent(orderId)+'/'+encodeURIComponent(asnId)+'/events',
+ z.array(event))
 export const createSupplierAsn=(orderId:string,body:NewSupplierAsn)=>api(
  base+'/orders/'+encodeURIComponent(orderId),asn,'POST',body)
 export const supplierAsnAction=(orderId:string,asnId:string,kind:'ship'|'cancel')=>api(
