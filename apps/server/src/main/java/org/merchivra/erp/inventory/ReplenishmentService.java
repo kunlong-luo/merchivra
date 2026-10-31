@@ -22,6 +22,7 @@ public class ReplenishmentService {
     private static final Duration MAX_AGE=Duration.ofHours(48);
     private final JdbcTemplate jdbc;
     private final Clock clock;
+    @org.springframework.beans.factory.annotation.Autowired
     public ReplenishmentService(JdbcTemplate jdbc) {
         this(jdbc,Clock.systemUTC());
     }
