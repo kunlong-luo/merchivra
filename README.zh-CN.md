@@ -137,3 +137,9 @@ Compose 使用 `postgres:18-alpine`，新卷 `pgdata18:/var/lib/postgresql`。�
 - 内部 SKU 新增/改名/归档/恢复、Listing 人工绑定/解绑及历史审计，React 业务界面；详见 [CAT-001](docs/catalog/sku-management.md)。
 - `deploy/compose.production.yaml` 仅为独立非 Demo 部署覆盖层的**代码配置**，不自带公网 TLS、备份、Secrets Manager 或生产验收。
 - 根据维护者新指示，这批功能只提交代码，暂不运行测试或真实 Amazon 连接；**不应据此宣称已经正式可用**。
+
+
+## V19/V20 商品成本与采购代码进展（尚未验收）
+
+新增历史成本版本（原币、有效区间）、供应商、采购草稿、跨 Owner 审批、分批收货和相应 React 页面。**不意味着实现了 Amazon 财务对账、真实入仓或完整采购系统。**
+见 [成本历史](docs/finance/sku-cost-history.md) 与 [采购单](docs/purchasing/local-purchase-workflow.md)。

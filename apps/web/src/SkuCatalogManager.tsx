@@ -2,6 +2,7 @@ import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {createSku,fetchSkus,mapListing,unmapListing,updateSku,type Sku} from './lib/catalog'
 import type {CoreListing} from './lib/core'
+import SkuCostManager from './SkuCostManager'
 
 /** Explicit tenant-scoped master-data management, never a remote Amazon write. */
 export default function SkuCatalogManager({tenantId,marketplaceId,listings}:{
@@ -92,5 +93,6 @@ export default function SkuCatalogManager({tenantId,marketplaceId,listings}:{
   </form>
   {message&&<p className="panel-caption" role="status">{message}</p>}
   {error&&<p className="setup-error" role="alert">{error}</p>}
+  <SkuCostManager tenantId={tenantId} skus={skus.data??[]}/>
  </section>
 }

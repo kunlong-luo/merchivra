@@ -112,3 +112,13 @@
 - [ ] 集中验证：所有 V17/V18 迁移、Java 编译、React 类型与构建、PostgreSQL 18 多租户 HTTP/CSRF、虚构私有导入、Amazon 真实 Seller 授权、生产权限与备份。
 
 [INT-005 私有应用导入](integrations/private-seller-import.md) · [CAT-001 商品/SKU](catalog/sku-management.md)
+
+
+## V19/V20 补充 · 成本及采购流程（2026-10-31）
+
+- [x] **代码已编写，未验收**：V19 SKU 原币历史成本半开区间表、OWNER 追加价格版本的 API、React 表格与输入。旧周期闭合但不物理删除，单行独立金额不称真实净利润。
+- [x] **代码已编写，未验收**：V20 供应商、采购单草稿/提交、另一名 Owner 批准/取消、追加式分批收货与数量上限、状态与审计；React “采购与供应商”页面。**不更新 Amazon/FBA，不视为财务已入账**。
+- [ ] Amazon Orders/Listing/FBA 正式同步、Finance/结算/税费与报表、采购库存仓库流水、自动补货建议/审批/通知、成熟企业 RBAC、多币汇兑、出口合规和生产验收仍待开发。
+- [ ] 所有本轮新增迁移、代码及页面均未按维护者要求执行测试，后续需集中修复编译、类型、Flyway 和数据一致性问题。
+
+[FIN-004](finance/sku-cost-history.md) · [PO-001](purchasing/local-purchase-workflow.md)
