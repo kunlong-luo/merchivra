@@ -19,11 +19,23 @@ export type NewPurchaseLine={productSkuId:string;quantity:number;unitCost:string
 const warehouse=z.object({id:z.string().uuid(),code:z.string(),name:z.string(),
  status:z.enum(['ACTIVE','ARCHIVED'])})
 const stock=z.object({warehouseId:z.string().uuid(),productSkuId:z.string().uuid(),
- internalSku:z.string(),recordedReceivedQuantity:z.number().int().nonnegative()})
+ internalSku:z.string(),recordedReceivedQuantity:z.number().int().nonnegative(),
+ onHandQuantity:z.number().int().nonnegative()})
 const movement=z.object({id:z.string().uuid(),warehouseId:z.string().uuid(),
- productSkuId:z.string().uuid(),internalSku:z.string(),purchaseReceiptId:z.string().uuid(),
- quantity:z.number().int().positive(),movementType:z.literal('PURCHASE_RECEIPT'),
- createdAt:z.string()})
+ productSkuId:z.string().uuid(),internalSku:z.string(),purchaseReceiptId:z.string().uuid().nullable(),
+ operationId:z.string().uuid().nullable(),quantity:z.number().int(),
+ movementType:z.enum(['PURCHASE_RECEIPT','OUTBOUND','TRANSFER_OUT','TRANSFER_IN','COUNT_ADJUSTMENT']),
+ reason:z.string().nullable(),createdAt:z.string()})
+const stockOperation=z.object({id:z.string().uuid(),
+ type:z.enum(['OUTBOUND','TRANSFER','COUNT']),warehouseId:z.string().uuid(),
+ destinationWarehouseId:z.string().uuid().nullable(),productSkuId:z.string().uuid(),
+ requestedQuantity:z.number().int(),expectedOnHand:z.number().int().nonnegative(),
+ appliedDelta:z.number().int(),afterQuantity:z.number().int().nonnegative(),
+ reason:z.string(),createdBy:z.string().uuid(),createdAt:z.string()})
+export type WarehouseStockOperation=z.infer<typeof stockOperation>
+export type StockOperationRequest={requestKey:string;type:'OUTBOUND'|'TRANSFER'|'COUNT';
+ warehouseId:string;destinationWarehouseId:string|null;productSkuId:string;
+ quantity:number;expectedOnHand:number;reason:string}
 const pending=z.object({purchaseOrderId:z.string().uuid(),orderNumber:z.string(),
  purchaseOrderLineId:z.string().uuid(),productSkuId:z.string().uuid(),internalSku:z.string(),
  status:z.enum(['APPROVED','RECEIVING']),orderedQuantity:z.number().int().positive(),
@@ -42,7 +54,7 @@ async function call<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown
  if(!res.ok){
   if(res.status===403)throw Error('当前账号没有采购操作权限')
   if(res.status===404)throw Error('供应商、采购单或 SKU 不存在')
-  if(res.status===409)throw Error('采购状态、数量或审批人不满足要求')
+  if(res.status===409)throw Error('库存已变化、余额不足、请求重复或采购审批状态冲突，请刷新后重新确认')
   throw Error('采购操作失败：HTTP '+res.status)
  }
  return schema.parse(await res.json())
@@ -64,6 +76,11 @@ export const fetchWarehouseStock=(warehouseId:string)=>
 export const fetchWarehouseLedger=(warehouseId:string)=>
  call(base+'/warehouse-ledger?warehouseId='+encodeURIComponent(warehouseId),z.array(movement))
 export const fetchPendingReceipts=()=>call(base+'/pending-receipts',z.array(pending))
+export const fetchStockOperations=(warehouseId:string)=>
+ call(base+'/warehouse-operations?warehouseId='+encodeURIComponent(warehouseId),
+  z.array(stockOperation))
+export const postStockOperation=(body:StockOperationRequest)=>
+ call(base+'/warehouse-operations',stockOperation,'POST',body)
 export const receivePurchase=(id:string,lineId:string,quantity:number,warehouseId:string)=>
  call(base+'/orders/'+encodeURIComponent(id)+'/receive',detail,'POST',
   {lineId,quantity,warehouseId})
