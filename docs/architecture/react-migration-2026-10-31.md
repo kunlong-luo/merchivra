@@ -21,3 +21,12 @@ Run `npm ci && npm run typecheck && npm run test && npm run build`; install Chro
 The former Vue package lockfile must be regenerated through actual npm resolution, not hand-edited or given fake integrity hashes. The one-time React lockfile workflow installs the React dependency graph using Node 24 and commits the resulting lockfile. Do not leave the repository with `package.json` out of sync with `package-lock.json`.
 
 React is not a reason to change Maven, Spring JDBC or the durable transaction/lease model.
+
+
+## React migration acceptance (2026-10-31)
+
+- [React 19 / TypeScript 6 / Vitest / Vite + Java 25 CI succeeded](https://github.com/kunlong-luo/merchivra/actions/runs/41164156695), including `scripts/check_frontend_stack.mjs` rejecting Vue packages and .vue source files, and React SSR bootstrap Vitest.
+- [Chromium responsive React UI smoke succeeded](https://github.com/kunlong-luo/merchivra/actions/runs/41164009525): 360/390/768/1280 widths, tenant core Listing/Orders/FBA, staff-only navigation, operations triage, team reviewer, MOCK/LIVE Orders panels and source indicators. Tests use synthetic API data.
+- [PostgreSQL 18 / Java 25 / React Nginx Compose full chain succeeded](https://github.com/kunlong-luo/merchivra/actions/runs/41164156751), including V1–V16 Flyway, authenticated Session/CSRF and multi-owner/operator checks, mock source import, Orders Worker checkpoint and actual backend restart recovery.
+- Lockfile was regenerated through the npm registry and committed in [React lockfile commit](https://github.com/kunlong-luo/merchivra/commit/d3e56c564f254cc4153d996da240edc65a397424), with zero Vue/Pinia/vue-tsc/Vue Query packages. Temporary lock generator workflow removed; normal CI and Docker require `npm ci`.
+- **Only the frontend framework changed**. All live Amazon Seller operations are still gated by the server and were NOT production-validated by these synthetic smoke tests. This change does not add OpenAPI/Orval, production Seller credentials, or Finances/Listing/FBA live sync.

@@ -253,3 +253,12 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 ## ADR React-only（2026-10-31，最新约束）
 
 用户已明确选择 **React 19** 替换 Vue：所有新 UI 用 React TSX、`@tanstack/react-query`、Vite React 插件、TypeScript + Zod。**禁止再新增 Vue SFC、vue-tsc、@vitejs/plugin-vue、@tanstack/vue-query、Pinia 或 Vue Router**。早期文件中的 Vue 描述仅为历史证据，**被本节覆盖**。保留 Spring Boot 4.1.2、Java 25、PostgreSQL 18、Maven、Flyway、租户 RBAC、Amazon 安全门禁。详见 [React 迁移 ADR](docs/architecture/react-migration-2026-10-31.md)。锁文件必须经过真实 npm registry 解析并提交，Docker 和 CI 用 npm ci。React 页面需执行类型检查、Vitest、Chromium 360/390/768/1280 冒烟与 PG18 Mock 全链路后方可视为验收。
+
+
+## React migration acceptance (2026-10-31)
+
+- [React 19 / TypeScript 6 / Vitest / Vite + Java 25 CI succeeded](https://github.com/kunlong-luo/merchivra/actions/runs/41164156695), including `scripts/check_frontend_stack.mjs` rejecting Vue packages and .vue source files, and React SSR bootstrap Vitest.
+- [Chromium responsive React UI smoke succeeded](https://github.com/kunlong-luo/merchivra/actions/runs/41164009525): 360/390/768/1280 widths, tenant core Listing/Orders/FBA, staff-only navigation, operations triage, team reviewer, MOCK/LIVE Orders panels and source indicators. Tests use synthetic API data.
+- [PostgreSQL 18 / Java 25 / React Nginx Compose full chain succeeded](https://github.com/kunlong-luo/merchivra/actions/runs/41164156751), including V1–V16 Flyway, authenticated Session/CSRF and multi-owner/operator checks, mock source import, Orders Worker checkpoint and actual backend restart recovery.
+- Lockfile was regenerated through the npm registry and committed in [React lockfile commit](https://github.com/kunlong-luo/merchivra/commit/d3e56c564f254cc4153d996da240edc65a397424), with zero Vue/Pinia/vue-tsc/Vue Query packages. Temporary lock generator workflow removed; normal CI and Docker require `npm ci`.
+- **Only the frontend framework changed**. All live Amazon Seller operations are still gated by the server and were NOT production-validated by these synthetic smoke tests. This change does not add OpenAPI/Orval, production Seller credentials, or Finances/Listing/FBA live sync.
