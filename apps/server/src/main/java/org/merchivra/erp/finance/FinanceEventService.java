@@ -210,6 +210,14 @@ public class FinanceEventService {
             WHERE tenant_id=? AND seller_marketplace_id=? AND id=? FOR UPDATE
             """,(rs,i)->rs.getObject(1,UUID.class),tenant,marketplace,event);
         if(found.size()!=1)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        List<UUID> reviewedRefundOrders=jdbc.query("""
+            SELECT DISTINCT sales_order_id FROM finance_refund_item_review
+            WHERE tenant_id=? AND event_id=?
+            """,(r,i)->r.getObject(1,UUID.class),tenant,event);
+        if(!reviewedRefundOrders.isEmpty()
+            &&(order==null||!reviewedRefundOrders.getFirst().equals(order)))
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Withdraw refund item reviews before changing the finance-order link");
         if(order!=null) {
             Integer valid=jdbc.queryForObject("""
                 SELECT COUNT(*) FROM sales_order

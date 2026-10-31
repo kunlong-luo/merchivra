@@ -3,6 +3,7 @@ import FinancesSyncPanel from './FinancesSyncPanel'
 import FinanceClassificationPanel from './FinanceClassificationPanel'
 import OrderCostReadinessPanel from './OrderCostReadinessPanel'
 import OrderContributionPanel from './OrderContributionPanel'
+import RefundReviewPanel from './RefundReviewPanel'
 import SettlementWorkspace from './SettlementWorkspace'
 import FinanceExceptionQueuePanel from './FinanceExceptionQueuePanel'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
@@ -207,6 +208,9 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
       key={current.id} tenantId={tenantId} marketplaceId={currentId}
       eventId={current.id} origin={current.dataOrigin}
       rawBreakdowns={breakdowns.data}/>}
+    {current.dataOrigin==='LIVE'&&current.reviewStatus==='MATCHED'&&
+     <RefundReviewPanel key={current.id} tenantId={tenantId}
+      marketplaceId={currentId} eventId={current.id}/>}
     <div className="sandbox-actions">
      <button className="primary-button" type="button" disabled={!selectedOrder||
       reviewed.isPending} onClick={()=>reviewed.mutate(selectedOrder)}>确认关联</button>
