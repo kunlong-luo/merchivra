@@ -420,3 +420,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 本地 `OUTBOUND`、`TRANSFER`、`COUNT` 必须显式 Owner 操作（Session/CSRF）、带 UUID 幂等键、原库存余额快照、仓库/内部 SKU 同租户锁与业务原因。库存不足和快照不一致返回冲突，不能覆盖移动事实。
 - 转仓同事务记负数 `TRANSFER_OUT` 和正数 `TRANSFER_IN`；仓库操作在排序仓库锁下读余额，和 V39 收货共用仓库锁；所有操作不可通过 Amazon API 写入。
 - `docs/purchasing/local-stock-operations-v40.md` 规定接口和边界。单测、CI 成功不等于正式 PostgreSQL 并发/真实 Seller 验收。
+
+## V41 · 仓库低库存与异常审核（2026-10-31）
+
+- 仓库 `NO_LEDGER` 与已记录 `onHandQuantity=0` **不可混淆**。只有当前仓库/SKU 存在正负移动证据且最终余额非负，才允许出具本地补货建议；负台账必须单独报异常，不能给出自动采购数量。
+- 批准后尚未收完的采购数量属于**跨仓未分配**采购承诺，不是 Amazon FBA 在途，也不能盲目抵减特定本地仓补货计划。
+- `erp_local_stock_finding` 状态更改必须 Owner + CSRF、Session tenant 隔离、带审计，扫描幂等；DONE 状态仅在实际条件消失并再次出现后重新打开。
+- 仓储计划扫描默认关闭；只有配置 `merchivra.warehouse-alerts.scheduler-enabled=true` 才允许启动本地-only 巡检。没有 Amazon 写入、自动采购或外部消息。
+- V41 约束与接口见 `docs/purchasing/local-stock-alerts-v41.md`；CI 不替代 PG18/Flyway/多实例真实验收。
