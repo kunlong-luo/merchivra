@@ -24,6 +24,11 @@ public class SupplierAsnController {
                                               @PathVariable UUID orderId) {
         return asns.list(access.currentTenant(auth,req),orderId);
     }
+    @GetMapping("/orders/{orderId}/{asnId}/events")
+    public List<SupplierAsnService.Event> events(Authentication auth,HttpServletRequest req,
+        @PathVariable UUID orderId,@PathVariable UUID asnId) {
+        return asns.events(access.currentTenant(auth,req),orderId,asnId);
+    }
     @PostMapping("/orders/{orderId}")
     @ResponseStatus(HttpStatus.CREATED)
     public SupplierAsnService.Asn create(Authentication auth,HttpServletRequest req,
