@@ -69,7 +69,7 @@ public class WarehouseStockOperationService {
         if(r==null || r.requestKey()==null || r.warehouseId()==null
            || r.productSkuId()==null || r.expectedOnHand()<0)
             throw bad("Missing or invalid warehouse operation fields");
-        if(!List.of("OUTBOUND","TRANSFER","COUNT").contains(r.type()))
+        if(r.type()==null || !List.of("OUTBOUND","TRANSFER","COUNT").contains(r.type()))
             throw bad("Unsupported local stock operation");
         if("TRANSFER".equals(r.type())) {
             if(r.destinationWarehouseId()==null
