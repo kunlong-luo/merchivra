@@ -323,3 +323,12 @@
 - [x] React 采购 ASN 管理、ETA 变更、关联实物收货、工作队列和单元契约测试；以对应最终 CI 记录为验证依据。
 - [ ] 真实 PostgreSQL 18 V43 Flyway/Compose、跨租户 HTTP、并发串行化及完整业务流程尚须专项验收；实际供应商 EDI、承运商 Tracking、真实 Amazon Inbound 尚未接入。
 - 参考：[PO-006 供应商 ASN 预到货与交期管理](purchasing/supplier-asn-tracking-v43.md)。
+
+## V44 · 本地采购实收质检、隔离品和供应商退货（2026-10-31）
+
+- [x] V44 数据迁移：独立一次性实收 QC、合格/不合格数量守恒、带唯一 inspection 来源的负向 `QC_QUARANTINE` 库存移动、租户隔离的供应商退货草稿与人工发出、不可覆盖审计与异常工作队列。
+- [x] Spring Boot 服务与 Owner/Session/CSRF API：严格核对真实采购收货与实际仓库，库存不足不得隔离；单次质检只扣不合格品，退货发出不能第二次扣仓库台账，所有相关动作幂等并附加审计。
+- [x] 退货可分批草拟/发出，但所有非取消草稿累计不能大于本次质检不合格品；隔离未处置和超过 7 天的异常可人工/可选计划巡检，默认不自动巡检、不外发邮件、不调用 Amazon。
+- [x] React 质检与退货管理、库存来源展示及 JUnit/Vitest 合约用例；以最新 CI 记录确认测试状态。
+- [ ] PostgreSQL 18 V44 Flyway/Compose 真实迁移、跨租户 HTTP/并发、产品真实环境整体验收尚需单独执行。暂不支持待检实物货位、批次/序列号、供应商索赔与 RMA 物流签收、退款/信用票据。
+- 详见 [PO-007 质检与供应商退货](purchasing/receipt-quality-and-supplier-returns-v44.md)。
