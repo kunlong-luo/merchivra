@@ -62,6 +62,8 @@ docker compose --env-file .env -f deploy/compose.yaml up --build
 
 ## Amazon 官方 SDK 接入代码（默认关闭）
 
-后端已引入 Amazon **官方 Java SP-API SDK 1.13.0**，包含多个模块的生成 API 类型；新增仅供受授权服务端调用的 LWA/区域 Client、Orders/Listing/FBA/Finances/Reports/Feeds 等读取封装，以及测试中使用的纯虚构 Token 和响应结构。**真实 Seller OAuth、凭证安全存储和实际 Amazon 网络调用仍未完成，默认不开启出站**。模块与差距详见 [INT-004](docs/integrations/sp-api-code-integration.md)。
+后端已引入 Amazon **官方 Java SP-API SDK 1.13.0**，包含多个模块的生成 API 类型；新增仅供受授权服务端调用的 LWA/区域 Client、Orders/Listing/FBA/Finances/Reports/Feeds 等读取封装，以及测试中使用的纯虚构 Token 和响应结构。**已有默认关闭的 OAuth/加密 Vault 代码，但尚无真实 Amazon 网络验收、完整角色授权或生产 Worker，默认不开启出站**。模块与差距详见 [INT-004](docs/integrations/sp-api-code-integration.md)。
 
-**Seller OAuth 下一层代码：** 已增加 V7、Amazon 公有应用的两阶段授权回调、一次性 State、租户绑定 AES-256-GCM 凭证 Vault、本地撤销和审计。授权回调后仅 `PENDING_VERIFICATION`，没有接入真实账户、密钥轮换或生产级核验；默认禁用。见 [SEC-004](docs/security/seller-oauth.md)。
+**Seller OAuth 下一层代码：** 已增加 V7、Amazon 公有应用的两阶段授权回调、一次性 State、租户绑定 AES-256-GCM 凭证 Vault、本地撤销和审计。授权回调后仅 `PENDING_VERIFICATION`，没有接入真实账户或完成生产级核验；默认禁用。见 [SEC-004](docs/security/seller-oauth.md)。
+
+**V8/V9 进一步实现（仍默认关闭）：** V8 增加 Amazon 官方 Sellers v1 Marketplace 参与状态核验与 Worker Vault 24 小时站点证据门禁；V9 增加版本化 AES-256-GCM 密钥环、Owner+CSRF 按店铺原子重加密和审计。**未做真实 Amazon Seller 账号验证、角色证明、KMS Envelope Encryption 或真实订单/库存 Worker。**本地加密密钥轮换不等于 Amazon Refresh Token 续期。见 [SEC-005](docs/security/seller-verification.md) / [SEC-006](docs/security/seller-key-rotation.md)。

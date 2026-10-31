@@ -77,3 +77,9 @@ The backend includes Amazon's official SDK 1.13.0 plus `spapi/` typed and read-o
 ## Optional public Seller OAuth code (disabled by default)
 
 Flyway V7 creates tenant-bound state and encrypted grant tables. Public-app website authorization includes Amazon login-URI handoff, short-lived Lax HttpOnly cookie, final Code exchange and local revoke/audit, but **never marks a Seller connected until separately verified**. Real OAuth is incompatible with Demo mode and requires a registered HTTPS redirect plus a protected AES-256 key and LWA app credentials. See [SEC-004](security/seller-oauth.md); do not put any credentials in this repo or public CI.
+
+## V8/V9 Marketplace verification and vault key rotation (code only)
+
+- V8 offers an opt-in, production-endpoint-only Sellers v1 Marketplace-participation check for Owner sessions, and 24-hour marketplace evidence before the internal Worker Vault releases a grant. Sellers v1 does **not** prove independent Seller identity or Amazon operation roles. Read [SEC-005](security/seller-verification.md).
+- V9 supports AES-256-GCM versioned keyrings and an Owner/CSRF per-account `POST /api/v1/seller-accounts/{accountId}/oauth/rotate-key` for transactional rewrap and metadata-only audit. It does **not** rotate Amazon LWA Refresh Tokens. Follow the careful old/new key staging procedure in [SEC-006](security/seller-key-rotation.md).
+- With real SP-API disabled, the independent Compose suite validates Flyway V7–V9 migration and fictional Mock regression; it does not test Amazon APIs, KMS, tenant-wide automatic rotation, roles or any live sync Worker. Never put real Seller secrets into CI or Demo fixtures.
