@@ -147,7 +147,8 @@ public class ReplenishmentService {
             else if(r.when()==null || r.when().isBefore(now.minus(MAX_AGE))
                     || r.when().isAfter(now.plus(Duration.ofMinutes(5))))
                 status="STALE_OBSERVATION";
-            else if(!"OBSERVED".equals(r.quality()) || r.available()==null)
+            else if(!"OBSERVED".equals(r.quality()) || r.available()==null
+                    || r.available()<0 || (r.reserved()!=null && r.reserved()<0))
                 status="INCOMPLETE_OBSERVATION";
             else if(r.available()<=r.policy().reorderPoint()) {
                 status="REORDER";
