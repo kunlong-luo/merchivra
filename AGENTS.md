@@ -451,3 +451,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - ASN 单行累计申报总量（未取消）加未关联 ASN 的实际收货总量不能超订购行数量。取消任何已有实际关联收货的 ASN 必须失败；人工 ETA 修改需旧 ETA 快照、原因及审计。
 - `SUPPLIER_ASN_OVERDUE` 和 `SUPPLIER_ASN_DUE_SOON` 仅当供应商上报发货、未完全实际收货、PO 仍可收货时匹配。扫描默认手工；可选 `merchivra.supplier-asns.scheduler-enabled=true`，**不发送外部消息、不调用 Amazon**，工作队列状态保留审计。
 - `docs/purchasing/supplier-asn-tracking-v43.md` 为接口和边界。真实 PostgreSQL18 迁移、HTTP 和多会话并发须另行验收，不得将编译成功解释为生产已对接。
+
+## V44 · 本地实收质检与隔离品来源（2026-10-31）
+
+- V39/V43 的 `erp_purchase_receipt` 是唯一真实本地采购收货依据；不可把供应商 ASN 申报数量或历史无仓库收货静默认领为当前仓库库存或质检实收。
+- V44 每笔实际收货最多完整质检一次，必须满足 `accepted+rejected=receipt.quantity`，使用 Owner/Session/CSRF、请求 UUID 幂等、原因审计。此前已入账的完整实收不重加合格数；**仅 rejected 件数生成唯一负向 QC_QUARANTINE 流水**，并在仓库锁下拒绝把台账余额扣成负数。
+- 不合格品独立隔离，供应商退货的所有非取消草稿累计不得大于拒收件数。退货 DISPATCHED 是人工申报发出，既不等于供应商签收或退款，**更不能在质检已隔离的库存上再次扣减**。所有动作保持租户复合 FK 和只追加事件。
+- 质检异常工作队列仅监控已有本地不合格品的未处置和超期 7 天，默认手动扫描；可选 `merchivra.purchase-quality.scheduler-enabled=true`。不自动采购、发货、退款、Amazon FBA/FBM 写入。
+- 实施与限制详见 `docs/purchasing/receipt-quality-and-supplier-returns-v44.md`。真实 PostgreSQL 18 迁移、并发/权限及业务集成验收仍须单独完成，不可把编译 CI 视为生产验证。
