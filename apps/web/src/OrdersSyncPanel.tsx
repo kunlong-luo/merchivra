@@ -32,6 +32,12 @@ export default function OrdersSyncPanel({ tenantId, marketplaceId, isLive }: {
     onError: error => { setError(errorText(error, '提交失败')); setMessage('') }
   })
   const value = status.data
+  const stats = value ? [
+    { label: '任务状态', val: value.state },
+    { label: '已提交页数', val: value.committedPages },
+    { label: '租约代数', val: value.leaseEpoch },
+    { label: '安全水位（UTC）', val: formatSourceTime(value.lastSafeWatermark) }
+  ] : []
   return <section className="panel orders-sync-panel" aria-label="V11 订单同步任务">
     <div className="panel-heading"><div>
       <h2>{isLive ? '订单增量 Worker · V11C LIVE' : '订单增量 Worker · V11A MOCK'}</h2>
@@ -42,9 +48,7 @@ export default function OrdersSyncPanel({ tenantId, marketplaceId, isLive }: {
       : status.isError ? <p className="setup-hint" role="status">{errorText(status.error, 'Worker 不可用')}</p>
       : value && <>
         <div className="orders-sync-grid">
-          {([['任务状态', value.state], ['已提交页数', value.committedPages],
-            ['租约代数', value.leaseEpoch], ['安全水位（UTC）', formatSourceTime(value.lastSafeWatermark)]]
-            as const).map(([label, val]) => <div key={label}><span>{label}</span><strong>{val}</strong></div>)}
+          {stats.map(({ label, val }) => <div key={label}><span>{label}</span><strong>{val}</strong></div>)}
         </div>
         <p className="core-search-scope">{isLive
           ? '分页 Token 不会发送到浏览器。未完成独立角色审核、正式连接或启用开关时，服务端必须拒绝读取；LIVE 数据也不代表已结算利润。'
