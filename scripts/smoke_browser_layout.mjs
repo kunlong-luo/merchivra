@@ -71,6 +71,8 @@ const server = createServer(async (req, res) => {
       lastSeenAt:'2026-10-31T00:00:00Z'
     }])
   if (url.pathname.startsWith('/api/v1/')) {
+    if (url.pathname === '/api/v1/seller-marketplaces' && mode === 'connected')
+      return respond(res, mock.get(url.pathname).map(x=>({ ...x, connectionStatus:'CONNECTED' })))
     if (mock.has(url.pathname)) return respond(res, mock.get(url.pathname))
     if (url.pathname.endsWith('/pages')) return respond(res,
       { status:'NOT_STARTED', nextPage:0, totalPages:2, leaseEpoch:0, pages:[] })
@@ -250,6 +252,23 @@ async function main() {
         true, 'operations rule label')
       await layout(send,width,'operations-360')
       await screenshot(send,'operations-360.png')
+      // Synthetic connected Marketplace must expose a LIVE-gated operations
+      // panel outside the local Demo tools. This does not call Amazon.
+      mode='connected'
+      await send('Page.navigate',{url:url+'?connected='+width})
+      await waitFor(send,
+        "document.querySelector('.orders-sync-panel')?.textContent?.includes('V11C LIVE')",
+        'connected Marketplace LIVE Orders panel')
+      assert.equal(await evaluate(send,
+        "document.querySelector('.orders-sync-panel')?.textContent?.includes('LIVE · 权限强校验')"),
+        true, 'LIVE must be explicitly distinguished from MOCK')
+      assert.equal(await evaluate(send,
+        "document.querySelectorAll('.orders-sync-panel').length"),1,
+        'LIVE checkpoint must be a single panel, not a Mock duplicate')
+      await layout(send,width,'connected-live-orders-360')
+      await evaluate(send,
+        "document.querySelector('.orders-sync-panel')?.scrollIntoView({block:'center'})")
+      await screenshot(send,'connected-live-orders-360.png')
     }
   }
   console.log('Chromium responsive UI smoke PASS (synthetic backend only).')
