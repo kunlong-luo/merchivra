@@ -81,6 +81,7 @@ export const fetchStockOperations=(warehouseId:string)=>
   z.array(stockOperation))
 export const postStockOperation=(body:StockOperationRequest)=>
  call(base+'/warehouse-operations',stockOperation,'POST',body)
-export const receivePurchase=(id:string,lineId:string,quantity:number,warehouseId:string)=>
+export const receivePurchase=(id:string,lineId:string,quantity:number,
+ warehouseId:string,asnId?:string|null)=>
  call(base+'/orders/'+encodeURIComponent(id)+'/receive',detail,'POST',
-  {lineId,quantity,warehouseId})
+  {lineId,quantity,warehouseId,...(asnId?{asnId}:{})})
