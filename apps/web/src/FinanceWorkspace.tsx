@@ -1,4 +1,5 @@
 import {useEffect,useState,type FormEvent} from 'react'
+import FinancesSyncPanel from './FinancesSyncPanel'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchCoreMarketplaces,fetchCoreOrders} from './lib/core'
 import {createManualFinanceEvent,fetchFinanceBuckets,fetchFinanceEvents,
@@ -68,6 +69,8 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
      {markets.data.map(m=><option key={m.id} value={m.id}>
       {m.marketplaceId} · {m.region} · {m.currency}</option>)}
     </select></label></div>}
+  {currentId&&markets.data?.find(m=>m.id===currentId)?.connectionStatus==='CONNECTED'&&
+    <FinancesSyncPanel key={currentId} tenantId={tenantId} marketplaceId={currentId}/>}
   <section className="panel full-panel">
    <div className="panel-heading"><div><h2>按来源 / 原币 / 类别统计</h2>
     <p>相同币种和同类事件才聚合。这里的金额不等于销售额、利润或到账金额。</p></div>

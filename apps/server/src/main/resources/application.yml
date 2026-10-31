@@ -99,3 +99,10 @@ merchivra:
     # Automatically progress only jobs started by a tenant Owner. OFF by default.
     scheduler-enabled: ${MERCHIVRA_CATALOG_SYNC_SCHEDULER_ENABLED:false}
     scheduler-ms: ${MERCHIVRA_CATALOG_SYNC_SCHEDULER_MS:10000}
+
+  finances-sync:
+    # Default OFF; verified Finance and Accounting role required per Seller.
+    enabled: ${MERCHIVRA_FINANCES_SYNC_ENABLED:false}
+    # Optional: continue only Owner-started finance scans.
+    scheduler-enabled: ${MERCHIVRA_FINANCES_SYNC_SCHEDULER_ENABLED:false}
+    scheduler-ms: ${MERCHIVRA_FINANCES_SYNC_SCHEDULER_MS:60000}

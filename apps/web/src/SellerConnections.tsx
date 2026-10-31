@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchLocalAccounts } from './lib/setup'
+import FinanceRoleReviewPanel from './FinanceRoleReviewPanel'
 import { getOauthStatus, getOauthAudit, startSellerOauth, verifySellerOauth,
   revokeSellerOauth, getRoleReviews, requestRoleReview, decideRoleReview,
   revokeOrdersRole } from './lib/connection'
@@ -211,6 +212,9 @@ export default function SellerConnections({ tenantId, currentUserId }: {
           </tbody></table>
         </div>}
     </section>}
+    {!!selectedId && oauth.data?.status === 'VERIFIED'&&
+     <FinanceRoleReviewPanel key={selectedId} tenantId={tenantId}
+       accountId={selectedId} currentUserId={currentUserId}/>}
     {!!selectedId && oauth.data?.status === 'VERIFIED' && <section className="panel full-panel">
       <div className="panel-heading"><div><h2>Orders API 角色审核</h2>
         <p>Seller 站点参与资格不等于 Amazon 应用具有 Inventory and Order Tracking 权限。此处必须使用独立外部审核证据，且申请人不能自己批准。</p></div>

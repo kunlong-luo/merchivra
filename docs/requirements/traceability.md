@@ -126,3 +126,11 @@ G2 全部为**设计验收规范**，并未执行任何数据库/HTTP 测试，�
 - `FR-INV-01`/`FR-INV-03`：FBA 可售/预留及质量来源快照；不把空/NULL 当 0，允许已有补货模块仅对可信 OBSERVED 来源计算。
 - `FR-SYNC-01`/`FR-SYNC-03`：手动运行、租约 fencing、持久化 cursor/代次/页 checkpoint、429/5xx 延迟重试和每页出网前后授权审核。
 - `FR-SYS-01`：Owner Session/CSRF、来源隔离及同租户 Marketplace，正式 Seller 授权与真实集成验证待办。
+
+
+### V25/V26 Finances 正式读取代码（待联调）
+
+- `FR-FIN-01`：Finance and Accounting 单独审批，正式 `listTransactions` 原币来源交易与稳定主键去重，未拆解分类保持 UNCLASSIFIED。
+- `FR-FIN-03`：财务事件与 Orders 预计金额隔离，不将来源净额假装为销售/利润；来源与人工未核验分桶，关联订单号仅作为待审查参考。
+- `FR-SYNC-01/03`：Owner 手动创建扫描，后台按页处理，持久化 checkpoint、lease epoch、角色撤销防护、429/5xx 退避与可选调度。
+- `FR-SYS-01`：申请人/SECURITY_REVIEWER 双人控制，7 天角色期限及紧急撤销。

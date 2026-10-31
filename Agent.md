@@ -326,3 +326,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 所有自动页在事务外读取官方 SDK，事务内复查角色/授权再提交；429/5xx 延迟，不把错误/未知库存清零；日志不得包含 refresh token、source JSON 或 cursor。
 
 - V24 安全修订：FBA Inventory 官方 nextToken 约 30 秒过期，本地 20 秒后必须重启完整新代次；Listing 采用单独 25 分钟阈值，自动调度默认 10 秒轮询。禁止把 FBA token 当成长寿命 Orders/Listing 游标。FBA 响应 granularity 必须匹配当前 Marketplace。
+
+
+## V25/V26 · Finances 独立来源、角色及结算纪律
+
+- Finance and Accounting 必须采用独立双人审核，不得由 Orders/Listings 权限或 OAuth 登录自动推断；财务角色有效期、grant 绑定、Reviewer 在职有效性、撤销和每页提交前锁必须检查。
+- 官方 Finances `totalAmount` 可能是含多种明细的有符号净额；仅允许暂存 `UNCLASSIFIED`，**禁止**直接归为销售收入、退款、平台手续费、结算或净利润，不得与 Orders 预计收入重复相加。
+- 同步端点只能接受 Marketplace ID 和受控 start/step；同步服务默认关闭，独立 Scheduler 默认关闭，用户显式启动后才能处理页。所有来源金额原币、稳定交易 ID、来源时间、审计与重放不变量保留；不得保存源 JSON、地址、买家或 OAuth token。
+- 后续必须做 Finances breakdown/结算/来源对账和有证据的贡献额，而非从单一 totalAmount 推导利润。真实 Seller 与财务口径验收完成前不得标记生产可用。

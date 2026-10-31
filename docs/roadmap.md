@@ -165,3 +165,13 @@
 ### V24B · 可选自动分页（2026-10-31）
 
 - [x] **代码已加入、待完整验收**：Owner 手动创建的 Listing/FBA 正式只读扫描可由默认关闭的 Scheduler 逐页执行和重试，保留数据库 Lease/Epoch 与来源权限逐页复核；不会自动对 Seller 发起新任务。
+
+
+## V25/V26 · Finances 角色审批及平台交易只读（2026-10-31）
+
+- [x] **已编写并提交** V25 独立 `Finance and Accounting` 双人角色审核、历史/撤销与加密 Seller Vault 财务 Scope；此前 Orders 审核不授予财务权限。
+- [x] **代码已编写，待验收** V26 SDK `listTransactions`、原币有符号金额、稳定 SHA-256 来源键、`UNCLASSIFIED` 隔离；固定 14 天/48 小时回溯窗口，持久化页游标、租约、重试和事务内来源事件/检查点。
+- [x] **代码已编写** React Seller 财务角色审批页面及财务工作台同步入口，另有默认关闭的可选自动分页调度。
+- [ ] 真实 Seller Finances 正式数据验收、历史补录、未分类交易 breakdown、退款/费用/结算识别、利润报表与税务口径仍未实现。
+
+[FIN-006](finance/finances-live-v26.md)

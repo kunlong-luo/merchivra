@@ -167,3 +167,8 @@ Core 工作台新增官方 SDK Listing/FBA 页面分页同步，包含授权/角
 
 
 管理员建立 Listing/FBA 扫描后，可选开启 `MERCHIVRA_CATALOG_SYNC_SCHEDULER_ENABLED=true` 自动逐页读取与重试，默认关闭。该调度器不会自动创建新扫描或执行 Amazon 写入。
+
+
+### V25/V26 Finances 只读业务链路
+
+增加 Finances 独立两人安全审批、`listTransactions` 官方 SDK 交易只读 Worker、稳定去重/原币未分类入库、原子分页 checkpoint、重试及可选调度，工作台能查看状态并逐页推进。所有真实功能**默认关闭**，不宣称真实 Amazon 已联调或费用/利润/结算已完整分类。详见 [FIN-006](docs/finance/finances-live-v26.md)。
