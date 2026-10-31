@@ -26,14 +26,16 @@ class MarketplaceReadControllerTest {
     private final UUID marketplaceId = UUID.fromString("c11e7a00-1234-4234-8234-222222222222");
 
     private void allow() {
-        when(tenants.currentTenant(eq(auth), any(HttpServletRequest.class))).thenReturn(tenantId);
+        when(tenants.authenticatedUser(auth)).thenReturn(UUID.fromString("88888888-8888-4888-8888-888888888888"));
+        when(tenants.currentReadTenant(eq(auth), any(HttpServletRequest.class))).thenReturn(tenantId);
         when(jdbc.queryForObject(anyString(), eq(Integer.class),
-            eq(marketplaceId), eq(tenantId), eq(tenantId))).thenReturn(1);
+            eq(marketplaceId), eq(tenantId), eq(tenantId), any(UUID.class))).thenReturn(1);
     }
 
     @Test
     void neverAcceptsForeignMarketplaceWithoutAuthorizedTenant() {
-        when(tenants.currentTenant(eq(auth), any(HttpServletRequest.class))).thenReturn(tenantId);
+        when(tenants.authenticatedUser(auth)).thenReturn(UUID.fromString("88888888-8888-4888-8888-888888888888"));
+        when(tenants.currentReadTenant(eq(auth), any(HttpServletRequest.class))).thenReturn(tenantId);
         when(jdbc.queryForObject(anyString(), eq(Integer.class),
             eq(marketplaceId), eq(tenantId), eq(tenantId))).thenReturn(0);
 
@@ -59,7 +61,7 @@ class MarketplaceReadControllerTest {
     void listMarketplacesDoesNotReadAnyOtherTenant() {
         allow();
         controller.marketplaces(auth, request);
-        verify(jdbc).query(anyString(), any(RowMapper.class), eq(tenantId));
+        verify(jdbc).query(anyString(), any(RowMapper.class), eq(tenantId), any(UUID.class));
     }
 
     @Test

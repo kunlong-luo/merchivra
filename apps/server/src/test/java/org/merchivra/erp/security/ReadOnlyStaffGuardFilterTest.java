@@ -21,6 +21,12 @@ class ReadOnlyStaffGuardFilterTest {
 
     @AfterEach void clear() { SecurityContextHolder.clearContext(); }
 
+    private static MockHttpServletRequest req(String method,String path) {
+        var r=new MockHttpServletRequest(method,path);
+        r.setServletPath(path);
+        return r;
+    }
+
     private Authentication staff() {
         var a=new UsernamePasswordAuthenticationToken(id,"n/a",List.of());
         SecurityContextHolder.getContext().setAuthentication(a);
@@ -30,7 +36,7 @@ class ReadOnlyStaffGuardFilterTest {
     @Test void staffCanOnlyReachReadOnlyScopedApi() throws Exception {
         Authentication a=staff();
         when(access.accessibleTenants(a)).thenReturn(List.of());
-        var req=new MockHttpServletRequest("GET","/api/v1/seller-marketplaces");
+        var req=req("GET","/api/v1/seller-marketplaces");
         var res=new MockHttpServletResponse();
         guard.doFilter(req,res,chain);
         assertEquals(200,res.getStatus());
@@ -41,7 +47,7 @@ class ReadOnlyStaffGuardFilterTest {
     @Test void staffCannotReadUnscopedOrWriteScope() throws Exception {
         Authentication a=staff();
         when(access.accessibleTenants(a)).thenReturn(List.of());
-        var req=new MockHttpServletRequest("GET","/api/v1/operations/summary");
+        var req=req("GET","/api/v1/operations/summary");
         var res=new MockHttpServletResponse();
         guard.doFilter(req,res,chain);
         assertEquals(403,res.getStatus());
@@ -51,7 +57,7 @@ class ReadOnlyStaffGuardFilterTest {
     @Test void sessionOwnerContinuesUsingLegacyRoutes() throws Exception {
         Authentication a=staff();
         when(access.accessibleTenants(a)).thenReturn(List.of(UUID.randomUUID()));
-        var req=new MockHttpServletRequest("POST","/api/v1/operations/scan");
+        var req=req("POST","/api/v1/operations/scan");
         var res=new MockHttpServletResponse();
         guard.doFilter(req,res,chain);
         assertEquals(200,res.getStatus());
@@ -63,7 +69,7 @@ class ReadOnlyStaffGuardFilterTest {
         when(access.accessibleTenants(a)).thenReturn(List.of());
         for(String path:List.of("/api/v1/demo/sync-runs","/api/v1/seller-accounts",
             "/api/v1/orders-sync/00000000-0000-4000-8000-000000000000/start")){
-            guard.doFilter(new MockHttpServletRequest("POST",path),
+            guard.doFilter(req("POST",path),
                 new MockHttpServletResponse(),chain);
         }
         verifyNoInteractions(chain);
