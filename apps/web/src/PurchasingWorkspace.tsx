@@ -3,8 +3,8 @@ import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchSkus} from './lib/catalog'
 import {createSupplier,fetchSuppliers,createPurchaseOrder,fetchPurchaseOrders,
  fetchPurchaseOrder,purchaseAction,receivePurchase,fetchWarehouses,createWarehouse,
- fetchWarehouseStock,fetchWarehouseLedger,fetchPendingReceipts,
- type NewPurchaseLine} from './lib/purchasing'
+ fetchWarehouseStock,fetchWarehouseLedger,fetchPendingReceipts,postStockOperation,
+ type NewPurchaseLine,type StockOperationRequest} from './lib/purchasing'
 
 export default function PurchasingWorkspace({tenantId,currentUserId}:{
  tenantId:string;currentUserId:string
@@ -19,6 +19,12 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  const [receiveQty,setReceiveQty]=useState(1)
  const [warehouseCode,setWarehouseCode]=useState(''),[warehouseName,setWarehouseName]=useState('')
  const [warehouseId,setWarehouseId]=useState(''),[stockWarehouseId,setStockWarehouseId]=useState('')
+ const [operationType,setOperationType]=useState<StockOperationRequest['type']>('OUTBOUND')
+ const [operationSku,setOperationSku]=useState('')
+ const [operationDestination,setOperationDestination]=useState('')
+ const [operationQuantity,setOperationQuantity]=useState(1)
+ const [operationReason,setOperationReason]=useState('')
+ const [operationKey,setOperationKey]=useState(()=>crypto.randomUUID())
  const [message,setMessage]=useState(''),[failure,setFailure]=useState('')
  const warehouses=useQuery({queryKey:['purchasing',tenantId,'warehouses'],queryFn:fetchWarehouses})
  const stock=useQuery({queryKey:['purchasing',tenantId,'stock',stockWarehouseId],
@@ -49,6 +55,13 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
   purchaseAction(id,kind),onSuccess:d=>{
     setMessage('采购单状态已更新：'+d.order.status);setFailure('');refresh()
   },onError:(e:Error)=>setFailure(e.message)})
+ const stockOperation=useMutation({
+  mutationFn:(body:StockOperationRequest)=>postStockOperation(body),
+  onSuccess:o=>{setMessage('本地库存操作已记录：'+o.type+' · 余额 '+o.afterQuantity);
+    setFailure('');setOperationKey(crypto.randomUUID());setOperationReason('');
+    setOperationSku('');setOperationQuantity(1);refresh()},
+  onError:(e:Error)=>setFailure(e.message)
+ })
  const receipt=useMutation({mutationFn:()=>receivePurchase(selectedId,receiveLine,receiveQty,warehouseId),
   onSuccess:d=>{setMessage('本地仓库收货和库存流水已追加：'+d.order.status);setFailure('');refresh()},
   onError:(e:Error)=>setFailure(e.message)})
@@ -59,6 +72,27 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  const supplierOptions=suppliers.data?.filter(s=>s.status==='ACTIVE')??[]
  const activeSkus=skus.data?.filter(s=>s.status==='ACTIVE')??[]
  const activeWarehouses=warehouses.data?.filter(w=>w.status==='ACTIVE')??[]
+ const currentOnHand=stock.data?.find(s=>s.productSkuId===operationSku)?.onHandQuantity??0
+ const quantityValid=Number.isSafeInteger(operationQuantity)&&
+  (operationType==='COUNT'?(operationQuantity>=0&&operationQuantity<=10000000
+    &&operationQuantity!==currentOnHand):
+   (operationQuantity>=1&&operationQuantity<=1000000&&operationQuantity<=currentOnHand))
+ const operationReady=!!stockWarehouseId&&!!operationSku&&!!stock.data&&
+  activeSkus.some(s=>s.id===operationSku)&&
+  activeWarehouses.some(w=>w.id===stockWarehouseId)&&
+  (operationType!=='TRANSFER'||activeWarehouses.some(w=>w.id===operationDestination
+    &&w.id!==stockWarehouseId))&&quantityValid&&
+  operationReason.trim().length>=5&&operationReason.trim().length<=300&&
+  !stock.isFetching&&!stockOperation.isPending
+ function submitStockOperation(e:FormEvent){
+  e.preventDefault()
+  if(!operationReady)return
+  if(!window.confirm('确认更新本地仓库库存流水？该操作不能通过删除记录撤销；不会同步 Amazon。'))return
+  stockOperation.mutate({requestKey:operationKey,type:operationType,
+   warehouseId:stockWarehouseId,destinationWarehouseId:operationType==='TRANSFER'
+    ?operationDestination:null,productSkuId:operationSku,quantity:operationQuantity,
+   expectedOnHand:currentOnHand,reason:operationReason.trim()})
+ }
  return <div className="core-workspace">
   <div className="core-intro"><strong>采购与供应商 · 本地业务</strong><p>
    支持采购审批、指定本地仓库后分批收货，并记录不可覆盖的入库流水。
@@ -229,39 +263,82 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
       </>}
    </div>}
   </section>
-  <section className="panel full-panel" aria-label="仓库入库流水与累计数量">
-   <div className="panel-heading"><div><h2>本地仓库入库流水</h2>
-    <p>仅展示明确分配到所选仓库的采购收货。累计数量尚未扣除出库、损耗或退货，
-     因此不是实际可用库存。</p></div></div>
+  <section className="panel full-panel" aria-label="本地仓库库存与出入库流水">
+   <div className="panel-heading"><div><h2>本地仓库库存台账</h2>
+    <p>只统计明确分配仓库的采购入库、人工出库、仓间调拨与盘点差异。
+     台账余额不含未知历史收货、未记录的损耗、预留或 Amazon FBA 库存。</p></div></div>
    <label htmlFor="warehouse-stock-select">选择仓库查看</label>
    <select id="warehouse-stock-select" value={stockWarehouseId}
-    onChange={e=>setStockWarehouseId(e.target.value)}>
+    onChange={e=>{setStockWarehouseId(e.target.value);setOperationSku('');
+     setOperationDestination('');setOperationKey(crypto.randomUUID())}}>
     <option value="">选择仓库</option>
     {(warehouses.data??[]).map(w=><option key={w.id} value={w.id}>
      {w.code} · {w.name}</option>)}
    </select>
    {stockWarehouseId&&<>
-    {stock.isPending?<p className="empty-state">加载累计入库数量…</p>:
+    {stock.isPending?<p className="empty-state">加载本地库存台账…</p>:
      stock.isError?<p className="setup-error" role="alert">{String(stock.error)}</p>:
-     !stock.data?.length?<p className="empty-state">所选仓库还没有入库流水。</p>:
-     <div className="table-scroll" role="region" tabIndex={0} aria-label="仓库累计入库">
+     !stock.data?.length?<p className="empty-state">所选仓库还没有已入账的库存流水。</p>:
+     <div className="table-scroll" role="region" tabIndex={0} aria-label="本地库存台账余额">
       <table><thead><tr><th scope="col">内部 SKU</th>
-       <th scope="col">累计采购收货件数</th></tr></thead><tbody>
+       <th scope="col">历史采购收货</th><th scope="col">本地台账余额</th></tr></thead><tbody>
        {stock.data.map(s=><tr key={s.productSkuId}><td>{s.internalSku}</td>
-        <td>{s.recordedReceivedQuantity}</td></tr>)}
+        <td>{s.recordedReceivedQuantity}</td><td>{s.onHandQuantity}</td></tr>)}
       </tbody></table>
      </div>}
-    <h3>最近 100 条本地收货流水</h3>
+    <form className="team-invite-form" onSubmit={submitStockOperation}>
+     <h3>人工更新本地库存（有审计、不可直接删除）</h3>
+     <label htmlFor="stock-op-type">操作类型</label>
+     <select id="stock-op-type" value={operationType}
+      onChange={e=>{setOperationType(e.target.value as StockOperationRequest['type']);
+       setOperationKey(crypto.randomUUID())}}>
+      <option value="OUTBOUND">本地出库（扣减）</option>
+      <option value="TRANSFER">仓间调拨（两仓同步记账）</option>
+      <option value="COUNT">盘点差异（输入实盘数量）</option>
+     </select>
+     <label htmlFor="stock-op-sku">内部 SKU</label>
+     <select id="stock-op-sku" value={operationSku}
+      onChange={e=>{setOperationSku(e.target.value);setOperationKey(crypto.randomUUID())}}>
+      <option value="">选择内部 SKU</option>
+      {activeSkus.map(s=><option key={s.id} value={s.id}>{s.internalSku}</option>)}
+     </select>
+     <p className="setup-hint">当前本地台账余额：{operationSku?currentOnHand:'请先选择 SKU'}。
+      操作时服务端重新验证余额，变化则要求刷新。</p>
+     {operationType==='TRANSFER'&&<>
+      <label htmlFor="stock-op-dest">目标仓库</label>
+      <select id="stock-op-dest" value={operationDestination}
+       onChange={e=>{setOperationDestination(e.target.value);setOperationKey(crypto.randomUUID())}}>
+       <option value="">选择目标仓库</option>
+       {activeWarehouses.filter(w=>w.id!==stockWarehouseId).map(w=>
+        <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}
+      </select>
+     </>}
+     <label htmlFor="stock-op-quantity">
+      {operationType==='COUNT'?'盘点实数（允许 0）':'本次操作件数'}
+     </label>
+     <input id="stock-op-quantity" type="number" step={1}
+      min={operationType==='COUNT'?0:1} max={operationType==='COUNT'?10000000:1000000}
+      value={operationQuantity} onChange={e=>{
+       setOperationQuantity(Number(e.target.value));setOperationKey(crypto.randomUUID())}}/>
+     <label htmlFor="stock-op-reason">业务原因（至少 5 字符）</label>
+     <input id="stock-op-reason" value={operationReason} minLength={5} maxLength={300}
+      onChange={e=>{setOperationReason(e.target.value);setOperationKey(crypto.randomUUID())}}
+      placeholder="例如：本地订单已出库／仓库盘点差异" required/>
+     <button type="submit" className="primary-button" disabled={!operationReady}>
+      确认写入本地库存流水</button>
+    </form>
+    <h3>最近 100 条本地库存流水</h3>
     {movements.isPending?<p className="empty-state">加载流水中…</p>:
      movements.isError?<p className="setup-error" role="alert">{String(movements.error)}</p>:
      !movements.data?.length?<p className="empty-state">暂无入库流水。</p>:
-     <div className="table-scroll" role="region" tabIndex={0} aria-label="仓库入库历史">
+     <div className="table-scroll" role="region" tabIndex={0} aria-label="仓库完整库存流水">
       <table><thead><tr><th scope="col">时间</th><th scope="col">内部 SKU</th>
-       <th scope="col">数量</th><th scope="col">来源收货 ID</th></tr></thead><tbody>
+       <th scope="col">变动</th><th scope="col">来源</th><th scope="col">原因</th></tr></thead><tbody>
        {movements.data.map(m=><tr key={m.id}>
         <td>{new Date(m.createdAt).toLocaleString('zh-CN')}</td>
-        <td>{m.internalSku}</td><td>+{m.quantity}</td>
-        <td>{m.purchaseReceiptId}</td>
+        <td>{m.internalSku}</td><td>{m.quantity>0?'+':''}{m.quantity}</td>
+        <td>{m.movementType} · {m.purchaseReceiptId??m.operationId??'无来源'}</td>
+        <td>{m.reason??'采购已审批收货'}</td>
        </tr>)}
       </tbody></table>
      </div>}
