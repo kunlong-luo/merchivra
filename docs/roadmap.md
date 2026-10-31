@@ -84,3 +84,9 @@
 - [ ] 实际公有/私有 Seller 授权资格、TLS 域名与密钥管理、API 角色与卖家一致性校验、Token/Key 轮换、账户级任务终止和真实 Amazon Worker/财务仍需开发与验收。见 [SEC-004](security/seller-oauth.md)。
 
 - [x] [V7 真实 Compose/PG 验证](https://github.com/kunlong-luo/merchivra/actions/runs/41145773306)：Flyway V1–V7 与旧 Mock 链全部通过，未开放 OAuth 或插入任何真实 Seller 授权。不是 Amazon 生产授权验收。
+
+## V17 · Seller 身份匹配与 React 连接中心（2026-10-31）
+
+- 修复 Seller v1 核验通过后 `seller_account.seller_id` 仍为 `LOCAL-` 的断点；仅在全部 Marketplace 证据验证与事务 claim 成功时绑定 Amazon OAuth Seller ID。
+- 在内部凭证 Vault 增加账号真实 Seller ID 与授权身份匹配校验，保持跨租户和失效证据拒绝。
+- React Owner 导航新增授权状态/启动/核验/本地撤销、OAuth 审计和独立 Orders 角色审核（全程 CSRF/同源、默认关闭）；待真实 Amazon/角色/负载/密钥验收。

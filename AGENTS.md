@@ -262,3 +262,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - [PostgreSQL 18 / Java 25 / React Nginx Compose full chain succeeded](https://github.com/kunlong-luo/merchivra/actions/runs/41164156751), including V1–V16 Flyway, authenticated Session/CSRF and multi-owner/operator checks, mock source import, Orders Worker checkpoint and actual backend restart recovery.
 - Lockfile was regenerated through the npm registry and committed in [React lockfile commit](https://github.com/kunlong-luo/merchivra/commit/d3e56c564f254cc4153d996da240edc65a397424), with zero Vue/Pinia/vue-tsc/Vue Query packages. Temporary lock generator workflow removed; normal CI and Docker require `npm ci`.
 - **Only the frontend framework changed**. All live Amazon Seller operations are still gated by the server and were NOT production-validated by these synthetic smoke tests. This change does not add OpenAPI/Orval, production Seller credentials, or Finances/Listing/FBA live sync.
+
+
+## V17 · Seller 连接中心开发约束（2026-10-31）
+
+- 用户只从 React Owner 工作台通过现有 CSRF/Session 接入 Seller OAuth/验证/Orders 角色审批，**不得**在浏览器储存或输入 Amazon Refresh Token、Seller Code、LWA Secret、API 凭证或租户 ID。OAuth 真实网络默认关闭。
+- 后端成功 Marketplace 核验后，必须在同一事务内将 `seller_account.seller_id` 绑定经过两阶段 OAuth 校验的 Seller ID；服务端 Vault/Orders Worker 要求本地账户、授权与站点证据三者身份一致。
+- Amazon OAuth 返回并不等于 Seller VERIFIED，Seller VERIFIED 不等于 Orders 角色已获批准，Owner 自己不能审核自己的 Orders 申请，失败与撤销必须不可绕过。
+- 本轮新增 Java 单元测试和前端 Vitest 必须随现有 Java CI、React CI 及 PostgreSQL Compose 验证；测试中的 Amazon 数据全为合成值。

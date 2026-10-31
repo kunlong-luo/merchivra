@@ -81,3 +81,16 @@ Worker Vault 仅接受 24 小时内的证据。撤销、并发 claim、失效证
 rewrap，并保留旧密钥解密兼容。V7 前述固定 key_version=1 的限制现已
 部分解决，但这**不是 KMS Envelope Encryption、Amazon OAuth Token 续期
 或生产级全局密钥轮换验收**。
+
+## V17 · React Seller 连接中心
+
+租户 Owner 的工作台新增“卖家授权”页，以现有 Session + CSRF 调用 V7/V8/V14 API。
+每个店铺可以查看授权状态、最近 30 条脱敏审计、发起公有应用 Seller Central 授权、手动验证站点、在确认后本地撤销。
+界面只接受由服务端返回且严格匹配 `https://sellercentral.amazon.{com,de,co.jp}/apps/authorize/consent` 的跳转地址；
+不接收用户提供的 Token、Seller ID、tenantId 或任意重定向 URL。
+Amazon OAuth 回跳只提示“等待验证”，绝不直接标为 `CONNECTED`。
+
+已验证的店铺显示独立 Orders 角色审核入口：提供不含秘密的外部工单编号和 SHA-256 文件摘要，
+由另一名满足 `SECURITY_REVIEWER` 的 Owner 审批（服务端强制不同人），支持审计与撤销。
+模块未启用时给出原因，不伪造角色授权或允许绕开审核。
+默认配置不启用真实 OAuth、验证或 Orders 审核；需要人工审批生产权限、HTTPS、真实 Amazon 资质与安全检查。

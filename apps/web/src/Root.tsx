@@ -13,7 +13,7 @@ export default function Root(){
  const [activating,setActivating]=useState(false),[signingOut,setSigningOut]=useState(false)
  const {data:viewer,isPending,isError,error,refetch}=useQuery({queryKey:['auth','me'],queryFn:fetchViewer,retry:false,staleTime:0})
  function clearCaches(){
-   for(const key of [['api','demo'],['core'],['setup'],['sandbox'],['operations'],['team'],['orders-sync']])
+   for(const key of [['api','demo'],['core'],['setup'],['sandbox'],['operations'],['team'],['connections'],['orders-sync']])
      client.removeQueries({queryKey:key})
  }
  async function signIn(event:React.FormEvent){

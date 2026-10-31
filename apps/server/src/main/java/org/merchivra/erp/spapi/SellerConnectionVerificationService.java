@@ -54,6 +54,7 @@ public final class SellerConnectionVerificationService {
                       OR g.verification_started_at < now() - interval '1 minute')
                   AND sa.connection_status IN ('AUTHORIZATION_PENDING','CONNECTED')
                   AND sa.region=g.region
+                  AND (sa.seller_id LIKE 'LOCAL-%' OR sa.seller_id=g.seller_id)
                   AND EXISTS(SELECT 1 FROM membership m JOIN app_user u ON u.id=m.user_id
                       WHERE m.tenant_id=g.tenant_id AND m.user_id=? AND m.status='ACTIVE'
                       AND u.status='ACTIVE' AND EXISTS(
@@ -113,10 +114,12 @@ public final class SellerConnectionVerificationService {
             if (updated!=1)
                 throw new ResponseStatusException(HttpStatus.CONFLICT,"Grant changed during verification");
             int connected=jdbc.update("""
-                UPDATE seller_account SET connection_status='CONNECTED'
-                WHERE tenant_id=? AND id=?
+                UPDATE seller_account
+                SET seller_id=?,connection_status='CONNECTED'
+                WHERE tenant_id=? AND id=? AND region=?
                   AND connection_status IN ('AUTHORIZATION_PENDING','CONNECTED')
-                """,tenant,account);
+                  AND (seller_id LIKE 'LOCAL-%' OR seller_id=?)
+                """,grant.sellerId(),tenant,account,grant.region().name(),grant.sellerId());
             if (connected!=1)
                 throw new ResponseStatusException(HttpStatus.CONFLICT,"Seller account state changed");
             // Evidence only for configured marketplaces, scoped to this Seller.

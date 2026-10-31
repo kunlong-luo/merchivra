@@ -33,7 +33,8 @@ public final class SpApiSellerGrantVault {
             JOIN tenant t ON t.id=g.tenant_id
             WHERE g.tenant_id=? AND g.seller_account_id=? AND mp.marketplace_id=?
               AND g.status='VERIFIED' AND sa.connection_status='CONNECTED'
-              AND sa.region=g.region AND mp.marketplace_id IS NOT NULL
+              AND sa.region=g.region AND sa.seller_id=g.seller_id
+              AND mp.marketplace_id IS NOT NULL
               AND t.status='ACTIVE'
               AND EXISTS (
                 SELECT 1 FROM spapi_marketplace_verification v

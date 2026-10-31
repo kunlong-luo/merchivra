@@ -44,3 +44,19 @@ V8 使用官方 Java SDK `SellersApi.getMarketplaceParticipations()`，以 V7 �
 官方参考：[Sellers API v1](https://developer-docs.amazon.com/sp-api/docs/sellers-api-v1-reference)、
 [官方 Java SDK](https://github.com/amzn/selling-partner-api-sdk)、
 [SP-API Roles](https://developer-docs.amazon.com/sp-api/docs/roles-in-the-selling-partner-api)。
+
+## V17 · 通过 Seller 身份一致性闭环（2026-10-31）
+
+V8 原版验证成功后只把 `seller_account.connection_status` 改为 `CONNECTED`，
+却仍将 `seller_account.seller_id` 留在 `LOCAL-<UUID>` 占位，而 OAuth 凭证内
+`spapi_seller_authorization.seller_id` 是 Amazon 回调提供的 Seller ID。
+V11C LIVE Orders 及 V14 双人角色审核均要求两个标识相等，从而产生了永远无法满足的准入门槛。
+
+V17 修复：仅在 Sellers v1 已验证**全部配置的 Marketplace**并且持有当前 verification claim 时，
+把经过回调绑定的 Seller ID、连接状态在同一数据库事务中写入 `seller_account`。
+只允许原先 `LOCAL-` 占位或重复核验同一 Seller ID；Region 必须一致，不允许覆盖其他真实 Seller ID。
+原有 `UNIQUE(tenant_id,seller_id,region)` 防止同租户绑定同一正式身份两次。
+Vault 也显式检查 `seller_account.seller_id = spapi_seller_authorization.seller_id`，
+避免身份不一致的异常账户获得 Worker 凭证。失败、过期、撤销时不得改变或复活身份。
+
+此变更通过合成证据的 Java 单元测试和现有认证守卫测试核查；真实 Amazon 账号与生产出站仍需单独验收。
