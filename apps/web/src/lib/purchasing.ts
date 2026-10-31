@@ -9,7 +9,8 @@ const order=z.object({id:z.string().uuid(),orderNumber:z.string(),supplierId:z.s
  notes:z.string().nullable(),updatedAt:z.string()})
 const line=z.object({id:z.string().uuid(),productSkuId:z.string().uuid(),
  orderedQuantity:z.number().int(),receivedQuantity:z.number().int(),unitCost:z.string()})
-const detail=z.object({order,lines:z.array(line)})
+export const purchaseDetailSchema=z.object({order,lines:z.array(line)})
+const detail=purchaseDetailSchema
 export type Supplier=z.infer<typeof supplier>
 export type PurchaseOrder=z.infer<typeof order>
 export type PurchaseLine=z.infer<typeof line>
