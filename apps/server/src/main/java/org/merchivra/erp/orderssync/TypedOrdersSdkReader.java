@@ -17,8 +17,8 @@ import software.amazon.spapi.models.orders.v2026_01_01.SearchOrdersResponse;
 
 /**
  * Typed Orders v2026-01-01 read using Amazon's official Java SDK.
- * Only stable minimal order facts cross this boundary; buyer, recipient,
- * proceeds and payment information are never requested or persisted.
+ * Only stable non-PII facts cross this boundary; BUYER, RECIPIENT and PAYMENT
+ * are never requested. Optional ITEM subtotal is not final settlement or profit.
  */
 public final class TypedOrdersSdkReader {
     @FunctionalInterface
@@ -36,7 +36,7 @@ public final class TypedOrdersSdkReader {
             modules.searchOrders(seller).searchOrders(
                 null, null, after, before, null,
                 List.of(seller.marketplaceId()), null, 100,
-                cursor, null);
+                cursor, List.of("PROCEEDS"));
     }
 
     TypedOrdersSdkReader(ReadCall caller) { this.caller=Objects.requireNonNull(caller); }

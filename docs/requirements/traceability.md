@@ -111,3 +111,10 @@ G2 全部为**设计验收规范**，并未执行任何数据库/HTTP 测试，�
 
 - `FR-INV-02`、`FR-AUTO-01`：基于手动策略和最新可信 FBA 可售观测提出只读补货数量、标识来源缺失/过期/不完整；仅 Owner 可修改规则，绝不自动发起 Amazon 远程操作。
 - `FR-PO-01`：当前采购是独立本地流程，补货建议尚未自动转换采购单，避免以未知在途冲抵目标数量。
+
+
+### V23 · Orders 订单项代码（待验收）
+
+- `FR-ORD-01`：v2026 `searchOrders` 的 item ID、卖家 SKU、quantity、可选 ITEM subtotal 持久化；沿用页提交、租约、权限 fence。
+- `FR-ORD-02`：按既有 Marketplace 权限读取明细，仅 Owner 或允许的店铺只读员工，无 PII；页面区别 NOT_OBSERVED 与 OBSERVED。
+- `FR-ORD-04` / `FR-FIN-03`：履约、退款、财务状态仍独立，不把 Orders ITEM 商品小计变为 Finances 已入账或会计利润。

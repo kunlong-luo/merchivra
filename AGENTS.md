@@ -310,3 +310,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - V22 仅为 Owner 提供站点级 Seller SKU 补货点和目标量、提醒建议与审计。不可修改 Amazon、自动采购或从未核验采购收货推算 FBA 可售。
 - 只有最新 `quality=OBSERVED` 且明确非 NULL 的 `fulfillable` 和不超过 48 小时的来源观测才用于补货建议；过期、缺失、未来异常时间与 PARTIAL 状态一律不可计算。不要把建议量误称真实销量预测。
 - 本轮先提交代码，运行、PG 迁移、权限安全及 API/React 的正式测试后续集中完成，报告时必须区分代码提交与验收证据。
+
+
+## V23 · Orders 商品项事实（功能优先）
+
+- 不允许倒退到 deprecated v0 `getOrderItems`。官方 v2026 `searchOrders` 基础订单项足以写入 Item ID/Seller SKU/数量；带 `PROCEEDS` 才能看 ITEM 商品小计，绝不请求 PII 或把 Orders 小计当平台结算。
+- `items_observation=NOT_OBSERVED`、`orderItems=null` 与空数组不同；源缺失不能覆盖已有明细。新版项快照更新当前行指示而保留历史，须与现有 Orders 逐页 commit/checkpoint/授权 fence 同事务。
+- Source dataOrigin、Marketplace、Seller、时间版本和独立 Orders 角色都要保持单向验证；正式 Amazon 调用仍需在生产合规授权后显式打开。
+- 本轮编写的 Java/React/数据库代码、离线测试与文档并不意味着真实 Seller 已验收。

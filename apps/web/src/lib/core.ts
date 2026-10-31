@@ -28,8 +28,18 @@ export const coreOrderSchema = z.object({
   refundStatus: z.string(),
   financialStatus: z.string(),
   itemCount: z.number().int().nonnegative(),
+  itemsObservation: z.enum(['NOT_OBSERVED','OBSERVED']).optional().default('NOT_OBSERVED'),
   sourceUpdatedAt: z.string().nullable(),
   dataOrigin: z.enum(['MOCK','UNVERIFIED','LIVE'])
+})
+
+export const coreOrderItemSchema = z.object({
+  id: z.string().uuid(),
+  externalItemId: z.string(),
+  sellerSku: z.string().nullable(),
+  quantity: z.number().int().nonnegative().nullable(),
+  itemSubtotal: z.string().nullable(),
+  currency: z.string().nullable()
 })
 
 export const coreInventorySchema = z.object({
@@ -46,6 +56,7 @@ export const coreInventorySchema = z.object({
 export type CoreMarketplace = z.infer<typeof marketplaceSchema>
 export type CoreListing = z.infer<typeof coreListingSchema>
 export type CoreOrder = z.infer<typeof coreOrderSchema>
+export type CoreOrderItem = z.infer<typeof coreOrderItemSchema>
 export type CoreInventory = z.infer<typeof coreInventorySchema>
 
 async function getCoreList<T>(url: string, schema: z.ZodType<T>): Promise<T> {
@@ -77,6 +88,12 @@ export function fetchCoreOrders(marketplaceId: string) {
   return getCoreList(
     `/api/v1/seller-marketplaces/${encodeURIComponent(marketplaceId)}/orders?limit=50`,
     z.array(coreOrderSchema)
+  )
+}
+export function fetchCoreOrderItems(marketplaceId:string,orderId:string) {
+  return getCoreList(
+    `/api/v1/seller-marketplaces/${encodeURIComponent(marketplaceId)}/orders/${encodeURIComponent(orderId)}/items`,
+    z.array(coreOrderItemSchema)
   )
 }
 export function fetchCoreInventory(marketplaceId: string) {

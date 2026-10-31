@@ -260,6 +260,56 @@ public class OrdersSyncService {
                            OR sales_order.source_updated_at<=EXCLUDED.source_updated_at)
                     """,UUID.randomUUID(),tenant,marketplace,order.orderId(),
                     order.fulfillment(),dbTime(order.updatedAt()),mode());
+                if(!order.itemsObserved())continue; // absent is NOT empty.
+                record StoredOrder(UUID id,Instant updatedAt,String origin) {}
+                List<StoredOrder> existing=jdbc.query("""
+                    SELECT id,source_updated_at,data_origin FROM sales_order
+                    WHERE tenant_id=? AND seller_marketplace_id=?
+                      AND external_order_id=? FOR UPDATE
+                    """,(rs,n)->new StoredOrder(rs.getObject("id",UUID.class),
+                        instant(rs,"source_updated_at"),rs.getString("data_origin")),
+                    tenant,marketplace,order.orderId());
+                if(existing.size()!=1)throw new IllegalStateException("Order lost during item write");
+                var stored=existing.getFirst();
+                // A newer Order or a different source must not have its item
+                // snapshot replaced by this older/replayed page.
+                if(!mode().equals(stored.origin())
+                   || !order.updatedAt().truncatedTo(java.time.temporal.ChronoUnit.MICROS)
+                        .equals(stored.updatedAt()))continue;
+                // v2026 searchOrders orderItems is the complete observed list.
+                // Maintain soft current membership; never physically destroy
+                // historical Order items during a subsequent update.
+                jdbc.update("""
+                    UPDATE order_item SET is_current=false
+                    WHERE tenant_id=? AND sales_order_id=? AND is_current=true
+                    """,tenant,stored.id());
+                for(var item:order.items()) {
+                    jdbc.update("""
+                        INSERT INTO order_item
+                          (id,tenant_id,sales_order_id,external_item_id,seller_sku_raw,
+                           quantity,proceeds_amount,proceeds_currency,
+                           source_updated_at,is_current)
+                        VALUES (?,?,?,?,?,?,?,?,?,true)
+                        ON CONFLICT (tenant_id,sales_order_id,external_item_id)
+                        DO UPDATE SET seller_sku_raw=EXCLUDED.seller_sku_raw,
+                          quantity=EXCLUDED.quantity,
+                          proceeds_amount=COALESCE(EXCLUDED.proceeds_amount,
+                                                   order_item.proceeds_amount),
+                          proceeds_currency=COALESCE(EXCLUDED.proceeds_currency,
+                                                     order_item.proceeds_currency),
+                          source_updated_at=EXCLUDED.source_updated_at,is_current=true
+                        WHERE order_item.source_updated_at IS NULL
+                           OR order_item.source_updated_at<=EXCLUDED.source_updated_at
+                        """,UUID.randomUUID(),tenant,stored.id(),item.itemId(),
+                        item.sellerSku(),item.quantity(),
+                        item.itemSubtotal()==null?null:new java.math.BigDecimal(item.itemSubtotal()),
+                        item.currency(),dbTime(order.updatedAt()));
+                }
+                jdbc.update("""
+                    UPDATE sales_order SET items_observation='OBSERVED',
+                        items_observed_at=now()
+                    WHERE tenant_id=? AND id=? AND data_origin=?
+                    """,tenant,stored.id(),mode());
             }
             jdbc.update("""
                 INSERT INTO orders_sync_page_commit
@@ -301,7 +351,26 @@ public class OrdersSyncService {
             if(o==null || o.orderId()==null || o.orderId().isBlank()
                || o.orderId().length()>160 || !scope.marketplaceCode().equals(o.marketplaceCode())
                || o.updatedAt()==null || o.fulfillment()==null
-               || o.fulfillment().length()>100) throw new IllegalArgumentException("Unsafe order fact");
+               || o.fulfillment().length()>100 || o.items()==null
+               || o.items().size()>1000 || (!o.itemsObserved()&&!o.items().isEmpty()))
+                throw new IllegalArgumentException("Unsafe order fact");
+            var observedIds=new java.util.HashSet<String>();
+            for(var item:o.items()) {
+                if(item==null || item.itemId()==null
+                  || !item.itemId().matches("[A-Za-z0-9._:/-]{1,160}")
+                  || !observedIds.add(item.itemId())
+                  || item.sellerSku()!=null && (item.sellerSku().isBlank()
+                      || item.sellerSku().length()>200
+                      || item.sellerSku().chars().anyMatch(Character::isISOControl))
+                  || item.quantity()!=null && item.quantity()<0
+                  || (item.itemSubtotal()==null)!=(item.currency()==null))
+                    throw new IllegalArgumentException("Unsafe order item fact");
+                if(item.itemSubtotal()!=null) {
+                    if(!item.currency().matches("[A-Z]{3}")
+                      || !item.itemSubtotal().matches("-?[0-9]{1,14}(?:\\.[0-9]{1,6})?"))
+                        throw new IllegalArgumentException("Unsafe order item money");
+                }
+            }
         }
     }
 

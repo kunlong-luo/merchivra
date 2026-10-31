@@ -15,7 +15,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * only after a separately audited app-role review is recorded.
  *
  * Uses the reviewed Orders 2026-01-01 read operation, never PII includedData.
- * Does not persist source JSON, buyer information, or financial amounts.
+ * Does not persist source JSON, buyer PII or settlement facts. Typed v2026
+ * path extracts non-PII item facts and optional ITEM proceeds subtotal only.
  */
 public final class ApprovedOrdersReadGateway {
     private final JdbcTemplate jdbc;

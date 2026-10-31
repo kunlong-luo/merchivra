@@ -154,3 +154,8 @@ Compose 使用 `postgres:18-alpine`，新卷 `pgdata18:/var/lib/postgresql`。�
 ## V22 库存补货建议代码（未验收）
 
 新增 FBA 页内按 Seller SKU 配置的补货阈值、目标库存、提前期以及计算建议。**数据质量不可信时返回「不可计算」而不是把未知库存当作 0；不会自动采购或修改 Amazon。**详见 [INV-004](docs/inventory/replenishment-policy-v22.md)。
+
+
+## V23 Orders 商品明细同步代码（待真实 Amazon 验收）
+
+接入官方 Orders v2026 `searchOrders` 的非 PII 商品项、数量及可选 ITEM 小计字段；增量 Worker 在每页事务中持久化当前明细并保留历史，React Core 订单支持展开查看、明确区分订单项未知与已观测。无真实订单同步验收，不等于财务结算或净利润。见 [ORD-005](docs/integrations/orders-items-v23.md)。

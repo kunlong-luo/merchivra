@@ -140,3 +140,13 @@
 - [ ] 真正销量预测、采购建议审批、采购自动生成、Amazon 货件/物流在途、跨仓库存统一汇总、真实 FBA 数据接入仍未实现。
 
 [INV-004](inventory/replenishment-policy-v22.md)
+
+
+## V23 · Orders v2026-01-01 真实订单项链路（2026-10-31）
+
+- [x] **代码已加入，尚需集中验收**：官方 Orders v2026 `searchOrders` 直接提取商品项 ID、Seller SKU、数量和 `type=ITEM` 的原币商品小计；仅请求 PROCEEDS，不取 BUYER/RECIPIENT；无金额保留 NULL。
+- [x] **代码已加入**：V23 增加是否观测订单项与当前行历史标记，订单与当前项在现有租户/Marketplace/授权 Worker 的单页事务中提交，分页 checkpoint 不脱节；老版本/空缺来源不覆盖可信明细。
+- [x] **代码已加入**：受 Session/账号作用域保护的订单项明细 API 与 React Core 订单展开视图，区别「未取得」与「已观测为空」。
+- [ ] 真实 Seller Orders 2026 联调、实际 Seller 网络限流/边界、PostgreSQL/Compose V23 回归以及订单履约/退款/财务对账尚需集中验证或开发。
+
+[ORD-005](integrations/orders-items-v23.md)

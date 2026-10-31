@@ -6,21 +6,25 @@ import OrdersSyncPanel from './OrdersSyncPanel'
 import SkuCatalogManager from './SkuCatalogManager'
 import ReplenishmentWorkspace from './ReplenishmentWorkspace'
 import {coreStatusLabel,filterLoadedRows,formatSourceTime,sourceLabel} from './lib/core-view'
-import {fetchCoreMarketplaces,fetchCoreListings,fetchCoreOrders,fetchCoreInventory} from './lib/core'
+import {fetchCoreMarketplaces,fetchCoreListings,fetchCoreOrders,fetchCoreOrderItems,fetchCoreInventory} from './lib/core'
 
 type Section='listings'|'orders'|'inventory'
 export default function CoreWorkspace({tenantId,isOwner=true}:{tenantId:string;isOwner?:boolean}){
  const [marketplaceId,setMarketplaceId]=useState(''),[section,setSection]=useState<Section>('listings'),[search,setSearch]=useState('')
+ const [selectedOrderId,setSelectedOrderId]=useState('')
  const marketplaces=useQuery({queryKey:['core','marketplaces',tenantId],queryFn:fetchCoreMarketplaces,staleTime:30000,retry:1})
  useEffect(()=>{if(!marketplaces.data?.some(m=>m.id===marketplaceId))setMarketplaceId(marketplaces.data?.[0]?.id??'')},[marketplaces.data,marketplaceId])
  const listings=useQuery({queryKey:['core',tenantId,'listings',marketplaceId],queryFn:()=>fetchCoreListings(marketplaceId),enabled:!!marketplaceId&&section==='listings',staleTime:30000,retry:1})
  const orders=useQuery({queryKey:['core',tenantId,'orders',marketplaceId],queryFn:()=>fetchCoreOrders(marketplaceId),enabled:!!marketplaceId&&section==='orders',staleTime:30000,retry:1})
+ const detail=useQuery({queryKey:['core',tenantId,'order-items',marketplaceId,selectedOrderId],
+  queryFn:()=>fetchCoreOrderItems(marketplaceId,selectedOrderId),
+  enabled:!!marketplaceId&&!!selectedOrderId&&section==='orders',staleTime:30000,retry:1})
  const inventory=useQuery({queryKey:['core',tenantId,'inventory',marketplaceId],queryFn:()=>fetchCoreInventory(marketplaceId),enabled:!!marketplaceId&&section==='inventory',staleTime:30000,retry:1})
  const active=marketplaces.data?.find(m=>m.id===marketplaceId)
  const filteredListings=useMemo(()=>filterLoadedRows(listings.data,search,r=>[r.sellerSku,r.asin,r.internalSku]),[listings.data,search])
  const filteredOrders=useMemo(()=>filterLoadedRows(orders.data,search,r=>[r.externalOrderId]),[orders.data,search])
  const filteredInventory=useMemo(()=>filterLoadedRows(inventory.data,search,r=>[r.sellerSku]),[inventory.data,search])
- function changeSection(id:Section){setSection(id);setSearch('')}
+ function changeSection(id:Section){setSection(id);setSearch('');setSelectedOrderId('')}
  function reload(){if(section==='listings')void listings.refetch();if(section==='orders')void orders.refetch();if(section==='inventory')void inventory.refetch()}
  const status=(origin:Parameters<typeof sourceLabel>[0])=><span className={`status-chip ${origin==='MOCK'?'chip-amber':'chip-muted'}`}>{sourceLabel(origin)}</span>
  const panel=(title:string,subtitle:string,count:number,total:number,loading:boolean,error:Error|null|undefined,empty:string,children:React.ReactNode,refresh:()=>void)=>
@@ -38,7 +42,7 @@ export default function CoreWorkspace({tenantId,isOwner=true}:{tenantId:string;i
  !marketplaces.data?.length?<div className="core-onboarding"><div className="state-panel core-empty"><h2>当前租户尚未配置 Marketplace</h2><p>本地配置不等于 Amazon 正式授权。</p><button className="refresh-button" onClick={()=>void marketplaces.refetch()}>重新检查站点</button></div>{isOwner&&<SellerSetup tenantId={tenantId}/>}</div>:
  <>
  <div className="core-controls"><label className="shop-filter"><span>Marketplace（服务端授权范围）</span>
- <select aria-label="切换受保护 Marketplace" value={marketplaceId} onChange={e=>{setMarketplaceId(e.target.value);setSearch('')}}>
+ <select aria-label="切换受保护 Marketplace" value={marketplaceId} onChange={e=>{setMarketplaceId(e.target.value);setSearch('');setSelectedOrderId('')}}>
  {marketplaces.data.map(m=><option key={m.id} value={m.id}>{m.marketplaceId} · {m.region} · {m.currency}</option>)}</select></label>
  <button className="refresh-button" disabled={!marketplaceId} onClick={reload}>刷新当前数据</button></div>
  {active&&<div className="core-marketplace-summary" role="status"><div><strong>{active.marketplaceId}</strong><span>{active.region} · {active.currency} · {active.timezone}</span></div>
@@ -52,7 +56,28 @@ export default function CoreWorkspace({tenantId,isOwner=true}:{tenantId:string;i
  {section==='listings'&&panel('Listing（核心业务表）','独立展示 Seller SKU 和已确认的内部 SKU 映射',filteredListings.length,listings.data?.length??0,listings.isPending,listings.error,'当前站点尚无 Listing 记录。',
  <div className="table-scroll core-data-scroll" role="region" tabIndex={0} aria-label="可水平滚动的 Listing 表格"><table><thead><tr>{['Seller SKU','ASIN','内部 SKU','映射状态','来源','来源更新时间'].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{filteredListings.map(i=><tr key={i.id}><td className="strong-cell">{i.sellerSku}</td><td>{i.asin??'未知'}</td><td>{i.internalSku??'未确认'}</td><td><span className={`status-chip ${i.mappingStatus==='ACTIVE'?'chip-green':'chip-amber'}`}>{coreStatusLabel(i.mappingStatus)}</span></td><td>{status(i.dataOrigin)}</td><td className="small-cell">{formatSourceTime(i.sourceUpdatedAt)}</td></tr>)}</tbody></table></div>,()=>void listings.refetch())}
  {section==='orders'&&panel('订单（核心业务表）','履约、退款与财务状态分开列示；不推测收入',filteredOrders.length,orders.data?.length??0,orders.isPending,orders.error,'当前站点尚无订单记录。',
- <div className="table-scroll core-data-scroll" role="region" tabIndex={0} aria-label="可水平滚动的订单表格"><table><thead><tr>{['外部订单号','订单项数量','履约','退款','财务','来源','来源时间'].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{filteredOrders.map(i=><tr key={i.id}><td className="strong-cell">{i.externalOrderId}</td><td>{i.itemCount}</td><td>{coreStatusLabel(i.fulfillmentStatus)}</td><td>{coreStatusLabel(i.refundStatus)}</td><td>{coreStatusLabel(i.financialStatus)}</td><td>{status(i.dataOrigin)}</td><td>{formatSourceTime(i.sourceUpdatedAt)}</td></tr>)}</tbody></table></div>,()=>void orders.refetch())}
+ <div className="table-scroll core-data-scroll" role="region" tabIndex={0} aria-label="可水平滚动的订单表格"><table><thead><tr>{['外部订单号','订单项数量','履约','退款','财务','来源','来源时间','明细'].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{filteredOrders.map(i=><tr key={i.id}><td className="strong-cell">{i.externalOrderId}</td><td>{i.itemsObservation==='OBSERVED'?i.itemCount:'未取得'}</td><td>{coreStatusLabel(i.fulfillmentStatus)}</td><td>{coreStatusLabel(i.refundStatus)}</td><td>{coreStatusLabel(i.financialStatus)}</td><td>{status(i.dataOrigin)}</td><td>{formatSourceTime(i.sourceUpdatedAt)}</td>
+ <td><button className="text-button" type="button"
+   aria-pressed={selectedOrderId===i.id} onClick={()=>setSelectedOrderId(
+     selectedOrderId===i.id?'':i.id)}>{selectedOrderId===i.id?'收起':'查看订单项'}</button></td></tr>)}</tbody></table></div>,()=>void orders.refetch())}
+ {section==='orders'&&selectedOrderId&&<section className="panel full-panel"
+   aria-label="当前订单明细"><div className="panel-heading"><div><h2>订单项详情</h2>
+   <p>仅包含订单项 ID、Seller SKU、数量及 ITEM 商品小计。该小计不等于总成交额、净利润或平台已结算金额。</p></div>
+   <button className="refresh-button" type="button" onClick={()=>void detail.refetch()}>刷新明细</button></div>
+   {detail.isPending?<p className="empty-state">正在读取当前订单项…</p>:
+     detail.isError?<p className="setup-error" role="alert">{String(detail.error)}</p>:
+     (orders.data?.find(o=>o.id===selectedOrderId)?.itemsObservation??'NOT_OBSERVED')!=='OBSERVED'
+      ?<p className="empty-state">源订单项尚未观测。不能把未知订单项当作零件。</p>:
+     !detail.data?.length?<p className="empty-state">该订单的来源订单项集合已观测为空。</p>:
+     <div className="table-scroll core-data-scroll" role="region" tabIndex={0}
+        aria-label="订单项明细表"><table><thead><tr>
+       {['来源订单项 ID','Seller SKU','订购数量','ITEM 商品小计（原币）'].map(h=>
+         <th key={h} scope="col">{h}</th>)}</tr></thead><tbody>
+       {detail.data.map(i=><tr key={i.id}><td className="strong-cell">{i.externalItemId}</td>
+         <td>{i.sellerSku??'未知'}</td><td>{i.quantity??'未知'}</td>
+         <td>{i.itemSubtotal===null?'未取得':`${i.currency} ${i.itemSubtotal}`}</td></tr>)}
+       </tbody></table></div>}
+ </section>}
  {section==='inventory'&&panel('最新 FBA 观测（核心业务表）','每个 Seller SKU 显示最新观测，未知不等于零',filteredInventory.length,inventory.data?.length??0,inventory.isPending,inventory.error,'当前站点尚无 FBA 库存观测。',
  <div className="table-scroll core-data-scroll" role="region" tabIndex={0} aria-label="可水平滚动的 FBA 库存表格"><table><thead><tr>{['Seller SKU','可售','预留','质量','来源','观测时间'].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{filteredInventory.map(i=><tr key={i.id}><td className="strong-cell">{i.sellerSku}</td><td>{i.fulfillable===null?'未知':i.fulfillable}</td><td>{i.reserved===null?'未知':i.reserved}</td><td>{coreStatusLabel(i.quality)}</td><td>{status(i.dataOrigin)}</td><td>{formatSourceTime(i.observedAt)}</td></tr>)}</tbody></table></div>,()=>void inventory.refetch())}
  <div className="note-panel"><span className="note-mark">i</span><div><strong>数据完整性提醒</strong><p>最多读取 50 条，筛选只作用于本页；未知库存不能当零，Mock 不代表 Amazon 真实业务。</p></div></div>

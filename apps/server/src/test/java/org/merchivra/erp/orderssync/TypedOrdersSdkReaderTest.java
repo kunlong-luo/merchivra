@@ -11,6 +11,11 @@ import org.junit.jupiter.api.Test;
 import org.merchivra.erp.spapi.SpApiSellerScope;
 import org.merchivra.erp.spapi.SpApiRegion;
 import software.amazon.spapi.models.orders.v2026_01_01.Order;
+import software.amazon.spapi.models.orders.v2026_01_01.OrderItem;
+import software.amazon.spapi.models.orders.v2026_01_01.ItemProduct;
+import software.amazon.spapi.models.orders.v2026_01_01.ItemProceeds;
+import software.amazon.spapi.models.orders.v2026_01_01.ItemProceedsBreakdown;
+import software.amazon.spapi.models.orders.v2026_01_01.Money;
 import software.amazon.spapi.models.orders.v2026_01_01.SalesChannel;
 import software.amazon.spapi.models.orders.v2026_01_01.OrderFulfillment;
 import software.amazon.spapi.models.orders.v2026_01_01.FulfillmentStatus;
@@ -92,4 +97,53 @@ class TypedOrdersSdkReaderTest {
             AFTER,BEFORE,null);
         assertEquals("NOT_OBSERVED",result.orders().getFirst().fulfillmentRaw());
     }
+    @Test void extractsTypedOrderItemsWithoutBuyerPiiOrEstimatedSettlement() throws Exception {
+        var item=new OrderItem().orderItemId("SYNTH-LINE-1").quantityOrdered(2)
+            .product(new ItemProduct().sellerSku("SKU-LINE"))
+            .proceeds(new ItemProceeds().breakdowns(List.of(
+                new ItemProceedsBreakdown().type("ITEM").subtotal(
+                    new Money().amount("19.250000").currencyCode("USD")),
+                new ItemProceedsBreakdown().type("SHIPPING").subtotal(
+                    new Money().amount("3.00").currencyCode("USD")))));
+        var reader=new TypedOrdersSdkReader((scope,after,before,cursor)->
+            new SearchOrdersResponse().orders(List.of(
+                new Order().orderId("SYNTH-WITH-ITEMS")
+                    .lastUpdatedTime(OffsetDateTime.ofInstant(AFTER,ZoneOffset.UTC))
+                    .salesChannel(new SalesChannel().marketplaceId(MP))
+                    .orderItems(List.of(item)))));
+        var page=reader.searchDetailed(grant(Set.of("Inventory and Order Tracking")),
+            AFTER,BEFORE,null);
+        var order=page.orders().getFirst();
+        assertTrue(order.itemsObserved());
+        assertEquals(1,order.items().size());
+        var fact=order.items().getFirst();
+        assertEquals("SYNTH-LINE-1",fact.itemId());
+        assertEquals("SKU-LINE",fact.sellerSku());
+        assertEquals(2,fact.quantity());
+        assertEquals("19.250000",fact.itemSubtotal());
+        assertEquals("USD",fact.currency());
+    }
+
+    @Test void doesNotConfuseMissingOrderItemsWithObservedEmptySnapshot() throws Exception {
+        var reader=new TypedOrdersSdkReader((scope,after,before,cursor)->
+            fixture(MP,null));
+        var result=reader.searchDetailed(grant(Set.of("Inventory and Order Tracking")),
+            AFTER,BEFORE,null);
+        assertFalse(result.orders().getFirst().itemsObserved());
+        assertTrue(result.orders().getFirst().items().isEmpty());
+    }
+
+    @Test void rejectedDuplicateItemIdsCannotProducePartialWritePage() {
+        var same=new OrderItem().orderItemId("SYNTH-SAME").quantityOrdered(1);
+        var reader=new TypedOrdersSdkReader((scope,after,before,cursor)->
+            new SearchOrdersResponse().orders(List.of(
+                new Order().orderId("SYNTH-BAD-ITEMS")
+                    .lastUpdatedTime(OffsetDateTime.ofInstant(AFTER,ZoneOffset.UTC))
+                    .salesChannel(new SalesChannel().marketplaceId(MP))
+                    .orderItems(List.of(same,same)))));
+        assertThrows(IllegalArgumentException.class,()->
+            reader.searchDetailed(grant(Set.of("Inventory and Order Tracking")),
+                AFTER,BEFORE,null));
+    }
+
 }

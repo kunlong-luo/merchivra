@@ -45,7 +45,11 @@ public class MarketplaceReadController {
 
     public record OrderView(String id, String externalOrderId, String fulfillmentStatus,
                             String refundStatus, String financialStatus,
-                            long itemCount, String sourceUpdatedAt, String dataOrigin) {}
+                            long itemCount, String sourceUpdatedAt, String dataOrigin,
+                            String itemsObservation) {}
+
+    public record OrderItemView(String id,String externalItemId,String sellerSku,
+                                Integer quantity,String itemSubtotal,String currency) {}
 
     public record InventoryView(String id, String sellerSku, String quality,
                                 Integer fulfillable, Integer reserved,
@@ -116,8 +120,10 @@ public class MarketplaceReadController {
         return jdbc.query("""
             SELECT o.id, o.external_order_id, o.fulfillment_status_raw,
                    o.refund_status, o.financial_status, o.source_updated_at, o.data_origin,
+                   o.items_observation,
                    (SELECT COUNT(*) FROM order_item i
-                     WHERE i.tenant_id = o.tenant_id AND i.sales_order_id = o.id) AS item_count
+                     WHERE i.tenant_id = o.tenant_id AND i.sales_order_id = o.id
+                       AND i.is_current=true) AS item_count
             FROM sales_order o
             WHERE o.tenant_id = ? AND o.seller_marketplace_id = ?
             ORDER BY o.source_updated_at DESC NULLS LAST, o.id DESC
@@ -126,8 +132,40 @@ public class MarketplaceReadController {
                 uuid(rs, "id"), rs.getString("external_order_id"),
                 rs.getString("fulfillment_status_raw"), rs.getString("refund_status"),
                 rs.getString("financial_status"), rs.getLong("item_count"),
-                instant(rs, "source_updated_at"), rs.getString("data_origin")),
+                instant(rs, "source_updated_at"), rs.getString("data_origin"),
+                rs.getString("items_observation")),
             tenant, marketplaceId, safeLimit);
+    }
+
+    /** No buyer/recipient PII. Same explicit Marketplace access as order listing. */
+    @GetMapping("/{marketplaceId}/orders/{orderId}/items")
+    public List<OrderItemView> orderItems(
+        Authentication authentication,HttpServletRequest request,
+        @PathVariable UUID marketplaceId,@PathVariable UUID orderId) {
+        UUID tenant=authorizedMarketplace(authentication,request,marketplaceId);
+        Integer found=jdbc.queryForObject("""
+            SELECT COUNT(*) FROM sales_order
+            WHERE tenant_id=? AND seller_marketplace_id=? AND id=?
+            """,Integer.class,tenant,marketplaceId,orderId);
+        if(found==null || found!=1)
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Order not found");
+        return jdbc.query("""
+            SELECT i.id,i.external_item_id,i.seller_sku_raw,i.quantity,
+                   i.proceeds_amount,i.proceeds_currency
+            FROM order_item i JOIN sales_order o
+              ON o.tenant_id=i.tenant_id AND o.id=i.sales_order_id
+            WHERE o.tenant_id=? AND o.seller_marketplace_id=?
+              AND o.id=? AND i.is_current=true
+            ORDER BY i.external_item_id LIMIT 1000
+            """,(rs,n)->{
+                var amount=rs.getBigDecimal("proceeds_amount");
+                var currency=rs.getString("proceeds_currency");
+                return new OrderItemView(uuid(rs,"id"),
+                    rs.getString("external_item_id"),rs.getString("seller_sku_raw"),
+                    nullableInteger(rs,"quantity"),
+                    amount==null?null:amount.toPlainString(),
+                    currency==null?null:currency.trim());
+            },tenant,marketplaceId,orderId);
     }
 
     @GetMapping("/{marketplaceId}/inventory/fba")
