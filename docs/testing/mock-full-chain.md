@@ -88,3 +88,10 @@ V6 `sandbox_page_stream` 对 `(tenant_id, seller_marketplace_id)` 唯一约束�
 [V6 逐页断点恢复 Compose 验证成功](https://github.com/kunlong-luo/merchivra/actions/runs/41065562926) 完整通过：在**第三个独立 LOCAL/UNCONFIGURED 美国站**先手动提交第 1 个 Orders 页，此时 PostgreSQL 核心查询仅见 **2 Listing + 1 Order + 0 FBA**，`nextPage=1`、`leaseEpoch=1`；重启 Spring Boot API 后重新登录，同一站点仍从 `nextPage=1` 开始，继续提交第 2 页后得到 **2 Listing + 2 Orders + 2 FBA**，`nextPage=2`、`leaseEpoch=2`。之后重新提交最初的幂等键，响应 `replayed=true` 且不增加时代数、事实或额外页；已完成流使用新键继续提交返回 409；最终审计事件数核对一致，退出后业务 API 返回 401。
 
 **覆盖的是串行事务与进度持久化、容器重启恢复，不是高并发压力测试或分布式过期租约。** 用户提供的正式 SP-API 真正分页/限流/授权信息仍待官方来源与已批准卖家角色核验，不能据此对外宣称真实 Amazon Worker 已完成。
+
+
+## 2026-10-31 · V9 CI / PostgreSQL 17 / Compose 验收证据
+
+- [Java 25 Maven + Vue/TypeScript CI 全部通过](https://github.com/kunlong-luo/merchivra/actions/runs/41148048963)（代码提交 `44e0cd40`）。
+- [Nginx + Spring Boot + PostgreSQL 17 Compose Mock 全链成功](https://github.com/kunlong-luo/merchivra/actions/runs/41148049147)：Flyway V7/V8/V9 迁移记录成功，V8 站点验证表存在，真实 OAuth 路由默认关闭、真实授权行为空；其余 Mock HTTP/存储/重启恢复回归成功。
+- 这仍**没有执行任何真实 Amazon OAuth、Seller API、Refresh Token 续期、真实密钥版本数据迁移或生产 KMS**。V9 的 rewrap 路径有离线 Mock 单测，但 Compose 没有使用任何真实 Seller grant 或密钥。

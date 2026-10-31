@@ -25,3 +25,10 @@
 **此功能只是应用层的手动 key rewrap，并非 AWS KMS Envelope Encryption、自动化密钥轮换、密钥吊销演练，也不更新 Amazon Refresh Token。** Amazon 公有应用授权的 Refresh Token 仍需独立的规定周期续期流程。正式生产前仍需多节点部署、安全 IAM、密钥备份/灾备、Amazon 实机验收、授权角色审核和同步 Worker 的撤销中断机制。
 
 参考：[官方 SP-API Onboarding](https://developer-docs.amazon.com/sp-api/docs/onboarding-overview)。
+
+
+## 2026-10-31 · V9 CI / PostgreSQL 17 / Compose 验收证据
+
+- [Java 25 Maven + Vue/TypeScript CI 全部通过](https://github.com/kunlong-luo/merchivra/actions/runs/41148048963)（代码提交 `44e0cd40`）。
+- [Nginx + Spring Boot + PostgreSQL 17 Compose Mock 全链成功](https://github.com/kunlong-luo/merchivra/actions/runs/41148049147)：Flyway V7/V8/V9 迁移记录成功，V8 站点验证表存在，真实 OAuth 路由默认关闭、真实授权行为空；其余 Mock HTTP/存储/重启恢复回归成功。
+- 这仍**没有执行任何真实 Amazon OAuth、Seller API、Refresh Token 续期、真实密钥版本数据迁移或生产 KMS**。V9 的 rewrap 路径有离线 Mock 单测，但 Compose 没有使用任何真实 Seller grant 或密钥。
