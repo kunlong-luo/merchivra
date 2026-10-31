@@ -195,3 +195,8 @@ Orders 读取增加真实创建时间，订单项带来源标记；财务页面�
 ### V31 · 结算来源编号辅助核对
 
 官方 Finances typed 读取层保存部分可核对的结算业务标识，结算工作台对人工账单编号相同的来源交易标记“精确匹配建议”。这不是自动到账确认，也不会调用 Amazon 写接口；本地真实授权留到功能完成后。详见 [V31](docs/finance/settlement-source-references-v31.md)。
+
+
+### V32 · 财务异常自动核对待办
+
+财务工作台新增只读的自动异常队列：对近期来源明细、订单人工匹配、结算差额及历史 SKU 成本覆盖进行分级检查，提示下一步操作。按需调用本地 API，不主动请求 Amazon。详见 [V32](docs/finance/finance-exception-queue-v32.md)。

@@ -3,6 +3,7 @@ import FinancesSyncPanel from './FinancesSyncPanel'
 import FinanceClassificationPanel from './FinanceClassificationPanel'
 import OrderCostReadinessPanel from './OrderCostReadinessPanel'
 import SettlementWorkspace from './SettlementWorkspace'
+import FinanceExceptionQueuePanel from './FinanceExceptionQueuePanel'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchCoreMarketplaces,fetchCoreOrders} from './lib/core'
 import {createManualFinanceEvent,fetchFinanceBuckets,fetchFinanceEvents,
@@ -76,6 +77,8 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
      {markets.data.map(m=><option key={m.id} value={m.id}>
       {m.marketplaceId} · {m.region} · {m.currency}</option>)}
     </select></label></div>}
+  {currentId&&<FinanceExceptionQueuePanel key={currentId}
+      tenantId={tenantId} marketplaceId={currentId}/>}
   {currentId&&markets.data?.find(m=>m.id===currentId)?.connectionStatus==='CONNECTED'&&
     <FinancesSyncPanel key={currentId} tenantId={tenantId} marketplaceId={currentId}/>}
   <section className="panel full-panel">

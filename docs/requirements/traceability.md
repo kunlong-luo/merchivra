@@ -167,3 +167,9 @@ G2 全部为**设计验收规范**，并未执行任何数据库/HTTP 测试，�
 
 - `FR-FIN-04/05`：Finances 交易保留 Settlement/Disbursement/Financial Event Group 引用，精确匹配同站点同币种人工参考账单，不做自动分配或结算确认。
 - `FR-SYS-01`：非 LIVE 来源拒绝写入业务标识，Owner/Session/Marketplace、事务页 checkpoint 联动审计。
+
+
+### V32 · 本地财务异常核对
+
+- `FR-FIN-03/04/05`：来源末级明细缺项、原币/合计不平、订单未审、结算差异/期间外和成本日期匹配缺口，按 SOURCE/SETTLEMENT/ORDER 展示。
+- `FR-SYS-01`：只读 Owner Session、明确上限和部分扫描标记；页面自动刷新本地 API，不触发任何 Amazon LIVE 请求或账务写入。

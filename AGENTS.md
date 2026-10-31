@@ -373,3 +373,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 
 - 只读取 `SETTLEMENT_ID`、`DISBURSEMENT_ID`、`FINANCIAL_EVENT_GROUP_ID` 这三类官方非 PII relatedIdentifiers，独立保存到 `finance_transaction_reference`；不保存买家/支付账号，不将订单 ID 与结算 ID 混淆，拒绝非法引用值。
 - 来源引用必须同 LIVE Finances 源交易与页 checkpoint 原子提交，重复导入幂等；只读列表受 tenant/Marketplace/Owner 限制。对人工结算参考号的完全相等匹配只能用于候选排序，不可自动连结或判定已结算，更不是银行到账证明。
+
+
+## V32 · 财务异常自动发现（本地有界扫描）
+
+- 财务异常列表只能描述来源覆盖/不一致的待审核信号，不能自动创建或修改 Finance 事实、收入、结算链接、银行到账或退款记录；没有 LIVE 原始数据时空列表不意味着财务已核准。
+- 来源 breakdown 只核对末级 signed amount，缺金额、缺业务分类、跨币种、未审订单关联和来源核平差异分别报告；未分配的来源交易仅为提示，不得称为漏付。
+- 检查必须带 tenant/Marketplace、明确扫描上限并返回 partialScan；页面定时刷新也只访问本地 ERP API，真实 Amazon 默认关闭。
