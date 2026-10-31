@@ -302,6 +302,30 @@ public class SupplierPurchasePlanService {
             && prior.onHandQuantity()==req.expectedOnHand()
             && prior.orderedQuantity()==req.expectedOrderQuantity();
     }
+    /**
+     * Local purchase lines have no destination warehouse yet. Blocking new
+     * warehouse plans while any SKU purchase is open is safer than assuming
+     * those units belong to a particular warehouse and subtracting them.
+     */
+    private void rejectOutstandingPurchases(UUID tenant,UUID sku,boolean includePlans) {
+        Integer outstanding=jdbc.queryForObject("""
+            SELECT COUNT(*) FROM erp_purchase_order_line l
+            JOIN erp_purchase_order o
+              ON o.tenant_id=l.tenant_id AND o.id=l.purchase_order_id
+            WHERE l.tenant_id=? AND l.product_sku_id=?
+              AND o.status IN ('DRAFT','SUBMITTED','APPROVED','RECEIVING')
+            """,Integer.class,tenant,sku);
+        if(outstanding!=null && outstanding>0)
+            throw conflict("Unfinished local purchase order already exists for this SKU");
+        if(includePlans) {
+            Integer plans=jdbc.queryForObject("""
+                SELECT COUNT(*) FROM erp_local_purchase_plan
+                WHERE tenant_id=? AND product_sku_id=? AND status='PROPOSED'
+                """,Integer.class,tenant,sku);
+            if(plans!=null && plans>0)
+                throw conflict("An unconverted purchase plan exists for this SKU");
+        }
+    }
     private void auditPlan(UUID tenant,UUID actor,UUID id,String event) {
         jdbc.update("""
             INSERT INTO erp_local_purchase_plan_audit
@@ -330,6 +354,7 @@ public class SupplierPurchasePlanService {
         verifyCurrent(source,request.expectedLastMovementId(),
             instant(request.expectedPolicyUpdatedAt()),instant(request.expectedRuleUpdatedAt()),
             request.expectedOnHand(),request.expectedOrderQuantity());
+        rejectOutstandingPurchases(tenant,request.productSkuId(),true);
         UUID id=UUID.randomUUID();
         jdbc.update("""
             INSERT INTO erp_local_purchase_plan
@@ -378,6 +403,7 @@ public class SupplierPurchasePlanService {
         verifyCurrent(source,UUID.fromString(plan.sourceMovementId()),
             instant(plan.policyUpdatedAt()),instant(plan.ruleUpdatedAt()),
             plan.onHandQuantity(),plan.orderedQuantity());
+        rejectOutstandingPurchases(tenant,UUID.fromString(plan.productSkuId()),false);
         PurchasingService.Detail purchase=purchasing.create(tenant,actor,
             UUID.fromString(plan.supplierId()),plan.currency(),
             "Local warehouse plan "+id,
