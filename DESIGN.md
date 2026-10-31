@@ -59,3 +59,21 @@ Second manual code audit using the public Impeccable audit/polish criteria (no I
 - P2 · Added table-local keyboard scroll, text status labels, FBA mock-page progress, semantic column headers, and a proper setup audit loading state. Tests cover pure filtering and provenance/time formatting.
 
 Acceptance evidence must include the actual GitHub Actions Vue typecheck/Vitest/Vite result. Manual responsive/browser screenshots, keyboard traversal, real ARIA screen-reader and WCAG evaluation are still pending.
+
+
+## Iteration 3 · Responsive CSS and Chromium smoke (2026-10-31)
+
+- Core, Seller Setup, Sandbox and Demo table containers are keyboard-focusable
+  and explicitly labelled. All column header cells have `scope="col"`.
+  Native table semantics are retained; Core category selectors remain buttons
+  with `aria-pressed` instead of incorrectly claiming WAI tab keyboard behavior.
+- At 360/390px, the Core table uses local horizontal scrolling; the full
+  page should not overflow. Controls remain readable and touchable.
+- New opt-in [TEST-005](docs/testing/browser-ui.md) checks real Chrome-rendered
+  login/Core layouts at 360, 390, 768 and 1280 CSS pixels, table column counts,
+  source labels and UNKNOWN vs zero. It captures screenshots for manual review.
+  The test uses only localhost fixtures and Chrome installed on the runner;
+  no Impeccable/Playwright install or live Amazon/network Seller data.
+- Treat screenshot capture and CDP assertions as a **limited UI smoke**, not
+  manual aesthetic approval, 200% zoom, WCAG, assistive-technology or
+  cross-browser acceptance. Only claim passing after a completed workflow run.

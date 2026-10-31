@@ -114,8 +114,8 @@ const add = useMutation({
       <p v-if="auditPending" class="setup-hint" role="status">正在读取配置审计…</p>
       <p v-else-if="auditError" class="setup-hint" role="alert">审计读取失败，请尝试刷新。</p>
       <p v-else-if="!audit?.length" class="setup-hint">暂无配置操作记录。</p>
-      <div v-else class="table-scroll">
-        <table><thead><tr><th scope="col">操作</th><th>资源标识</th><th>发生时间</th></tr></thead>
+      <div v-else class="table-scroll" role="region" tabindex="0" aria-label="可水平滚动的本地配置审计表格">
+        <table><thead><tr><th scope="col">操作</th><th scope="col">资源标识</th><th scope="col">发生时间</th></tr></thead>
           <tbody><tr v-for="event in audit" :key="event.id">
             <td>{{ event.action === 'LOCAL_SELLER_ACCOUNT_CREATED' ? '创建店铺' : '添加站点' }}</td>
             <td>{{ event.resourceId.slice(0, 8) }}…</td>

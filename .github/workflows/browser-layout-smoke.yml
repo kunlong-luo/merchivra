@@ -1,0 +1,46 @@
+# Browser layout smoke is opt-in and independently triggered, not a M0-M2 CI gate.
+# Runs installed Chrome with Node 24 DevTools Protocol (no Playwright/npm deps).
+name: Optional Chromium responsive UI smoke
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/browser-layout-smoke.yml
+
+permissions:
+  contents: read
+
+jobs:
+  browser-layout:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+          package-manager-cache: false
+      - name: Install locked frontend dependencies
+        working-directory: apps/web
+        run: npm ci --no-audit --no-fund
+      - name: Build frontend and check TypeScript
+        working-directory: apps/web
+        run: npm run build
+      - name: Browser layout and table provenance smoke with synthetic API
+        run: |
+          set -euo pipefail
+          export CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable)"
+          "$CHROME_BIN" --version
+          node scripts/smoke_browser_layout.mjs apps/web/dist browser-smoke-artifacts
+      - name: Upload viewport screenshots for manual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: merchivra-synthetic-browser-screenshots
+          path: browser-smoke-artifacts/*.png
+          if-no-files-found: ignore
+          retention-days: 7

@@ -425,3 +425,48 @@ tbody tr:hover { background: #f8fbff; }
   .core-tools-content { padding: 12px; }
   .core-query-error { padding: 20px 16px; }
 }
+
+/* Responsive data grids: contain horizontal overflow locally, not on the page. */
+.workspace, .main-panel, .content, .core-workspace, .panel, .core-tools, .core-tools-content {
+  min-width: 0;
+}
+.table-scroll {
+  max-width: 100%;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.table-scroll table { width: 100%; }
+.table-scroll th, .table-scroll td {
+  font-variant-numeric: tabular-nums;
+}
+.table-scroll td.strong-cell, .table-scroll td.nowrap {
+  overflow-wrap: anywhere;
+}
+.table-scroll[tabindex="0"]:focus-visible {
+  outline: 3px solid var(--ui-focus);
+  outline-offset: -3px;
+}
+.core-scroll-instruction { display: none; }
+@media (max-width: 760px) {
+  .content { width: 100%; }
+  .core-data-scroll table { min-width: 680px; }
+  .core-scroll-instruction { display: block; margin-top: 4px; }
+  .table-scroll::after { content: none; }
+  .panel-heading, .setup-audit-heading { min-width: 0; }
+  .setup-form, .setup-panel, .sandbox-panel { min-width: 0; }
+  .core-controls { align-items: stretch; }
+  .core-controls > .refresh-button { min-height: 44px; }
+  .sandbox-panel-top { flex-wrap: wrap; }
+  .sandbox-actions > .refresh-button, .sandbox-actions > .primary-button {
+    min-height: 44px;
+  }
+}
+@media (max-width: 420px) {
+  .core-search-field { min-width: 0; }
+  .auth-shell { padding: 14px; }
+  .core-tools > summary { padding: 15px; }
+  .setup-forms { padding: 16px; }
+  .sidebar { max-width: 100vw; }
+  .nav-links { max-width: 100%; }
+  .topbar-right .logout-control { white-space: nowrap; }
+}

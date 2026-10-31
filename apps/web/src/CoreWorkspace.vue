@@ -108,7 +108,7 @@ function observed(value: number | null) {
             </option>
           </select>
         </label>
-        <button class="refresh-button" type="button" @click="reloadCurrent()">刷新当前数据</button>
+        <button class="refresh-button" type="button" :disabled="!marketplaceId" @click="reloadCurrent()">刷新当前数据</button>
       </div>
 
       <div v-if="activeMarketplace" class="core-marketplace-summary" role="status">
@@ -126,6 +126,7 @@ function observed(value: number | null) {
         ] as const" :key="tab.id" type="button"
           :class="['core-subtab', { selected: section === tab.id }]"
           :aria-pressed="section === tab.id"
+          :aria-controls="`core-panel-${tab.id}`"
           @click="section = tab.id">{{ tab.label }}</button>
       </div>
 
@@ -135,10 +136,10 @@ function observed(value: number | null) {
           <input id="core-record-search" v-model="searchText" type="search"
             :placeholder="searchPlaceholder" autocomplete="off" aria-describedby="core-search-scope" />
         </label>
-        <p id="core-search-scope" class="core-search-scope">仅筛选已读取的最多 50 条记录，不搜索服务端其他页。</p>
+        <p id="core-search-scope" class="core-search-scope">仅筛选已读取的最多 50 条记录，不搜索服务端其他页。<span class="core-scroll-instruction">表格可左右滑动，键盘可在表格区域使用方向键。</span></p>
       </div>
-      <section v-if="section === 'listings'" class="panel full-panel">
-        <div class="panel-heading"><div><h2>Listing（核心业务表）</h2><p>独立展示 Seller SKU 和已确认的内部 SKU 映射</p></div>
+      <section v-if="section === 'listings'" id="core-panel-listings" class="panel full-panel" aria-labelledby="core-title-listings">
+        <div class="panel-heading"><div><h2 id="core-title-listings">Listing（核心业务表）</h2><p>独立展示 Seller SKU 和已确认的内部 SKU 映射</p></div>
           <span class="count-pill" role="status">显示 {{ filteredListings.length }} / {{ listings?.length ?? 0 }} 条 · 最多读取 50 条</span></div>
         <div v-if="listingPending" class="empty-state" role="status">正在读取 Listing…</div>
         <div v-else-if="listingError" class="core-query-error" role="alert">
@@ -148,7 +149,7 @@ function observed(value: number | null) {
         </div>
         <div v-else-if="!listings?.length" class="empty-state">当前站点尚无 Listing 记录；本地占位配置不会自动产生业务数据。</div>
         <div v-else-if="!filteredListings.length" class="empty-state">本页没有匹配的 Listing。 <button class="text-button" type="button" @click="searchText = ''">清除筛选</button></div>
-        <div v-else class="table-scroll" tabindex="0" aria-label="可水平滚动的 Listing 表格">
+        <div v-else class="table-scroll core-data-scroll" role="region" tabindex="0" aria-label="可水平滚动的 Listing 表格">
           <table><thead><tr><th scope="col">Seller SKU</th><th scope="col">ASIN</th><th scope="col">内部 SKU</th><th scope="col">映射状态</th><th scope="col">来源</th><th scope="col">来源更新时间</th></tr></thead>
             <tbody><tr v-for="item in filteredListings" :key="item.id">
               <td class="strong-cell">{{ item.sellerSku }}</td>
@@ -160,8 +161,8 @@ function observed(value: number | null) {
         </div>
       </section>
 
-      <section v-else-if="section === 'orders'" class="panel full-panel">
-        <div class="panel-heading"><div><h2>订单（核心业务表）</h2><p>独立展示履约、退款与财务状态；不推测结算收入</p></div>
+      <section v-else-if="section === 'orders'" id="core-panel-orders" class="panel full-panel" aria-labelledby="core-title-orders">
+        <div class="panel-heading"><div><h2 id="core-title-orders">订单（核心业务表）</h2><p>独立展示履约、退款与财务状态；不推测结算收入</p></div>
           <span class="count-pill" role="status">显示 {{ filteredOrders.length }} / {{ orders?.length ?? 0 }} 笔 · 最多读取 50 笔</span></div>
         <div v-if="orderPending" class="empty-state" role="status">正在读取订单…</div>
         <div v-else-if="orderError" class="core-query-error" role="alert">
@@ -171,7 +172,7 @@ function observed(value: number | null) {
         </div>
         <div v-else-if="!orders?.length" class="empty-state">当前站点尚无订单记录；未授权来源不自动生成真实订单。</div>
         <div v-else-if="!filteredOrders.length" class="empty-state">本页没有匹配的订单。 <button class="text-button" type="button" @click="searchText = ''">清除筛选</button></div>
-        <div v-else class="table-scroll" tabindex="0" aria-label="可水平滚动的订单表格">
+        <div v-else class="table-scroll core-data-scroll" role="region" tabindex="0" aria-label="可水平滚动的订单表格">
           <table><thead><tr><th scope="col">外部订单号</th><th scope="col">订单项数量</th><th scope="col">履约</th><th scope="col">退款</th><th scope="col">财务</th><th scope="col">来源</th><th scope="col">来源时间</th></tr></thead>
             <tbody><tr v-for="item in filteredOrders" :key="item.id">
               <td class="strong-cell">{{ item.externalOrderId }}</td><td>{{ item.itemCount }}</td>
@@ -183,8 +184,8 @@ function observed(value: number | null) {
         </div>
       </section>
 
-      <section v-else class="panel full-panel">
-        <div class="panel-heading"><div><h2>最新 FBA 观测（核心业务表）</h2>
+      <section v-else id="core-panel-inventory" class="panel full-panel" aria-labelledby="core-title-inventory">
+        <div class="panel-heading"><div><h2 id="core-title-inventory">最新 FBA 观测（核心业务表）</h2>
           <p>每个 Seller SKU 只显示最新一次观测；未知数量不等于零</p></div>
           <span class="count-pill" role="status">显示 {{ filteredInventory.length }} / {{ inventory?.length ?? 0 }} 条 · 最多读取 50 条</span></div>
         <div v-if="stockPending" class="empty-state" role="status">正在读取 FBA 库存观测…</div>
@@ -195,7 +196,7 @@ function observed(value: number | null) {
         </div>
         <div v-else-if="!inventory?.length" class="empty-state">当前站点尚无 FBA 观测，未知库存不等于零。</div>
         <div v-else-if="!filteredInventory.length" class="empty-state">本页没有匹配的 SKU。 <button class="text-button" type="button" @click="searchText = ''">清除筛选</button></div>
-        <div v-else class="table-scroll" tabindex="0" aria-label="可水平滚动的 FBA 库存表格">
+        <div v-else class="table-scroll core-data-scroll" role="region" tabindex="0" aria-label="可水平滚动的 FBA 库存表格">
           <table><thead><tr><th scope="col">Seller SKU</th><th scope="col">可售</th><th scope="col">预留</th><th scope="col">质量</th><th scope="col">来源</th><th scope="col">观测时间</th></tr></thead>
             <tbody><tr v-for="item in filteredInventory" :key="item.id">
               <td class="strong-cell">{{ item.sellerSku }}</td>

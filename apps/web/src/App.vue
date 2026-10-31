@@ -248,8 +248,8 @@ function tabTitle() {
               <div class="panel">
                 <div class="panel-heading"><div><h2>近期订单</h2><p>来源状态、退款和财务状态分开记录</p></div>
                   <button class="text-button" @click="activeView = 'orders'">查看全部 →</button></div>
-                <div class="table-scroll">
-                  <table><thead><tr><th>订单编号</th><th>SKU</th><th>预计金额</th><th>履约状态</th></tr></thead>
+                <div class="table-scroll" role="region" tabindex="0" aria-label="可水平滚动的演示数据表格">
+                  <table><thead><tr><th scope="col">订单编号</th><th scope="col">SKU</th><th scope="col">预计金额</th><th scope="col">履约状态</th></tr></thead>
                     <tbody><tr v-for="order in orders" :key="order.id">
                       <td class="strong-cell">{{ order.externalOrderId }}</td><td>{{ order.sellerSku }}</td>
                       <td class="nowrap">{{ money(order.provisionalSales) }}</td>
@@ -275,8 +275,8 @@ function tabTitle() {
             <div class="panel-heading"><div><h2>订单列表</h2><p>订单业务事实与退款、财务状态保持独立</p></div><span class="count-pill">{{ shopOrders?.length ?? 0 }} 笔</span></div>
             <div v-if="shopOrdersPending" class="empty-state">读取订单中…</div>
             <div v-else-if="shopOrdersError" class="empty-state">订单查询失败，请检查本地服务</div>
-            <div v-else class="table-scroll">
-              <table><thead><tr><th>Amazon 订单（模拟）</th><th>Seller SKU</th><th>预计商品收入</th><th>退款</th><th>履约</th><th>财务</th><th>来源更新时间</th></tr></thead>
+            <div v-else class="table-scroll" role="region" tabindex="0" aria-label="可水平滚动的演示数据表格">
+              <table><thead><tr><th scope="col">Amazon 订单（模拟）</th><th scope="col">Seller SKU</th><th scope="col">预计商品收入</th><th scope="col">退款</th><th scope="col">履约</th><th scope="col">财务</th><th scope="col">来源更新时间</th></tr></thead>
                 <tbody><tr v-for="order in shopOrders ?? []" :key="order.id">
                   <td class="strong-cell">{{ order.externalOrderId }}</td><td>{{ order.sellerSku }}</td>
                   <td class="nowrap">{{ money(order.provisionalSales) }}</td>
@@ -293,8 +293,8 @@ function tabTitle() {
             <div class="panel-heading"><div><h2>Listing 与 SKU 归属</h2><p>ASIN、Seller SKU 与内部 SKU 不是同一个标识</p></div><span class="count-pill">{{ shopListings?.length ?? 0 }} 个 Listing</span></div>
             <div v-if="shopListingsPending" class="empty-state">读取 Listing 中…</div>
             <div v-else-if="shopListingsError" class="empty-state">Listing 查询失败，请检查本地服务</div>
-            <div v-else class="table-scroll">
-              <table><thead><tr><th>Seller SKU</th><th>ASIN（模拟）</th><th>内部 SKU</th><th>映射状态</th></tr></thead>
+            <div v-else class="table-scroll" role="region" tabindex="0" aria-label="可水平滚动的演示数据表格">
+              <table><thead><tr><th scope="col">Seller SKU</th><th scope="col">ASIN（模拟）</th><th scope="col">内部 SKU</th><th scope="col">映射状态</th></tr></thead>
                 <tbody><tr v-for="item in shopListings ?? []" :key="item.id">
                   <td class="strong-cell">{{ item.sellerSku }}</td><td>{{ item.asin }}</td>
                   <td>{{ item.internalSku ?? '—' }}</td><td><span class="status-chip" :class="item.mappingStatus === 'ACTIVE' ? 'chip-green' : 'chip-amber'">{{ qualityLabel(item.mappingStatus) }}</span></td>
@@ -307,8 +307,8 @@ function tabTitle() {
             <div class="panel-heading"><div><h2>FBA 库存快照</h2><p>观测型库存，不是仓库出入库流水；未知数值不可当 0</p></div><span class="count-pill">{{ shopInventory?.length ?? 0 }} 条观测</span></div>
             <div v-if="shopInventoryPending" class="empty-state">读取库存中…</div>
             <div v-else-if="shopInventoryError" class="empty-state">库存查询失败，请检查本地服务</div>
-            <div v-else class="table-scroll">
-              <table><thead><tr><th>Seller SKU</th><th>可售</th><th>预留</th><th>数据质量</th><th>来源观测时间</th></tr></thead>
+            <div v-else class="table-scroll" role="region" tabindex="0" aria-label="可水平滚动的演示数据表格">
+              <table><thead><tr><th scope="col">Seller SKU</th><th scope="col">可售</th><th scope="col">预留</th><th scope="col">数据质量</th><th scope="col">来源观测时间</th></tr></thead>
                 <tbody><tr v-for="item in shopInventory ?? []" :key="item.id">
                   <td class="strong-cell">{{ item.sellerSku }}</td>
                   <td class="quantity-cell">{{ item.fulfillable === null ? '未知' : item.fulfillable }} <span v-if="item.fulfillable === 0" class="zero-label">已观测为 0</span></td>
@@ -354,8 +354,8 @@ function tabTitle() {
             <div v-if="syncRunsPending" class="empty-state">读取同步历史中…</div>
             <div v-else-if="syncRunsError" class="empty-state">无法读取同步记录，请检查数据库</div>
             <div v-else-if="!syncRuns?.length" class="empty-state">暂无任务。初始 Mock 快照在首次启动时保存。</div>
-            <div v-else class="table-scroll">
-              <table><thead><tr><th>任务 ID</th><th>结果</th><th>快照记录数</th><th>完成时间</th><th>说明</th></tr></thead>
+            <div v-else class="table-scroll" role="region" tabindex="0" aria-label="可水平滚动的演示数据表格">
+              <table><thead><tr><th scope="col">任务 ID</th><th scope="col">结果</th><th scope="col">快照记录数</th><th scope="col">完成时间</th><th scope="col">说明</th></tr></thead>
                 <tbody><tr v-for="run in syncRuns" :key="run.id">
                   <td class="strong-cell">{{ run.id.slice(0, 8) }}…</td>
                   <td><span :class="['status-chip', run.status === 'SUCCEEDED' ? 'chip-green' : 'chip-amber']">{{ run.status === 'SUCCEEDED' ? '已完成' : '失败，可重试' }}</span></td>

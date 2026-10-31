@@ -105,8 +105,8 @@ const replay = useMutation({
       <p v-if="runsError" class="setup-hint">任务历史读取失败，请检查服务端 Session 和数据库。</p>
       <div v-else-if="runs?.length" class="sandbox-history">
         <strong>模拟同步记录（最近 20 次）</strong>
-        <div class="table-scroll"><table>
-          <thead><tr><th scope="col">时间</th><th>状态</th><th>Orders 页</th><th>Listing</th><th>订单</th><th>FBA</th><th>财务</th></tr></thead>
+        <div class="table-scroll" role="region" tabindex="0" aria-label="可水平滚动的模拟同步历史表格"><table>
+          <thead><tr><th scope="col">时间</th><th scope="col">状态</th><th scope="col">Orders 页</th><th scope="col">Listing</th><th scope="col">订单</th><th scope="col">FBA</th><th scope="col">财务</th></tr></thead>
           <tbody><tr v-for="run in runs" :key="run.id">
             <td class="small-cell">{{ run.createdAt }}</td>
             <td><span :class="['status-chip', run.status === 'SUCCEEDED' ? 'chip-green' : 'chip-amber']">{{ run.status }}</span></td>

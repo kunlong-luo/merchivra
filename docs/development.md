@@ -83,3 +83,13 @@ Flyway V7 creates tenant-bound state and encrypted grant tables. Public-app webs
 - V8 offers an opt-in, production-endpoint-only Sellers v1 Marketplace-participation check for Owner sessions, and 24-hour marketplace evidence before the internal Worker Vault releases a grant. Sellers v1 does **not** prove independent Seller identity or Amazon operation roles. Read [SEC-005](security/seller-verification.md).
 - V9 supports AES-256-GCM versioned keyrings and an Owner/CSRF per-account `POST /api/v1/seller-accounts/{accountId}/oauth/rotate-key` for transactional rewrap and metadata-only audit. It does **not** rotate Amazon LWA Refresh Tokens. Follow the careful old/new key staging procedure in [SEC-006](security/seller-key-rotation.md).
 - With real SP-API disabled, the independent Compose suite validates Flyway V7–V9 migration and fictional Mock regression; it does not test Amazon APIs, KMS, tenant-wide automatic rotation, roles or any live sync Worker. Never put real Seller secrets into CI or Demo fixtures.
+
+
+## Optional browser-responsive layout smoke
+
+See [TEST-005](testing/browser-ui.md) for a separate Chrome/Node 24 browser
+layout test with synthetic localhost-only Seller/Listing/Orders/FBA responses.
+It captures 360/390/768/1280 screenshots and checks no page-level horizontal
+overflow, local table scrolling, table columns, and source/UNKNOWN semantics.
+It is opt-in, does not install Impeccable or Playwright, and is not part of the
+M0–M2 fast CI. It does not test real login, database, or Amazon connections.
