@@ -53,6 +53,18 @@ public final class ApprovedOrdersReadGateway {
                 "Independent Orders role evidence or Seller grant missing"));
     }
 
+    /**
+     * Read-only preflight. Called at claim, fetch and under the worker's
+     * transaction-held database locks before an Orders page is committed.
+     * Never returns a refresh token to callers.
+     */
+    public void requireAuthorized(UUID tenant, UUID marketplaceId, String expectedSite) {
+        Marketplace resolved=marketplace(tenant,marketplaceId);
+        if(!resolved.site().equals(expectedSite))
+            throw new SecurityException("Marketplace scope changed");
+        approved(tenant,resolved);
+    }
+
     public OrdersSyncSource.Page search(UUID tenant, UUID marketplaceId, Instant after,
         Instant before, String cursor) throws Exception {
         if(after==null || before==null || !after.isBefore(before))

@@ -131,3 +131,22 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - [Java/Vue CI 41154501014](https://github.com/kunlong-luo/merchivra/actions/runs/41154501014): success.
 - [PostgreSQL 18 / V1–V12 full-chain 41154500844](https://github.com/kunlong-luo/merchivra/actions/runs/41154500844): success, actual PG18 mount, 0 preseeded Orders permissions, Mock replay + restart recovery.
 - Older PostgreSQL 17 data volumes were **not upgraded** by this test. See [migration procedure](../deployment/postgresql-18-upgrade.md). Production Amazon Orders still blocked pending independently reviewed application roles and live-source authorization.
+
+
+## V11C · Production Orders read source behind explicit safety gates (2026-10-31)
+
+V11C connects the independently role-checked V11B `ApprovedOrdersReadGateway` to the **existing V11A durable Worker**, but **does not enable it automatically**. Default deployment behavior remains unchanged: `MERCHIVRA_ORDERS_SYNC_ENABLED=false`, `MERCHIVRA_ORDERS_SYNC_MODE=MOCK`, `MERCHIVRA_ORDERS_SYNC_LIVE_APPROVED=false`.
+
+Two mutually exclusive `OrdersSyncSource` implementations are now supported:
+
+- `MOCK`: original Demo-only fixed fixture, permitted only if Demo is on, SP-API outbound is off and LIVE approval is off; data origin `MOCK`.
+- `LIVE`: `LiveOrdersSyncSource` delegates to V11B's read-only `ApprovedOrdersReadGateway.search`. Configuration refuses startup unless **all** of these are true: sync enabled, explicit mode `LIVE`, explicit LIVE approval, Demo off, SP-API on, SP-API sandbox **off**, SP-API writes **off**, OAuth on, and Seller participation verification on. Requires a configured cryptographic Vault, LWA app credentials, live Seller verification and **separate audited Orders role evidence** per Seller. No such evidence is automatically seeded or obtained from Marketplace participation.
+
+The persistent worker now reads and writes a mode-specific `MOCK`/`LIVE` value and rejects a stored job when its mode does not match the configured source. A `MOCK` cursor cannot be relabelled or reused as `LIVE`. In LIVE mode the worker locks tenant, Marketplace, connected Seller account, verified grant, Orders role evidence and current Marketplace participation with `FOR SHARE` in the commit transaction; a concurrent revocation cannot overtake the final authorization check. It re-validates both Marketplace and independently reviewed roles immediately before committing a page; a revoked role causes the transaction to roll back, the job to pause, and **no** page, order or safe-watermark commit. A successful page and its cursor are still atomic with source rows. Source failures remain sanitized; no token, buyer data or raw response logged.
+
+Orders from an authorized LIVE read carry `data_origin=LIVE` in `sales_order`; this never authorizes financial settlement, refunds, procurement or Amazon writes. Frontend core order validation and operator labels now explicitly distinguish `LIVE` / `MOCK` / `UNVERIFIED`. Flyway V13 extends the advisory `ops_finding` provenance constraint for LIVE records, without enabling automated financial decisions. Real sales orders' item details and restricted PII are not ingested.
+
+**Security / acceptance limitation:** this stage adds the wiring and rejects unauthorized configurations in automated tests. No real Amazon Seller credentials or separately reviewed role evidence are available in project tests, and this version has **not** completed a production Amazon Orders read, real throttle/TTL testing, or operator-controlled Orders role attestation. The existing reviewed `SpApiReadOperations` transport powers this path; generating SDK classes is not by itself proof of a production integration. Keep LIVE **disabled** until external Amazon app/role approval, vault and key management, production read-only networking, revocation, privacy, and operational approval are complete.
+
+CI checks both synthetic source modes in Java tests; the actual PostgreSQL 18 Compose workflow remains MOCK-only and asserts zero LIVE orders and no seeded role evidence. It also tests repeated pagination, restart recovery and tenant/session/CSRF. Evidence of passing requires the completed workflow run—not just committed tests.
+

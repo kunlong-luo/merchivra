@@ -59,7 +59,7 @@ const change = useMutation({
     <div class="core-intro">
       <strong>运营自动化 · PostgreSQL 任务队列</strong>
       <p>根据当前租户已有的 Listing、订单和 FBA 事实生成待办，不连接 Amazon、不自动采购、不发送客户消息。
-        Mock 测试记录与未核验来源始终保留来源标记。</p>
+        Mock 测试、未核验与已授权 API 记录始终保留来源标记。</p>
     </div>
     <div class="ops-summary" aria-label="异常待办状态统计">
       <div><span>待处理</span><strong>{{ summaryPending ? '—' : summary?.open ?? 0 }}</strong></div>

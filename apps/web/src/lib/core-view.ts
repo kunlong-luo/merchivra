@@ -42,8 +42,8 @@ export function coreStatusLabel(status: string): string {
   // Unknown future API values must remain visible, not silently misrepresented.
   return labels[status] ?? status
 }
-export function sourceLabel(origin: 'MOCK' | 'UNVERIFIED'): string {
-  return origin === 'MOCK' ? '模拟测试' : '来源未核验'
+export function sourceLabel(origin: 'MOCK' | 'UNVERIFIED' | 'LIVE'): string {
+  return origin === 'MOCK' ? '模拟测试' : origin === 'LIVE' ? 'Amazon API 已同步' : '来源未核验'
 }
 export function formatSourceTime(value: string | null): string {
   if (!value) return '来源时间未知'

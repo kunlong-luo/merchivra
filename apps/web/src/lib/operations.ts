@@ -9,7 +9,7 @@ export const findingSchema = z.object({
   title: z.string(),
   severity: z.enum(['INFO', 'WARNING', 'CRITICAL']),
   state: z.enum(['OPEN', 'ACKNOWLEDGED', 'DONE', 'CLEARED']),
-  dataOrigin: z.enum(['MOCK', 'UNVERIFIED']),
+  dataOrigin: z.enum(['MOCK', 'UNVERIFIED', 'LIVE']),
   lastSeenAt: z.string()
 })
 export const summarySchema = z.object({

@@ -64,7 +64,12 @@ merchivra:
     low-stock-threshold: ${MERCHIVRA_OPS_LOW_STOCK_THRESHOLD:3}
 
   orders-sync:
-    # V11A ONLY: synthetic local source. Service refuses live egress.
+    # V11C explicit source selection: MOCK default, LIVE requires extra gates.
+    mode: ${MERCHIVRA_ORDERS_SYNC_MODE:MOCK}
+    live-approved: ${MERCHIVRA_ORDERS_SYNC_LIVE_APPROVED:false}
+    # A LIVE source also requires app-role evidence for every Seller and
+    # production-only read access. Never infer Orders role from Seller OAuth.
+
     enabled: ${MERCHIVRA_ORDERS_SYNC_ENABLED:false}
     scheduler-enabled: ${MERCHIVRA_ORDERS_SYNC_SCHEDULER_ENABLED:false}
     scheduler-ms: ${MERCHIVRA_ORDERS_SYNC_SCHEDULER_MS:30000}

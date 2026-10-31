@@ -171,3 +171,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - [PostgreSQL 18 + Spring Boot + Nginx Compose 成功（run 41154500844）](https://github.com/kunlong-luo/merchivra/actions/runs/41154500844)：实际断言服务器版本 18 和默认 PGDATA；V1–V12 Flyway 全部迁移、V12 角色证据为空；Mock Session/CSRF、旧 V6 与 V11A 逐页提交→重启→恢复均成功。
 - **仍未验收真实 PostgreSQL 17 数据卷到 18 的升级**。本次使用全新的、一次性 `pgdata18` 卷。若已有真实 PostgreSQL 17 数据，必须先依 [17→18 数据迁移手册](docs/deployment/postgresql-18-upgrade.md) 备份并人工迁移。
 - **仍未接通真实 Amazon Orders**：V11B 的证据表仅提供“拒绝未审核角色”的基础，尚未实现独立角色证据审核登记、完成全部正式接入前置条件或开启 Live Worker。所有生产 SP-API 出站开关保持默认关闭。
+
+
+## V11C LIVE Orders 只读 Worker 安全闸（2026-10-31）
+
+- V11C `OrdersSyncConfiguration` 显式选择 `MOCK`（默认）或 `LIVE`（需要独立批准 `MERCHIVRA_ORDERS_SYNC_LIVE_APPROVED=true`）；LIVE 要求正式 OAuth、真实 Seller Verification、V12 Orders 角色证据、生产 SP-API 只读，Demo/Sandbox/远端写入必须关闭。默认不触发任何生产出站。
+- `OrdersSyncService` 现在把任务 mode 与记录 `data_origin` 绑定，禁止既有 MOCK 任务继承 LIVE 任务游标；提交 LIVE 订单/页日志/安全水位时重新核验并事务锁住账户、授权、角色、参与证据，授权撤销后事务回滚且转暂停。
+- Flyway V13 放开 ops_finding 只读建议记录的 LIVE 来源分类，Web 必须区分 Amazon API 已同步/模拟/未核验；LIVE 绝不代表已记账或 Amazon 写入批准。
+- 所有真实角色审核、真实 LWA、网络 429/Token TTL 与生产部署仍需独立实测。项目 CI 必须保留 Mock-only 全链路及默认角色表为空的断言。详情 `docs/integrations/orders-worker-v11.md`。

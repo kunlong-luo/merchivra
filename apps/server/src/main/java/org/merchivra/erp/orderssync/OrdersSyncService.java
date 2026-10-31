@@ -43,7 +43,7 @@ public class OrdersSyncService {
     public record Status(String jobId, String state, int committedPages, long leaseEpoch,
                          String windowAfter, String windowBefore, String lastSafeWatermark,
                          String nextAttemptAt, String lastFailureCode) {}
-    private record Stored(UUID jobId, String state, Instant after, Instant before,
+    private record Stored(UUID jobId, String mode, String state, Instant after, Instant before,
                           int page, int generation, String token, Instant tokenIssuedAt,
                           Instant safe, int retries, Instant nextAttempt,
                           long epoch, UUID leaseOwner, Instant leaseExpires) {}
@@ -61,12 +61,12 @@ public class OrdersSyncService {
 
     private Stored row(UUID tenant, UUID mp, boolean lock) {
         List<Stored> rows=jdbc.query("""
-            SELECT id,state,window_after,window_before,page_index,generation,
+            SELECT id,mode,state,window_after,window_before,page_index,generation,
                    next_token,token_issued_at,last_safe_watermark,retry_count,next_attempt_at,
                    lease_epoch,lease_owner,lease_expires_at
             FROM orders_sync_job WHERE tenant_id=? AND seller_marketplace_id=?
             """ + (lock ? " FOR UPDATE" : ""),
-            (rs,n)->new Stored(rs.getObject("id",UUID.class),rs.getString("state"),
+            (rs,n)->new Stored(rs.getObject("id",UUID.class),rs.getString("mode"),rs.getString("state"),
                 instant(rs,"window_after"),instant(rs,"window_before"),
                 rs.getInt("page_index"),rs.getInt("generation"),rs.getString("next_token"),
                 instant(rs,"token_issued_at"),instant(rs,"last_safe_watermark"),
@@ -76,20 +76,66 @@ public class OrdersSyncService {
         return rows.isEmpty()?null:rows.getFirst();
     }
 
+    private String mode() {
+        String origin=source.dataOrigin();
+        if(!"MOCK".equals(origin) && !"LIVE".equals(origin))
+            throw new IllegalStateException("Unsupported Orders source provenance");
+        return origin;
+    }
+
+    /**
+     * In LIVE mode, lock the account, grant, V12 evidence, participation and
+     * tenant for the duration of the claiming/committing transaction. A
+     * concurrent revocation cannot slip between the final check and commit.
+     */
     private OrdersSyncSource.Scope scope(UUID tenant,UUID mp) {
-        List<String> sites=jdbc.query("""
-            SELECT m.marketplace_id FROM seller_marketplace m
-            JOIN seller_account a ON a.tenant_id=m.tenant_id AND a.id=m.seller_account_id
-            JOIN tenant t ON t.id=m.tenant_id
-            WHERE m.tenant_id=? AND m.id=?
-              AND a.seller_id LIKE 'LOCAL-%'
-              AND a.connection_status='UNCONFIGURED' AND t.status='ACTIVE'
-            """,(rs,n)->rs.getString(1),tenant,mp);
-        if (sites.size()!=1) throw new ResponseStatusException(
-            HttpStatus.NOT_FOUND,"Eligible local Marketplace not found");
+        String origin=mode();
+        String sql;
+        if("MOCK".equals(origin)) {
+            sql="""
+                SELECT m.marketplace_id FROM seller_marketplace m
+                JOIN seller_account a ON a.tenant_id=m.tenant_id AND a.id=m.seller_account_id
+                JOIN tenant t ON t.id=m.tenant_id
+                WHERE m.tenant_id=? AND m.id=?
+                  AND a.seller_id LIKE 'LOCAL-%'
+                  AND a.connection_status='UNCONFIGURED' AND t.status='ACTIVE'
+                """;
+        } else {
+            sql="""
+                SELECT m.marketplace_id FROM seller_marketplace m
+                JOIN seller_account a ON a.tenant_id=m.tenant_id AND a.id=m.seller_account_id
+                JOIN tenant t ON t.id=m.tenant_id
+                JOIN spapi_seller_authorization g
+                  ON g.tenant_id=m.tenant_id AND g.seller_account_id=m.seller_account_id
+                JOIN spapi_orders_role_evidence e
+                  ON e.tenant_id=g.tenant_id AND e.seller_account_id=g.seller_account_id
+                JOIN spapi_marketplace_verification v
+                  ON v.tenant_id=m.tenant_id AND v.seller_account_id=m.seller_account_id
+                  AND v.marketplace_id=m.marketplace_id
+                WHERE m.tenant_id=? AND m.id=?
+                  AND t.status='ACTIVE' AND a.connection_status='CONNECTED'
+                  AND a.seller_id NOT LIKE 'LOCAL-%' AND a.region=g.region
+                  AND g.status='VERIFIED' AND g.seller_id=a.seller_id
+                  AND g.verified_at IS NOT NULL AND g.verified_at=e.grant_verified_at
+                  AND v.verified_at > now()-interval '24 hours'
+                  AND e.role_code='Inventory and Order Tracking'
+                  AND e.evidence_kind='EXTERNAL_APP_ROLE_REVIEW'
+                  AND e.revoked_at IS NULL AND e.expires_at>now()
+                FOR SHARE OF m,a,t,g,e,v
+                """;
+        }
+        List<String> sites=jdbc.query(sql,(rs,n)->rs.getString(1),tenant,mp);
+        if(sites.size()!=1) throw new ResponseStatusException(
+            HttpStatus.NOT_FOUND,"Eligible Marketplace not found");
         OrdersSyncSource.Scope value=new OrdersSyncSource.Scope(tenant,mp,sites.getFirst());
         source.requireAuthorized(value);
         return value;
+    }
+
+    private void requireMatchingMode(Stored stored) {
+        if(stored!=null && !mode().equals(stored.mode()))
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Job source mode mismatch; never reclassify checkpoint provenance");
     }
 
     private Status view(Stored stored,String code) {
@@ -101,6 +147,7 @@ public class OrdersSyncService {
         scope(tenant,marketplace);
         Stored row=row(tenant,marketplace,false);
         if(row==null) return new Status(null,"NOT_STARTED",0,0,null,null,null,null,null);
+        requireMatchingMode(row);
         List<String> codes=jdbc.query(
             "SELECT last_failure_code FROM orders_sync_job WHERE tenant_id=? AND id=?",
             (rs,n)->rs.getString(1),tenant,row.jobId());
@@ -118,10 +165,11 @@ public class OrdersSyncService {
             jdbc.update("""
                 INSERT INTO orders_sync_job
                   (id,tenant_id,seller_marketplace_id,mode,state,window_after,window_before)
-                VALUES (?,?,?,'MOCK','READY',?,?)
+                VALUES (?,?,?,?,'READY',?,?)
                 ON CONFLICT (tenant_id,seller_marketplace_id) DO NOTHING
-                """,proposed,tenant,marketplace,dbTime(after),dbTime(before));
+                """,proposed,tenant,marketplace,mode(),dbTime(after),dbTime(before));
             Stored current=row(tenant,marketplace,true);
+            requireMatchingMode(current);
             if ("SUCCEEDED".equals(current.state())) {
                 Instant resume=current.safe()==null?after:current.safe().minus(OVERLAP);
                 jdbc.update("""
@@ -147,6 +195,7 @@ public class OrdersSyncService {
             OrdersSyncSource.Scope scope=scope(tenant,marketplace);
             Stored stored=row(tenant,marketplace,true);
             if(stored==null) throw new ResponseStatusException(HttpStatus.CONFLICT,"Start a sync job first");
+            requireMatchingMode(stored);
             Instant now=clock.instant();
             if("SUCCEEDED".equals(stored.state()) || "PAUSED".equals(stored.state()))
                 throw new ResponseStatusException(HttpStatus.CONFLICT,"Sync is not ready");
@@ -185,11 +234,13 @@ public class OrdersSyncService {
             return status(tenant,marketplace);
         }
 
-        return tx.execute(transaction -> {
+        try {
+          return tx.execute(transaction -> {
             // A revoked/changed seller or tenant cannot commit after fetching.
             scope(tenant,marketplace);
             source.requireAuthorized(claim.scope());
             Stored current=row(tenant,marketplace,true);
+            requireMatchingMode(current);
             if(current==null || !"RUNNING".equals(current.state())
                || !claim.owner().equals(current.leaseOwner()) || current.epoch()!=claim.epoch()
                || current.leaseExpires()==null || !current.leaseExpires().isAfter(clock.instant())) {
@@ -200,15 +251,15 @@ public class OrdersSyncService {
                     INSERT INTO sales_order
                       (id,tenant_id,seller_marketplace_id,external_order_id,
                        fulfillment_status_raw,source_updated_at,data_origin)
-                    VALUES (?,?,?,?,?,?,'MOCK')
+                    VALUES (?,?,?,?,?,?,?)
                     ON CONFLICT (tenant_id,seller_marketplace_id,external_order_id)
                     DO UPDATE SET fulfillment_status_raw=EXCLUDED.fulfillment_status_raw,
                         source_updated_at=EXCLUDED.source_updated_at
-                    WHERE sales_order.data_origin='MOCK'
+                    WHERE sales_order.data_origin=EXCLUDED.data_origin
                       AND (sales_order.source_updated_at IS NULL
                            OR sales_order.source_updated_at<=EXCLUDED.source_updated_at)
                     """,UUID.randomUUID(),tenant,marketplace,order.orderId(),
-                    order.fulfillment(),dbTime(order.updatedAt()));
+                    order.fulfillment(),dbTime(order.updatedAt()),mode());
             }
             jdbc.update("""
                 INSERT INTO orders_sync_page_commit
@@ -232,7 +283,14 @@ public class OrdersSyncService {
                     clock.instant().plus(Duration.ofSeconds(180))),
                 tenant,current.jobId(),claim.epoch(),claim.owner());
             return status(tenant,marketplace);
-        });
+          });
+        } catch (SecurityException | ResponseStatusException rejected) {
+            // Transaction rolled back, so neither page nor watermark advanced.
+            // Fence the same claim into PAUSED without writing upstream data.
+            fail(claim,new SecurityException("Authorization check rejected"));
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Orders authorization revoked before commit");
+        }
     }
 
     private static void validate(OrdersSyncSource.Page page,OrdersSyncSource.Scope scope) {
@@ -253,7 +311,8 @@ public class OrdersSyncService {
         boolean transientFailure=http==429 || http==500 || http==503 || http==502 || http==504;
         boolean expiredCursor=http==400 && claim.stored().token()!=null;
         String code=expiredCursor?"CURSOR_EXPIRED":transientFailure?"UPSTREAM_RETRY":
-            http==401 || http==403?"AUTHORIZATION_REJECTED":"SOURCE_ERROR";
+            http==401 || http==403 || error instanceof SecurityException
+              ?"AUTHORIZATION_REJECTED":"SOURCE_ERROR";
         tx.executeWithoutResult(txStatus -> {
             Stored current=row(claim.tenant(),claim.marketplace(),true);
             if(current==null || current.epoch()!=claim.epoch()

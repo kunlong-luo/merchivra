@@ -22,6 +22,7 @@ describe('core workbench read-only presentation', () => {
   it('never labels mock or unverified facts as verified Amazon data', () => {
     expect(sourceLabel('MOCK')).toBe('模拟测试')
     expect(sourceLabel('UNVERIFIED')).toBe('来源未核验')
+    expect(sourceLabel('LIVE')).toBe('Amazon API 已同步')
     expect(coreStatusLabel('NOT_OBSERVED')).toBe('尚无财务数据')
     expect(coreStatusLabel('UNKNOWN')).toBe('未知')
     expect(coreStatusLabel('CONNECTED')).toBe('已连接')
