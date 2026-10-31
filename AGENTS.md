@@ -443,3 +443,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 本地采购计划只允许仓库/SKU 有库存流水证据且 V41 本地策略触发低库存时提出；数量 = `ceil(max(targetStock-onHand,MOQ)/packMultiple)*packMultiple`，最大 PO 单行 1,000,000 件。
 - 人工保存计划和人工转采购单 DRAFT 是两次不同的 Owner + CSRF 动作；转换前必须重新检查仓库最后流水 ID、本地库存、策略和供应商版本。请求 UUID 幂等，同一仓库 SKU 库存流水证据全生命周期不可重复计划/创建 PO；变更一经保存保留来源快照/审计。
 - 后续继续既有双人审批，不自动向 Amazon、供应商、支付或 FBA Inbound 写入。未按仓分配的采购待收货仅供参考不能冲减本地仓库建议。V42 见 `docs/purchasing/supplier-purchase-planning-v42.md`；未经 PG18/HTTP 并发验收勿声称生产完工。
+
+## V43 · 本地供应商 ASN 与来源可信度（2026-10-31）
+
+- V43 仅允许 Owner 在已审批/正在收货的**本地采购单行**创建、人工标记供应商发货、修正预计到货日和取消 ASN。数据来自人工/供应商申报，不能代表 Amazon 真实货件、承运商确认或本地实物收货。
+- 只有 `erp_purchase_receipt` 记载实际到仓；`asn_id` 可为空以兼容历史 V20/V39 收货。关联时后端必须锁采购单、核对 tenant/order/line/warehouse、申报 SHIPPED 状态及剩余件数，同一个事务记录采购收货、ASN 审计和本地仓库流水。不能将无 ASN 收货静默映射到某 ASN。
+- ASN 单行累计申报总量（未取消）加未关联 ASN 的实际收货总量不能超订购行数量。取消任何已有实际关联收货的 ASN 必须失败；人工 ETA 修改需旧 ETA 快照、原因及审计。
+- `SUPPLIER_ASN_OVERDUE` 和 `SUPPLIER_ASN_DUE_SOON` 仅当供应商上报发货、未完全实际收货、PO 仍可收货时匹配。扫描默认手工；可选 `merchivra.supplier-asns.scheduler-enabled=true`，**不发送外部消息、不调用 Amazon**，工作队列状态保留审计。
+- `docs/purchasing/supplier-asn-tracking-v43.md` 为接口和边界。真实 PostgreSQL18 迁移、HTTP 和多会话并发须另行验收，不得将编译成功解释为生产已对接。
