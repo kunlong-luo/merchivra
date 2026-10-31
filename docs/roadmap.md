@@ -122,3 +122,12 @@
 - [ ] 所有本轮新增迁移、代码及页面均未按维护者要求执行测试，后续需集中修复编译、类型、Flyway 和数据一致性问题。
 
 [FIN-004](finance/sku-cost-history.md) · [PO-001](purchasing/local-purchase-workflow.md)
+
+
+## V21 · 财务来源事实与人工核对代码切片（2026-10-31）
+
+- [x] **代码已加入，未通过集中验收**：独立于 Orders 的 `finance_source_event`、原币/来源分类/稳定唯一键，可靠来源事件不能被重复同键改写；手工录入只标 `MANUAL_UNVERIFIED`。
+- [x] **代码已加入，未通过集中验收**：Owner 查看站点财务来源事件及同币分类汇总、审核关联同站点订单、保留审查历史；React 财务与对账工作台及服务端键集分页。
+- [ ] 未完成：正式 Finances 角色审核及 SP-API API Worker、结算/回款、可信订单收入/退款汇总、汇兑、订单成本/已知费用的解释性利润、测试与审计。
+
+[FIN-005](finance/source-events-v21.md)

@@ -143,3 +143,9 @@ Compose 使用 `postgres:18-alpine`，新卷 `pgdata18:/var/lib/postgresql`。�
 
 新增历史成本版本（原币、有效区间）、供应商、采购草稿、跨 Owner 审批、分批收货和相应 React 页面。**不意味着实现了 Amazon 财务对账、真实入仓或完整采购系统。**
 见 [成本历史](docs/finance/sku-cost-history.md) 与 [采购单](docs/purchasing/local-purchase-workflow.md)。
+
+
+## V21 财务来源事件开发（代码已提交，未验收）
+
+新增 `财务与对账` React 入口：按来源/原币/类别展示来源事实，允许 Owner 人工录入**未核验**事件和关联同站点订单，保存分类与匹配决策的审计。**不是**真实 Amazon Finances 同步、平台已结算或可信利润计算。
+详见 [FIN-005](docs/finance/source-events-v21.md)。

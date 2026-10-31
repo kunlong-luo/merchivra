@@ -287,3 +287,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 内部历史成本金额为 `NUMERIC(20,6)` + ISO 原币及 `[effective_from,effective_to)`，追加新版本必须先锁 `product_sku`。不能将成本当做 Amazon Fees、P&L 或财务实际结算，也不能随意跨币聚合。
 - 采购事实属于独立采购子域。双人审批由与创建人不同的当前租户 Owner 执行；收货为可审计追加事实并持有 PO 行锁、检查剩余数量。严禁用采购收货修改、推算或回填 FBA 观察表。
 - V19/V20 API/UI/数据库设计还需后续集成与安全验收，不能认为功能已经达到正式上线要求。
+
+
+## V21 财务事实实现纪律（功能先行，统一验收）
+
+- `finance_source_event` 与 `sales_order` 不是同一收入流水。手工参考来源标记 `MANUAL_UNVERIFIED`，绝不能转为 LIVE 或自动参与 Amazon 结算；正式来源必须通过独立 Finances 角色和 Seller Scope。
+- 每笔来源事件保留有符号原币金额、稳定来源键、Marketplace、时间与原始类别。重复键但数据不同必须拒绝，不能被最后写入覆盖。不得用无标识的总额跨币聚合。
+- 人工匹配属于附属的可审计判断记录，不能改变来源金额；只允许同租户同 Marketplace 订单，不接受浏览器自报租户；Owner/CSRF 限制保持。
+- 本轮开发服从“先补功能、后集中验收”，不得预先宣称 Java/React/PG18/真实 Amazon 验收通过。参见 FIN-005。
