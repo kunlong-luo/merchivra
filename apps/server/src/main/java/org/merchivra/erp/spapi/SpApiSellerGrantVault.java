@@ -94,4 +94,42 @@ public final class SpApiSellerGrantVault {
             scope.marketplaceId(),scope.region(),scope.refreshToken(),
             Set.of("Inventory and Order Tracking")));
     }
+    /**
+     * Independent, expiring Finance and Accounting role review. Orders approval
+     * and Seller marketplace participation are never Finance authorization.
+     */
+    public Optional<SpApiSellerScope> loadFinancesApproved(
+        UUID tenant,UUID account,String marketplaceId) {
+        Optional<SpApiSellerScope> base=loadVerified(tenant,account,marketplaceId);
+        if(base.isEmpty())return Optional.empty();
+        SpApiSellerScope scope=base.get();
+        List<String> roles=jdbc.query("""
+            SELECT e.role_code FROM spapi_finances_role_evidence e
+            JOIN spapi_seller_authorization g
+              ON g.tenant_id=e.tenant_id AND g.seller_account_id=e.seller_account_id
+            WHERE e.tenant_id=? AND e.seller_account_id=?
+              AND e.role_code='Finance and Accounting'
+              AND e.evidence_kind='EXTERNAL_APP_ROLE_REVIEW'
+              AND e.revoked_at IS NULL AND e.expires_at>now()
+              AND e.grant_verified_at=g.verified_at
+              AND g.status='VERIFIED' AND g.seller_id=? AND g.region=?
+              AND EXISTS (
+                SELECT 1 FROM membership m JOIN app_user u ON u.id=m.user_id
+                JOIN role_binding rb ON rb.tenant_id=m.tenant_id AND rb.user_id=m.user_id
+                WHERE m.tenant_id=e.tenant_id AND m.user_id=e.reviewed_by
+                  AND m.status='ACTIVE' AND u.status='ACTIVE'
+                  AND rb.role_code='SECURITY_REVIEWER'
+                  AND EXISTS (SELECT 1 FROM role_binding owner
+                    WHERE owner.tenant_id=m.tenant_id AND owner.user_id=m.user_id
+                    AND owner.role_code='OWNER' AND owner.seller_account_id IS NULL)
+                  AND (rb.seller_account_id IS NULL OR rb.seller_account_id=e.seller_account_id)
+              )
+            """,(rs,n)->rs.getString(1),tenant,account,scope.sellerId(),
+            scope.region().name());
+        if(!roles.contains("Finance and Accounting"))return Optional.empty();
+        return Optional.of(new SpApiSellerScope(scope.tenantId(),scope.sellerAccountId(),
+            scope.sellerId(),scope.marketplaceId(),scope.region(),scope.refreshToken(),
+            Set.of("Finance and Accounting")));
+    }
+
 }
