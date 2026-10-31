@@ -151,8 +151,17 @@ public class SupplierAsnService {
             WHERE tenant_id=? AND purchase_order_id=? AND purchase_order_line_id=?
               AND status<>'CANCELLED'
             """,Long.class,tenant,order,value.lineId());
-        if((committed==null?0:committed)+value.quantity()>ordered.getFirst())
-            throw conflict("Supplier ASN quantities exceed approved PO line quantity");
+        // Legacy/manual receipts without ASN linkage are already arrived units,
+        // not unallocated shipment capacity. Do not promise those units again.
+        Long unlinked=jdbc.queryForObject("""
+            SELECT COALESCE(SUM(quantity),0)::bigint
+            FROM erp_purchase_receipt
+            WHERE tenant_id=? AND purchase_order_id=? AND purchase_order_line_id=?
+              AND asn_id IS NULL
+            """,Long.class,tenant,order,value.lineId());
+        if((committed==null?0:committed)+(unlinked==null?0:unlinked)+value.quantity()
+            >ordered.getFirst())
+            throw conflict("Supplier ASN exceeds ordered units after existing receipts and notices");
         UUID id=UUID.randomUUID();
         jdbc.update("""
             INSERT INTO erp_purchase_asn
