@@ -93,3 +93,6 @@ merchivra:
   catalog-sync:
     # LIVE-only Inventory/Order Tracking reviewed role. No DEMO, no writes, no sandbox.
     enabled: ${MERCHIVRA_CATALOG_SYNC_ENABLED:false}
+    # Automatically progress only jobs started by a tenant Owner. OFF by default.
+    scheduler-enabled: ${MERCHIVRA_CATALOG_SYNC_SCHEDULER_ENABLED:false}
+    scheduler-ms: ${MERCHIVRA_CATALOG_SYNC_SCHEDULER_MS:60000}

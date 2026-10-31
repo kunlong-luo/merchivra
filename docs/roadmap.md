@@ -160,3 +160,8 @@
 - [ ] 未完成：真实 Seller 授权/角色演练、生产调用与长时间分页容灾、可选 scheduler、Listings 信息扩展、FBA 货件/仓库退货、实际利润。
 
 [集成实现契约](integrations/catalog-fba-live-sync-v24.md)
+
+
+### V24B · 可选自动分页（2026-10-31）
+
+- [x] **代码已加入、待完整验收**：Owner 手动创建的 Listing/FBA 正式只读扫描可由默认关闭的 Scheduler 逐页执行和重试，保留数据库 Lease/Epoch 与来源权限逐页复核；不会自动对 Seller 发起新任务。

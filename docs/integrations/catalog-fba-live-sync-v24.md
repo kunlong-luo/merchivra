@@ -30,3 +30,11 @@
 ## 不在本轮内
 
 实际卖家可用凭证、真实 HTTP 联调、Seller Central 角色审计批准、完整平台限流/后台定时调度、Feeds 写回和 Listings API 写操作、自动缺货补单、FBA 货件/退货、站点分页前端加载更多、远程库存质量告警与真实利润。上述均不能因代码提交而宣称生产完成。
+
+
+## 可选自动分页调度（V24B）
+
+- `MERCHIVRA_CATALOG_SYNC_SCHEDULER_ENABLED=false` 默认关闭，只有 `MERCHIVRA_CATALOG_SYNC_ENABLED=true` 且显式打开 scheduler 才会启动。
+- Scheduler 每隔 `MERCHIVRA_CATALOG_SYNC_SCHEDULER_MS`（默认 60 秒）读取最多 5 个已存在并处于 READY/RETRY 的任务，再逐一执行一页。不会自己创建或重启 Seller 授权、任务或更改 Amazon Listing/FBA。
+- Owner 先通过 `start` 建立扫描任务，后续会按租约/游标持续推进到 SUCCEEDED。429/5xx 进入延迟重试，权限失效 PAUSED。跨进程并发仍由 DB Lease/Epoch 栅栏阻断。
+- Scheduler 的运行状态本身不证明获得了 Seller Central 真实角色或真实数据已同步；必须有独立证据和部署开关。

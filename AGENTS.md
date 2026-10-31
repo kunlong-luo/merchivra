@@ -326,3 +326,9 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 默认关闭新出网开关；生产必须无 Demo、无 sandbox、无 API write，且有 LWA + 加密授权和独立站点验证。浏览器只传 Marketplace UUID 与 LISTINGS/FBA，不可接受可控 URL/Token/卖家 ID。
 - 不将未知库存当零；PARTIAL、STALE 或未取得库存不触发自动补货。LISTINGS 不删站点缺失项、不自动改变 SKU 映射版本，不把 MOCK 升格 LIVE；FBA 的来源观测键跨重复页必须幂等。
 - `V24` 仍需 Java/PG18/React、权限与真实卖家集中验收，严禁把存在代码误报为“Amazon 正式接入完成”。
+
+
+### V24B · 只读自动扫描（显式 opt-in）
+
+- CatalogSyncScheduler 默认关闭，且不允许在 catalog-sync 主开关关闭时独立运行；只继续处理已有 Owner 创建的 READY/RETRY 任务。不得主动注册 Seller、新建定期全量重扫、绕过租约或者自动提交 Amazon 修改。
+- 所有自动页在事务外读取官方 SDK，事务内复查角色/授权再提交；429/5xx 延迟，不把错误/未知库存清零；日志不得包含 refresh token、source JSON 或 cursor。

@@ -164,3 +164,6 @@ Compose 使用 `postgres:18-alpine`，新卷 `pgdata18:/var/lib/postgresql`。�
 ### V24 真实 Listing / FBA 只读同步代码
 
 Core 工作台新增官方 SDK Listing/FBA 页面分页同步，包含授权/角色复核、持久化 checkpoint、租约、重试和来源完整度。默认关闭，非真实卖家联调完成；不是自动上架、库存写回或自动下单。见 [V24 说明](docs/integrations/catalog-fba-live-sync-v24.md)。
+
+
+管理员建立 Listing/FBA 扫描后，可选开启 `MERCHIVRA_CATALOG_SYNC_SCHEDULER_ENABLED=true` 自动逐页读取与重试，默认关闭。该调度器不会自动创建新扫描或执行 Amazon 写入。

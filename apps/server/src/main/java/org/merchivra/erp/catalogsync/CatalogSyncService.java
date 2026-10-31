@@ -286,6 +286,21 @@ public class CatalogSyncService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,"Catalog sync authorization changed");
         }
     }
+    /** Poll only locally started work; never silently enroll a Seller in a new sync. */
+    public List<JobKey> due(int max) {
+        if(max<1||max>20)throw new IllegalArgumentException("batch must be 1..20");
+        return jdbc.query("""
+            SELECT tenant_id,seller_marketplace_id,stream
+            FROM spapi_catalog_sync_job
+            WHERE state IN ('READY','RETRY')
+              AND (retry_at IS NULL OR retry_at<=now())
+              AND (lease_expires_at IS NULL OR lease_expires_at<=now())
+            ORDER BY updated_at LIMIT ?
+            """,(rs,n)->new JobKey(rs.getObject(1,UUID.class),rs.getObject(2,UUID.class),
+                Stream.valueOf(rs.getString(3))),max);
+    }
+    public record JobKey(UUID tenant,UUID marketplace,Stream stream) {}
+
     private void fail(Claim claim,Exception error) {
         int http=error instanceof SpApiHttpException e?e.status():0;
         boolean retry=http==429 || http==500 || http==502 || http==503 || http==504;
