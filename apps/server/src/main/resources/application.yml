@@ -40,6 +40,10 @@ merchivra:
     enabled: ${MERCHIVRA_SPAPI_ENABLED:false}
     sandbox: ${MERCHIVRA_SPAPI_SANDBOX:true}
     allow-writes: ${MERCHIVRA_SPAPI_ALLOW_WRITES:false}
+    orders-role-review:
+      # Explicit two-person off-platform application-role verification.
+      # Default OFF; reviewer RBAC is provisioned through trusted administration.
+      enabled: ${MERCHIVRA_SPAPI_ORDERS_ROLE_REVIEW_ENABLED:false}
     verification:
       # Separate explicit live-only gate. No sandbox/Demo verification.
       enabled: ${MERCHIVRA_SPAPI_VERIFICATION_ENABLED:false}

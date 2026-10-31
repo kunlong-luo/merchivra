@@ -73,6 +73,15 @@ public final class SpApiSellerGrantVault {
               AND e.revoked_at IS NULL AND e.expires_at > now()
               AND e.grant_verified_at = g.verified_at
               AND g.status='VERIFIED' AND g.seller_id=? AND g.region=?
+              AND EXISTS (
+                SELECT 1 FROM membership m
+                JOIN role_binding rb ON rb.tenant_id=m.tenant_id
+                  AND rb.user_id=m.user_id
+                WHERE m.tenant_id=e.tenant_id AND m.user_id=e.reviewed_by
+                  AND m.status='ACTIVE' AND rb.role_code='SECURITY_REVIEWER'
+                  AND (rb.seller_account_id IS NULL
+                       OR rb.seller_account_id=e.seller_account_id)
+              )
             """, (rs,n)->rs.getString(1),tenant,account,
             scope.sellerId(),scope.region().name());
         if(!roles.contains("Inventory and Order Tracking")) return Optional.empty();

@@ -201,3 +201,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 单元测试仅用合成 SDK 模型，不连接 Amazon。真实应用角色审核登记工作流、官方 Amazon 实际授权与网络验收仍是阻断项。不得把“编译接通 SDK”描述为“真实账户已连通”。
 
 参考官方文档 https://developer-docs.amazon.com/sp-api/reference/searchorders 及 https://developer-docs.amazon.com/sp-api/docs/orders-api-migration-guide 。
+
+
+## V14 双人角色审核（2026-10-31）
+
+- [V14 Orders 角色双人审核](docs/integrations/orders-role-review-v14.md)：Flyway V14 `spapi_orders_role_review_request` / `spapi_orders_role_review_audit`；默认关闭 `MERCHIVRA_SPAPI_ORDERS_ROLE_REVIEW_ENABLED=false`，必须由当前租户 OWNER 提交真实外部角色材料的 SHA-256 与非敏感 case reference，再由**另一位**拥有独立 `SECURITY_REVIEWER` 角色的有效 OWNER 人工复核。不能自动给审核人角色、不能申请者自批、不能因 Seller OAuth 或 Marketplace 核验自动生成 Orders role evidence。
+- 审批生成 V12 的 7 天有效角色证据，经过当前 Seller grant 版本核验与历史审计；Owner 可紧急撤销。默认无任何角色、证据或审批记录。尚无受信任的账号开通/审核角色授予 UI，因此在外部管理权限、真实 Amazon 角色审批证据未验收前不得进入 LIVE 生产。
+- [V11D Typed SDK](docs/integrations/orders-worker-v11.md) 的 LIVE 读取改用官方 Java SDK `SearchOrdersApi.searchOrders`，不请求 BUYER/RECIPIENT，审批门禁仍在内部网关和事务内复核；真实 Seller API 流量尚未验收。

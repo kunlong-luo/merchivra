@@ -1,4 +1,4 @@
-# Regression focus: V7-V13 schemas migrate without enabling real Amazon credentials.
+# Regression focus: V7-V14 schemas migrate without enabling real Amazon credentials.
 # V6 page-one durable commit survives container restart before page two.
 # Shared US/DE internal SKU remains tenant-scoped.
 name: Mock full-chain Compose validation
@@ -20,6 +20,7 @@ on:
       - 'apps/server/src/main/java/org/merchivra/erp/spapi/**'
       - 'apps/server/src/test/java/org/merchivra/erp/spapi/**'
       - apps/server/src/main/resources/db/migration/V13__ops_live_order_origin.sql
+      - apps/server/src/main/resources/db/migration/V14__orders_role_dual_review.sql
       - deploy/compose.yaml
 jobs:
   mock-chain:
@@ -58,11 +59,11 @@ jobs:
           test "${major:0:2}" = 18
           docker compose --env-file .env -f deploy/compose.yaml exec -T postgres \
             sh -c 'test "$PGDATA" = /var/lib/postgresql/18/docker'
-      - name: Verify V7-V13 schemas migrated and live routes stay off
+      - name: Verify V7-V14 schemas migrated and live routes stay off
         run: |
           # The regular local Demo must never automatically enable real Seller OAuth.
-          applied=$(docker compose --env-file .env -f deploy/compose.yaml exec -T postgres             psql -U merchivra -d merchivra -Atc             "SELECT count(*) FROM flyway_schema_history WHERE version IN ('7','8','9','10','11','12','13') AND success")
-          test "$applied" = 7
+          applied=$(docker compose --env-file .env -f deploy/compose.yaml exec -T postgres             psql -U merchivra -d merchivra -Atc             "SELECT count(*) FROM flyway_schema_history WHERE version IN ('7','8','9','10','11','12','13','14') AND success")
+          test "$applied" = 8
           verification_table=$(docker compose --env-file .env -f deploy/compose.yaml exec -T postgres \
             psql -U merchivra -d merchivra -Atc \
             "SELECT count(*) FROM information_schema.tables WHERE table_schema='public' AND table_name='spapi_marketplace_verification'")
@@ -85,6 +86,14 @@ jobs:
             psql -U merchivra -d merchivra -Atc \
             "SELECT count(*) FROM spapi_orders_role_evidence")
           test "$role_rows" = 0
+          pending_reviews=$(docker compose --env-file .env -f deploy/compose.yaml exec -T postgres \
+            psql -U merchivra -d merchivra -Atc \
+            "SELECT count(*) FROM spapi_orders_role_review_request")
+          test "$pending_reviews" = 0
+          review_events=$(docker compose --env-file .env -f deploy/compose.yaml exec -T postgres \
+            psql -U merchivra -d merchivra -Atc \
+            "SELECT count(*) FROM spapi_orders_role_review_audit")
+          test "$review_events" = 0
           # Mock-only Compose must never silently flip an Orders job to LIVE
           # or create Live Seller records without reviewed role evidence.
           live_orders=$(docker compose --env-file .env -f deploy/compose.yaml exec -T postgres \
