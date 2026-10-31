@@ -87,3 +87,15 @@ schema. Browser acceptance is separate. All tests use invented data only.
   real network failure/retry testing, quotas, backfill and Seller PII retention.
 - Need production key management, MFA/RBAC, monitoring, backup restore and
   full production security review. No full Amazon Orders sync is claimed here.
+
+
+## V11A PostgreSQL restart validation (2026-10-31)
+
+The opt-in Compose regression runs `scripts/smoke_orders_sync.py` in two stages:
+first, an authenticated Owner starts a LOCAL/UNCONFIGURED US Marketplace job,
+commits page 1, and confirms watermark is still NULL; then the backend container
+is actually restarted and a new login checks that the same job/page/lease epoch
+persisted. It commits the final page, confirms the safe watermark and no extra
+orders, starts the next overlapping window, and verifies foreign ID 404 and
+logout 401. This is a **Mock-only** Worker test. Its real run evidence must
+come from the completed GitHub Actions workflow, not inferred from code.

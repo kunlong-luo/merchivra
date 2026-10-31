@@ -12,6 +12,11 @@ on:
       - scripts/smoke_ops.py
       - scripts/smoke_orders_sync.py
       - apps/server/src/main/resources/db/migration/V11__orders_sync_checkpoint.sql
+      - 'apps/server/src/main/java/org/merchivra/erp/orderssync/**'
+      - 'apps/server/src/test/java/org/merchivra/erp/orderssync/**'
+      - apps/web/src/OrdersSyncPanel.vue
+      - apps/web/src/lib/order-sync.ts
+      - deploy/compose.yaml
 jobs:
   mock-chain:
     runs-on: ubuntu-latest
@@ -69,6 +74,12 @@ jobs:
           . ./.env
           set +a
           python3 scripts/smoke_mock_chain.py --stage initial
+      - name: V11 create job and commit first Orders page BEFORE backend restart
+        run: |
+          set -a
+          . ./.env
+          set +a
+          python3 scripts/smoke_orders_sync.py --stage before-restart
       - name: Restart backend and verify persisted chain and logout
         run: |
           docker compose --env-file .env -f deploy/compose.yaml restart server
@@ -91,12 +102,12 @@ jobs:
           . ./.env
           set +a
           python3 scripts/smoke_ops.py
-      - name: Verify V11 durable local-only Orders worker
+      - name: V11 recover second Orders page AFTER backend restart
         run: |
           set -a
           . ./.env
           set +a
-          python3 scripts/smoke_orders_sync.py
+          python3 scripts/smoke_orders_sync.py --stage after-restart
       - name: Diagnostics
         if: failure()
         run: docker compose --env-file .env -f deploy/compose.yaml logs --no-color --tail=150
