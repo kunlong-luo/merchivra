@@ -1,4 +1,3 @@
-
 #!/usr/bin/env node
 // Chromium layout smoke using built-in Node 24 WebSocket/CDP and a synthetic localhost API.
 // No Amazon calls, production credentials, Playwright, or new npm dependencies.
