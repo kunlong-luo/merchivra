@@ -212,13 +212,16 @@ function observed(value: number | null) {
         <strong>数据完整性提醒</strong>
         <p>每类最多读取 50 条，筛选仅作用于本页；分页与真实 Amazon 同步尚未完成。测试数据必须标注 MOCK，未知库存不能按 0 处理。</p>
       </div></div>
+      <OrdersSyncPanel v-if="activeMarketplace && activeMarketplace.connectionStatus === 'CONNECTED'"
+        :key="'live-orders-'+activeMarketplace.id"
+        :tenant-id="tenantId" :marketplace-id="activeMarketplace.id" :is-live="true" />
       <details class="core-tools">
         <summary><strong>本地店铺配置与测试工具</strong><span>添加 Marketplace、手动 Mock 回放 · 不连接 Amazon</span></summary>
         <div class="core-tools-content">
           <SellerSetup :tenant-id="tenantId" />
           <OrdersSyncPanel v-if="activeMarketplace && activeMarketplace.connectionStatus === 'UNCONFIGURED'"
             :key="'orders-'+activeMarketplace.id"
-            :tenant-id="tenantId" :marketplace-id="activeMarketplace.id" />
+            :tenant-id="tenantId" :marketplace-id="activeMarketplace.id" :is-live="false" />
           <SandboxReplay v-if="activeMarketplace" :key="activeMarketplace.id"
             :tenant-id="tenantId" :marketplace-id="activeMarketplace.id"
             :marketplace-code="activeMarketplace.marketplaceId"

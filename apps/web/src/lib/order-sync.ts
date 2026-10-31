@@ -19,7 +19,7 @@ async function load(id: string, method: 'GET' | 'POST', action = '') {
     method, credentials: 'same-origin', cache: 'no-store',
     ...(method === 'POST' ? { headers: await csrfHeader() } : {})
   })
-  if (response.status === 404) throw new Error('离线订单 Worker 未开启或站点不符合模拟测试条件')
+  if (response.status === 404) throw new Error('订单同步服务未启用或当前站点不满足来源/授权条件')
   if (response.status === 409) throw new Error('任务正在执行、等待重试或已完成；请刷新检查点')
   if (!response.ok) throw new Error('订单同步操作未完成（HTTP ' + response.status + '）')
   return orderSyncStatusSchema.parse(await response.json())

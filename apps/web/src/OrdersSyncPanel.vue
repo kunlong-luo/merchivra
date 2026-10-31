@@ -4,7 +4,7 @@ import { computed, ref } from 'vue'
 import { fetchOrderSync, startOrderSync, stepOrderSync } from './lib/order-sync'
 import { formatSourceTime } from './lib/core-view'
 
-const props = defineProps<{ tenantId: string; marketplaceId: string }>()
+const props = defineProps<{ tenantId: string; marketplaceId: string; isLive: boolean }>()
 const client = useQueryClient()
 const message = ref('')
 const error = ref('')
@@ -38,9 +38,10 @@ const step = useMutation({
 <template>
   <section class="panel orders-sync-panel" aria-label="V11 离线订单同步任务">
     <div class="panel-heading">
-      <div><h2>订单增量 Worker · V11A</h2>
-        <p>持久分页、租约防并发、断点恢复；目前只支持虚构订单源，默认禁用，不连接 Amazon。</p></div>
-      <span class="status-chip chip-amber">MOCK ONLY</span>
+      <div><h2>{{ isLive ? '订单增量 Worker · V11C LIVE' : '订单增量 Worker · V11A MOCK' }}</h2>
+        <p v-if="isLive">正式只读订单模式：只有通过 Seller OAuth、Marketplace 与 Orders 角色审核并由部署者显式批准后才能执行。不自动发货或记账。</p>
+        <p v-else>持久分页、租约防并发、断点恢复；此模式只使用虚构订单源，不连接 Amazon。</p></div>
+      <span class="status-chip chip-amber">{{ isLive ? 'LIVE · 权限强校验' : 'MOCK ONLY' }}</span>
     </div>
     <div v-if="isPending" class="empty-state" role="status">正在读取同步检查点…</div>
     <p v-else-if="isError" class="setup-hint" role="status">
@@ -53,7 +54,9 @@ const step = useMutation({
         <div><span>租约代数</span><strong>{{ status.leaseEpoch }}</strong></div>
         <div><span>安全水位（UTC）</span><strong>{{ formatSourceTime(status.lastSafeWatermark) }}</strong></div>
       </div>
-      <p class="core-search-scope">分页 Token 不会发送到浏览器；真实卖家授权与 Orders 角色尚未开放。</p>
+      <p class="core-search-scope">{{ isLive
+        ? '分页 Token 不会发送到浏览器。未完成独立角色审核、正式连接或启用开关时，服务端必须拒绝读取；LIVE 数据也不代表已结算利润。'
+        : '分页 Token 不会发送到浏览器；模拟记录不可冒充 Amazon 真实经营数据。' }}</p>
       <div class="sandbox-actions">
         <button type="button" class="primary-button" :disabled="start.isPending.value || step.isPending.value || status.state === 'RUNNING'"
           @click="start.mutate()">开始新的增量窗口</button>
