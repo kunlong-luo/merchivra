@@ -5,6 +5,7 @@ import SandboxReplay from './SandboxReplay'
 import OrdersSyncPanel from './OrdersSyncPanel'
 import SkuCatalogManager from './SkuCatalogManager'
 import ReplenishmentWorkspace from './ReplenishmentWorkspace'
+import CatalogSyncPanel from './CatalogSyncPanel'
 import {coreStatusLabel,filterLoadedRows,formatSourceTime,sourceLabel} from './lib/core-view'
 import {fetchCoreMarketplaces,fetchCoreListings,fetchCoreOrders,fetchCoreOrderItems,fetchCoreInventory} from './lib/core'
 
@@ -81,6 +82,12 @@ export default function CoreWorkspace({tenantId,isOwner=true}:{tenantId:string;i
  {section==='inventory'&&panel('最新 FBA 观测（核心业务表）','每个 Seller SKU 显示最新观测，未知不等于零',filteredInventory.length,inventory.data?.length??0,inventory.isPending,inventory.error,'当前站点尚无 FBA 库存观测。',
  <div className="table-scroll core-data-scroll" role="region" tabIndex={0} aria-label="可水平滚动的 FBA 库存表格"><table><thead><tr>{['Seller SKU','可售','预留','质量','来源','观测时间'].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{filteredInventory.map(i=><tr key={i.id}><td className="strong-cell">{i.sellerSku}</td><td>{i.fulfillable===null?'未知':i.fulfillable}</td><td>{i.reserved===null?'未知':i.reserved}</td><td>{coreStatusLabel(i.quality)}</td><td>{status(i.dataOrigin)}</td><td>{formatSourceTime(i.observedAt)}</td></tr>)}</tbody></table></div>,()=>void inventory.refetch())}
  <div className="note-panel"><span className="note-mark">i</span><div><strong>数据完整性提醒</strong><p>最多读取 50 条，筛选只作用于本页；未知库存不能当零，Mock 不代表 Amazon 真实业务。</p></div></div>
+ {isOwner&&active?.connectionStatus==='CONNECTED'&&section==='listings'&&
+   <CatalogSyncPanel key={'catalog-'+active.id} tenantId={tenantId}
+    marketplaceId={active.id} stream="LISTINGS"/>}
+ {isOwner&&active?.connectionStatus==='CONNECTED'&&section==='inventory'&&
+   <CatalogSyncPanel key={'fba-'+active.id} tenantId={tenantId}
+    marketplaceId={active.id} stream="FBA"/>}
  {isOwner&&section==='inventory'&&<ReplenishmentWorkspace tenantId={tenantId}
     marketplaceId={marketplaceId}/>}
  {isOwner&&section==='listings'&&<SkuCatalogManager tenantId={tenantId}

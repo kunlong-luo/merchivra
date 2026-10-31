@@ -159,3 +159,8 @@ Compose 使用 `postgres:18-alpine`，新卷 `pgdata18:/var/lib/postgresql`。�
 ## V23 Orders 商品明细同步代码（待真实 Amazon 验收）
 
 接入官方 Orders v2026 `searchOrders` 的非 PII 商品项、数量及可选 ITEM 小计字段；增量 Worker 在每页事务中持久化当前明细并保留历史，React Core 订单支持展开查看、明确区分订单项未知与已观测。无真实订单同步验收，不等于财务结算或净利润。见 [ORD-005](docs/integrations/orders-items-v23.md)。
+
+
+### V24 真实 Listing / FBA 只读同步代码
+
+Core 工作台新增官方 SDK Listing/FBA 页面分页同步，包含授权/角色复核、持久化 checkpoint、租约、重试和来源完整度。默认关闭，非真实卖家联调完成；不是自动上架、库存写回或自动下单。见 [V24 说明](docs/integrations/catalog-fba-live-sync-v24.md)。

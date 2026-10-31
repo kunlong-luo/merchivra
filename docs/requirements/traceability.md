@@ -118,3 +118,11 @@ G2 全部为**设计验收规范**，并未执行任何数据库/HTTP 测试，�
 - `FR-ORD-01`：v2026 `searchOrders` 的 item ID、卖家 SKU、quantity、可选 ITEM subtotal 持久化；沿用页提交、租约、权限 fence。
 - `FR-ORD-02`：按既有 Marketplace 权限读取明细，仅 Owner 或允许的店铺只读员工，无 PII；页面区别 NOT_OBSERVED 与 OBSERVED。
 - `FR-ORD-04` / `FR-FIN-03`：履约、退款、财务状态仍独立，不把 Orders ITEM 商品小计变为 Finances 已入账或会计利润。
+
+
+### V24 · Listing/FBA SP-API 官方 SDK 只读（待实测）
+
+- `FR-CAT-02`：站点级 Listing 只读列表页拉取，来源 Seller SKU/ASIN/FNSKU 及时间，不自动改商品映射。
+- `FR-INV-01`/`FR-INV-03`：FBA 可售/预留及质量来源快照；不把空/NULL 当 0，允许已有补货模块仅对可信 OBSERVED 来源计算。
+- `FR-SYNC-01`/`FR-SYNC-03`：手动运行、租约 fencing、持久化 cursor/代次/页 checkpoint、429/5xx 延迟重试和每页出网前后授权审核。
+- `FR-SYS-01`：Owner Session/CSRF、来源隔离及同租户 Marketplace，正式 Seller 授权与真实集成验证待办。

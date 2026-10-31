@@ -150,3 +150,13 @@
 - [ ] 真实 Seller Orders 2026 联调、实际 Seller 网络限流/边界、PostgreSQL/Compose V23 回归以及订单履约/退款/财务对账尚需集中验证或开发。
 
 [ORD-005](integrations/orders-items-v23.md)
+
+
+## V24 · 官方 Listing / FBA 只读页同步（2026-10-31）
+
+- [x] **代码已加入，待真实 Amazon 验证**：`searchListingsItems` typed 获取 Seller SKU/ASIN/FNSKU/更新时间；`getInventorySummaries` 获取 FBA 可售/预留/更新时间，缺失保留未知。
+- [x] **代码已加入**：独立 Listing/FBA 任务的代次/页游标/租约 fencing/重试与原子写入；V12/V14 已核角色和 Marketplace Vault 每页前后复核，原生 SDK 非 PII 读取。
+- [x] **页面代码已加入**：Core Listing 与 FBA 添加 Owner 手动触发只读来源扫描入口，source=LIVE 与 MOCK 分离。
+- [ ] 未完成：真实 Seller 授权/角色演练、生产调用与长时间分页容灾、可选 scheduler、Listings 信息扩展、FBA 货件/仓库退货、实际利润。
+
+[集成实现契约](integrations/catalog-fba-live-sync-v24.md)

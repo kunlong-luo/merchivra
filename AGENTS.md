@@ -318,3 +318,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - `items_observation=NOT_OBSERVED`、`orderItems=null` 与空数组不同；源缺失不能覆盖已有明细。新版项快照更新当前行指示而保留历史，须与现有 Orders 逐页 commit/checkpoint/授权 fence 同事务。
 - Source dataOrigin、Marketplace、Seller、时间版本和独立 Orders 角色都要保持单向验证；正式 Amazon 调用仍需在生产合规授权后显式打开。
 - 本轮编写的 Java/React/数据库代码、离线测试与文档并不意味着真实 Seller 已验收。
+
+
+## V24 · 真实 Listing/FBA 数据读取安全纪律
+
+- 只有受信 `CatalogSyncService` 可调用官方 SDK `searchListingsItems` / `getInventorySummaries`，先通过 V12/V14 独立 Inventory and Order Tracking 应用角色审核及最新 Marketplace verified Seller Scope；每页落库前再校验，并保持数据库锁和租约 epoch。
+- 默认关闭新出网开关；生产必须无 Demo、无 sandbox、无 API write，且有 LWA + 加密授权和独立站点验证。浏览器只传 Marketplace UUID 与 LISTINGS/FBA，不可接受可控 URL/Token/卖家 ID。
+- 不将未知库存当零；PARTIAL、STALE 或未取得库存不触发自动补货。LISTINGS 不删站点缺失项、不自动改变 SKU 映射版本，不把 MOCK 升格 LIVE；FBA 的来源观测键跨重复页必须幂等。
+- `V24` 仍需 Java/PG18/React、权限与真实卖家集中验收，严禁把存在代码误报为“Amazon 正式接入完成”。

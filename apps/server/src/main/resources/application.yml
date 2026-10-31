@@ -89,3 +89,7 @@ merchivra:
     enabled: ${MERCHIVRA_ORDERS_SYNC_ENABLED:false}
     scheduler-enabled: ${MERCHIVRA_ORDERS_SYNC_SCHEDULER_ENABLED:false}
     scheduler-ms: ${MERCHIVRA_ORDERS_SYNC_SCHEDULER_MS:30000}
+
+  catalog-sync:
+    # LIVE-only Inventory/Order Tracking reviewed role. No DEMO, no writes, no sandbox.
+    enabled: ${MERCHIVRA_CATALOG_SYNC_ENABLED:false}
