@@ -15,8 +15,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * only after a separately audited app-role review is recorded.
  *
  * Uses the reviewed Orders 2026-01-01 read operation, never PII includedData.
- * Does not persist source JSON, buyer PII or settlement facts. Typed v2026
- * path extracts non-PII item facts and optional ITEM proceeds subtotal only.
+ * Does not persist source JSON or buyer PII. Typed path extracts
+ * optional ITEM subtotal (not final settlement) with order facts.
  */
 public final class ApprovedOrdersReadGateway {
     private final JdbcTemplate jdbc;
@@ -85,28 +85,41 @@ public final class ApprovedOrdersReadGateway {
         SpApiSellerScope scope=approved(tenant,site);
         // The existing reviewed client sends only lastUpdated* and
         // marketplaceIds. It never requests BUYER or RECIPIENT.
-        var parsed=typed==null
-            ? decoder.orders2026(api.searchOrders(scope,after,before,cursor).body())
-            : typed.search(scope,after,before,cursor);
-        if(parsed.orders().size()>100 || (parsed.nextToken()!=null
-            && (parsed.nextToken().isBlank() || parsed.nextToken().length()>4096)))
+        List<OrdersSyncSource.OrderFact> facts;
+        String nextToken;
+        if(typed!=null) {
+            TypedOrdersSdkReader.DetailedPage parsed=
+                typed.searchDetailed(scope,after,before,cursor);
+            nextToken=parsed.nextToken();
+            facts=parsed.orders().stream().map(order->new OrdersSyncSource.OrderFact(
+                order.orderId(),order.marketplaceId(),order.updatedAt(),
+                order.fulfillment(),order.items(),order.itemsObserved())).toList();
+        } else {
+            // Legacy decoder path is deliberately summary-only. Never pretend
+            // that a missing items dataset represents a zero-item Order.
+            var parsed=decoder.orders2026(api.searchOrders(scope,after,before,cursor).body());
+            nextToken=parsed.nextToken();
+            facts=parsed.orders().stream().map(order->new OrdersSyncSource.OrderFact(
+                order.orderId(),order.marketplaceId(),order.lastUpdated(),
+                order.fulfillmentRaw())).toList();
+        }
+        if(facts.size()>100 || (nextToken!=null
+            && (nextToken.isBlank() || nextToken.length()>4096)))
             throw new IllegalArgumentException("Invalid Orders page shape");
-        var facts=parsed.orders().stream().map(order -> {
+        for(var order:facts) {
             if(order.orderId()==null || order.orderId().isBlank()
                || order.orderId().length()>160
-               || !site.site().equals(order.marketplaceId())
-               || order.lastUpdated()==null
-               || order.fulfillmentRaw()==null || order.fulfillmentRaw().length()>100)
+               || !site.site().equals(order.marketplaceCode())
+               || order.updatedAt()==null
+               || order.fulfillment()==null || order.fulfillment().length()>100)
                 throw new IllegalArgumentException("Orders response scope mismatch");
-            return new OrdersSyncSource.OrderFact(order.orderId(),site.site(),
-                order.lastUpdated(),order.fulfillmentRaw());
-        }).toList();
+        }
         // Revocation/role change during network read MUST prevent return.
         Marketplace current=marketplace(tenant,marketplaceId);
         SpApiSellerScope stillApproved=approved(tenant,current);
         if(!current.equals(site) || !stillApproved.sellerId().equals(scope.sellerId())
             || stillApproved.region()!=scope.region())
             throw new SecurityException("Seller authorization changed during Orders read");
-        return new OrdersSyncSource.Page(facts,parsed.nextToken());
+        return new OrdersSyncSource.Page(facts,nextToken);
     }
 }
