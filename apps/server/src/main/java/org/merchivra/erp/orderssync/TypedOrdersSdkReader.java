@@ -45,7 +45,8 @@ public final class TypedOrdersSdkReader {
     TypedOrdersSdkReader(ReadCall caller) { this.caller=Objects.requireNonNull(caller); }
 
     public record DetailedOrder(String orderId,String marketplaceId,Instant updatedAt,
-        String fulfillment,List<OrdersSyncSource.ItemFact> items,boolean itemsObserved) {}
+        String fulfillment,List<OrdersSyncSource.ItemFact> items,boolean itemsObserved,
+        Instant createdAt) {}
     public record DetailedPage(List<DetailedOrder> orders,String nextToken) {}
 
     /** Compatibility for existing summary-only consumers. */
@@ -143,7 +144,8 @@ public final class TypedOrdersSdkReader {
                 }
             }
             records.add(new DetailedOrder(order.getOrderId(),seller.marketplaceId(),
-                order.getLastUpdatedTime().toInstant(),status,List.copyOf(items),observed));
+                order.getLastUpdatedTime().toInstant(),status,List.copyOf(items),observed,
+                order.getCreatedTime()==null?null:order.getCreatedTime().toInstant()));
         }
         String next=response.getPagination()==null?null:response.getPagination().getNextToken();
         if(next!=null && (next.isBlank() || next.length()>4096))

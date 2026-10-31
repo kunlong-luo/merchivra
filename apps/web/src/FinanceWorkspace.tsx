@@ -1,6 +1,7 @@
 import {useEffect,useState,type FormEvent} from 'react'
 import FinancesSyncPanel from './FinancesSyncPanel'
 import FinanceClassificationPanel from './FinanceClassificationPanel'
+import OrderCostReadinessPanel from './OrderCostReadinessPanel'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchCoreMarketplaces,fetchCoreOrders} from './lib/core'
 import {createManualFinanceEvent,fetchFinanceBuckets,fetchFinanceEvents,
@@ -24,6 +25,7 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
  const [postedAt,setPostedAt]=useState(''),[sourceType,setSourceType]=useState('MANUAL_ENTRY')
  const [orderRef,setOrderRef]=useState('')
  const [selectedEvent,setSelectedEvent]=useState(''),[selectedOrder,setSelectedOrder]=useState('')
+ const [selectedCostOrder,setSelectedCostOrder]=useState('')
  const [message,setMessage]=useState(''),[failure,setFailure]=useState('')
  const markets=useQuery({queryKey:['finance','marketplaces',tenantId],
   queryFn:fetchCoreMarketplaces,retry:false})
@@ -38,7 +40,7 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
   enabled:!!currentId&&!!selectedEvent,retry:false})
  const orders=useQuery({queryKey:['finance','order-options',tenantId,currentId],
   queryFn:()=>fetchCoreOrders(currentId),enabled:!!currentId,retry:false})
- useEffect(()=>{setCursor(undefined);setSelectedEvent('');setSelectedOrder('')},[currentId])
+ useEffect(()=>{setCursor(undefined);setSelectedEvent('');setSelectedOrder('');setSelectedCostOrder('')},[currentId])
  const refresh=()=>{
   void client.invalidateQueries({queryKey:['finance','events',tenantId,currentId]})
   void client.invalidateQueries({queryKey:['finance','buckets',tenantId,currentId]})
@@ -148,6 +150,21 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
     {events.data?.length===50&&<button type="button" className="refresh-button"
      onClick={next}>下一页</button>}
    </div>
+   {currentId&&<section className="panel full-panel">
+    <div className="panel-heading"><div><h2>订单历史成本覆盖率</h2>
+     <p>选择同一 Marketplace 的来源订单，检查每个订单项是否找到业务日对应的内部 SKU 成本；
+      成本仅供核对，不直接产生利润。</p></div></div>
+    <label className="shop-filter" htmlFor="fin-cogs-order">
+     <span>选择来源订单</span><select id="fin-cogs-order" value={selectedCostOrder}
+      onChange={e=>setSelectedCostOrder(e.target.value)}>
+       <option value="">暂不选择</option>
+       {(orders.data??[]).map(o=><option key={o.id} value={o.id}>
+        {o.externalOrderId} · {o.dataOrigin}</option>)}
+     </select>
+    </label>
+    {selectedCostOrder&&<OrderCostReadinessPanel key={selectedCostOrder}
+      tenantId={tenantId} marketplaceId={currentId} orderId={selectedCostOrder}/>}
+   </section>}
    {current&&<div className="core-tools">
     <strong>当前事件：{current.eventKey}</strong>
     <p className="setup-hint">来源状态：{displayOrigin(current.dataOrigin)}。必须人工核对事件和订单是否真实相关。</p>

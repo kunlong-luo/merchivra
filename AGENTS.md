@@ -352,3 +352,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - `finance_source_event` 的原币 signed amount/sourceType/category 始终是不可变来源事实；`finance_breakdown_rule` 是当前人工解释规则，改变规则只能改变只读预览，不能自动写入原始事件、结算或记账总账。
 - 只有 source breakdown 的 `is_leaf=true` 可用于临时类别求和；必须排除父节点，验证所有末级已完整获得金额、币种与来源总额一致、全部明细已分类；任何缺口不得返回类别合计。
 - Marketplace+tenant+Owner 权限从 Session 推导，分类规则精准匹配 sourceType，变更创建/撤销有追加审计；无真实会计归属证明之前，不可称为最终利润、退款已核销或银行结算。
+
+
+## V29 · 订单成本来源完整度与本地授权顺序
+
+- Orders v2026 createdTime 和 lastUpdatedTime 不得混作同一时点；首个已知 createdTime 写入 order_time，缺失不猜。OrderItem 必须明确 LIVE/MOCK provenance，旧来源不一致必须阻断该页写入。
+- COGS 只读预览必须满足订单 LIVE、订单项已观测、业务日期已知、当地日期有效成本、当前 Seller SKU 的当时映射、数量和成本原币一致；任何缺失返回 NULL 合计和行级原因。不得用历史 SKU 成本冒充真实 FIFO 成本，更不能标记最终利润。
+- 用户明确选择“所有核心功能代码完成后，才在本地授权并自行调用真实 API 测试”：不要提前请求 Seller 账号、Token 或真实 Amazon 环境；继续使用 synthetic fixtures + CI，生产开关保持默认关闭。本地实测步骤应单独留待功能阶段收尾。

@@ -17,9 +17,14 @@ public interface OrdersSyncSource {
      * that must never overwrite previously observed lines.
      */
     record OrderFact(String orderId, String marketplaceCode, Instant updatedAt,
-                     String fulfillment, List<ItemFact> items, boolean itemsObserved) {
+                     String fulfillment, List<ItemFact> items, boolean itemsObserved,
+                     Instant createdAt) {
         public OrderFact(String orderId,String marketplaceCode,Instant updatedAt,String fulfillment) {
-            this(orderId,marketplaceCode,updatedAt,fulfillment,List.of(),false);
+            this(orderId,marketplaceCode,updatedAt,fulfillment,List.of(),false,null);
+        }
+        public OrderFact(String orderId,String marketplaceCode,Instant updatedAt,String fulfillment,
+                         List<ItemFact> items,boolean itemsObserved) {
+            this(orderId,marketplaceCode,updatedAt,fulfillment,items,itemsObserved,null);
         }
     }
     record Page(List<OrderFact> orders, String nextToken) {}

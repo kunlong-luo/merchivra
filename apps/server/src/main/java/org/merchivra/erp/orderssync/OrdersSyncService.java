@@ -250,16 +250,17 @@ public class OrdersSyncService {
                 jdbc.update("""
                     INSERT INTO sales_order
                       (id,tenant_id,seller_marketplace_id,external_order_id,
-                       fulfillment_status_raw,source_updated_at,data_origin)
-                    VALUES (?,?,?,?,?,?,?)
+                       fulfillment_status_raw,source_updated_at,data_origin,order_time)
+                    VALUES (?,?,?,?,?,?,?,?)
                     ON CONFLICT (tenant_id,seller_marketplace_id,external_order_id)
                     DO UPDATE SET fulfillment_status_raw=EXCLUDED.fulfillment_status_raw,
-                        source_updated_at=EXCLUDED.source_updated_at
+                        source_updated_at=EXCLUDED.source_updated_at,
+                        order_time=COALESCE(sales_order.order_time,EXCLUDED.order_time)
                     WHERE sales_order.data_origin=EXCLUDED.data_origin
                       AND (sales_order.source_updated_at IS NULL
                            OR sales_order.source_updated_at<=EXCLUDED.source_updated_at)
                     """,UUID.randomUUID(),tenant,marketplace,order.orderId(),
-                    order.fulfillment(),dbTime(order.updatedAt()),mode());
+                    order.fulfillment(),dbTime(order.updatedAt()),mode(),dbTime(order.createdAt()));
                 if(!order.itemsObserved())continue; // absent is NOT empty.
                 record StoredOrder(UUID id,Instant updatedAt,String origin) {}
                 List<StoredOrder> existing=jdbc.query("""
@@ -279,6 +280,12 @@ public class OrdersSyncService {
                 // v2026 searchOrders orderItems is the complete observed list.
                 // Maintain soft current membership; never physically destroy
                 // historical Order items during a subsequent update.
+                Integer conflicting=jdbc.queryForObject("""
+                    SELECT COUNT(*) FROM order_item
+                    WHERE tenant_id=? AND sales_order_id=? AND data_origin<>?
+                    """,Integer.class,tenant,stored.id(),mode());
+                if(conflicting==null || conflicting>0)
+                    throw new IllegalStateException("Cross-origin order items require review");
                 jdbc.update("""
                     UPDATE order_item SET is_current=false
                     WHERE tenant_id=? AND sales_order_id=? AND is_current=true
@@ -288,8 +295,8 @@ public class OrdersSyncService {
                         INSERT INTO order_item
                           (id,tenant_id,sales_order_id,external_item_id,seller_sku_raw,
                            quantity,proceeds_amount,proceeds_currency,
-                           source_updated_at,is_current)
-                        VALUES (?,?,?,?,?,?,?,?,?,true)
+                           source_updated_at,is_current,data_origin)
+                        VALUES (?,?,?,?,?,?,?,?,?,true,?)
                         ON CONFLICT (tenant_id,sales_order_id,external_item_id)
                         DO UPDATE SET seller_sku_raw=EXCLUDED.seller_sku_raw,
                           quantity=EXCLUDED.quantity,
@@ -298,13 +305,20 @@ public class OrdersSyncService {
                           proceeds_currency=COALESCE(EXCLUDED.proceeds_currency,
                                                      order_item.proceeds_currency),
                           source_updated_at=EXCLUDED.source_updated_at,is_current=true
-                        WHERE order_item.source_updated_at IS NULL
-                           OR order_item.source_updated_at<=EXCLUDED.source_updated_at
+                        WHERE order_item.data_origin=EXCLUDED.data_origin
+                          AND (order_item.source_updated_at IS NULL
+                           OR order_item.source_updated_at<=EXCLUDED.source_updated_at)
                         """,UUID.randomUUID(),tenant,stored.id(),item.itemId(),
                         item.sellerSku(),item.quantity(),
                         item.itemSubtotal()==null?null:new java.math.BigDecimal(item.itemSubtotal()),
-                        item.currency(),dbTime(order.updatedAt()));
+                        item.currency(),dbTime(order.updatedAt()),mode());
                 }
+                Integer currentItems=jdbc.queryForObject("""
+                    SELECT COUNT(*) FROM order_item WHERE tenant_id=? AND sales_order_id=?
+                      AND is_current=true AND data_origin=?
+                    """,Integer.class,tenant,stored.id(),mode());
+                if(currentItems==null || currentItems!=order.items().size())
+                    throw new IllegalStateException("Order item snapshot was not fully committed");
                 jdbc.update("""
                     UPDATE sales_order SET items_observation='OBSERVED',
                         items_observed_at=now()

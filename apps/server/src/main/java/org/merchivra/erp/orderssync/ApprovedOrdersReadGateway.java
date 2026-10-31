@@ -93,7 +93,8 @@ public final class ApprovedOrdersReadGateway {
             nextToken=parsed.nextToken();
             facts=parsed.orders().stream().map(order->new OrdersSyncSource.OrderFact(
                 order.orderId(),order.marketplaceId(),order.updatedAt(),
-                order.fulfillment(),order.items(),order.itemsObserved())).toList();
+                order.fulfillment(),order.items(),order.itemsObserved(),
+                order.createdAt())).toList();
         } else {
             // Legacy decoder path is deliberately summary-only. Never pretend
             // that a missing items dataset represents a zero-item Order.

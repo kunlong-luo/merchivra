@@ -26,3 +26,8 @@
 ## 待开发/验收
 
 需要真实 Amazon 授权和批准的 Orders 角色、生产调用/节流、PostgreSQL V23 迁移/重复页及多租户负例、实际履约信息和退款事件、财务状态关联、Orders 大范围服务器分页与导出、后续逐条来源差异审计。在完成之前，本文只说明已交付**代码路径**，不是生产可用的证明。
+
+
+## V29 来源修复
+
+官方 v2026 Order.createdTime 现在会写入初始 order_time，而不是用 lastUpdatedTime 代替业务日期。每条 OrderItem 都写入 LIVE/MOCK 来源标识并通过跨来源/数量完整性检查；若旧订单项 provenance 不同，事务拒绝冒充受信来源。详见 [V29](../finance/order-cost-readiness-v29.md)。

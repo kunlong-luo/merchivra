@@ -147,3 +147,10 @@ G2 全部为**设计验收规范**，并未执行任何数据库/HTTP 测试，�
 - `FR-FIN-02/03`：当前租户/站点规则精确来源类型、状态修订及追加审计；禁止修改原始财务事件/金额。
 - `FR-FIN-03/04`：只统计末级 breakdown，完整性/币种/规则/交易总额核平后才返回待复核分类合计，未知与不平不视为已完成。
 - `FR-SYS-01`：Owner Session+CSRF、规则审计与强制 Marketplace 租户作用域。
+
+
+### V29 · Orders createdTime 与历史单位成本（本地待验收）
+
+- `FR-ORD-01`：source createdTime 与 order_item provenance 同步；缺失数据保持 NULL，LIVE/MOCK 隔离。
+- `FR-FIN-02`：以 Marketplace 当地业务日和有效期 SKU 成本覆盖当前订单项，缺映射/时间/成本/币种时不计算整体 COGS。
+- `FR-FIN-03`：暂定成本仅为 read-only 运营评估，不自动变为 Finances 交易、已结算利润或账务凭证。

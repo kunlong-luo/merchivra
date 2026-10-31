@@ -97,6 +97,20 @@ class TypedOrdersSdkReaderTest {
             AFTER,BEFORE,null);
         assertEquals("NOT_OBSERVED",result.orders().getFirst().fulfillmentRaw());
     }
+    @Test void capturesSourceCreatedTimeForHistoricalUnitCostDate() throws Exception {
+        var created=OffsetDateTime.parse("2026-10-29T03:10:00Z");
+        var reader=new TypedOrdersSdkReader((scope,after,before,cursor)->
+            new SearchOrdersResponse().orders(List.of(
+                new Order().orderId("SYNTH-HISTORICAL-COST")
+                    .createdTime(created)
+                    .lastUpdatedTime(OffsetDateTime.ofInstant(AFTER,ZoneOffset.UTC))
+                    .salesChannel(new SalesChannel().marketplaceId(MP)))));
+        var page=reader.searchDetailed(grant(Set.of("Inventory and Order Tracking")),
+            AFTER,BEFORE,null);
+        assertEquals(created.toInstant(),page.orders().getFirst().createdAt());
+        assertFalse(page.orders().getFirst().itemsObserved());
+    }
+
     @Test void extractsTypedOrderItemsWithoutBuyerPiiOrEstimatedSettlement() throws Exception {
         var item=new OrderItem().orderItemId("SYNTH-LINE-1").quantityOrdered(2)
             .product(new ItemProduct().sellerSku("SKU-LINE"))
