@@ -1,4 +1,4 @@
-import {useState,type FormEvent} from 'react'
+import {useEffect,useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchSkus} from './lib/catalog'
 import WarehouseAlertsPanel from './WarehouseAlertsPanel'
@@ -21,6 +21,8 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  const [selectedId,setSelectedId]=useState(''),[receiveLine,setReceiveLine]=useState('')
  const [receiveQty,setReceiveQty]=useState(1)
  const [receiveAsnId,setReceiveAsnId]=useState('')
+ // Switching purchase orders must never silently carry an ASN attribution forward.
+ useEffect(()=>setReceiveAsnId(''),[selectedId])
  const [warehouseCode,setWarehouseCode]=useState(''),[warehouseName,setWarehouseName]=useState('')
  const [warehouseId,setWarehouseId]=useState(''),[stockWarehouseId,setStockWarehouseId]=useState('')
  const [operationType,setOperationType]=useState<StockOperationRequest['type']>('OUTBOUND')
