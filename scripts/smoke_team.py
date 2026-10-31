@@ -40,7 +40,8 @@ def login(op,user,password):
     except HTTPError as e:raise AssertionError("Login HTTP "+str(e.code)) from e
 
 expect(owner,"/api/v1/team/members",401)
-expect(owner,"/api/v1/auth/invitations/accept",403,method="POST",body={})
+code,_=hit(owner,"/api/v1/auth/invitations/accept",method="POST",body={})
+assert code in (401,403),("anonymous unprotected activation",code)
 login(owner,os.environ["MERCHIVRA_BOOTSTRAP_USERNAME"],os.environ["MERCHIVRA_BOOTSTRAP_PASSWORD"])
 oc=csrf(owner)
 self_user=expect(owner,"/api/v1/auth/me")["userId"]

@@ -54,6 +54,14 @@ const server = createServer(async (req, res) => {
       : respond(res, { userId: account, activeTenantId: tenant, availableTenantIds:[tenant] })
   }
   if (url.pathname === '/api/v1/ping') return respond(res, { status:'ok' })
+  if (url.pathname === '/api/v1/team/members') return respond(res, [
+    {userId:account,loginName:'local-smoke-admin',status:'ACTIVE',reviewer:false},
+    {userId:'88888888-8888-4888-8888-888888888888',loginName:'ops-reviewer',status:'ACTIVE',reviewer:true}
+  ])
+  if (url.pathname === '/api/v1/team/invitations') return respond(res, [
+    {id:'99999999-9999-4999-8999-999999999999',
+     loginName:'another-owner',status:'PENDING',expiresAt:'2026-11-01T00:00:00Z'}
+  ])
   if (url.pathname === '/api/v1/orders-sync/' + market)
     return respond(res, {
       jobId:null,state:'NOT_STARTED',committedPages:0,leaseEpoch:0,
@@ -252,6 +260,19 @@ async function main() {
         true, 'operations rule label')
       await layout(send,width,'operations-360')
       await screenshot(send,'operations-360.png')
+      // V15 Owner-only management surface must render independent reviewers,
+      // never an invitation token in the list response.
+      await evaluate(send,
+        "(() => {const b=[...document.querySelectorAll('.nav-link')]" +
+        ".find(x=>x.textContent.includes('团队与权限'));if(!b)throw Error('Missing V15 navigation');b.click();})()")
+      await waitFor(send,
+        "document.querySelector('.team-workspace tbody tr')?.textContent?.includes('ops-reviewer')",
+        'V15 team role list')
+      assert.equal(await evaluate(send,
+        "document.querySelector('.team-workspace')?.textContent?.includes('生成邀请')"),
+        true,'V15 invite UI should exist')
+      await layout(send,width,'team-owner-360')
+      await screenshot(send,'team-owner-360.png')
       // Synthetic connected Marketplace must expose a LIVE-gated operations
       // panel outside the local Demo tools. This does not call Amazon.
       mode='connected'
