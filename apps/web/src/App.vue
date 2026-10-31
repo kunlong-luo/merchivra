@@ -155,7 +155,7 @@ function tabTitle() {
       <div class="sidebar-spacer"></div>
       <div class="sidebar-info">
         <span class="local-indicator"></span>
-        <div><strong>{{ activeView === 'core' ? '核心业务工作台' : '本地演示环境' }}</strong><small>{{ activeView === 'core' ? '会话租户隔离 · 业务数据与 Mock 分离' : '纯虚构数据 · 无真实连接' }}</small></div>
+        <div><strong>{{ activeView === 'core' ? '核心业务工作台' : '本地演示环境' }}</strong><small>{{ activeView === 'core' ? '会话租户隔离 · 数据记录标注来源' : '纯虚构数据 · 无真实连接' }}</small></div>
       </div>
       <a class="sidebar-repo" href="https://github.com/kunlong-luo/merchivra" target="_blank" rel="noopener noreferrer">
         GitHub 源代码 <span aria-hidden="true">↗</span>
