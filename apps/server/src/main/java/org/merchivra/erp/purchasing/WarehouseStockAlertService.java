@@ -104,7 +104,13 @@ public class WarehouseStockAlertService {
     @Transactional
     public void removePolicy(UUID tenant,UUID actor,UUID warehouse,UUID sku) {
         if(sku==null)throw bad("SKU required");
-        requireWarehouse(tenant,warehouse);
+        // Match plan creation/conversion warehouse locks so policy removal cannot
+        // race an evidence snapshot between source verification and PO creation.
+        List<UUID> warehouses=jdbc.queryForList("""
+            SELECT id FROM erp_local_warehouse
+            WHERE tenant_id=? AND id=? AND status='ACTIVE' FOR SHARE
+            """,UUID.class,tenant,warehouse);
+        if(warehouses.size()!=1)throw missing();
         int changed=jdbc.update("""
             DELETE FROM erp_local_stock_policy
             WHERE tenant_id=? AND warehouse_id=? AND product_sku_id=?
