@@ -150,3 +150,32 @@ Orders from an authorized LIVE read carry `data_origin=LIVE` in `sales_order`; t
 
 CI checks both synthetic source modes in Java tests; the actual PostgreSQL 18 Compose workflow remains MOCK-only and asserts zero LIVE orders and no seeded role evidence. It also tests repeated pagination, restart recovery and tenant/session/CSRF. Evidence of passing requires the completed workflow run—not just committed tests.
 
+
+
+## V11C verified evidence (2026-10-31)
+
+- [Java 25 + Vue/Vitest/Vite CI passed](https://github.com/kunlong-luo/merchivra/actions/runs/41155975249).
+  Unit tests include LIVE-mode configuration guardrails, scheduler filtering
+  by matching source mode, role rejection and the **fetched page followed by
+  revoked grant before transaction commit** race. The last case asserts no
+  Orders source rows, page journal, or watermark update.
+- [PostgreSQL 18 + Nginx + Spring Boot Compose passed](https://github.com/kunlong-luo/merchivra/actions/runs/41155924445).
+  Tests confirm Flyway V1–V13, no pre-seeded Orders role evidence or LIVE rows,
+  tenant Session/CSRF, existing mocked order replay, first-page commit,
+  actual backend container restart, second-page recovery and idempotence.
+- [Headless Chromium responsive smoke passed](https://github.com/kunlong-luo/merchivra/actions/runs/41155975252):
+  a synthetic connected Marketplace exposes one distinctly labelled
+  V11C LIVE check-point panel at 360px, while the separate local
+  UNCONFIGURED Marketplace retains its MOCK-only workflow. Screenshots
+  are available in the workflow artifact.
+- The Vue Core workspace now displays V11C LIVE status/actions for
+  **connected** marketplaces, outside the local-only tools disclosure;
+  it still shows an explicit unauthorized/disabled error if safety
+  preconditions are not met. UI cannot override server authorization,
+  install app roles, provide a token, or select the source mode.
+- Live Amazon egress, OAuth approval, external review of Orders role
+  evidence, production 429/TTL limits, real order items, financial
+  settlement, and acceptance with any genuine Seller credentials **are
+  not complete**. All known proof is synthetic, and LIVE remains
+  separately opt-in and disabled by default.
+

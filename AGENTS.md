@@ -179,3 +179,14 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - `OrdersSyncService` 现在把任务 mode 与记录 `data_origin` 绑定，禁止既有 MOCK 任务继承 LIVE 任务游标；提交 LIVE 订单/页日志/安全水位时重新核验并事务锁住账户、授权、角色、参与证据，授权撤销后事务回滚且转暂停。
 - Flyway V13 放开 ops_finding 只读建议记录的 LIVE 来源分类，Web 必须区分 Amazon API 已同步/模拟/未核验；LIVE 绝不代表已记账或 Amazon 写入批准。
 - 所有真实角色审核、真实 LWA、网络 429/Token TTL 与生产部署仍需独立实测。项目 CI 必须保留 Mock-only 全链路及默认角色表为空的断言。详情 `docs/integrations/orders-worker-v11.md`。
+
+
+## V11C 自动化 Worker 与权限门禁实测（2026-10-31）
+
+- [Java/Vue CI](https://github.com/kunlong-luo/merchivra/actions/runs/41155975249)、
+  [PostgreSQL 18 / V1–V13 Compose Mock 全链路](https://github.com/kunlong-luo/merchivra/actions/runs/41155924445)、
+  [Chromium 360px LIVE / MOCK 分离 UI](https://github.com/kunlong-luo/merchivra/actions/runs/41155975252)
+  均成功；浏览器和数据库使用虚构数据，不是正式 Amazon 账号验收。
+- `OrdersSyncService` 任务 mode 与 `data_origin` 必须一致，拒绝 MOCK/LIVE 游标混用；调度查询 `mode=?` 仅领取本模式任务。LIVE 来源重读已审核角色，事务内锁定相关 Seller 授权与角色证据，撤销后不得提交新订单、分页或水位。专门的撤销竞态单测已加入。
+- Core 已连接 Marketplace 提供独立的 V11C LIVE 检查点面板；本地测试工具只显示 V11A MOCK，不应让 LIVE 看起来是模拟数据，亦不能从浏览器绕过生产部署门禁。
+- 未完成独立生产 Amazon app/role 审批、外部角色证据录入审批、多租户生产授信/真实连接、官方 SDK typed Orders API 直接调用和真实流量验证；后续不得将合成测试当作生产证据，生产出站仍默认关闭。
