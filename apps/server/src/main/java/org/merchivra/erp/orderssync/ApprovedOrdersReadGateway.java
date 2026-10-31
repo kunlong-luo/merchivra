@@ -10,7 +10,7 @@ import org.merchivra.erp.spapi.SpApiSellerScope;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 /**
- * V11B production Orders read seam: no HTTP route, no Spring bean, and no
+ * V11D trusted Orders read seam: no HTTP route, no direct Seller proxy, and no
  * connection to V11A's MOCK-only job writer. A trusted worker may call this
  * only after a separately audited app-role review is recorded.
  *
@@ -22,10 +22,19 @@ public final class ApprovedOrdersReadGateway {
     private final SpApiSellerGrantVault vault;
     private final SpApiReadOperations api;
     private final SpApiPayloadDecoder decoder;
+    private final TypedOrdersSdkReader typed;
 
     public ApprovedOrdersReadGateway(JdbcTemplate jdbc, SpApiSellerGrantVault vault,
                                      SpApiReadOperations api, SpApiPayloadDecoder decoder) {
         this.jdbc=jdbc; this.vault=vault; this.api=api; this.decoder=decoder;
+        this.typed=null;
+    }
+
+    /** V11D LIVE requests use Amazon's typed SDK, not raw-JSON transport. */
+    public ApprovedOrdersReadGateway(JdbcTemplate jdbc, SpApiSellerGrantVault vault,
+                                     TypedOrdersSdkReader typed) {
+        this.jdbc=jdbc; this.vault=vault; this.api=null; this.decoder=null;
+        this.typed=java.util.Objects.requireNonNull(typed);
     }
 
     private record Marketplace(UUID sellerAccount, String site) {}
@@ -75,8 +84,9 @@ public final class ApprovedOrdersReadGateway {
         SpApiSellerScope scope=approved(tenant,site);
         // The existing reviewed client sends only lastUpdated* and
         // marketplaceIds. It never requests BUYER or RECIPIENT.
-        var remote=api.searchOrders(scope,after,before,cursor);
-        var parsed=decoder.orders2026(remote.body());
+        var parsed=typed==null
+            ? decoder.orders2026(api.searchOrders(scope,after,before,cursor).body())
+            : typed.search(scope,after,before,cursor);
         if(parsed.orders().size()>100 || (parsed.nextToken()!=null
             && (parsed.nextToken().isBlank() || parsed.nextToken().length()>4096)))
             throw new IllegalArgumentException("Invalid Orders page shape");

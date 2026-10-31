@@ -1,10 +1,8 @@
 package org.merchivra.erp.orderssync;
 
 import org.merchivra.erp.demo.MockSpApiClient;
-import org.merchivra.erp.spapi.SpApiClient;
-import org.merchivra.erp.spapi.SpApiPayloadDecoder;
-import org.merchivra.erp.spapi.SpApiReadOperations;
 import org.merchivra.erp.spapi.SpApiSellerGrantVault;
+import org.merchivra.erp.spapi.SpApiOfficialSdkFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -24,7 +22,7 @@ public class OrdersSyncConfiguration {
     OrdersSyncSource ordersSyncSource(
         MockSpApiClient mock, JdbcTemplate jdbc,
         ObjectProvider<SpApiSellerGrantVault> vaultProvider,
-        ObjectProvider<SpApiClient> clientProvider,
+        ObjectProvider<SpApiOfficialSdkFactory> sdkProvider,
         @Value("${merchivra.orders-sync.mode:MOCK}") String mode,
         @Value("${merchivra.orders-sync.live-approved:false}") boolean liveApproved,
         @Value("${merchivra.demo.enabled:false}") boolean demoEnabled,
@@ -48,11 +46,11 @@ public class OrdersSyncConfiguration {
                 "LIVE Orders requires explicit approval, production read-only SP-API, verified OAuth and no Demo");
         }
         var vault=vaultProvider.getIfAvailable();
-        var client=clientProvider.getIfAvailable();
-        if(vault==null || client==null)
-            throw new IllegalStateException("LIVE Orders requires audited vault and SP-API client");
+        var factory=sdkProvider.getIfAvailable();
+        if(vault==null || factory==null)
+            throw new IllegalStateException("LIVE Orders requires audited vault and official SDK");
         var gateway=new ApprovedOrdersReadGateway(jdbc,vault,
-            new SpApiReadOperations(client),new SpApiPayloadDecoder());
+            new TypedOrdersSdkReader(factory));
         return new LiveOrdersSyncSource(gateway);
     }
 }

@@ -190,3 +190,14 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - `OrdersSyncService` 任务 mode 与 `data_origin` 必须一致，拒绝 MOCK/LIVE 游标混用；调度查询 `mode=?` 仅领取本模式任务。LIVE 来源重读已审核角色，事务内锁定相关 Seller 授权与角色证据，撤销后不得提交新订单、分页或水位。专门的撤销竞态单测已加入。
 - Core 已连接 Marketplace 提供独立的 V11C LIVE 检查点面板；本地测试工具只显示 V11A MOCK，不应让 LIVE 看起来是模拟数据，亦不能从浏览器绕过生产部署门禁。
 - 未完成独立生产 Amazon app/role 审批、外部角色证据录入审批、多租户生产授信/真实连接、官方 SDK typed Orders API 直接调用和真实流量验证；后续不得将合成测试当作生产证据，生产出站仍默认关闭。
+
+
+## V11D · 官方 Java SDK 类型化 Orders 读取（2026-10-31）
+
+- LIVE Orders 不再直接以 `SpApiClient` 原始 HTTP+Jackson JSON 解码作为主路径。新增 `TypedOrdersSdkReader`：通过官方 SDK `SearchOrdersApi.searchOrders` 读取 Orders v2026-01-01 的 `SearchOrdersResponse` / `Order` / `Pagination` 类型；仅传递 lastUpdatedAfter/Before、Marketplace、maxResultsPerPage=100 和受控分页 Token，`includedData` 为 null，从而不请求 BUYER/RECIPIENT/财务扩展数据。
+- V11B `ApprovedOrdersReadGateway` 依旧负责当前租户、Seller、Marketplace、V12 经审核 Orders 角色、网络前/后权限复核及页面数据归属校验；原始 JSON 读取构造函数暂为向后兼容测试用。V11C `OrdersSyncConfiguration` 的 LIVE 实例改用 `SpApiOfficialSdkFactory` + `TypedOrdersSdkReader`，且仍需所有 LIVE 显式开关，默认永久关闭。
+- 适配器将 SDK `Order` 转成仅 ID、Marketplace、更新时间、履约状态四个字段的只读摘要；缺失履约状态保留 `NOT_OBSERVED`，不能当已发货。任意 Marketplace 不匹配、缺失/无效分页、空订单数组均拒绝。SDK 异常返回**安全错误码**而不是包含 PII、令牌和签名的完整远端响应；429 与 5xx 交由现有 Worker 重试策略处理。
+- Amazon 公开的 `searchOrders` 默认使用计划速率 0.0056 rps，Token 24h；Worker LIVE 页间有最少约 180s 延迟和 20h 保守分页回扫。生产共享配额、真实网络 429/503、签名失败、multi-tenant 业务容量尚未现场验收。
+- 单元测试仅用合成 SDK 模型，不连接 Amazon。真实应用角色审核登记工作流、官方 Amazon 实际授权与网络验收仍是阻断项。不得把“编译接通 SDK”描述为“真实账户已连通”。
+
+参考官方文档 https://developer-docs.amazon.com/sp-api/reference/searchorders 及 https://developer-docs.amazon.com/sp-api/docs/orders-api-migration-guide 。

@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.merchivra.erp.demo.MockSpApiClient;
-import org.merchivra.erp.spapi.SpApiClient;
+import org.merchivra.erp.spapi.SpApiOfficialSdkFactory;
 import org.merchivra.erp.spapi.SpApiSellerGrantVault;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -18,12 +18,12 @@ class OrdersSyncModesTest {
     private final MockSpApiClient mock=mock(MockSpApiClient.class);
     private final JdbcTemplate jdbc=mock(JdbcTemplate.class);
     private final ObjectProvider<SpApiSellerGrantVault> vaultProvider=mock(ObjectProvider.class);
-    private final ObjectProvider<SpApiClient> clientProvider=mock(ObjectProvider.class);
+    private final ObjectProvider<SpApiOfficialSdkFactory> sdkProvider=mock(ObjectProvider.class);
     private final OrdersSyncConfiguration config=new OrdersSyncConfiguration();
 
     private OrdersSyncSource source(String mode,boolean approval,boolean demo,
         boolean spapi,boolean sandbox,boolean writes,boolean oauth,boolean verification) {
-        return config.ordersSyncSource(mock,jdbc,vaultProvider,clientProvider,
+        return config.ordersSyncSource(mock,jdbc,vaultProvider,sdkProvider,
             mode,approval,demo,spapi,sandbox,writes,oauth,verification);
     }
 
@@ -62,7 +62,7 @@ class OrdersSyncModesTest {
             source("LIVE",true,false,true,false,false,true,false));
         assertThrows(IllegalStateException.class,()->
             source("auto",true,false,true,false,false,true,true));
-        verifyNoInteractions(vaultProvider,clientProvider);
+        verifyNoInteractions(vaultProvider,sdkProvider);
     }
 
     @Test void missingVaultNeverCreatesLiveSource() {
@@ -72,9 +72,9 @@ class OrdersSyncModesTest {
 
     @Test void enabledLiveSourceStillChecksRoleForEveryPage() throws Exception {
         SpApiSellerGrantVault vault=mock(SpApiSellerGrantVault.class);
-        SpApiClient client=mock(SpApiClient.class);
+        SpApiOfficialSdkFactory factory=mock(SpApiOfficialSdkFactory.class);
         when(vaultProvider.getIfAvailable()).thenReturn(vault);
-        when(clientProvider.getIfAvailable()).thenReturn(client);
+        when(sdkProvider.getIfAvailable()).thenReturn(factory);
         OrdersSyncSource live=source("LIVE",true,false,true,false,false,true,true);
         assertEquals("LIVE",live.dataOrigin());
         var scope=new OrdersSyncSource.Scope(UUID.randomUUID(),UUID.randomUUID(),"ATVPDKIKX0DER");
@@ -82,7 +82,7 @@ class OrdersSyncModesTest {
         assertThrows(SecurityException.class,()->live.fetch(scope,
             Instant.parse("2026-10-30T00:00:00Z"),
             Instant.parse("2026-10-31T00:00:00Z"),null));
-        verifyNoInteractions(client);
+        verifyNoInteractions(factory);
     }
 
     @Test void liveAdapterRejectsScopeMismatchBeforeAnyRead() throws Exception {
