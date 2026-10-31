@@ -8,6 +8,7 @@ on:
     branches: [main]
     paths:
       - .github/workflows/browser-layout-smoke.yml
+      - scripts/smoke_browser_layout.mjs
 
 permissions:
   contents: read
@@ -35,6 +36,7 @@ jobs:
           set -euo pipefail
           export CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable)"
           "$CHROME_BIN" --version
+          node --check scripts/smoke_browser_layout.mjs
           node scripts/smoke_browser_layout.mjs apps/web/dist browser-smoke-artifacts
       - name: Upload viewport screenshots for manual review
         if: always()
