@@ -35,7 +35,7 @@ describe('local purchase warehouse contract',()=>{
    urls.push(url)
    if(url.includes('warehouse-stock'))return new Response(JSON.stringify([{
     warehouseId:warehouse,productSkuId:sku,internalSku:'LOCAL-1',
-    recordedReceivedQuantity:12
+    recordedReceivedQuantity:12,onHandQuantity:12
    }]),{status:200})
    return new Response(JSON.stringify([{
     purchaseOrderId:order,orderNumber:'PO-T',purchaseOrderLineId:line,
