@@ -37,7 +37,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
   onError:(e:Error)=>setFailure(e.message)})
  function addSupplier(e:FormEvent){e.preventDefault();supplier.mutate()}
  function create(e:FormEvent){e.preventDefault();if(draft.length&&supplierId)created.mutate()}
- const remaining=selected.data?.lines.filter(l=>l.receivedQuantity<l.orderedQuantity())??[]
+ const remaining=selected.data?.lines.filter(l=>l.receivedQuantity<l.orderedQuantity)??[]
  const supplierOptions=suppliers.data?.filter(s=>s.status==='ACTIVE')??[]
  const activeSkus=skus.data?.filter(s=>s.status==='ACTIVE')??[]
  return <div className="core-workspace">

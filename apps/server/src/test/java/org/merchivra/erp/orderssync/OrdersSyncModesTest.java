@@ -24,7 +24,7 @@ class OrdersSyncModesTest {
     private OrdersSyncSource source(String mode,boolean approval,boolean demo,
         boolean spapi,boolean sandbox,boolean writes,boolean oauth,boolean verification) {
         return config.ordersSyncSource(mock,jdbc,vaultProvider,sdkProvider,
-            mode,approval,demo,spapi,sandbox,writes,oauth,verification);
+            mode,approval,demo,spapi,sandbox,writes,oauth,false,verification);
     }
 
     @Test void scheduledJobsNeverCrossMockAndLiveModes() {
