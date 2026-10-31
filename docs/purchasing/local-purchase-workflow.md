@@ -16,3 +16,7 @@
 所有 API 从 Session 获得当前 Tenant、Owner；危险操作由 CSRF 保护。Purchase Order 行记录单价与原币种快照，receipt 为追加式事实而不是通过更新一个计数掩盖历史；事务持有 PO 行锁避免并发超收，复合 FK 确认每条 Receipt 对应同一 PO 的 Line。动作有独立 audit。前端 Owner 导航“采购与供应商”可录入供应商、采购行、提交、审批与收货；员工不可操作。
 
 **未实现：**供应商资料完善、合同、计划采购、自动补货算法、仓库库存流水/退货、采购付款/应付、采购单 PDF、审批多级策略、正式 Amazon Inbound/Shipment 写入。不能从采购收货推导 FBA 可售数量。
+
+## V37 · FBA 补货建议 → 采购草稿（人工触发）
+
+`/api/v1/replenishment/marketplaces/{id}/purchase-drafts` 复用原有 `PurchasingService.create()`，因此创建后状态仍为 `DRAFT`，必须按上述双人审批与收货流程继续。它并未增加采购自动执行权限。只对具有最新可核验观测且有 ACTIVE SKU 映射的单个 Seller SKU 开放；库存、策略或映射变化时返回冲突。使用 UUID 幂等请求键与 V37 独立来源快照表，保留原币、建议数量、来源观测以及关联采购单。参见 [INV-004](../inventory/replenishment-policy-v22.md)。
