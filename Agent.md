@@ -400,3 +400,9 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - Amazon Ads API 与 SP-API Seller 授权独立。本阶段所有广告支出只允许 `MANUAL_UNVERIFIED`，不得伪装已从 Ads API 抓取，也不允许未知签名/广告币种向财务利润自动过账。
 - 站点内人工广告来源 key 重复内容必须一致，否则拒绝；原币与站点一致，支出非负。SKU basisPoints 总和上限 10000，修改需持有支出来源行锁，追加审核操作审计。
 - V36 广告分配总额和未分配余额是人工参考，只能用于核对，不等于真实 Ads 报表、ROAS/ACOS、银行已支付广告款。任何未来真实广告费用必须单独证明其来源并核对与 Finances 的费用是否重叠，才能进入正式利润。
+
+## V37 · 补货建议人工转采购草稿（2026-10-31）
+
+- Owner 可用补货建议主动创建**本地** `DRAFT` 采购单，但不得静默自动提交、批准或写入 Amazon。复用 PO-001 创建与双人审批；库存来源质量标记 `OBSERVED` 不等于真实 Seller 认证。
+- 必须重新验证 ACTIVE Listing/内部 SKU 映射、最新 FBA 观测 ID、策略更新时间与建议量；原币单价由用户填写。V37 持久保留来源、SKU、库存、策略、数量、供应商和价格快照，使用租户内唯一请求 UUID 保障幂等；不将采购收货计入 FBA。
+- 版本与操作定义见 `docs/inventory/replenishment-policy-v22.md`；未实际测试的 CI/Flyway/并发结果不得称通过。
