@@ -40,6 +40,7 @@ class OrdersSyncServiceTest {
     @Test void foreignMarketplaceIsNeverReadFromSource() throws Exception {
         OrdersSyncSource source=mock(OrdersSyncSource.class);
         when(source.allowed()).thenReturn(true);
+        when(source.dataOrigin()).thenReturn("MOCK");
         var service=new OrdersSyncService(jdbc,tx,source);
         when(jdbc.query(anyString(), any(org.springframework.jdbc.core.RowMapper.class),
             eq(tenant),eq(marketplace))).thenReturn(List.of());
