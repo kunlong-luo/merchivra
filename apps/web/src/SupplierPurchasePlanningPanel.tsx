@@ -163,8 +163,12 @@ export default function SupplierPurchasePlanningPanel({tenantId,warehouseId,skus
         {a.currency} {a.unitCost} · 交期 {a.leadTimeDays} 天</div></td>
        <td>{states[a.state]??a.state}</td>
        <td><button type="button" className="primary-button"
-        disabled={a.state!=='LOW_STOCK'||a.orderQuantity===null||
-         propose.isPending} onClick={()=>plan(a)}>保存采购计划</button></td>
+        disabled={a.state!=='LOW_STOCK'||a.orderQuantity===null||propose.isPending||
+         !!plans.data?.some(p=>p.productSkuId===a.productSkuId&&
+          p.sourceMovementId===a.sourceMovementId)}
+        onClick={()=>plan(a)}>
+        {plans.data?.some(p=>p.productSkuId===a.productSkuId&&
+          p.sourceMovementId===a.sourceMovementId)?'当前证据已有计划':'保存采购计划'}</button></td>
       </tr>)}</tbody></table>
     </div>}
    <h3>本地采购计划清单</h3>
