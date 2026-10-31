@@ -1,5 +1,6 @@
 import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
+import RefundAmountAllocationPanel from './RefundAmountAllocationPanel'
 import {getRefundAudit,getRefundSnapshot,saveRefundItem,withdrawRefundItem,
  type RefundReviewDisposition} from './lib/refund-review'
 
@@ -100,6 +101,8 @@ export default function RefundReviewPanel({tenantId,marketplaceId,eventId}:{
       <button className="primary-button" type="submit"
        disabled={!valid||save.isPending}>保存人工退款项审核</button>
      </form>}
+    <RefundAmountAllocationPanel tenantId={tenantId} marketplaceId={marketplaceId}
+      eventId={eventId} refund={info.data}/>
     <button className="text-button" type="button"
       onClick={()=>setShowHistory(v=>!v)}>{showHistory?'收起':'查看'}审核历史</button>
     {showHistory&&(history.isPending?<p>正在读取审计…</p>:

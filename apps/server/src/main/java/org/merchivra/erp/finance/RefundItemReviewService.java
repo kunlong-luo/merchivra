@@ -239,6 +239,13 @@ public class RefundItemReviewService {
         lockSource(tenant,mp,event);
         if(!src.orderId().equals(source(tenant,mp,event).orderId()))
             throw new ResponseStatusException(HttpStatus.CONFLICT,"Order link changed");
+        Integer attributed=jdbc.queryForObject("""
+            SELECT count(*) FROM finance_refund_amount_allocation
+            WHERE tenant_id=? AND event_id=? AND external_item_id=?
+            """,Integer.class,tenant,event,itemId);
+        if(attributed!=null&&attributed>0)
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Withdraw V35 item amount attribution before removing V34 quantity review");
         var rows=jdbc.query("""
             DELETE FROM finance_refund_item_review
             WHERE tenant_id=? AND event_id=? AND sales_order_id=?
