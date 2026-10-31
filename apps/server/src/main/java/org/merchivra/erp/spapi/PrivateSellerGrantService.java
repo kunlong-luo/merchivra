@@ -35,6 +35,7 @@ public final class PrivateSellerGrantService {
     public void importFromServer(UUID tenant,UUID account,String sellerId,String refreshToken) {
         if(tenant==null || account==null || sellerId==null
            || !sellerId.matches("[A-Za-z0-9_-]{5,128}")
+           || sellerId.startsWith("LOCAL-")
            || refreshToken==null || refreshToken.length()<16 || refreshToken.length()>8192
            || !refreshToken.equals(refreshToken.strip())
            || refreshToken.chars().anyMatch(Character::isISOControl))
@@ -111,7 +112,7 @@ public final class PrivateSellerGrantService {
             WHERE tenant_id=? AND seller_account_id=?
             """,(rs,n)->new Status(rs.getString(1),rs.getString(2),
                 rs.getString(3),rs.getString(4)),tenant,account)
-            .stream().findFirst().orElse(new Status("NOT_CONNECTED",null,null,null));
+            .stream().findFirst().orElse(new Status("NOT_CONNECTED",null,null,"PRIVATE_SELF"));
     }
 
     public List<Audit> history(UUID tenant,UUID account) {

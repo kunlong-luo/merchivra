@@ -50,8 +50,9 @@ public class ProductCatalogService {
             SELECT id,internal_sku,display_name,status,updated_at
             FROM product_sku
             WHERE tenant_id=?
-              AND (? IS NULL OR internal_sku ILIKE ? || '%')
-              AND (? IS NULL OR internal_sku>?)
+              AND (CAST(? AS text) IS NULL OR
+                   starts_with(lower(internal_sku),lower(CAST(? AS text))))
+              AND (CAST(? AS text) IS NULL OR internal_sku>CAST(? AS text))
             ORDER BY internal_sku ASC LIMIT ?
             """,ProductCatalogService::map,tenant,prefix,prefix,after,after,limit);
     }
@@ -83,6 +84,11 @@ public class ProductCatalogService {
         if(nextStatus==null || !List.of("ACTIVE","ARCHIVED").contains(nextStatus))
             throw bad("Status must be ACTIVE or ARCHIVED");
         String display=name(label);
+        // Serialize archive/rename against a concurrent Mapping attaching this SKU.
+        List<UUID> locked=jdbc.query("""
+            SELECT id FROM product_sku WHERE tenant_id=? AND id=? FOR UPDATE
+            """,(rs,n)->rs.getObject(1,UUID.class),tenant,id);
+        if(locked.size()!=1)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         Sku current=get(tenant,id);
         if(current.status().equals(nextStatus) && current.displayName().equals(display))
             return current;
@@ -115,6 +121,7 @@ public class ProductCatalogService {
         if(source.size()!=1)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         List<UUID> target=jdbc.query("""
             SELECT id FROM product_sku WHERE tenant_id=? AND id=? AND status='ACTIVE'
+            FOR SHARE
             """,(rs,n)->rs.getObject(1,UUID.class),tenant,sku);
         if(target.size()!=1)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         List<Mapping> current=jdbc.query("""

@@ -68,6 +68,7 @@ export async function getOauthStatus(accountId: string) {
     headers:{Accept:'application/json'}})
   if(res.status===404)
     return get(path(accountId,'/private-authorization/status'),oauthStatusSchema)
+      .then(status=>({...status,authorizationMethod:status.authorizationMethod??'PRIVATE_SELF' as const}))
   return response(res,oauthStatusSchema)
 }
 export async function getOauthAudit(accountId: string) {
