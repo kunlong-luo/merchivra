@@ -29,6 +29,8 @@ public class SupplierAsnService {
                       int quantity,long receivedQuantity,String expectedArrivalDate,
                       String trackingReference,String status,String dispatchReportedAt,
                       String createdAt) {}
+    public record Event(String id,String eventType,String actorUserId,Integer quantity,
+                        String oldEta,String newEta,String note,String createdAt) {}
     public record Finding(String id,String asnId,String orderId,String trackingReference,
                           String ruleCode,String state,String expectedArrivalDate,
                           String lastSeenAt) {}
@@ -96,6 +98,33 @@ public class SupplierAsnService {
     private Asn get(UUID tenant,UUID id) {
         return jdbc.query(ASN_SQL+" AND a.id=?",SupplierAsnService::asn,tenant,id)
             .stream().findFirst().orElseThrow(SupplierAsnService::missing);
+    }
+    @Transactional(readOnly=true)
+    public List<Event> events(UUID tenant,UUID order,UUID asnId) {
+        if(tenant==null || order==null || asnId==null)throw bad("Order and ASN required");
+        List<UUID> existing=jdbc.queryForList("""
+            SELECT id FROM erp_purchase_asn
+            WHERE tenant_id=? AND purchase_order_id=? AND id=?
+            """,UUID.class,tenant,order,asnId);
+        if(existing.size()!=1)throw missing();
+        return jdbc.query("""
+            SELECT e.id,e.event_type,e.actor_user_id,e.quantity,
+              e.old_eta,e.new_eta,e.note,e.created_at
+            FROM erp_purchase_asn_event e
+            WHERE e.tenant_id=? AND e.asn_id=?
+            ORDER BY e.created_at DESC,e.id DESC LIMIT 200
+            """,(rs,i)->{
+                int count=rs.getInt("quantity");
+                return new Event(rs.getObject("id",UUID.class).toString(),
+                    rs.getString("event_type"),
+                    rs.getObject("actor_user_id",UUID.class).toString(),
+                    rs.wasNull()?null:count,
+                    rs.getObject("old_eta",LocalDate.class)==null?null:
+                      rs.getObject("old_eta",LocalDate.class).toString(),
+                    rs.getObject("new_eta",LocalDate.class)==null?null:
+                      rs.getObject("new_eta",LocalDate.class).toString(),
+                    rs.getString("note"),instant(rs,"created_at"));
+            },tenant,asnId);
     }
     private void activeOrder(UUID tenant,UUID order) {
         List<UUID> ids=jdbc.queryForList("""
