@@ -92,3 +92,16 @@ layout/scroll boundaries. Noto CJK fonts exist **in the test runner only**.
 
 This is a small, actual browser-based acceptance step, not completion of a
 multi-browser matrix, screen-reader assessment, focus order review or WCAG AA.
+
+
+## V10 · Operations triage workspace (2026-10-31)
+
+New left-nav "运营自动化" sits beside Core data instead of the fictional
+Commerce Intelligence pages. It provides compact rule counts, an explicit
+manual scan, a text- and source-labelled table, action feedback and an audit-safe
+triage state transition. It does not imply Amazon real data or automatic writes.
+
+Chrome synthetic navigation to this page and layout at 360px passed:
+[run 41151964910](https://github.com/kunlong-luo/merchivra/actions/runs/41151964910).
+The browser checks only explicitly exercised DOM rules; screen-reader,
+multi-browser and full keyboard path acceptance remain pending.

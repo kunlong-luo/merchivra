@@ -37,3 +37,17 @@
 5. 生产 IAM、安全密钥/KMS、备份恢复、角色最小权限、真实 Amazon sandbox/live 认证及 β 验收。
 
 V10 验收需以 GitHub Actions 的 Java/Vue 和 PostgreSQL Compose 全链路实际状态为准；测试场景只用虚构数据。正式 Amazon/通知/采购尚未接入。
+
+
+## Work queue
+
+- [#6 durable real Orders sync worker](https://github.com/kunlong-luo/merchivra/issues/6)
+  and [#8 Orders domain integration](https://github.com/kunlong-luo/merchivra/issues/8)
+- [#23 configurable operations rules + notifications](https://github.com/kunlong-luo/merchivra/issues/23)
+- [#24 replenishment/purchase approvals](https://github.com/kunlong-luo/merchivra/issues/24)
+- [#11 Amazon Finance and settlement reconciliation](https://github.com/kunlong-luo/merchivra/issues/11)
+- [#13 production authorization, audit and disaster recovery](https://github.com/kunlong-luo/merchivra/issues/13)
+
+V10 evidence: [CI](https://github.com/kunlong-luo/merchivra/actions/runs/41151803877),
+[actual PG/Nginx/Java mock-chain](https://github.com/kunlong-luo/merchivra/actions/runs/41151803940),
+[synthetic Chrome operations UI](https://github.com/kunlong-luo/merchivra/actions/runs/41151964910).

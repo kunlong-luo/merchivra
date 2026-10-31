@@ -111,3 +111,14 @@
 - 详见 [OPS-001](docs/operations/ops-automation.md)：V10 Flyway 持久待办、规则巡检、4 类异常、重复巡检幂等、自动恢复条件已消失的异常、用户认领/完成/重开与事务审计；工作台开放“运营自动化”入口。低库存必须满足最近来源观测 quality=OBSERVED 且非 NULL，UNKNOWN 永远不等于 0；待办数据源仅 MOCK/UNVERIFIED，不能自动补货/发货/写 Amazon/财务记账。
 - 用户端只允许 Owner Session 导出所属租户待办和触发扫描/变更状态。POST 受 Security CSRF 保护；请求没有 tenantId，foreign ID 返回 404。调度器环境开关 `MERCHIVRA_OPS_SCHEDULER_ENABLED=false` 默认关闭；打开才周期巡检；读业务事实不意味着 Seller 角色已核验。
 - 实际交付必须经 Java 25/Vue CI + 独立 PostgreSQL Compose Session/CSRF Mock 全链路验证。调度器大规模多租户负载、规则配置/人员权限及真实 SP-API Worker 尚未完成，不能将 V10 巡检当作正式订单同步。
+
+
+## V10 运营异常自动化验收证据（2026-10-31）
+
+- [Java 25 / Vue 快速 CI 成功](https://github.com/kunlong-luo/merchivra/actions/runs/41151803877)，
+  [Nginx + Spring Boot + PostgreSQL17 的 V1–V10 Compose Mock 全链路成功](https://github.com/kunlong-luo/merchivra/actions/runs/41151803940)；
+  [Chromium 360px 虚构运营工作台回归成功](https://github.com/kunlong-luo/merchivra/actions/runs/41151964910)。
+  所有验证均不包含真实 Amazon Seller 授权、定时调度多机负载或真实财务。
+- 后续参见 [#23 运营规则配置与通知](https://github.com/kunlong-luo/merchivra/issues/23)、
+  [#24 补货采购审批](https://github.com/kunlong-luo/merchivra/issues/24)；
+  真正 Amazon Orders Worker 继续受 #6/#8 的 P0 前置授权与角色审查约束。

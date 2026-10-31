@@ -59,3 +59,23 @@ Not yet implemented: per-account rule customization, task assignment and SLA,
 notification deliveries, background Amazon Orders worker, multi-role workforce,
 live Seller role evaluation or real Amazon APIs. This is an **operations
 triage queue**, not a complete peer ERP replacement.
+
+
+## V10 verified evidence · 2026-10-31
+
+- Code: [430c61ad](https://github.com/kunlong-luo/merchivra/commit/430c61ad560b555cc300797743a8f28362c6e424).
+- [Java 25 Maven + Vue TypeScript, Vitest, Vite all passed](https://github.com/kunlong-luo/merchivra/actions/runs/41151803877).
+- [Real Nginx/Spring Boot/PostgreSQL17 Compose mock full-chain passed](https://github.com/kunlong-luo/merchivra/actions/runs/41151803940):
+  Flyway V1–V10 migrations, local Owner session+CSRF, manual scan, repeated
+  deduplicated scan, MOCK provenance, invalid state and unknown finding rejection,
+  acknowledged -> done, preserved DONE after rescanning, post-logout denial.
+  The existing mocked order pagination / restart chain also passed.
+- [Real Chromium responsive smoke passed](https://github.com/kunlong-luo/merchivra/actions/runs/41151964910) on the
+  synthetic advisory UI at 360px; screenshot artifact available in the run.
+  It does not verify live user data or actual Seller roles.
+- Follow-up: [#23 rules/notifications](https://github.com/kunlong-luo/merchivra/issues/23)
+  and [#24 replenishment/purchasing](https://github.com/kunlong-luo/merchivra/issues/24).
+
+These completed checks are all on *local/disposable mock data*, not Amazon live or
+financial postings. Optional scheduled executions have not been validated under
+multi-node production load; default remains off.
