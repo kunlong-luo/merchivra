@@ -31,8 +31,24 @@ public class ReplenishmentService {
     }
     public record Policy(String marketplaceId,String sellerSku,int reorderPoint,
         int targetStock,int leadTimeDays,String updatedAt) {}
-    public record Advice(Policy policy,String observationQuality,Integer fulfillable,
-        Integer reserved,String observedAt,String state,Integer suggestedQuantity) {}
+    public record Advice(Policy policy,String observationId,String observationQuality,
+        Integer fulfillable,Integer reserved,String observedAt,String state,Integer suggestedQuantity) {}
+    public record Evaluation(String state,Integer suggestedQuantity) {}
+
+    /** Shared, side-effect-free decision rule used by suggestions and purchase draft validation. */
+    static Evaluation evaluate(String quality,Integer available,Integer reserved,
+                               Instant observedAt,int reorderPoint,int targetStock,Instant now) {
+        if(quality==null)return new Evaluation("NO_OBSERVATION",null);
+        if(observedAt==null || observedAt.isBefore(now.minus(MAX_AGE))
+           || observedAt.isAfter(now.plus(Duration.ofMinutes(5))))
+            return new Evaluation("STALE_OBSERVATION",null);
+        if(!"OBSERVED".equals(quality) || available==null || available<0
+           || (reserved!=null && reserved<0))
+            return new Evaluation("INCOMPLETE_OBSERVATION",null);
+        if(available<=reorderPoint)
+            return new Evaluation("REORDER",Math.max(0,targetStock-available));
+        return new Evaluation("HEALTHY",null);
+    }
 
     private static ResponseStatusException bad(String message) {
         return new ResponseStatusException(HttpStatus.BAD_REQUEST,message);
@@ -114,15 +130,15 @@ public class ReplenishmentService {
     }
     public List<Advice> advice(UUID tenant,UUID marketplace) {
         requireMarketplace(tenant,marketplace);
-        record Observed(Policy policy,String quality,Integer available,
+        record Observed(Policy policy,UUID observationId,String quality,Integer available,
                         Integer reserved,Instant when) {}
         List<Observed> rows=jdbc.query("""
             SELECT p.seller_marketplace_id,p.seller_sku,p.reorder_point,
                 p.target_stock,p.lead_time_days,p.updated_at,
-                f.quality,f.fulfillable,f.reserved,f.observed_at
+                f.id AS observation_id,f.quality,f.fulfillable,f.reserved,f.observed_at
             FROM erp_replenishment_policy p
             LEFT JOIN LATERAL (
-              SELECT quality,fulfillable,reserved,observed_at
+              SELECT id,quality,fulfillable,reserved,observed_at
               FROM fba_inventory_observation
               WHERE tenant_id=p.tenant_id
                 AND seller_marketplace_id=p.seller_marketplace_id
@@ -136,26 +152,19 @@ public class ReplenishmentService {
               Integer units=(Integer)rs.getObject("fulfillable");
               Integer reserved=(Integer)rs.getObject("reserved");
               OffsetDateTime observed=rs.getObject("observed_at",OffsetDateTime.class);
-              return new Observed(map(rs,i),rs.getString("quality"),
-                  units,reserved,observed==null?null:observed.toInstant());
+              return new Observed(map(rs,i),rs.getObject("observation_id",UUID.class),
+                  rs.getString("quality"),units,reserved,
+                  observed==null?null:observed.toInstant());
             },tenant,marketplace);
         Instant now=clock.instant();
         return rows.stream().map(r->{
-            String status;
-            Integer suggestion=null;
-            if(r.quality()==null)status="NO_OBSERVATION";
-            else if(r.when()==null || r.when().isBefore(now.minus(MAX_AGE))
-                    || r.when().isAfter(now.plus(Duration.ofMinutes(5))))
-                status="STALE_OBSERVATION";
-            else if(!"OBSERVED".equals(r.quality()) || r.available()==null
-                    || r.available()<0 || (r.reserved()!=null && r.reserved()<0))
-                status="INCOMPLETE_OBSERVATION";
-            else if(r.available()<=r.policy().reorderPoint()) {
-                status="REORDER";
-                suggestion=Math.max(0,r.policy().targetStock()-r.available());
-            } else status="HEALTHY";
-            return new Advice(r.policy(),r.quality(),r.available(),r.reserved(),
-                r.when()==null?null:r.when().toString(),status,suggestion);
+            Evaluation evaluation=evaluate(r.quality(),r.available(),r.reserved(),r.when(),
+                r.policy().reorderPoint(),r.policy().targetStock(),now);
+            return new Advice(r.policy(),
+                r.observationId()==null?null:r.observationId().toString(),
+                r.quality(),r.available(),r.reserved(),
+                r.when()==null?null:r.when().toString(),
+                evaluation.state(),evaluation.suggestedQuantity());
         }).toList();
     }
     private void audit(UUID tenant,UUID actor,UUID marketplace,String sellerSku,String action){
