@@ -79,6 +79,26 @@ class WarehouseStockOperationServiceTest {
             request("OUTBOUND",null,4,3)));
         verify(jdbc,never()).update(anyString(),any(Object[].class));
     }
+    @Test void exactReplayReturnsPriorOperationWithoutPostingAgain() {
+        when(jdbc.queryForList(contains("FROM tenant"),eq(UUID.class),eq(tenant)))
+            .thenReturn(List.of(tenant));
+        when(jdbc.queryForList(contains("FROM erp_local_stock_operation"),
+            eq(UUID.class),eq(tenant),eq(key))).thenReturn(List.of(id));
+        var saved=new WarehouseStockOperationService.Operation(id.toString(),
+            "OUTBOUND",source.toString(),null,sku.toString(),2,5,-2,3,
+            "Manual stock verification",actor.toString(),"2026-10-31T00:00:00Z");
+        when(jdbc.query(contains("FROM erp_local_stock_operation WHERE tenant_id=?"),
+            any(RowMapper.class),eq(tenant),eq(id))).thenReturn(List.of(saved));
+        assertEquals(id.toString(),service.post(tenant,actor,
+            request("OUTBOUND",null,2,5)).id());
+        verify(jdbc,never()).update(anyString(),any(Object[].class));
+    }
+    @Test void foreignDestinationWarehouseCannotCreatePartialTransfer() {
+        stubActive(false,10);
+        status(HttpStatus.NOT_FOUND,()->service.post(tenant,actor,
+            request("TRANSFER",destination,3,10)));
+        verify(jdbc,never()).update(anyString(),any(Object[].class));
+    }
     @Test void differentPayloadCannotReuseIdempotencyKey() {
         when(jdbc.queryForList(contains("FROM tenant"),eq(UUID.class),eq(tenant)))
             .thenReturn(List.of(tenant));
