@@ -56,3 +56,9 @@ merchivra:
       active-key-version: ${MERCHIVRA_SPAPI_OAUTH_ACTIVE_KEY_VERSION:1}
       allowed-amazon-origins: ${MERCHIVRA_SPAPI_OAUTH_AMAZON_ORIGINS:}
       secure-cookie: ${MERCHIVRA_SPAPI_OAUTH_SECURE_COOKIE:true}
+
+  operations:
+    # Advisory-only: manual scans work without this scheduler.
+    scheduler-enabled: ${MERCHIVRA_OPS_SCHEDULER_ENABLED:false}
+    scan-interval-ms: ${MERCHIVRA_OPS_SCAN_INTERVAL_MS:900000}
+    low-stock-threshold: ${MERCHIVRA_OPS_LOW_STOCK_THRESHOLD:3}

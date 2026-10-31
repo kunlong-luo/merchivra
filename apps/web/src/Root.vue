@@ -28,6 +28,7 @@ async function signIn() {
     client.removeQueries({ queryKey: ['core'] })
     client.removeQueries({ queryKey: ['setup'] })
     client.removeQueries({ queryKey: ['sandbox'] })
+    client.removeQueries({ queryKey: ['operations'] })
     await refetch()
   } catch (error) {
     errorMessage.value = error instanceof Error ? error.message : '登录失败'
@@ -46,6 +47,7 @@ async function signOut() {
     client.removeQueries({ queryKey: ['core'] })
     client.removeQueries({ queryKey: ['setup'] })
     client.removeQueries({ queryKey: ['sandbox'] })
+    client.removeQueries({ queryKey: ['operations'] })
     await refetch()
   } catch (error) {
     // A failed logout must not be presented as a successful sign-out.

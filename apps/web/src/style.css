@@ -470,3 +470,37 @@ tbody tr:hover { background: #f8fbff; }
   .nav-links { max-width: 100%; }
   .topbar-right .logout-control { white-space: nowrap; }
 }
+
+/* V10 Operations automation: compact triage-first workbench. */
+.ops-workspace { min-width: 0; }
+.ops-summary {
+  display: grid; grid-template-columns: repeat(4,minmax(0,1fr));
+  gap: 14px; margin-bottom: 20px;
+}
+.ops-summary > div {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 18px 20px; border: 1px solid var(--ui-border);
+  background: var(--ui-surface); border-radius: var(--ui-radius);
+}
+.ops-summary span { font-size: 12px; color: var(--ui-secondary); }
+.ops-summary strong { font-size: 26px; color: var(--ui-ink); font-variant-numeric: tabular-nums; }
+.ops-toolbar {
+  display: flex; align-items: flex-end; flex-wrap: wrap;
+  gap: 12px; padding: 18px 22px;
+}
+.ops-toolbar .primary-button { margin-top: 0; }
+.ops-rule-note {
+  padding: 0 22px 18px; color: var(--ui-secondary);
+  font-size: 12px; line-height: 1.65;
+}
+.ops-row-actions { display: flex; gap: 12px; flex-wrap: wrap; min-width: 125px; }
+.ops-row-actions button { min-height: 36px; text-decoration: underline; text-underline-offset: 2px; }
+.ops-workspace .table-scroll table { min-width: 750px; }
+@media (max-width: 760px) {
+  .ops-summary { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+  .ops-summary > div { padding: 14px; }
+  .ops-summary strong { font-size: 23px; }
+  .ops-toolbar { padding: 16px; align-items: stretch; }
+  .ops-toolbar .shop-filter { width: 100%; flex: 1 1 100%; }
+  .ops-rule-note { padding: 0 16px 16px; }
+}

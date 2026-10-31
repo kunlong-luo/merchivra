@@ -4,9 +4,10 @@ import type { AuthViewer } from './lib/auth'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { fetchPing } from './lib/api'
 import CoreWorkspace from './CoreWorkspace.vue'
+import OperationsWorkspace from './OperationsWorkspace.vue'
 import { fetchDemoOverview, fetchDemoSyncRuns, startDemoSync, fetchDemoOrders, fetchDemoListings, fetchDemoInventory, fetchDemoCoreStatus } from './lib/demo'
 
-type View = 'core' | 'overview' | 'orders' | 'catalog' | 'inventory' | 'sync'
+type View = 'core' | 'ops' | 'overview' | 'orders' | 'catalog' | 'inventory' | 'sync'
 
 defineProps<{ viewer: AuthViewer; signingOut: boolean }>()
 const emit = defineEmits<{ logout: [] }>()
@@ -26,7 +27,7 @@ const {
   refetch
 } = useQuery({
   queryKey: ['api', 'demo', 'overview'], queryFn: fetchDemoOverview,
-  enabled: computed(() => activeView.value !== 'core'), staleTime: 60_000, retry: 1
+  enabled: computed(() => activeView.value !== 'core' && activeView.value !== 'ops'), staleTime: 60_000, retry: 1
 })
 
 watch(overview, value => {
@@ -92,6 +93,7 @@ const apiStatus = computed(() => {
 })
 const navigation: { key: View; label: string; symbol: string }[] = [
   { key: 'core', label: '核心业务数据', symbol: '▣' },
+  { key: 'ops', label: '运营自动化', symbol: '✳' },
   { key: 'overview', label: '经营总览', symbol: '◫' },
   { key: 'orders', label: '订单管理', symbol: '▤' },
   { key: 'catalog', label: '商品与 Listing', symbol: '▧' },
@@ -155,7 +157,7 @@ function tabTitle() {
       <div class="sidebar-spacer"></div>
       <div class="sidebar-info">
         <span class="local-indicator"></span>
-        <div><strong>{{ activeView === 'core' ? '核心业务工作台' : '本地演示环境' }}</strong><small>{{ activeView === 'core' ? '会话租户隔离 · 数据记录标注来源' : '纯虚构数据 · 无真实连接' }}</small></div>
+        <div><strong>{{ activeView === 'core' || activeView === 'ops' ? '核心业务工作台' : '本地演示环境' }}</strong><small>{{ activeView === 'core' || activeView === 'ops' ? '会话租户隔离 · 数据记录标注来源' : '纯虚构数据 · 无真实连接' }}</small></div>
       </div>
       <a class="sidebar-repo" href="https://github.com/kunlong-luo/merchivra" target="_blank" rel="noopener noreferrer">
         GitHub 源代码 <span aria-hidden="true">↗</span>
@@ -176,11 +178,11 @@ function tabTitle() {
       <div class="content">
         <div class="page-heading">
           <div>
-            <div class="eyebrow">{{ activeView === 'core' ? 'SECURE ERP / CORE DATA' : 'COMMERCE INTELLIGENCE / DEMO' }}</div>
+            <div class="eyebrow">{{ activeView === 'core' || activeView === 'ops' ? 'SECURE ERP / CORE DATA' : 'COMMERCE INTELLIGENCE / DEMO' }}</div>
             <h1>{{ tabTitle() }}</h1>
-            <p>{{ activeView === 'core' ? '基于当前会话的租户权限读取 PostgreSQL 核心业务表。' : '集中查看店铺运营数据，所有示例均来自本地 Mock Gateway。' }}</p>
+            <p>{{ activeView === 'core' ? '基于当前会话的租户权限读取 PostgreSQL 核心业务表。' : activeView === 'ops' ? '通过规则自动检查来源数据，生成可认领、可审计的运营待办。' : '集中查看店铺运营数据，所有示例均来自本地 Mock Gateway。' }}</p>
           </div>
-          <div v-if="activeView !== 'core'" class="heading-actions">
+          <div v-if="activeView !== 'core' && activeView !== 'ops'" class="heading-actions">
             <label class="shop-filter">
               <span>当前店铺</span>
               <select v-model="accountId" :disabled="!overview?.accounts.length" aria-label="切换演示店铺">
@@ -193,13 +195,15 @@ function tabTitle() {
           </div>
         </div>
 
-        <div v-if="activeView !== 'core'" class="mock-banner" role="status">
+        <div v-if="activeView !== 'core' && activeView !== 'ops'" class="mock-banner" role="status">
           <span class="mock-banner-icon" aria-hidden="true">✦</span>
           <div><strong>MOCK 演示模式</strong><span>全部商品、订单、账户和库存均为虚构数据；无 Amazon 凭证、实际财务入账或实时库存。请勿用于经营决策。</span></div>
           <span class="mock-pill">DEMO ONLY</span>
         </div>
 
         <CoreWorkspace v-if="activeView === 'core'" :tenant-id="viewer.activeTenantId" />
+
+        <OperationsWorkspace v-else-if="activeView === 'ops'" :tenant-id="viewer.activeTenantId" />
 
         <div v-else-if="demoPending" class="state-panel">
           <div class="loading-ring"></div>

@@ -75,3 +75,10 @@ The backend now includes Amazon's **official Java SP-API SDK 1.13.0** with gener
 **Seller authorization (code only):** Flyway V7 and a default-disabled public-app OAuth handoff, encrypted per-tenant Seller credential vault, local revoke/audit and worker-only verified grant gate are in place. No live Amazon Seller authorization or KMS envelope-rotation validation has been performed. See [SEC-004](docs/security/seller-oauth.md).
 
 **V8/V9 implementation (disabled by default):** The code now has an OWNER-triggered Sellers v1 Marketplace participation check with short-lived Worker Vault evidence, plus versioned AES-256-GCM keys and per-account ciphertext rewrap protected by Session/CSRF and row locks. The independent Seller ID and application roles have **not** been verified; Finance/RDT access remains blocked. This is not a working live Amazon sync Worker, and local encryption-key rotation is not LWA Refresh Token renewal. See [SEC-005](docs/security/seller-verification.md), [SEC-006](docs/security/seller-key-rotation.md).
+
+
+## V10 运营自动化工作台
+
+- [竞品能力矩阵与路线图](docs/product/competitor-gap-and-automation.md)：对照 Sellercloud、Linnworks 和 Helium 10 的订单自动化、库存风险、采购与财务模块，标记已完成、待集成和高风险写入能力。
+- [OPS-001](docs/operations/ops-automation.md)：提供只读事实上的异常识别、持久待办、认领完成、审计与显式开启的定期巡检；默认无需调用真实 Amazon。建议先在本地模拟导入数据，然后通过“运营自动化”工作台手动执行巡检。
+- **没有**实现物流发货、广告自动调价、正式补货单/采购审批、财务对账或正式 Amazon Orders Worker；功能对标不是宣称生产连接已全部完成。
