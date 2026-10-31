@@ -2,6 +2,7 @@ import {useEffect,useState,type FormEvent} from 'react'
 import FinancesSyncPanel from './FinancesSyncPanel'
 import FinanceClassificationPanel from './FinanceClassificationPanel'
 import OrderCostReadinessPanel from './OrderCostReadinessPanel'
+import OrderContributionPanel from './OrderContributionPanel'
 import SettlementWorkspace from './SettlementWorkspace'
 import FinanceExceptionQueuePanel from './FinanceExceptionQueuePanel'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
@@ -170,6 +171,8 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
      </select>
     </label>
     {selectedCostOrder&&<OrderCostReadinessPanel key={selectedCostOrder}
+      tenantId={tenantId} marketplaceId={currentId} orderId={selectedCostOrder}/>}
+    {selectedCostOrder&&<OrderContributionPanel key={selectedCostOrder}
       tenantId={tenantId} marketplaceId={currentId} orderId={selectedCostOrder}/>}
    </section>}
    {current&&<div className="core-tools">

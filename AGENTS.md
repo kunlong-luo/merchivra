@@ -380,3 +380,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 财务异常列表只能描述来源覆盖/不一致的待审核信号，不能自动创建或修改 Finance 事实、收入、结算链接、银行到账或退款记录；没有 LIVE 原始数据时空列表不意味着财务已核准。
 - 来源 breakdown 只核对末级 signed amount，缺金额、缺业务分类、跨币种、未审订单关联和来源核平差异分别报告；未分配的来源交易仅为提示，不得称为漏付。
 - 检查必须带 tenant/Marketplace、明确扫描上限并返回 partialScan；页面定时刷新也只访问本地 ERP API，真实 Amazon 默认关闭。
+
+
+## V33 · 已审核来源的订单贡献额预览门槛
+
+- 仅可使用当前 Marketplace 同一订单**人工确认关联**的 SPAPI_FINANCES/LIVE 交易；逐个 V28 叶级分类核平且与 V29 历史 COGS 同币种，才能形成暂定经营贡献额，不能把 Orders 估计 proceeds 同时加进去。
+- 对退款、业务调整、未审订单关联、原币不符、成本日期/映射缺失、来源结果被截断、无已审销售、来源重复等情况必须不输出合计；退款成本回转未被证明前不得自动冲回商品成本。
+- 平台费用保持原始有符号金额（负值不可重复扣除），`financialSourceComplete` 和 `bankSettlementVerified` 不能因为本地核对通过而被设置为 true。输出只能称经营贡献**预览**，不是利润或结算回执。

@@ -24,3 +24,8 @@
 ## 本地授权与验收约定
 
 真实 Seller 授权暂不需要。全部功能代码优先构建，使用官方 SDK 的 synthetic fixtures、Java 单测和 React 静态/单测。待功能覆盖足够后，再由仓库使用者在本地配置 Seller Central OAuth/私有授权、明确开启生产 SP-API 读取开关，并自行验证真实 API。默认 Demo/Mock 与 LIVE 数据隔离；无需现在提供 Refresh Token、账号信息或外部角色证明。
+
+
+## V33 下一层经营贡献预览
+
+[已审核来源的单笔订单贡献额](order-contribution-v33.md) 将 V29 的完整历史 COGS 仅与 V28 已核平并经人工确认属于该订单的 LIVE Finances 分类金额结合；拒绝对退款或未核实调整推断利润，真实来源未齐前不得叫净利润。
