@@ -47,6 +47,17 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
   b.status==='ACTIVE'&&b.purpose==='STORAGE')??false
  const expiryExceeded=!!chosen?.expiryDate&&
   chosen.expiryDate<new Date().toISOString().slice(0,10)
+ const action=useMutation({mutationFn:(payload:LotActionRequest)=>actLotPosition(positionId,payload),
+  onSuccess:r=>{
+   setSuccess(r.actionType==='COUNT_OBSERVATION'
+    ?'盘点观察已记录，没有自动增加或减少库存'
+    :r.actionType==='MOVE'
+     ?'已记录实物同仓移位，仓库库存余额不变'
+     :r.actionType==='TRANSFER'
+      ?'真实跨仓调拨已同时过账，目标仓新增来源可追踪的批次库位'
+      :'已将人工确认的过期商品从可用仓库台账扣除，保存隔离审计')
+   setError('');setReason('');setDestBin('');setRequestKey(crypto.randomUUID());refresh()
+  },onError:(e:Error)=>setError(e.message)})
  const canPost=!!chosen&&!positions.isFetching&&!stock.isFetching&&
   reason.trim().length>=5&&reason.trim().length<=300&&
   (type==='MOVE'?chosen.remainingQuantity>0&&chosenBinAllowed&&destBin!==chosen.binId:
@@ -60,17 +71,7 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
   !action.isPending
  const refresh=()=>void client.invalidateQueries({queryKey:root})
  const change=()=>setRequestKey(crypto.randomUUID())
- const action=useMutation({mutationFn:(payload:LotActionRequest)=>actLotPosition(positionId,payload),
-  onSuccess:r=>{
-   setSuccess(r.actionType==='COUNT_OBSERVATION'
-    ?'盘点观察已记录，没有自动增加或减少库存'
-    :r.actionType==='MOVE'
-     ?'已记录实物同仓移位，仓库库存余额不变'
-     :r.actionType==='TRANSFER'
-      ?'真实跨仓调拨已同时过账，目标仓新增来源可追踪的批次库位'
-      :'已将人工确认的过期商品从可用仓库台账扣除，保存隔离审计')
-   setError('');setReason('');setDestBin('');setRequestKey(crypto.randomUUID());refresh()
-  },onError:(e:Error)=>setError(e.message)})
+
  function submit(e:FormEvent){
   e.preventDefault()
   if(!canPost||!chosen)return
