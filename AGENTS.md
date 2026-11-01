@@ -544,7 +544,7 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 统一使用 Gradle Wrapper / Java 25 / Spring Boot 4.1.2。Gradle 入口是 `apps/server/settings.gradle`，仓库不引入 Maven 构建。
 - Amazon 的 `x-amzn-RateLimit-Limit` 是按操作和授权维度尽力提供的响应元数据，不保证出现，也不代表所有 usage-plan 或 burst 限制。缺失/无效时保持保守配置。
 - 旧版经过审核的 SP-API HTTP 读通道把响应头写入 Redis，以区域+操作+受保护 grant 指纹学习 24h 冷却间隔；429 通过共享 Redis fence 保留较长期限，Redis 出错仍 fail-closed。
-- Amazon 生成式 SDK 目前只有每卖家/SDK 家族级安全阀，尚未接入每个 SDK 方法的动态响应头拦截及自适应令牌桶；不得声称全量 SP-API 动态配额完成。
+- 官方 SDK 的 Orders / Listings / FBA Inventory / Finances 受审核的 typed read 操作现在经 `executeObservedRead` 取得 Redis 操作级许可，利用 `WithHttpInfo` 学习响应配额和 429 响应头；其他生成式 SDK 方法仍是家族级安全阀，尚未实现全量方法级动态配额及 burst/token-bucket，不能宣称全量完成。
 - `SpApiRetryPolicy` 支持 Retry-After 秒数和 HTTP-date；指数增长加随机抖动、上限 1 小时。重试必须写 PostgreSQL `next_attempt_at`，禁止 HTTP 请求线程 sleep 或原地无限重试。
 - Orders 后台同步对 429、临时 HTTP 错误与 Redis 拒绝在租约 fencing 后保存重试时间，最多 8 次，之后暂停；due 查询按租户交错公平分配。不得绕过租户/卖家授权。
 - 不需要真实 Amazon 授权做这一阶段编码；本地正式启用前需专用 noeviction Redis、真实店铺授权及独立角色审查、实际响应头验收和完整 CI；远端写入继续禁用。
