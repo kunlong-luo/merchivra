@@ -350,3 +350,13 @@
 - [x] 新建批次编码变更的版本比较和审计、批次查询/审批/事件 React 工作台，JUnit/Vitest 覆盖无重复入账、质检员不得自审、零合格放行、历史路径兼容及 CSRF。
 - [ ] 尚需 PostgreSQL 18 实例 Flyway/Compose、HTTP 多租户与并发、完整浏览器业务流程专项验收；批次拆分/序列号/物理货位及 Amazon 授权留后续。
 - 详见：[PO-009 V46 批次质检与独立放行](purchasing/held-receipt-lots-quality-release-v46.md)。
+
+## V47 · 待检批次拆分、库位与补货压力可视化（2026-11-01）
+
+- [x] V47 Postgres 迁移：仓库默认虚拟 QC-HOLD，租户/仓库复合约束的待检库位、真实收货 ROOT 分段及事件，原始已检/已放行批次不回写位置。
+- [x] 后端只允许在真实 PENDING_QC 阶段拆分批次分段、同仓待检库位移动；tenant+批次锁、来源仓库/库位验证、UUID 幂等、原因审计，分段数量守恒；**不产生库存入账**。
+- [x] 支持创建 QC_HOLD / STORAGE 库位目录，其中待检分段不允许移动到 STORAGE；新仓库和每笔新 V46+ 实收自动创建接收来源，缺少默认待检库位必须回滚实收事务。
+- [x] 只读供应压力：签名库存流水可用数、V46 待检数、已检待另一位 Owner 放行的合格数、供应商申报 ASN 在途未收数；不自动计为可售或创建采购单。
+- [x] React 管理库位、批次分段、数量核对、待检压力；JUnit/Vitest 新增数量守恒、跨仓拦截、来源快照、CSRF 与无库存副作用验证，以最终 CI 为准。
+- [ ] 真实 PostgreSQL 18 Flyway/Compose、跨租户 HTTP 与竞争事务仍需专项验收；真实批次级可用库存/序列号/FEFO/仓位盘点和 Amazon API 留后续。
+- 文档：[PO-010 V47 待检批次/库位](purchasing/receipt-lot-locations-v47.md)。
