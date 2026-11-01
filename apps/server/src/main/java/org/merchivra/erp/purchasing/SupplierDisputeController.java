@@ -1,0 +1,74 @@
+package org.merchivra.erp.purchasing;
+
+import jakarta.servlet.http.HttpServletRequest;
+import java.util.List;
+import java.util.UUID;
+import org.merchivra.erp.security.TenantAccessService;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.*;
+
+/** Human-controlled local purchase discrepancy and claim APIs; no supplier or finance writes. */
+@RestController
+@RequestMapping("/api/v1/purchasing/disputes")
+public class SupplierDisputeController {
+    private final SupplierDisputeService service;
+    private final TenantAccessService access;
+    public SupplierDisputeController(SupplierDisputeService service,TenantAccessService access) {
+        this.service=service;this.access=access;
+    }
+    public record ActionNote(String note) {}
+
+    @GetMapping("/orders/{orderId}/variances")
+    public List<SupplierDisputeService.Variance> variances(Authentication auth,
+        HttpServletRequest req,@PathVariable UUID orderId) {
+        return service.variances(access.currentTenant(auth,req),orderId);
+    }
+    @PostMapping("/orders/{orderId}/variances")
+    @ResponseStatus(HttpStatus.CREATED)
+    public SupplierDisputeService.Variance report(Authentication auth,HttpServletRequest req,
+        @PathVariable UUID orderId,@RequestBody SupplierDisputeService.Report body) {
+        return service.report(access.currentTenant(auth,req),access.authenticatedUser(auth),
+            orderId,body);
+    }
+    @PostMapping("/variances/{id}/{action}")
+    public SupplierDisputeService.Variance review(Authentication auth,HttpServletRequest req,
+        @PathVariable UUID id,@PathVariable String action) {
+        return service.changeVariance(access.currentTenant(auth,req),
+            access.authenticatedUser(auth),id,action);
+    }
+    @GetMapping("/orders/{orderId}/claims")
+    public List<SupplierDisputeService.Claim> claims(Authentication auth,
+        HttpServletRequest req,@PathVariable UUID orderId) {
+        return service.claims(access.currentTenant(auth,req),orderId);
+    }
+    @PostMapping("/claims")
+    @ResponseStatus(HttpStatus.CREATED)
+    public SupplierDisputeService.Claim createClaim(Authentication auth,HttpServletRequest req,
+        @RequestBody SupplierDisputeService.ClaimRequest body) {
+        return service.createClaim(access.currentTenant(auth,req),
+            access.authenticatedUser(auth),body);
+    }
+    @PostMapping("/claims/{id}/{action}")
+    public SupplierDisputeService.Claim changeClaim(Authentication auth,HttpServletRequest req,
+        @PathVariable UUID id,@PathVariable String action,
+        @RequestBody(required=false) ActionNote body) {
+        return service.changeClaim(access.currentTenant(auth,req),
+            access.authenticatedUser(auth),id,action,body==null?null:body.note());
+    }
+    @GetMapping("/variances/{id}/events")
+    public List<SupplierDisputeService.Event> varianceEvents(Authentication auth,
+        HttpServletRequest req,@PathVariable UUID id) {
+        return service.events(access.currentTenant(auth,req),id,null);
+    }
+    @GetMapping("/claims/{id}/events")
+    public List<SupplierDisputeService.Event> claimEvents(Authentication auth,
+        HttpServletRequest req,@PathVariable UUID id) {
+        return service.events(access.currentTenant(auth,req),null,id);
+    }
+    @GetMapping("/supplier-performance")
+    public List<SupplierDisputeService.Performance> performance(Authentication auth,
+        HttpServletRequest req) {
+        return service.performance(access.currentTenant(auth,req));
+    }
+}
