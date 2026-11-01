@@ -13,14 +13,14 @@
 
 ## 当前工程基线（2026-10-30）
 
-- **后端**：Java 25 LTS、Spring Boot 4.1.2、Spring Security 7、Jackson 3、Maven、Spring JDBC + Flyway、PostgreSQL 18。
+- **后端**：Java 25 LTS、Spring Boot 4.1.2、Spring Security 7、Jackson 3、Maven、Spring JDBC + Flyway、PostgreSQL 18，构建工具唯一选择 Gradle 9.2.1（Gradle Wrapper）。
 - **前端（2026-10-31 React 迁移覆盖早期 Vue 决策）**：Node 24 LTS、React 19.3、React DOM、TypeScript 6、Vite 8、TanStack React Query 5、Zod 4、Vitest；使用已提交的 `apps/web/package-lock.json` 与 **`npm ci`**，不要改回无锁安装。
 - **部署**：单体 API + React 静态页面、Docker Compose；Redis 预留而非所有功能都必须用。Dockerfile 与 GitHub Actions 必须和本地版本一致。
-- 不迁移到 Gradle，除非存在实质工程收益并经维护者确认；添加依赖前先判断当前阶段是否真正使用。
+- 维护者已淘汰 Maven：后端仅允许 Gradle Wrapper，必须同时更新 build.gradle、Dockerfile、GitHub Actions 和文档；禁止重新加入 pom.xml 或 mvn 命令。添加依赖前确认现有业务实际使用，避免把 Kafka/InfluxDB/Redis/JPA 强行变成运行必需。
 
 ## 测试与开发节奏
 
-- **M0～M2 轻量 CI**：后端 Maven 快速单元测试；前端 TypeScript 类型检查、少量 Vitest、Vite build。
+- **M0～M2 轻量 CI**：后端 Gradle 快速单元测试；前端 TypeScript 类型检查、少量 Vitest、Vite build。
 - 不提前引入 Playwright/E2E、跨浏览器矩阵、83% 等覆盖率门禁、大型 Docker 集成 CI。M3 核心流程基本成熟时逐步补 E2E；M4 Beta 之前再加必要安全、数据库和上线验收。
 - 保留**少量高价值负例**：租户/店铺越权、CSRF、同步幂等、金额/币种、退款状态、库存 `UNKNOWN ≠ 0`。成熟库内部行为无需重新测试。
 - 每次修改后检查当前 `main` 的 **CI 实际结论**；失败时先诊断并修复。已完成的 PostgreSQL V1–V6 和真实 Compose Mock HTTP 全链路（含逐页重启恢复）冒烟应附准确证据，但**未执行的** Compose、并发、Amazon SP-API 及生产安全实测不应声称已通过。
@@ -252,7 +252,7 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 
 ## ADR React-only（2026-10-31，最新约束）
 
-用户已明确选择 **React 19** 替换 Vue：所有新 UI 用 React TSX、`@tanstack/react-query`、Vite React 插件、TypeScript + Zod。**禁止再新增 Vue SFC、vue-tsc、@vitejs/plugin-vue、@tanstack/vue-query、Pinia 或 Vue Router**。早期文件中的 Vue 描述仅为历史证据，**被本节覆盖**。保留 Spring Boot 4.1.2、Java 25、PostgreSQL 18、Maven、Flyway、租户 RBAC、Amazon 安全门禁。详见 [React 迁移 ADR](docs/architecture/react-migration-2026-10-31.md)。锁文件必须经过真实 npm registry 解析并提交，Docker 和 CI 用 npm ci。React 页面需执行类型检查、Vitest、Chromium 360/390/768/1280 冒烟与 PG18 Mock 全链路后方可视为验收。
+用户已明确选择 **React 19** 替换 Vue：所有新 UI 用 React TSX、`@tanstack/react-query`、Vite React 插件、TypeScript + Zod。**禁止再新增 Vue SFC、vue-tsc、@vitejs/plugin-vue、@tanstack/vue-query、Pinia 或 Vue Router**。早期文件中的 Vue 描述仅为历史证据，**被本节覆盖**。保留 Spring Boot 4.1.2、Java 25、PostgreSQL 18、Gradle 9.2.1、Flyway、租户 RBAC、Amazon 安全门禁。详见 [React 迁移 ADR](docs/architecture/react-migration-2026-10-31.md)。锁文件必须经过真实 npm registry 解析并提交，Docker 和 CI 用 npm ci。React 页面需执行类型检查、Vitest、Chromium 360/390/768/1280 冒烟与 PG18 Mock 全链路后方可视为验收。
 
 
 ## React migration acceptance (2026-10-31)
@@ -522,3 +522,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - V52 供应商退货严格引用 V50 `EXECUTED_REPORTED` 且 method=SUPPLIER_RETURN 的已扣库位过期品；原 supplierId 必须沿 V49 source_position → V48 original receipt → V20 original purchase order 得到，客户端不得指定。V44 erp_supplier_return 是 QC rejected 实物的另一个来源，**绝不可混同或重复计数已放行后过期隔离品**。人工回执需要非发运 Owner、数量不超过发运量；差异只记 RECEIPT_MISMATCH，不自动改变库存和应收财务，不能冒充 Amazon/第三方验证。
 - GitHub CI 后端/前端单测之外必须启动独立 postgres:18 实例运行全 Flyway 并校验 V46–V52 迁移；不能把 Mock Compose 队列运行、尚未完成的 PG18 job 算作验收通过。Java 25 / Spring Boot 4.1 / React 19 / PostgreSQL 18 持续固定。
 - 详见 `docs/purchasing/lot-proof-files-supplier-trace-v52.md`。
+
+
+## 2026-11-01 · 维护者确认的唯一后端构建工具：Gradle
+
+- Maven 已淘汰。所有新业务模块和 CI 必须使用 `apps/server/build.gradle`（Groovy DSL），Gradle 9.2.1（`apps/server/gradlew`/Windows `gradlew.bat`）和 Java 25 toolchain。禁止添加 `pom.xml`、Maven Wrapper、`mvn` 构建命令或 Maven 构建镜像。历史日志中的 Maven 表述只能说明历史版本。
+- Spring Boot 保持项目已验证的 `4.1.2`（高于模板 `4.1.1`），`io.spring.dependency-management` `1.1.7`，不要把另一项目的 `com.spark.iot` 包名/业务依赖直接复制过来；当前 group 必须是 `org.merchivra`。
+- 必需功能以 Spring JDBC、Flyway、Security、Web MVC、官方 Amazon SDK 和 PostgreSQL 18 为核心；Redis/Kafka/InfluxDB/JPA/PostGIS/WebSocket/Zen Engine/MapStruct/Lombok 等仅在有真实实现且测试覆盖时添加，当前 spark-db 共享环境不应因此被强制依赖。
+- CI 必须执行 Gradle test + JaCoCo 报告，真实 PostgreSQL 18 的 bootRun/Flyway 迁移，React 19 的 npm ci/typecheck/Vitest/build，及 Docker Compose 服务数量验证。83% 行覆盖率保留为 `-PstrictCoverage check` 严格目标，在未达到覆盖率前不得虚假标记通过。所有 Gradle 分发和 Wrapper JAR 应校验 SHA-256。
