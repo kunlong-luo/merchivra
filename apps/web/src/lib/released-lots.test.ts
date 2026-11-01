@@ -33,7 +33,7 @@ function fake(handler:(url:string,opts?:RequestInit)=>unknown){
  vi.stubGlobal('fetch',vi.fn(async(url:string,options?:RequestInit)=>{
   calls.push({url,options})
   if(url.endsWith('/auth/csrf'))return new Response(JSON.stringify({
-   token:'v48-csrf',headerName:'X-CSRF-TOKEN'}),{status:200})
+   token:'valid-v48-csrf-token',headerName:'X-CSRF-TOKEN'}),{status:200})
   return new Response(JSON.stringify(handler(url,options)),{status:200})
  }))
  return calls
@@ -46,7 +46,7 @@ describe('V48 per-piece QC and lot stock workflows',()=>{
   await finalizePieceGrades(receipt,{requestKey:reqKey,reason:'Completed lot quality inspection'})
   const posts=calls.filter(c=>c.options?.method==='POST')
   expect(posts).toHaveLength(2)
-  expect(posts[0].options?.headers).toMatchObject({'X-CSRF-TOKEN':'v48-csrf'})
+  expect(posts[0].options?.headers).toMatchObject({'X-CSRF-TOKEN':'valid-v48-csrf-token'})
   expect(JSON.parse(String(posts[0].options?.body))).toMatchObject({
    requestKey:reqKey,pieceId:piece,acceptedQuantity:7,rejectedQuantity:3
   })
