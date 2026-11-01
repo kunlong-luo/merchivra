@@ -1,4 +1,5 @@
 import {useState} from 'react'
+import SyncTaskMonitorPanel from './SyncTaskMonitorPanel'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchFindings,fetchOpsSummary,scanOperations,changeFindingState,ruleNames,severityNames,stateNames} from './lib/operations'
 import type {FindingFilter,FindingState} from './lib/operations'
@@ -35,5 +36,7 @@ export default function OperationsWorkspace({tenantId}:{tenantId:string}){
  {(i.state==='DONE'||i.state==='ACKNOWLEDGED')&&<button className="text-button" disabled={!!editing} onClick={()=>change.mutate({id:i.id,state:'OPEN'})}>重新打开</button>}
  </div></td></tr>)}</tbody></table></div>}
  <div className="panel-caption">最多显示 100 条。测试来源的待办不可直接用于自动补货、发货或财务结算。</div>
- </section></div>
+ </section>
+ <SyncTaskMonitorPanel tenantId={tenantId}/>
+ </div>
 }
