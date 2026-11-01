@@ -1,0 +1,888 @@
+{
+  "components": {
+    "schemas": {
+      "Audit": {
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "failureCode": {
+            "type": "string"
+          },
+          "occurredAt": {
+            "type": "string"
+          },
+          "processedOrders": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Create": {
+        "properties": {
+          "after": {
+            "format": "date",
+            "type": "string"
+          },
+          "before": {
+            "format": "date",
+            "type": "string"
+          },
+          "requestKey": {
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Job": {
+        "properties": {
+          "after": {
+            "type": "string"
+          },
+          "bankVerified": {
+            "type": "boolean"
+          },
+          "before": {
+            "type": "string"
+          },
+          "blockedOrders": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "cohortFrozen": {
+            "type": "boolean"
+          },
+          "completedAt": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "eligibleOrders": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "failureCode": {
+            "type": "string"
+          },
+          "financialSourceComplete": {
+            "type": "boolean"
+          },
+          "globalSourceSnapshot": {
+            "type": "boolean"
+          },
+          "id": {
+            "type": "string"
+          },
+          "ledgerPosted": {
+            "type": "boolean"
+          },
+          "manualAdsCount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "manualAdsReference": {
+            "type": "string"
+          },
+          "processedOrders": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "retryCount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "state": {
+            "type": "string"
+          },
+          "totalOrders": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Order": {
+        "properties": {
+          "cogs": {
+            "type": "string"
+          },
+          "contribution": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "extractedAt": {
+            "type": "string"
+          },
+          "extractSha256": {
+            "type": "string"
+          },
+          "fba": {
+            "type": "string"
+          },
+          "fees": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "position": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "readiness": {
+            "type": "string"
+          },
+          "sales": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "OrderRow": {
+        "properties": {
+          "amazonFees": {
+            "type": "string"
+          },
+          "cogs": {
+            "type": "string"
+          },
+          "contribution": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "externalOrderId": {
+            "type": "string"
+          },
+          "fbaFees": {
+            "type": "string"
+          },
+          "orderedAt": {
+            "type": "string"
+          },
+          "orderId": {
+            "type": "string"
+          },
+          "readiness": {
+            "type": "string"
+          },
+          "reviewedEventCount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "sales": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "units": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Preview": {
+        "properties": {
+          "adsSourceOrigin": {
+            "type": "string"
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "offset": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "orders": {
+            "items": {
+              "$ref": "#/components/schemas/OrderRow"
+            },
+            "type": "array"
+          },
+          "pageSize": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "periodAfter": {
+            "type": "string"
+          },
+          "periodBefore": {
+            "type": "string"
+          },
+          "periodTruncated": {
+            "type": "boolean"
+          },
+          "skuRows": {
+            "items": {
+              "$ref": "#/components/schemas/SkuRow"
+            },
+            "type": "array"
+          },
+          "timezone": {
+            "type": "string"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/Totals"
+          },
+          "unverifiedAdsRecordCount": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "unverifiedAdsSpendReference": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Report": {
+        "properties": {
+          "hasMore": {
+            "type": "boolean"
+          },
+          "job": {
+            "$ref": "#/components/schemas/Job"
+          },
+          "orderOffset": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "orders": {
+            "items": {
+              "$ref": "#/components/schemas/Order"
+            },
+            "type": "array"
+          },
+          "skus": {
+            "items": {
+              "$ref": "#/components/schemas/Sku"
+            },
+            "type": "array"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/Totals"
+          }
+        },
+        "type": "object"
+      },
+      "Sku": {
+        "properties": {
+          "amazonFees": {
+            "type": "string"
+          },
+          "cogs": {
+            "type": "string"
+          },
+          "contribution": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "fbaFees": {
+            "type": "string"
+          },
+          "orderCount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "sales": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "units": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "SkuRow": {
+        "properties": {
+          "amazonFees": {
+            "type": "string"
+          },
+          "cogs": {
+            "type": "string"
+          },
+          "contribution": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "fbaFees": {
+            "type": "string"
+          },
+          "orderCount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "sales": {
+            "type": "string"
+          },
+          "sku": {
+            "type": "string"
+          },
+          "units": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "Totals": {
+        "properties": {
+          "amazonFees": {
+            "type": "string"
+          },
+          "bankVerified": {
+            "type": "boolean"
+          },
+          "blockedOrders": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "cogs": {
+            "type": "string"
+          },
+          "completePeriod": {
+            "type": "boolean"
+          },
+          "contribution": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "eligibleOrders": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "fbaFees": {
+            "type": "string"
+          },
+          "financialSourceComplete": {
+            "type": "boolean"
+          },
+          "ledgerPosted": {
+            "type": "boolean"
+          },
+          "multiSkuOrders": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "sales": {
+            "type": "string"
+          },
+          "scannedOrders": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "sourceEvents": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "csrfHeader": {
+        "in": "header",
+        "name": "X-CSRF-TOKEN",
+        "type": "apiKey"
+      },
+      "sessionCookie": {
+        "in": "cookie",
+        "name": "JSESSIONID",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "description": "Generated from LIVE Spring MVC Controller mappings; only local Session authentication.",
+    "title": "Merchivra verified finance contribution API",
+    "version": "64.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/finance/marketplaces/{marketplaceId}/profit-reports": {
+      "get": {
+        "operationId": "listProfitReports",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "marketplaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Job"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "profit-report-job-controller"
+        ]
+      },
+      "post": {
+        "operationId": "createProfitReport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "marketplaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Create"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "profit-report-job-controller"
+        ]
+      }
+    },
+    "/api/v1/finance/marketplaces/{marketplaceId}/profit-reports/{jobId}": {
+      "get": {
+        "operationId": "getProfitReport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "marketplaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "jobId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Report"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "profit-report-job-controller"
+        ]
+      }
+    },
+    "/api/v1/finance/marketplaces/{marketplaceId}/profit-reports/{jobId}/audit": {
+      "get": {
+        "operationId": "getProfitReportAudit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "marketplaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "jobId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Audit"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "profit-report-job-controller"
+        ]
+      }
+    },
+    "/api/v1/finance/marketplaces/{marketplaceId}/profit-reports/{jobId}/export.csv": {
+      "get": {
+        "operationId": "exportProfitReportCsv",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "marketplaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "jobId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "profit-report-job-controller"
+        ]
+      }
+    },
+    "/api/v1/finance/marketplaces/{marketplaceId}/profit-reports/{jobId}/resume": {
+      "post": {
+        "operationId": "resumeProfitReport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "marketplaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "jobId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "profit-report-job-controller"
+        ]
+      }
+    },
+    "/api/v1/finance/marketplaces/{marketplaceId}/profit-reports/{jobId}/step": {
+      "post": {
+        "operationId": "advanceProfitReport",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "marketplaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "jobId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "profit-report-job-controller"
+        ]
+      }
+    },
+    "/api/v1/finance/marketplaces/{marketplaceId}/sku-profit-preview": {
+      "get": {
+        "operationId": "getSkuProfitPreview",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "marketplaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Preview"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "sku-profit-preview-controller"
+        ]
+      }
+    },
+    "/api/v1/finance/marketplaces/{marketplaceId}/sku-profit-preview/export.csv": {
+      "get": {
+        "operationId": "exportSkuProfitPreviewCsv",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "marketplaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "format": "int32",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/csv": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "sku-profit-preview-controller"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "sessionCookie": []
+    }
+  ],
+  "servers": [
+    {
+      "url": ""
+    }
+  ]
+}
