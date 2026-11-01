@@ -12,6 +12,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 
 /** V64 persistent, read-only source contribution extracts; Owner Session only. */
 @RestController
@@ -25,51 +27,65 @@ public class ProfitReportJobController {
         this.access=access;this.service=service;this.csv=csv;
     }
     public record Create(UUID requestKey,LocalDate after,LocalDate before) {}
+    @Operation(operationId="createProfitReport")
     @PostMapping
     public ResponseEntity<ProfitReportJobService.Job> create(
-        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
+        @Parameter(hidden=true) Authentication auth,
+        @Parameter(hidden=true) HttpServletRequest request,@PathVariable UUID marketplaceId,
         @RequestBody Create body){
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
             service.create(access.currentTenant(auth,request),marketplaceId,
                 access.authenticatedUser(auth),body.requestKey(),body.after(),body.before()));
     }
+    @Operation(operationId="listProfitReports")
     @GetMapping
     public ResponseEntity<List<ProfitReportJobService.Job>> recent(
-        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId){
+        @Parameter(hidden=true) Authentication auth,
+        @Parameter(hidden=true) HttpServletRequest request,@PathVariable UUID marketplaceId){
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
             service.recent(access.currentTenant(auth,request),marketplaceId));
     }
+    @Operation(operationId="getProfitReport")
     @GetMapping("/{jobId}")
     public ResponseEntity<ProfitReportJobService.Report> report(
-        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
+        @Parameter(hidden=true) Authentication auth,
+        @Parameter(hidden=true) HttpServletRequest request,@PathVariable UUID marketplaceId,
         @PathVariable UUID jobId,@RequestParam(defaultValue="0") int offset){
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
             service.report(access.currentTenant(auth,request),marketplaceId,jobId,offset));
     }
+    @Operation(operationId="advanceProfitReport")
     @PostMapping("/{jobId}/step")
     public ResponseEntity<ProfitReportJobService.Job> step(
-        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
+        @Parameter(hidden=true) Authentication auth,
+        @Parameter(hidden=true) HttpServletRequest request,@PathVariable UUID marketplaceId,
         @PathVariable UUID jobId){
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
             service.step(access.currentTenant(auth,request),marketplaceId,jobId));
     }
+    @Operation(operationId="resumeProfitReport")
     @PostMapping("/{jobId}/resume")
     public ResponseEntity<ProfitReportJobService.Job> resume(
-        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
+        @Parameter(hidden=true) Authentication auth,
+        @Parameter(hidden=true) HttpServletRequest request,@PathVariable UUID marketplaceId,
         @PathVariable UUID jobId){
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
             service.resume(access.currentTenant(auth,request),marketplaceId,jobId));
     }
+    @Operation(operationId="getProfitReportAudit")
     @GetMapping("/{jobId}/audit")
     public ResponseEntity<List<ProfitReportJobService.Audit>> audit(
-        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
+        @Parameter(hidden=true) Authentication auth,
+        @Parameter(hidden=true) HttpServletRequest request,@PathVariable UUID marketplaceId,
         @PathVariable UUID jobId){
         return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
             service.history(access.currentTenant(auth,request),marketplaceId,jobId));
     }
+    @Operation(operationId="exportProfitReportCsv")
     @GetMapping(value="/{jobId}/export.csv",produces="text/csv")
     public ResponseEntity<String> export(
-        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
+        @Parameter(hidden=true) Authentication auth,
+        @Parameter(hidden=true) HttpServletRequest request,@PathVariable UUID marketplaceId,
         @PathVariable UUID jobId){
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
             .header(HttpHeaders.CONTENT_DISPOSITION,

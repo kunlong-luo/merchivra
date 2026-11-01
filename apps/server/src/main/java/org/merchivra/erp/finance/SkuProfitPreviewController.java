@@ -10,6 +10,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 
 /** Owner-only page-specific provisional SKU and Marketplace contributions. */
 @RestController
@@ -21,18 +23,22 @@ public class SkuProfitPreviewController {
         SkuProfitPreviewService service) {
         this.access=access;this.service=service;
     }
+    @Operation(operationId="getSkuProfitPreview")
     @GetMapping
     public ResponseEntity<SkuProfitPreviewService.Preview> preview(
-        Authentication auth,HttpServletRequest req,@PathVariable UUID marketplaceId,
+        @Parameter(hidden=true) Authentication auth,
+        @Parameter(hidden=true) HttpServletRequest req,@PathVariable UUID marketplaceId,
         @RequestParam LocalDate after,@RequestParam LocalDate before,
         @RequestParam(defaultValue="0") int offset) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
             .body(service.preview(access.currentTenant(auth,req),
                 marketplaceId,after,before,offset));
     }
+    @Operation(operationId="exportSkuProfitPreviewCsv")
     @GetMapping(value="/export.csv",produces="text/csv")
     public ResponseEntity<String> export(
-        Authentication auth,HttpServletRequest req,@PathVariable UUID marketplaceId,
+        @Parameter(hidden=true) Authentication auth,
+        @Parameter(hidden=true) HttpServletRequest req,@PathVariable UUID marketplaceId,
         @RequestParam LocalDate after,@RequestParam LocalDate before,
         @RequestParam(defaultValue="0") int offset) {
         var data=service.preview(access.currentTenant(auth,req),marketplaceId,

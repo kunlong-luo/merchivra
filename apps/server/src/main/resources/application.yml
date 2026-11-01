@@ -8,6 +8,17 @@ server:
         same-site: strict
         secure: ${MERCHIVRA_SESSION_COOKIE_SECURE:false}
 
+springdoc:
+  api-docs:
+    enabled: ${MERCHIVRA_CONTRACT_EXPORT_ENABLED:false}
+  group-configs:
+    - group: finance-profits
+      paths-to-match:
+        - /api/v1/finance/marketplaces/**/sku-profit-preview
+        - /api/v1/finance/marketplaces/**/sku-profit-preview/**
+        - /api/v1/finance/marketplaces/**/profit-reports
+        - /api/v1/finance/marketplaces/**/profit-reports/**
+
 spring:
   application:
     name: merchivra-server

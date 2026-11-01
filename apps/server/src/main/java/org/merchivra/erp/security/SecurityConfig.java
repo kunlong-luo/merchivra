@@ -2,6 +2,8 @@ package org.merchivra.erp.security;
 
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authorization.AuthorizationDecision;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
@@ -24,7 +26,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http, TenantAccessService tenants) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http, TenantAccessService tenants,
+        @Value("${MERCHIVRA_CONTRACT_EXPORT_ENABLED:false}") boolean contractExport) throws Exception {
         // CSRF token is stored server-side in the session and fetched by the SPA
         // through GET /api/v1/auth/csrf. JSESSIONID remains HttpOnly.
         var csrfHandler = new CsrfTokenRequestAttributeHandler();
@@ -33,6 +36,12 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.csrfTokenRepository(new HttpSessionCsrfTokenRepository())
                 .csrfTokenRequestHandler(csrfHandler))
             .authorizeHttpRequests(auth -> auth
+                // Disabled by default; allowed only for explicit loopback generation.
+                .requestMatchers("/v3/api-docs", "/v3/api-docs/**", "/v3/api-docs.yaml")
+                .access((authentication,context) -> new AuthorizationDecision(
+                    contractExport && ("127.0.0.1".equals(context.getRequest().getRemoteAddr())
+                        || "0:0:0:0:0:0:0:1".equals(context.getRequest().getRemoteAddr())
+                        || "::1".equals(context.getRequest().getRemoteAddr()))))
                 .requestMatchers("/api/v1/spapi/oauth/login", "/api/v1/spapi/oauth/callback").permitAll()
                 .requestMatchers("/api/v1/auth/invitations/accept").permitAll()
                 .requestMatchers("/api/v1/ping", "/api/v1/auth/csrf",
