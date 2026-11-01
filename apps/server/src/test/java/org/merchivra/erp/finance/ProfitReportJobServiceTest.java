@@ -21,7 +21,7 @@ class ProfitReportJobServiceTest {
     private static final Clock FIXED=Clock.fixed(
         Instant.parse("2026-11-01T12:00:00Z"),ZoneOffset.UTC);
     @Test void rejectsInvalidDateWindowsAndUnboundedFuturePeriodsBeforeDatabaseAccess() {
-        LocalDate after=LocalDate.of(2026,9,1);
+        LocalDate after=LocalDate.of(2026,7,1);
         ProfitReportJobService.validate(after,after.plusDays(92),FIXED);
         assertThrows(ResponseStatusException.class,()->
             ProfitReportJobService.validate(after,after.plusDays(93),FIXED));

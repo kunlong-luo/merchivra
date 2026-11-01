@@ -47,7 +47,7 @@ describe('V64 durable period contribution API',()=>{
   expect(init.credentials).toBe('same-origin')
   expect(init.cache).toBe('no-store')
   expect(exportPeriodProfitUrl(mp,id)).toContain('/export.csv')
-  await expect(getPeriodProfitReport(mp,id,51)).rejects.toThrow()
+  expect(()=>getPeriodProfitReport(mp,id,51)).toThrow()
  })
  it('creates an explicit idempotent job with CSRF and no outbound Amazon API',async()=>{
   const mock=vi.fn().mockImplementation(async (url:string)=>({
