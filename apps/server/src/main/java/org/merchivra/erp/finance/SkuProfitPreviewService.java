@@ -7,6 +7,10 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,15 +32,19 @@ public class SkuProfitPreviewService {
     private final OrderCostReadinessService costs;
     private final OrderContributionService contribution;
     private final Clock clock;
+    private final MultiSkuContributionService multiSku;
 
     @Autowired
     public SkuProfitPreviewService(JdbcTemplate jdbc,
-        OrderCostReadinessService costs,OrderContributionService contribution) {
-        this(jdbc,costs,contribution,Clock.systemUTC());
+        OrderCostReadinessService costs,OrderContributionService contribution,
+        MultiSkuContributionService multiSku) {
+        this(jdbc,costs,contribution,multiSku,Clock.systemUTC());
     }
     SkuProfitPreviewService(JdbcTemplate jdbc,OrderCostReadinessService costs,
-        OrderContributionService contribution,Clock clock) {
-        this.jdbc=jdbc;this.costs=costs;this.contribution=contribution;this.clock=clock;
+        OrderContributionService contribution,MultiSkuContributionService multiSku,
+        Clock clock) {
+        this.jdbc=jdbc;this.costs=costs;this.contribution=contribution;
+        this.multiSku=multiSku;this.clock=clock;
     }
     private record Order(UUID id,String externalId,String createdAt) {}
     private record Market(String currency) {}
@@ -57,6 +65,7 @@ public class SkuProfitPreviewService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "Use UTC date range 1..92 days and aligned page offset");
     }
+    @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public Preview preview(UUID tenant,UUID marketplace,
         LocalDate after,LocalDate before,int offset) {
         validate(after,before,offset,clock);
@@ -84,6 +93,7 @@ public class SkuProfitPreviewService {
             tenant,marketplace,start,end,PAGE_SIZE+1,offset);
         boolean more=source.size()>PAGE_SIZE;
         List<SkuProfitPreviewEngine.Input> inputs=new ArrayList<>();
+        Map<String,MultiSkuContributionService.Result> reviewedMulti=new HashMap<>();
         for(int i=0;i<Math.min(PAGE_SIZE,source.size());i++){
             Order order=source.get(i);
             var cost=costs.preview(tenant,marketplace,order.id());
@@ -99,8 +109,10 @@ public class SkuProfitPreviewService {
             inputs.add(new SkuProfitPreviewEngine.Input(order.id().toString(),
                 order.externalId(),order.createdAt(),sku,units,cost.readiness(),
                 mixed,financial));
+            if(mixed)reviewedMulti.put(order.id().toString(),
+                multiSku.preview(tenant,marketplace,order.id(),cost,financial));
         }
-        var rollup=SkuProfitPreviewEngine.calculate(currency,inputs,more,offset>0);
+        var rollup=SkuProfitPreviewEngine.calculate(currency,inputs,more,offset>0,reviewedMulti);
         var ads=jdbc.query("""
             SELECT COALESCE(SUM(a.spend_amount),0) AS manual_spend,
                    COUNT(*) AS source_count
