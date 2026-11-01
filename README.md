@@ -79,7 +79,7 @@ Detailed instructions including database checks, permissions, networking, backup
 
 ## Local development — hot reload
 
-Requires **Java 25, Maven 3.9+, Node.js 24.11+, npm, PostgreSQL 18**. With your existing spark-db database mapped to the **host's** `127.0.0.1:5432`, run:
+Requires **Java 25, Gradle 9.2.1（项目内 Gradle Wrapper）, Node.js 24.11+, npm, PostgreSQL 18**. With your existing spark-db database mapped to the **host's** `127.0.0.1:5432`, run:
 
 Backend terminal:
 
@@ -88,7 +88,7 @@ export DB_HOST=127.0.0.1 DB_PORT=5432 DB_NAME=merchivra DB_USER=merchivra
 export DB_PASSWORD='your-dedicated-merchivra-password'
 export MERCHIVRA_BOOTSTRAP_USERNAME=your_admin
 export MERCHIVRA_BOOTSTRAP_PASSWORD='your-own-16-plus-character-password'
-mvn -f apps/server/pom.xml spring-boot:run
+(cd apps/server && ./gradlew bootRun)
 ```
 
 Frontend terminal:
@@ -143,7 +143,7 @@ Recent **Java 25 tests, React/Vitest/typecheck/build, real PostgreSQL 18 Flyway 
 curl -f http://127.0.0.1:8080/api/v1/ping
 curl -f http://127.0.0.1:8080/actuator/health
 
-mvn -f apps/server/pom.xml test
+(cd apps/server && ./gradlew test)
 cd apps/web && npm ci && npm run typecheck && npm run test && npm run build
 ```
 
