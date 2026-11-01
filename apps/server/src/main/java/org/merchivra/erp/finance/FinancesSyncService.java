@@ -204,11 +204,17 @@ public class FinancesSyncService {
  public List<UUID[]> due(int max){
    if(max<1||max>20)throw new IllegalArgumentException("batch must be 1..20");
    return jdbc.query("""
-     SELECT tenant_id,seller_marketplace_id FROM spapi_finances_sync_job
-     WHERE (state IN ('READY','RETRY') OR (state='RUNNING' AND lease_expires_at<=now()))
-       AND (retry_at IS NULL OR retry_at<=now())
-       AND (lease_expires_at IS NULL OR lease_expires_at<=now())
-     ORDER BY updated_at LIMIT ?
+     WITH eligible AS (
+       SELECT tenant_id,seller_marketplace_id,updated_at,
+              ROW_NUMBER() OVER (PARTITION BY tenant_id ORDER BY updated_at,id)
+                AS tenant_lane
+       FROM spapi_finances_sync_job
+       WHERE (state IN ('READY','RETRY') OR (state='RUNNING' AND lease_expires_at<=now()))
+         AND (retry_at IS NULL OR retry_at<=now())
+         AND (lease_expires_at IS NULL OR lease_expires_at<=now())
+     )
+     SELECT tenant_id,seller_marketplace_id FROM eligible
+     ORDER BY tenant_lane,updated_at,tenant_id LIMIT ?
      """,(r,n)->new UUID[]{r.getObject(1,UUID.class),r.getObject(2,UUID.class)},max);
  }
  private void fail(Claim c,Exception e){
@@ -226,7 +232,9 @@ public class FinancesSyncService {
        SELECT retry_count FROM spapi_finances_sync_job WHERE tenant_id=? AND id=?
        """,Integer.class,c.tenant(),j.id());
      boolean mayRetry=retry&&attempts<8;
-     long seconds=Math.min(3600,180L*(1L<<Math.min(attempts,4)));
+     Duration minimum=e instanceof SpApiHttpException h ? h.retryAfter()
+         : e instanceof SpApiAdmissionException a ? a.retryAfter() : Duration.ZERO;
+     Duration delay=SpApiRetryPolicy.nextDelay(attempts+1,minimum);
      jdbc.update("""
        UPDATE spapi_finances_sync_job SET state=?,retry_at=?,last_failure_code=?,
          retry_count=retry_count+1,
@@ -237,7 +245,7 @@ public class FinancesSyncService {
          lease_owner=NULL,lease_expires_at=NULL,updated_at=now()
        WHERE tenant_id=? AND id=? AND lease_epoch=? AND lease_owner=?
        """,mayRetry?"RETRY":"PAUSED",
-         db(mayRetry?clock.instant().plusSeconds(seconds):null),
+         db(mayRetry?clock.instant().plus(delay):null),
          mayRetry?reason:"RETRY_LIMIT_OR_"+reason,
          stale,stale,stale,stale,c.tenant(),j.id(),c.epoch(),c.owner());
    });
