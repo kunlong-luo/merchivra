@@ -587,3 +587,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 只能把同币种金额相等的人工银行来源交由独立 Owner REVIEWED；审批人既不能是上传人也不能是申请人。fx_rate 为人工声明值，跨币种差异仅用于显示，不允许自动批准为到账或对账完成。
 - 所有 HTTP 接口保持 Session Owner + CSRF + no-store；bankVerified=false 和 ledgerPosted=false 不可被业务 UI 或 API 偷改。真实银行确认需受信银行来源与另行设计的审核，不得由 Mock 升级真凭证。
 - 继续使用 Java25、Spring Boot4.1.2、Gradle、PostgreSQL18、React19；不启用真实 Amazon 写调用或未经验证的银行出站连接。
+
+## 2026-11-01 · V61 SKU / 店铺贡献利润预览
+
+- 参考 docs/finance/sku-profit-preview-v61.md。店铺与 SKU 聚合优先复用 OrderContributionEngine 的已审核 LIVE Finances + 历史有效 SKU 成本，禁止另算 Orders estimated proceeds 或把 Reports+Finances 双重计入。Amazon/FBA 负费用是签名来源数，不二次扣减。
+- 订单级金融交易仅当订单全部当前商品映射到同一内部 SKU 且历史成本与财务分类都齐全时，可归属该 SKU。多 SKU 订单、退款回转未知、分类/事件链接未知必须标示阻塞，不按数量、收入猜分，也不以 0 表示来源缺失。
+- 报表分页每页 30，UTC 时间窗口不超过 92 天，offset 0..3000、必须按30对齐。页内 SKU 归集与 CSV 只能算当前页，不得暗示整期完成。`financialSourceComplete`、`bankVerified`、`ledgerPosted` 始终 false。
+- 手工 Ads 支出 `MANUAL_UNVERIFIED` 只能另示参考，不能伪装成可信 Ads API 或自动从贡献中扣除；零差额也不能声明完整净利润。
+- CSV 防 spreadsheet formula 注入，接口只从 Session Owner 推导租户、no-store，无数据写入/外部 Amazon 或银行调用。技术栈保持 Java 25、Gradle、Spring Boot4.1.2、PostgreSQL18、React19。
