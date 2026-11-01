@@ -135,6 +135,12 @@ public class ReceiptLotLocationService {
             WHERE tenant_id=? AND receipt_id=? AND status='PENDING_QC' FOR UPDATE
             """,UUID.class,tenant,receipt);
         if(ids.size()!=1)throw conflict("Only uninspected receiving lots may be partitioned or moved");
+        Long graded=jdbc.queryForObject("""
+            SELECT COUNT(*) FROM erp_receipt_piece_grade
+            WHERE tenant_id=? AND receipt_id=?
+            """,Long.class,tenant,receipt);
+        if(graded!=null && graded>0)
+            throw conflict("Receiving lot pieces are frozen once quality grading starts");
     }
     private void requireQcBin(UUID tenant,UUID warehouse,UUID binId){
         if(binId==null)throw bad("QC-hold location required");
