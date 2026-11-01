@@ -14,7 +14,7 @@ export default function OpsAttentionControls({finding,tenantId,userId}:{
  const [note,setNote]=useState('')
  const [error,setError]=useState('')
  const mine=finding.assignedTo===userId,other=!!finding.assignedTo&&!mine
- const active=finding.state!=='CLEARED'
+ const active=finding.state==='OPEN'||finding.state==='ACKNOWLEDGED'
  const suppressed=!!finding.snoozedUntil&&Date.parse(finding.snoozedUntil)>Date.now()
  const refresh=()=>void cache.invalidateQueries({queryKey:['operations',tenantId]})
  const claim=useMutation({mutationFn:()=>claimFinding(finding.id),

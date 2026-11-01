@@ -5,7 +5,6 @@ import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
-import java.time.Instant;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -285,6 +284,8 @@ public class OperationsAutomationService {
     @Transactional
     public Attention claim(UUID tenant,UUID actor,UUID id) {
         LockRow before=lockFinding(tenant,id);
+        if(!"OPEN".equals(before.state())&&!"ACKNOWLEDGED".equals(before.state()))
+            throw new ResponseStatusException(HttpStatus.CONFLICT,"Only unresolved findings can be claimed");
         if(before.assignedTo()!=null&&!before.assignedTo().equals(actor))
             throw new ResponseStatusException(HttpStatus.CONFLICT,"Claimed by another Owner");
         if(before.assignedTo()==null) {
@@ -321,6 +322,8 @@ public class OperationsAutomationService {
           note.chars().anyMatch(Character::isISOControl))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Review note length 10..300");
         LockRow before=lockFinding(tenant,id);
+        if(!"OPEN".equals(before.state())&&!"ACKNOWLEDGED".equals(before.state()))
+            throw new ResponseStatusException(HttpStatus.CONFLICT,"Only unresolved findings can be snoozed");
         if(before.assignedTo()!=null&&!before.assignedTo().equals(actor))
             throw new ResponseStatusException(HttpStatus.CONFLICT,"Only assigned Owner may snooze");
         var dates=jdbc.query("""
