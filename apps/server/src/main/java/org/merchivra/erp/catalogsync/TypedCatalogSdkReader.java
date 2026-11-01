@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import org.merchivra.erp.spapi.SpApiHttpException;
+import org.merchivra.erp.spapi.SpApiOperation;
+import org.merchivra.erp.spapi.SpApiRetryPolicy;
 import org.merchivra.erp.spapi.SpApiOfficialModules;
 import org.merchivra.erp.spapi.SpApiOfficialSdkFactory;
 import org.merchivra.erp.spapi.SpApiSellerScope;
@@ -33,13 +35,17 @@ public final class TypedCatalogSdkReader {
     public TypedCatalogSdkReader(SpApiOfficialSdkFactory factory) {
         Objects.requireNonNull(factory);
         var modules=new SpApiOfficialModules(factory);
-        this.listings=(scope,cursor)->modules.listings(scope).searchListingsItems(
-            scope.sellerId(),List.of(scope.marketplaceId()),null,List.of("summaries"),
-            null,null,null,null,null,null,null,null,null,null,null,
-            null,null,20,cursor);
-        this.inventory=(scope,cursor)->modules.fbaInventory(scope).getInventorySummaries(
-            "Marketplace",scope.marketplaceId(),List.of(scope.marketplaceId()),
-            true,null,null,null,cursor);
+        this.listings=(scope,cursor)->factory.executeObservedRead(scope,
+            SpApiOperation.SEARCH_LISTINGS,
+            () -> modules.listings(scope).searchListingsItemsWithHttpInfo(
+                scope.sellerId(),List.of(scope.marketplaceId()),null,List.of("summaries"),
+                null,null,null,null,null,null,null,null,null,null,null,
+                null,null,20,cursor));
+        this.inventory=(scope,cursor)->factory.executeObservedRead(scope,
+            SpApiOperation.GET_FBA_INVENTORY,
+            () -> modules.fbaInventory(scope).getInventorySummariesWithHttpInfo(
+                "Marketplace",scope.marketplaceId(),List.of(scope.marketplaceId()),
+                true,null,null,null,cursor));
     }
     TypedCatalogSdkReader(ListingsCall listings,StockCall inventory) {
         this.listings=Objects.requireNonNull(listings);
@@ -70,9 +76,11 @@ public final class TypedCatalogSdkReader {
         ItemSearchResults response;
         try { response=listings.call(scope,cursor); }
         catch(ApiException.RateLimitExceeded e) {
-            throw new SpApiHttpException("searchListingsItems",429,"");
+            throw new SpApiHttpException("searchListingsItems",429,"",
+                SpApiRetryPolicy.retryAfter(e.getResponseHeaders(),Instant.now()));
         } catch(ApiException e) {
-            throw new SpApiHttpException("searchListingsItems",e.getCode(),"");
+            throw new SpApiHttpException("searchListingsItems",e.getCode(),"",
+                SpApiRetryPolicy.retryAfter(e.getResponseHeaders(),Instant.now()));
         } catch(LWAException e) { throw new SecurityException("LWA authorization rejected"); }
         if(response==null || response.getItems()==null || response.getItems().size()>100)
             throw new IllegalArgumentException("Invalid Listing result page");
@@ -109,9 +117,11 @@ public final class TypedCatalogSdkReader {
         GetInventorySummariesResponse response;
         try { response=inventory.call(scope,cursor); }
         catch(ApiException.RateLimitExceeded e) {
-            throw new SpApiHttpException("getInventorySummaries",429,"");
+            throw new SpApiHttpException("getInventorySummaries",429,"",
+                SpApiRetryPolicy.retryAfter(e.getResponseHeaders(),Instant.now()));
         } catch(ApiException e) {
-            throw new SpApiHttpException("getInventorySummaries",e.getCode(),"");
+            throw new SpApiHttpException("getInventorySummaries",e.getCode(),"",
+                SpApiRetryPolicy.retryAfter(e.getResponseHeaders(),Instant.now()));
         } catch(LWAException e) { throw new SecurityException("LWA authorization rejected"); }
         if(response==null || response.getPayload()==null
            || response.getPayload().getInventorySummaries()==null
