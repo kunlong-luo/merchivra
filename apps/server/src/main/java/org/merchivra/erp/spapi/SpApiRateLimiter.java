@@ -8,6 +8,9 @@ package org.merchivra.erp.spapi;
 public interface SpApiRateLimiter {
     void requirePermit(SpApiSellerScope seller, Class<?> apiFamily);
 
+    /** Pre-verification Seller ID is unknown; enforce a region-wide safety gate. */
+    default void requireVerificationPermit(SpApiRegion region) { }
+
     static SpApiRateLimiter disabled() {
         return (seller, family) -> { };
     }
