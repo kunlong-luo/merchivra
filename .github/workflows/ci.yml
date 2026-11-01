@@ -163,6 +163,25 @@ jobs:
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM ads_report_reviewed_cost")" = "0"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM ads_profile_reference")" = "0"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='64' AND success")" = "1"
+          curl -fsS http://127.0.0.1:8080/v3/api-docs/operations-v67 > /tmp/ops-live.json
+          node scripts/normalize-ops-openapi.mjs /tmp/ops-live.json /tmp/ops-normalized.json
+          if test -s apps/web/openapi/operations-v67.json; then
+            cmp apps/web/openapi/operations-v67.json /tmp/ops-normalized.json
+          fi
+          cp /tmp/ops-normalized.json apps/web/openapi/operations-v67.json
+          (
+            cd apps/web
+            npm run api:generate:ops
+          )
+          test -s apps/web/src/generated/operations-v67.ts
+          echo 'MERCHIVRA_OPS_V67_TRANSFER_START'
+          for file in apps/web/openapi/operations-v67.json apps/web/src/generated/operations-v67.ts $(find apps/web/src/generated/operations-models -type f -name '*.ts' | sort); do
+            printf 'MERCHIVRA_OPS_V67_FILE %s\n' "$file"
+            base64 "$file"
+            printf 'MERCHIVRA_OPS_V67_FILE_END\n'
+          done
+          echo 'MERCHIVRA_OPS_V67_TRANSFER_END'
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='65' AND success")" = "1"
           python3 scripts/smoke_fba_inbound.py
           psql -h 127.0.0.1 -U merchivra -d merchivra -v ON_ERROR_STOP=1 -f scripts/smoke_ads_schema.sql
           echo "PostgreSQL 18 / Flyway / actual finance + FBA OpenAPI and local mock chain verified"

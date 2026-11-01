@@ -15,6 +15,7 @@
     "api:generate": "orval --config orval.config.ts",
     "api:generate:fba": "orval --config orval.fba.config.ts",
     "api:generate:ads": "orval --config orval.ads.config.ts",
+    "api:generate:ops": "orval --config orval.ops.config.ts",
     "api:check": "npm run api:generate && node ../../scripts/check-orval-generated.mjs"
   },
   "dependencies": {

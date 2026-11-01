@@ -39,6 +39,8 @@ class OperationsAutomationServiceTest {
         verify(jdbc).update(contains("INVENTORY_UNKNOWN"), any(UUID.class), eq(tenant));
         verify(jdbc).update(contains("'LOW_STOCK'"), any(UUID.class), eq(tenant), eq(3));
         verify(jdbc).update(contains("'REFUND_REVIEW'"), any(UUID.class), eq(tenant));
+        verify(jdbc).update(contains("'FBA_INBOUND_REVIEW'"), any(UUID.class), eq(tenant));
+        verify(jdbc).update(contains("'ADS_REPORT_REVIEW'"), any(UUID.class), eq(tenant));
         verify(jdbc).update(contains("last_scan_id <>"), eq(tenant), any(UUID.class));
         verify(jdbc).update(contains("ops_automation_run"), any(UUID.class),
             eq(tenant), eq(actor), eq("MANUAL"), eq(0), eq(0));
@@ -95,7 +97,7 @@ class OperationsAutomationServiceTest {
         service.findings(tenant, "ACTIVE");
         service.summary(tenant);
         verify(jdbc).query(contains("WHERE tenant_id = ?"), any(RowMapper.class),
-            eq(tenant), eq("ACTIVE"));
+            eq(tenant), eq("ACTIVE"), eq("ACTIVE"));
         verify(jdbc).queryForObject(contains("ops_finding WHERE tenant_id = ?"),
             any(RowMapper.class), eq(tenant));
     }
