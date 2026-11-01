@@ -12,6 +12,11 @@
 | M3 | 财务/成本/利润 | 费用、成本与估算报表 | 可对账、可追踪 |
 | M4 | Beta | 安全、运维、发布 | P0 验收通过、运行手册完成 |
 
+## 2026-11-01 · V69 Marketplace 运营规则与站内提醒（当前）
+- 复用 V10/V67 ops_finding，Flyway V66 增加 Tenant+Marketplace+Rule 配置、审计、版本冲突保护；按站点启停六类异常，单独设置 OBSERVED 低库存阈值。
+- 实际运行的 MVC OpenAPI + Orval 8 Client、React 运营工作台配置/审计页，PG18 两站点 Mock 场景测试。无外部通知渠道，Scheduler/Seller OAuth 仍关闭。
+- 详见 [OPS-009](operations/ops-rules-v69.md)。
+
 ## 2026-11-01 · V68 预发布安全与数据恢复门禁（当前）
 - PostgreSQL 18 的 `pg_dump -Fc` / `pg_restore --single-transaction --exit-on-error` 一次性 Mock 恢复，覆盖所有 public 表行数+逻辑指纹、Flyway 历史/索引/约束；严格禁止非本机、非模拟数据使用。
 - Spring Security Test / 本机 HTTP 验证匿名拒绝、CSRF、Cookie、头部、注销失效；Operations 本机串行 p95 冒烟；Docker Compose 生产 overlay 默认安全配置静态校验。

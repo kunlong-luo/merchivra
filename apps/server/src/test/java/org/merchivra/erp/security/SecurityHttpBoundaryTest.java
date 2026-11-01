@@ -52,6 +52,8 @@ class SecurityHttpBoundaryTest {
         for (String path : new String[] {
             "/api/v1/operations/findings",
             "/api/v1/operations/summary",
+            "/api/v1/operations/marketplaces/11111111-1111-4111-8111-111111111111/rules",
+            "/api/v1/operations/marketplaces/11111111-1111-4111-8111-111111111111/rules/audit",
             "/api/v1/operations/findings/11111111-1111-4111-8111-111111111111/attention-audit",
             "/api/v1/ads/marketplaces/11111111-1111-4111-8111-111111111111/reports",
             "/api/v1/fba/marketplaces/11111111-1111-4111-8111-111111111111/shipments",
@@ -73,6 +75,7 @@ class SecurityHttpBoundaryTest {
     void newModuleMutationsRequireCsrfEvenForAuthenticatedOwner() throws Exception {
         for(String path : new String[]{
             "/api/v1/operations/scan",
+            "/api/v1/operations/marketplaces/11111111-1111-4111-8111-111111111111/rules/LOW_STOCK",
             "/api/v1/operations/findings/11111111-1111-4111-8111-111111111111/claim",
             "/api/v1/operations/findings/11111111-1111-4111-8111-111111111111/snooze",
             "/api/v1/ads/marketplaces/11111111-1111-4111-8111-111111111111/profiles",

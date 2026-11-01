@@ -69,6 +69,17 @@ const server = createServer(async (req, res) => {
       windowAfter:null,windowBefore:null,lastSafeWatermark:null,
       nextAttemptAt:null,lastFailureCode:null
     })
+  if (url.pathname === '/api/v1/operations/marketplaces/' + market + '/rules')
+    return respond(res, [
+      {ruleCode:'UNMAPPED_LISTING',enabled:true,lowStockThreshold:null,version:0,updatedAt:null},
+      {ruleCode:'INVENTORY_UNKNOWN',enabled:true,lowStockThreshold:null,version:0,updatedAt:null},
+      {ruleCode:'LOW_STOCK',enabled:true,lowStockThreshold:3,version:0,updatedAt:null},
+      {ruleCode:'REFUND_REVIEW',enabled:true,lowStockThreshold:null,version:0,updatedAt:null},
+      {ruleCode:'FBA_INBOUND_REVIEW',enabled:true,lowStockThreshold:null,version:0,updatedAt:null},
+      {ruleCode:'ADS_REPORT_REVIEW',enabled:true,lowStockThreshold:null,version:0,updatedAt:null}
+    ])
+  if (url.pathname === '/api/v1/operations/marketplaces/' + market + '/rules/audit')
+    return respond(res, [])
   if (url.pathname === '/api/v1/operations/summary')
     return respond(res, { open:1, acknowledged:0, done:0, cleared:0, snoozed:0 })
   if (url.pathname === '/api/v1/operations/findings')
@@ -274,6 +285,9 @@ async function main() {
       assert.equal(await evaluate(send,
         "document.querySelector('.ops-workspace tbody tr')?.textContent?.includes('FBA 库存数据不完整')"),
         true, 'operations rule label')
+      await waitFor(send,
+        "document.querySelector('[aria-label=\"站点异常规则表\"] tbody tr')?.textContent?.includes('低库存')",
+        'V69 Marketplace rule settings')
       await layout(send,width,'operations-360')
       await screenshot(send,'operations-360.png')
       // V15 Owner-only management surface must render independent reviewers,

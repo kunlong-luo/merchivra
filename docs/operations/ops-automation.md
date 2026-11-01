@@ -79,3 +79,8 @@ triage queue**, not a complete peer ERP replacement.
 These completed checks are all on *local/disposable mock data*, not Amazon live or
 financial postings. Optional scheduled executions have not been validated under
 multi-node production load; default remains off.
+
+
+## V69 已实施（2026-11-01）
+
+六类异常按 Marketplace 的规则开关及 LOW_STOCK 阈值、版本冲突/审计，复用现有扫描和待办队列。见 [OPS-009](ops-rules-v69.md)。无站外消息发送或远端 Amazon 写调用。
