@@ -29,6 +29,13 @@ class FbaInboundServiceTest {
             new FbaInboundService.LineInput("SKU-1",1),
             new FbaInboundService.LineInput("SKU-2",1000000)));
     }
+    @Test void reconciledShortfallsAreNotStillInTransit(){
+        assertNull(FbaInboundService.estimatedInTransit("DRAFT",10,0));
+        assertEquals(8,FbaInboundService.estimatedInTransit("IN_TRANSIT",10,2));
+        assertEquals(0,FbaInboundService.estimatedInTransit("RECEIVING",10,12));
+        assertNull(FbaInboundService.estimatedInTransit("REVIEWING",10,2));
+        assertNull(FbaInboundService.estimatedInTransit("RECONCILED",10,2));
+    }
     @Test void apiDerivesTenantAndActorFromOwnerSession(){
         TenantAccessService access=mock(TenantAccessService.class);
         FbaInboundService service=mock(FbaInboundService.class);
