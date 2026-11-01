@@ -565,3 +565,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 原始 Settlement 报告数据只能在独立 tenant+marketplace 的 staging 表幂等保存白名单非 PII 列；报告金额不等于 Finances 入账，也不等于银行已结算。禁止直接写 finance_source_event、利润结果或自动将同笔 Reports + Finances 金额相加。
 - UTF-8/TSV/GZIP 解析要对未知列、列重复、混币、超大和错误金额 fail closed；报告 ID + 文档 SHA256 不能被静默覆盖。HTTP 只能提供当前 Session Owner 的只读摘要/明细。
 - 仍需开发：报告发现任务持久队列/租约和批量分页、脱敏异常审计、真实 Seller 最终本地联调、来源匹配复核和生产部署安全。Gradle / Java25 / Spring Boot4.1.2 / PostgreSQL18 / React19 不变。
+
+## 2026-11-01 · V58B 结算报告持久队列和来源对账
+
+- 阅读 docs/finance/settlement-report-ingestion-v58.md 的 V58B 段落。严格区分: Amazon Reports 独立 staging / LIVE Finances 交易 / 真实结算 / 银行到账。
+- 报告发现只由 Owner 显式启动，服务器持久 page token + rowOffset 及租约 fencing；下载必须重新获取短效签名 URL，超时/过期后从固定窗口幂等重扫。严禁在失去 lease 后将来源行提交。
+- Reports 真实网络默认关闭，调度默认关闭，生产只用读操作及 Redis 8 fail-closed 操作级配额。不得由 UI 接收任意 Seller/租户 ID、URL、报表内容或授权 Token。
+- 报告与 Finances 只读对账按当前 tenant、Marketplace、SETTLEMENT_ID、币种精确匹配；不得自动视为会计入账、退款或银行支付。源合计一致仍必须标识未验真。
+- V57 的任务监控须包含 V55 REPORTS 任务，同时维持四条分支 tenant_id 条件和非敏感字段清单。

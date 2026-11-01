@@ -37,3 +37,15 @@
 - https://developer-docs.amazon.com/sp-api/docs/retrieve-a-report
 - https://developer-docs.amazon.com/sp-api/reference/getreports
 - https://github.com/amzn/selling-partner-api-models/discussions/3626
+
+## V58B · 持久化发现调度与来源差异（2026-11-01）
+
+- Flyway V55：spapi_settlement_scan_job，每个租户/Marketplace 一条显式 Owner 发起的报告扫描任务，包含固定 14 天来源窗口、48h 延迟、nextToken、页内 rowOffset、页数、代次、lease_epoch/owner/TTL、retry_at、8 次上限、脱敏错误码和来源已导入计数。
+- 即使同一 Amazon 分页含 >2 份新文档，Worker 每次最多处理 2 份，将页内位置持久保存，之后从同一 Token/偏移继续；进程崩溃时用报告 ID/documentID + 原件摘要幂等重放。不将预签名 URL 保存到 PostgreSQL，重试重新获取 document 元数据/新 URL。
+- Token 超过保守 15 分钟有效期或上游明确报无效时重置分页 Token/页内偏移并重扫固定窗口，旧 Worker 若 lease 过期/epoch 变化，则无法在当前 PostgreSQL 事务提交新来源记录。
+- 仅当 `MERCHIVRA_SPAPI_REPORTS_ENABLED=true` 且 verified LIVE、Finance 角色审核、Redis quota、production endpoint、Demo 和写操作关闭时注册 Worker/Owner API。可选 `MERCHIVRA_SPAPI_REPORTS_SCHEDULER_ENABLED=true` 的周期调度只继续 **Owner 显式创建**的任务，不自动发现/添加新 Seller，也不调用 `createReport`。
+- 同源 Owner+CSRF 接口：`GET /api/v1/settlement-report-scan/{marketplaceId}`、`POST .../start`、`POST .../step`。浏览器只传 Marketplace UUID，无租户 ID、凭证、报告 URL、时间窗或分页 Token。
+- 只读 `GET /api/v1/finance/marketplaces/{marketplaceId}/reports/{reportId}/finance-comparison`：必须通过 tenant、marketplace、原始 `SETTLEMENT_ID` 精确匹配已获 Finance 权限的 LIVE Finances 来源交易，原币单独比较；报告声明净额和报告行净额另行比对。缺来源、跨币种或差额均返回不同状态，**即使金额一致，也仅标记 SOURCE_AMOUNTS_AGREE_UNVERIFIED，reconciled=false、bankVerified=false**。绝不自动写财务账或创建银行回执。
+- V57 运营监控现显示 `REPORTS` 类型任务与积压/过期租约，只使用当前 Owner Session 所属租户聚合。
+- 关键验证：Java25 Gradle、PG18 Flyway V55、React19 Vitest，租户隔离、重试筛选、来源金额状态；浏览器不接触敏感 Token/URL。仅在核心功能完善后由 Owner 本地实测 Amazon。
+- 尚缺：真实 Amazon Report 文件变体/超大文件方案、分页 token 可靠性和完整压力测试、可信银行入账来源、人工正式确认/审计对账状态与运营级通知。不可宣称真实结算闭环已通过。
