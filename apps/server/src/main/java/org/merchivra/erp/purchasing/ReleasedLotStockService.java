@@ -169,6 +169,7 @@ public class ReleasedLotStockService {
         Long allocated=jdbc.queryForObject("""
             SELECT COALESCE(SUM(placed_quantity),0)::bigint
             FROM erp_local_lot_position WHERE tenant_id=? AND receipt_id=?
+              AND origin_position_id IS NULL
             """,Long.class,tenant,req.receiptId());
         if((allocated==null?0:allocated)+req.quantity()>src.accepted())
             throw conflict("Putaway quantity exceeds this independently released QC batch");
