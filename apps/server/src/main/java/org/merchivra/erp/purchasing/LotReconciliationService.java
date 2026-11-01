@@ -395,6 +395,13 @@ public class LotReconciliationService {
             return prior;
         }
         Quarantine source=quarantine(tenant,req.quarantineActionId());
+        Long debited=jdbc.queryForObject("""
+            SELECT COUNT(*)::bigint FROM erp_local_stock_movement
+            WHERE tenant_id=? AND lot_action_id=?
+              AND movement_type='LOT_QUARANTINE' AND quantity=?
+            """,Long.class,tenant,source.id(),-source.quantity());
+        if(debited==null || debited!=1L)
+            throw conflict("Disposition requires one evidenced, previously debited quarantine");
         // One disposition plan per already debited quarantine event.
         List<UUID> claimed=jdbc.queryForList("""
             SELECT id FROM erp_local_lot_disposition
