@@ -123,7 +123,8 @@ class PurchaseQualityServiceTest {
         verify(jdbc).update(contains("UPDATE erp_receipt_quality_batch"),
             any(UUID.class),eq(tenant),eq(receiptId));
         verify(jdbc).update(contains("INSERT INTO erp_receipt_quality_batch_event"),
-            any(UUID.class),eq(tenant),eq(receiptId),eq(actor),eq(7));
+            any(UUID.class),eq(tenant),eq(receiptId),eq(actor),eq(7),
+            eq("Inspected only; accepted units await second Owner"));
         verify(jdbc,never()).queryForObject(contains("erp_local_stock_movement"),
             eq(Long.class),any(Object[].class));
         verify(jdbc,never()).update(contains("INSERT INTO erp_local_stock_movement"),
