@@ -71,6 +71,11 @@ public class WarehouseInventoryService {
             """,id,tenant,code,name,actor);
         if(count!=1)throw new ResponseStatusException(HttpStatus.CONFLICT,
             "Warehouse code already exists");
+        jdbc.update("""
+            INSERT INTO erp_local_stock_bin
+              (id,tenant_id,warehouse_id,bin_code,purpose,created_by)
+            VALUES (?,?,?,'QC-HOLD','QC_HOLD',?)
+            """,UUID.randomUUID(),tenant,id,actor);
         return jdbc.query("""
             SELECT id,warehouse_code,display_name,status
             FROM erp_local_warehouse WHERE tenant_id=? AND id=?
@@ -105,6 +110,28 @@ public class WarehouseInventoryService {
               (id,tenant_id,receipt_id,actor_user_id,event_type,new_lot_code,quantity,note)
             VALUES (?,?,?,?,'RECEIVED_TO_HOLD',?,?,'Physical receipt pending inspection')
             """,UUID.randomUUID(),tenant,purchaseReceiptId,actor,lotCode,quantity);
+        List<UUID> hold=jdbc.queryForList("""
+            SELECT id FROM erp_local_stock_bin
+            WHERE tenant_id=? AND warehouse_id=? AND bin_code='QC-HOLD'
+              AND purpose='QC_HOLD' AND status='ACTIVE'
+            """,UUID.class,tenant,warehouseId);
+        if(hold.size()!=1)throw new ResponseStatusException(HttpStatus.CONFLICT,
+            "Warehouse is missing its receiving QC-hold location");
+        UUID pieceId=UUID.randomUUID();
+        jdbc.update("""
+            INSERT INTO erp_receipt_lot_piece
+              (id,tenant_id,receipt_id,warehouse_id,product_sku_id,
+               bin_id,piece_code,quantity,created_by)
+            VALUES (?,?,?,?,? ,?,'ROOT',?,?)
+            """,pieceId,tenant,purchaseReceiptId,warehouseId,productSkuId,
+            hold.getFirst(),quantity,actor);
+        jdbc.update("""
+            INSERT INTO erp_receipt_lot_piece_event
+              (id,tenant_id,receipt_id,piece_id,actor_user_id,
+               event_type,quantity,new_bin_id,note)
+            VALUES (?,?,?,?,?,'RECEIVED',?,?,'Received to virtual QC-hold location')
+            """,UUID.randomUUID(),tenant,purchaseReceiptId,pieceId,actor,quantity,
+            hold.getFirst());
     }
     private void requireReadable(UUID tenant,UUID warehouseId) {
         if(warehouseId==null)throw bad("Warehouse ID is required");
