@@ -1,0 +1,88 @@
+name: Redis 8 / Spring Session integration smoke
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/redis-session-smoke.yml
+      - apps/server/build.gradle
+      - apps/server/src/main/resources/application.yml
+      - 'apps/server/src/main/java/org/merchivra/erp/security/RedisSessionConfiguration.java'
+      - 'apps/server/src/main/java/org/merchivra/erp/spapi/RedisSpApiRateLimiter.java'
+      - 'apps/server/src/main/java/org/merchivra/erp/spapi/SpApiOfficialSdkFactory.java'
+      - deploy/compose.yaml
+      - scripts/smoke_redis_session.py
+
+permissions:
+  contents: read
+
+concurrency:
+  group: merchivra-redis-integration-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  redis-session:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v5
+      - name: Configure disposable bootstrap + Redis session; no Amazon egress
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import secrets
+          Path(".env").write_text(
+              "MERCHIVRA_DB_PASSWORD=" + secrets.token_urlsafe(24) + "\n"
+              + "MERCHIVRA_BOOTSTRAP_USERNAME=redis-smoke-owner\n"
+              + "MERCHIVRA_BOOTSTRAP_PASSWORD=" + secrets.token_urlsafe(32) + "\n"
+              + "MERCHIVRA_REDIS_SESSIONS_ENABLED=true\n"
+              + "MERCHIVRA_SPAPI_ENABLED=false\n"
+              + "MERCHIVRA_SPAPI_RATE_LIMIT_ENABLED=false\n"
+          )
+          PY
+      - name: Start isolated Redis 8, PG18, Spring Boot and Nginx
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache up -d --build postgres redis server web
+          ready=0
+          for i in $(seq 1 120); do
+            if curl -fsS http://127.0.0.1:3000/api/v1/ping >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ready" = 1
+      - name: Authenticate with real Redis session and CSRF
+        shell: bash
+        run: |
+          set -a
+          source .env
+          set +a
+          python3 scripts/smoke_redis_session.py --stage login
+          docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache exec -T redis \
+            redis-cli --scan --pattern 'merchivra:session:v1:*' | grep -q .
+      - name: Restart Java and prove same cookie remains valid
+        shell: bash
+        run: |
+          docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache restart server
+          for i in $(seq 1 80); do
+            if curl -fsS http://127.0.0.1:3000/api/v1/ping >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+          python3 scripts/smoke_redis_session.py --stage persisted
+      - name: Redis unavailable must deny access to existing session
+        shell: bash
+        run: |
+          docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache stop redis
+          python3 scripts/smoke_redis_session.py --stage outage
+      - name: Diagnostics
+        if: failure()
+        run: docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache logs --no-color --tail=120 server redis
+      - name: Always remove disposable project volumes and cookies
+        if: always()
+        run: |
+          docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache down -v --remove-orphans
+          rm -f /tmp/merchivra-ci-redis-cookies.txt
