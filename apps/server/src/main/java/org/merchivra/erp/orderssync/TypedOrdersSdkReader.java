@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import org.merchivra.erp.spapi.SpApiHttpException;
+import org.merchivra.erp.spapi.SpApiOperation;
+import org.merchivra.erp.spapi.SpApiRetryPolicy;
 import org.merchivra.erp.spapi.SpApiOfficialModules;
 import org.merchivra.erp.spapi.SpApiOfficialSdkFactory;
 import org.merchivra.erp.spapi.SpApiPayloadDecoder;
@@ -36,10 +38,11 @@ public final class TypedOrdersSdkReader {
         Objects.requireNonNull(factory);
         SpApiOfficialModules modules=new SpApiOfficialModules(factory);
         this.caller=(seller,after,before,cursor) ->
-            modules.searchOrders(seller).searchOrders(
-                null, null, after, before, null,
-                List.of(seller.marketplaceId()), null, 100,
-                cursor, List.of("PROCEEDS"));
+            factory.executeObservedRead(seller, SpApiOperation.SEARCH_ORDERS,
+                () -> modules.searchOrders(seller).searchOrdersWithHttpInfo(
+                    null, null, after, before, null,
+                    List.of(seller.marketplaceId()), null, 100,
+                    cursor, List.of("PROCEEDS")));
     }
 
     TypedOrdersSdkReader(ReadCall caller) { this.caller=Objects.requireNonNull(caller); }
@@ -78,9 +81,11 @@ public final class TypedOrdersSdkReader {
                 OffsetDateTime.ofInstant(updatedAfter,ZoneOffset.UTC),
                 OffsetDateTime.ofInstant(updatedBefore,ZoneOffset.UTC),cursor);
         } catch(ApiException.RateLimitExceeded rate) {
-            throw new SpApiHttpException("searchOrders",429,"");
+            throw new SpApiHttpException("searchOrders",429,"",
+                SpApiRetryPolicy.retryAfter(rate.getResponseHeaders(),Instant.now()));
         } catch(ApiException remote) {
-            throw new SpApiHttpException("searchOrders",remote.getCode(),"");
+            throw new SpApiHttpException("searchOrders",remote.getCode(),"",
+                SpApiRetryPolicy.retryAfter(remote.getResponseHeaders(),Instant.now()));
         } catch(LWAException denied) {
             throw new SecurityException("LWA authorization rejected");
         }
