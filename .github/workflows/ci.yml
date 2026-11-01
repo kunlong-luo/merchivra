@@ -26,10 +26,14 @@ jobs:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.2.1'
-      - name: Gradle test and JaCoCo report
-        run: gradle -p apps/server --no-daemon --console plain test jacocoTestReport
+      - name: Verify Maven is retired and official Gradle Wrapper is pinned
+        run: |
+          test ! -e apps/server/pom.xml
+          test -x apps/server/gradlew
+          printf '%s  %s\n' 423cb469ccc0ecc31f0e4e1c309976198ccb734cdcbb7029d4bda0f18f57e8d9 apps/server/gradle/wrapper/gradle-wrapper.jar | sha256sum -c -
+          grep -F 'distributionSha256Sum=72f44c9f8ebcb1af43838f45ee5c4aa9c5444898b3468ab3f4af7b6076c5bc3f' apps/server/gradle/wrapper/gradle-wrapper.properties
+      - name: Gradle Wrapper test and JaCoCo report
+        run: ./apps/server/gradlew -p apps/server --no-daemon --console plain test jacocoTestReport
 
   frontend:
     name: React 19 / TypeScript / Vitest / Vite
@@ -91,13 +95,11 @@ jobs:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '9.2.1'
       - name: Start actual Spring Boot against isolated PostgreSQL 18
         shell: bash
         run: |
           set -euo pipefail
-          gradle -p apps/server --no-daemon --console plain bootRun \
+          ./apps/server/gradlew -p apps/server --no-daemon --console plain bootRun \
             > /tmp/merchivra-flyway.log 2>&1 &
           app_pid=$!
           ready=0
