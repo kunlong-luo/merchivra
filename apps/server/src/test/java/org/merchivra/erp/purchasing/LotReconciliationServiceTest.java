@@ -111,6 +111,17 @@ class LotReconciliationServiceTest {
             eq("Physical cartons were recounted"),eq(observer));
         verifyNoInteractions(stock);
     }
+    @Test void aSecondCountReviewKeyCannotDuplicateOnePhysicalObservation() {
+        active();
+        when(jdbc.queryForList(contains("AND observation_action_id=?"),
+            eq(UUID.class),eq(tenant),eq(observation))).thenReturn(List.of(caseId));
+        assertEquals(HttpStatus.CONFLICT,assertThrows(ResponseStatusException.class,
+            ()->service.submitCount(tenant,observer,
+                new LotReconciliationService.CountRequest(key,observation,
+                    "Physical cartons were recounted"))).getStatusCode());
+        verify(jdbc,never()).update(anyString(),any(Object[].class));
+        verifyNoInteractions(stock);
+    }
     @Test void sourceObserverCannotApproveOwnStockAdjustment() throws Exception {
         active();observation(7);countStored(count(7,"PENDING_REVIEW",null,null));
         assertEquals(HttpStatus.CONFLICT,assertThrows(ResponseStatusException.class,
