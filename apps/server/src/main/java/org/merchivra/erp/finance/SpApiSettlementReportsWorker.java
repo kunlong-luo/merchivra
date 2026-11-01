@@ -32,7 +32,7 @@ public class SpApiSettlementReportsWorker {
         this.sdk=sdk;this.vault=vault;this.downloader=downloader;this.importer=importer;
     }
 
-    public record Outcome(int inspected,int processed,
+    public record Outcome(int inspected,int imported,int alreadyKnown,
         int skipped,boolean hasMoreReports) {}
 
     /**
@@ -48,8 +48,8 @@ public class SpApiSettlementReportsWorker {
             || Duration.between(from,until).compareTo(Duration.ofDays(14))>0
             || until.isAfter(OffsetDateTime.now().plusMinutes(1)))
             throw new IllegalArgumentException("Bounded trusted Reports scan scope required");
-        SpApiSellerScope scope=approved(tenant,account,marketplace);
-        int inspected=0,processed=0,skipped=0;
+        approved(tenant,account,marketplace);
+        int inspected=0,imported=0,known=0,skipped=0;
         String next=null;
         boolean hasMore=false;
         for(int page=0;page<4;page++) {
@@ -65,7 +65,7 @@ public class SpApiSettlementReportsWorker {
                 throw new IllegalStateException("Amazon Reports list has no response");
             for(var report:result.getReports()) {
                 inspected++;
-                if(processed>=2){hasMore=true;break;}
+                if(imported>=2){hasMore=true;break;}
                 if(report==null
                     || !SettlementReportImportService.TYPE.equals(report.getReportType())
                     || report.getProcessingStatus()==null
@@ -76,9 +76,14 @@ public class SpApiSettlementReportsWorker {
                     || report.getReportId()==null || report.getReportDocumentId()==null) {
                     skipped++;continue;
                 }
-                // Retain this second role read before egress. The importer
-                // verifies the active grant again under its DB transaction.
+                // Advisory skip prevents old reports consuming the download
+                // quota. Import still atomically checks hash/ID under a DB lock.
                 SpApiSellerScope current=approved(tenant,account,marketplace);
+                if(importer.alreadyImported(current,report.getReportId(),
+                    report.getReportDocumentId())) {
+                    known++;
+                    continue;
+                }
                 var document=sdk.executeObservedRead(current,
                     SpApiOperation.GET_REPORT_DOCUMENT,ReportsApi.class,
                     api->api.getReportDocumentWithHttpInfo(
@@ -99,7 +104,7 @@ public class SpApiSettlementReportsWorker {
                 approved(tenant,account,marketplace);
                 importer.importDocument(current,report.getReportId(),
                     report.getReportDocumentId(),bytes,gzip);
-                processed++;
+                imported++;
             }
             next=result.getNextToken();
             if(hasMore || next==null || next.isBlank()) {
@@ -108,7 +113,7 @@ public class SpApiSettlementReportsWorker {
             }
             if(page==3)hasMore=true;
         }
-        return new Outcome(inspected,processed,skipped,hasMore);
+        return new Outcome(inspected,imported,known,skipped,hasMore);
     }
 
     private SpApiSellerScope approved(UUID tenant,UUID account,String marketplace) {
