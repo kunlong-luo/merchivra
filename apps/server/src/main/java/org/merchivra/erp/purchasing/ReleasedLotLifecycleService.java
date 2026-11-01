@@ -296,7 +296,7 @@ public class ReleasedLotLifecycleService {
                     """,quantity,tenant,sourceId,src.remaining());
                 if(n!=1)throw conflict("Source lot changed before transfer");
                 var posted=stock.post(tenant,actor,
-                    new WarehouseStockOperationService.Request(req.requestKey(),
+                    new WarehouseStockOperationService.Request(UUID.randomUUID(),
                         "TRANSFER",src.warehouse(),destinationWarehouse,src.sku(),
                         quantity,req.expectedOnHand(),explanation));
                 operation=UUID.fromString(posted.id());
