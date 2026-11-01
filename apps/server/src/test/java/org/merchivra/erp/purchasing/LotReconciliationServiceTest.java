@@ -203,6 +203,29 @@ class LotReconciliationServiceTest {
             eq("Six physical cartons received"),eq(reviewer));
         verifyNoInteractions(stock);
     }
+    @Test void dispositionMustProveTheOriginalQuarantineAlreadyDebitedStock()
+        throws Exception {
+        active();
+        when(jdbc.query(contains("FROM erp_local_lot_action"),
+            any(RowMapper.class),eq(tenant),eq(quarantine))).thenAnswer(inv->{
+                RowMapper<?> mapper=inv.getArgument(1);
+                ResultSet rs=mock(ResultSet.class);
+                when(rs.getObject("id",UUID.class)).thenReturn(quarantine);
+                when(rs.getObject("source_warehouse_id",UUID.class)).thenReturn(wh);
+                when(rs.getInt("quantity")).thenReturn(3);
+                when(rs.getObject("actor_user_id",UUID.class)).thenReturn(observer);
+                return List.of(mapper.mapRow(rs,0));
+            });
+        when(jdbc.queryForObject(contains("SELECT COUNT(*)::bigint FROM erp_local_stock_movement"),
+            eq(Long.class),eq(tenant),eq(quarantine),eq(-3))).thenReturn(0L);
+        assertEquals(HttpStatus.CONFLICT,assertThrows(ResponseStatusException.class,
+            ()->service.proposeDisposition(tenant,observer,
+                new LotReconciliationService.DispositionRequest(key,quarantine,
+                    "DISPOSAL","Expired goods await documented disposal")))
+            .getStatusCode());
+        verify(jdbc,never()).update(anyString(),any(Object[].class));
+        verifyNoInteractions(stock);
+    }
     @Test void approvedQuarantineDispositionReportsCompletionWithoutSecondDebit() {
         active();
         var pending=new LotReconciliationService.Disposition(
