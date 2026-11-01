@@ -190,6 +190,12 @@ public class RedisSpApiRateLimiter implements SpApiRateLimiter {
             + operation.name() + ":" + sha256(approvedRefreshToken);
     }
 
+    private Duration remaining(String key, Duration fallback) {
+        Long millis=redis.getExpire(key, TimeUnit.MILLISECONDS);
+        if (millis == null || millis < 1) return fallback;
+        return Duration.ofMillis(Math.min(3_600_000, millis));
+    }
+
     private void reserve(String key) {
         reserve(key, cooldown);
     }
