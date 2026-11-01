@@ -159,8 +159,10 @@ public class SettlementReportScanService {
             if(j.retry()!=null&&j.retry().isAfter(now))
                 throw new ResponseStatusException(HttpStatus.CONFLICT,"Report retry not due");
             // Conservative cursor lifetime with overlapping-window replay.
-            if(j.token()!=null&&(j.tokenAt()==null
-                ||j.tokenAt().plus(Duration.ofMinutes(15)).isBefore(now))) {
+            if((j.token()!=null&&(j.tokenAt()==null
+                ||j.tokenAt().plus(Duration.ofMinutes(15)).isBefore(now)))
+                || (j.token()==null && j.offset()>0 && j.updated()!=null
+                    && j.updated().plus(Duration.ofMinutes(15)).isBefore(now))) {
                 jdbc.update("""
                     UPDATE spapi_settlement_scan_job
                     SET next_token=NULL,token_issued_at=NULL,row_offset=0,
@@ -275,7 +277,9 @@ public class SettlementReportScanService {
         tx.executeWithoutResult(t->{
             Job current=job(c.tenant(),c.marketplace(),true);
             if(current==null||current.epoch()!=c.epoch()
-                ||!c.owner().equals(current.owner()))return;
+                ||!c.owner().equals(current.owner())
+                ||current.lease()==null
+                ||!current.lease().isAfter(clock.instant()))return;
             boolean again=transientFailure&&current.attempts()<8;
             Duration minimum=failure instanceof SpApiAdmissionException adm
                 ?adm.retryAfter():Duration.ofMinutes(1);
