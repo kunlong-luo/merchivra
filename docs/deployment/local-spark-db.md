@@ -126,7 +126,7 @@ docker exec spark-postgres psql -U root -d merchivra -Atc \
 
 ### B4. 使用独立前后端进程进行开发（共享同一数据库）
 
-需要 Java **25**、Maven **3.9+**、Node.js **24.11+**、npm（以及正在运行的 spark-db PostgreSQL 18）：
+需要 Java **25**、Gradle Wrapper **9.2.1**、Node.js **24.11+**、npm（以及正在运行的 spark-db PostgreSQL 18）：
 
 在终端 A 配置后端环境（变量仅供示例，密码请在本地安全注入）：
 
@@ -138,7 +138,7 @@ export DB_PASSWORD='your-dedicated-database-password'
 export MERCHIVRA_BOOTSTRAP_USERNAME=your_admin
 export MERCHIVRA_BOOTSTRAP_PASSWORD='your-unique-16-plus-character-password'
 export MERCHIVRA_DEMO_ENABLED=false
-mvn -f apps/server/pom.xml spring-boot:run
+(cd apps/server && ./gradlew bootRun)
 ```
 
 终端 B：
@@ -230,7 +230,7 @@ DROP ROLE merchivra;
 curl -f http://127.0.0.1:8080/api/v1/ping
 curl -f http://127.0.0.1:8080/actuator/health
 # 业务操作需要先在 http://127.0.0.1:3000 登录
-mvn -f apps/server/pom.xml test
+(cd apps/server && ./gradlew test)
 cd apps/web && npm ci && npm run typecheck && npm run test && npm run build
 ```
 
