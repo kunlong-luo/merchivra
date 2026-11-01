@@ -78,7 +78,9 @@ public enum SpApiOperation {
     public String path() { return path; }
     public Set<String> queryParameters() { return params; }
     public boolean mutatesRemoteState() { return !"GET".equals(method); }
-    public boolean requiresFinanceRole() { return this == LIST_TRANSACTIONS; }
+    public boolean requiresFinanceRole() {
+        return this == LIST_TRANSACTIONS || this == GET_REPORTS || this == GET_REPORT_DOCUMENT;
+    }
     /** Explicitly narrower than Amazon's complete approved-role list. */
     public boolean requiresOrdersReadRole() { return this == SEARCH_ORDERS || this == GET_ORDER; }
 
