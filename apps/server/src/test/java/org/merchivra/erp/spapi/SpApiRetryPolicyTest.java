@@ -15,7 +15,7 @@ class SpApiRetryPolicyTest {
             SpApiRetryPolicy.retryAfter("Sun, 01 Nov 2026 00:01:00 GMT", NOW));
         assertEquals(Duration.ZERO, SpApiRetryPolicy.retryAfter("-9", NOW));
         assertEquals(Duration.ZERO, SpApiRetryPolicy.retryAfter("not-a-date", NOW));
-        assertEquals(Duration.ZERO, SpApiRetryPolicy.retryAfter(null, NOW));
+        assertEquals(Duration.ZERO, SpApiRetryPolicy.retryAfter((String) null, NOW));
         assertEquals(Duration.ofHours(1), SpApiRetryPolicy.retryAfter("999999", NOW));
     }
 
