@@ -5,6 +5,7 @@ import SandboxReplay from './SandboxReplay'
 import OrdersSyncPanel from './OrdersSyncPanel'
 import SkuCatalogManager from './SkuCatalogManager'
 import ReplenishmentWorkspace from './ReplenishmentWorkspace'
+import FbaInboundPanel from './FbaInboundPanel'
 import CatalogSyncPanel from './CatalogSyncPanel'
 import {coreStatusLabel,filterLoadedRows,formatSourceTime,sourceLabel} from './lib/core-view'
 import {fetchCoreMarketplaces,fetchCoreListings,fetchCoreOrders,fetchCoreOrderItems,fetchCoreInventory} from './lib/core'
@@ -88,6 +89,8 @@ export default function CoreWorkspace({tenantId,isOwner=true}:{tenantId:string;i
  {isOwner&&active?.connectionStatus==='CONNECTED'&&section==='inventory'&&
    <CatalogSyncPanel key={'fba-'+active.id} tenantId={tenantId}
     marketplaceId={active.id} stream="FBA"/>}
+ {isOwner&&section==='inventory'&&<FbaInboundPanel key={'fba-inbound-'+marketplaceId}
+    tenantId={tenantId} marketplaceId={marketplaceId}/>}
  {isOwner&&section==='inventory'&&<ReplenishmentWorkspace tenantId={tenantId}
     marketplaceId={marketplaceId}/>}
  {isOwner&&section==='listings'&&<SkuCatalogManager tenantId={tenantId}

@@ -88,8 +88,10 @@ jobs:
       PGPASSWORD: ci_disposable_database_password
       MERCHIVRA_SPAPI_ENABLED: 'false'
       MERCHIVRA_SPAPI_OAUTH_ENABLED: 'false'
-      MERCHIVRA_DEMO_ENABLED: 'false'
-      MERCHIVRA_TEAM_ENABLED: 'false'
+      MERCHIVRA_DEMO_ENABLED: 'true'
+      MERCHIVRA_TEAM_ENABLED: 'true'
+      MERCHIVRA_BOOTSTRAP_USERNAME: 'v65-ci-owner'
+      MERCHIVRA_BOOTSTRAP_PASSWORD: 'ci-disposable-v65-only-secret-0000'
       MERCHIVRA_CONTRACT_EXPORT_ENABLED: 'true'
     steps:
       - uses: actions/checkout@v5
@@ -138,8 +140,30 @@ jobs:
           curl -fsS http://127.0.0.1:8080/v3/api-docs/finance-profits > /tmp/merchivra-live-finance-openapi.json
           node scripts/normalize-finance-openapi.mjs /tmp/merchivra-live-finance-openapi.json /tmp/merchivra-normalized-finance-openapi.json
           cmp apps/web/openapi/finance-profits.json /tmp/merchivra-normalized-finance-openapi.json
-          echo "PostgreSQL 18 / Flyway / actual finance OpenAPI snapshot verified against a real server"
+          curl -fsS http://127.0.0.1:8080/v3/api-docs/fba-inbound > /tmp/merchivra-live-fba-openapi.json
+          node scripts/normalize-fba-openapi.mjs /tmp/merchivra-live-fba-openapi.json /tmp/merchivra-normalized-fba-openapi.json
+          cmp apps/web/openapi/fba-inbound.json /tmp/merchivra-normalized-fba-openapi.json
+          cp /tmp/merchivra-normalized-fba-openapi.json apps/web/openapi/fba-inbound.json
+          (
+            cd apps/web
+            npm ci --no-audit --no-fund
+            npm run api:generate:fba
+          )
+          test -s apps/web/src/generated/fba-inbound.ts
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='63' AND success")" = "1"
+          python3 scripts/smoke_fba_inbound.py
+          echo "PostgreSQL 18 / Flyway / actual finance + FBA OpenAPI and local mock chain verified"
           kill "$app_pid" 2>/dev/null || true
+      - name: Preserve verified V65 OpenAPI contract for Orval review
+        uses: actions/upload-artifact@v4
+        with:
+          name: v65-fba-live-openapi
+          path: |
+            apps/web/openapi/fba-inbound.json
+            apps/web/src/generated/fba-inbound.ts
+            apps/web/src/generated/fba-models/
+          if-no-files-found: error
+          retention-days: 7
 
   compose-deployment-config:
     name: Docker Compose / three-service and spark-db modes

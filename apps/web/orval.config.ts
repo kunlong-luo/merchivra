@@ -14,5 +14,18 @@ export default defineConfig({
         // Defaults: GET => useQuery; POST => useMutation (no unsafe GET mutations)
       }
     }
+  },
+  fbaInbound:{
+    input:{target:'./openapi/fba-inbound.json'},
+    output:{
+      target:'./src/generated/fba-inbound.ts',
+      schemas:'./src/generated/fba-models',
+      client:'react-query',
+      httpClient:'fetch',
+      mode:'single',
+      override:{
+        mutator:{path:'./src/lib/merchivra-mutator.ts',name:'merchivraFetch'}
+      }
+    }
   }
 })
