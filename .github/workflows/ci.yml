@@ -214,4 +214,6 @@ jobs:
           docker compose --env-file .env.example -f deploy/compose.spark-db.yaml config | grep -F 'spark-iot-net'
           docker compose --env-file .env.example -f deploy/compose.spark-db.yaml config | grep -F 'spark-postgres'
           docker compose --env-file .env.example -f deploy/compose.spark-db.yaml -f deploy/compose.production.yaml config -q
+          docker compose --env-file .env.example -f deploy/compose.yaml -f deploy/compose.production.yaml --profile optional-cache config --format json |
+            python3 scripts/check_release_config_v68.py
           echo "PASS: three bundled services, optional Redis, external spark-db reuse, production overlay"
