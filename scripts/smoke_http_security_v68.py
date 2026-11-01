@@ -46,7 +46,9 @@ for path in ["/api/v1/auth/me","/api/v1/seller-accounts",
 # An anonymous write is rejected at the authentication boundary (401).
 call("/api/v1/operations/scan",method="POST",body={},expected=401)
 raw, headers=call("/actuator/health")
-assert json.loads(raw)=={"status":"UP"},raw[:140]
+health=json.loads(raw)
+assert health.get("status")=="UP",raw[:140]
+assert set(health).issubset({"status","groups"}),"Actuator must not expose database, Redis or credentials"
 assert "no-store" in headers.get("Cache-Control","")
 assert headers.get("X-Content-Type-Options","").lower()=="nosniff"
 # Spring Security default anti-framing headers apply to authenticated APIs as well.
