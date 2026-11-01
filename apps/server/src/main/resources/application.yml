@@ -17,6 +17,14 @@ spring:
     password: ${DB_PASSWORD:}
   flyway:
     enabled: true
+  data:
+    redis:
+      host: ${MERCHIVRA_REDIS_HOST:localhost}
+      port: ${MERCHIVRA_REDIS_PORT:6379}
+      database: ${MERCHIVRA_REDIS_DATABASE:0}
+      password: ${MERCHIVRA_REDIS_PASSWORD:}
+      timeout: 2s
+      connect-timeout: 2s
   servlet:
     multipart:
       max-file-size: 2MB
@@ -32,6 +40,9 @@ management:
       show-details: never
 
 merchivra:
+  redis:
+    # Explicit opt-in: shared Session/CSRF only when Redis is configured.
+    sessions-enabled: ${MERCHIVRA_REDIS_SESSIONS_ENABLED:false}
   team:
     # Explicitly opt in to multi-owner invitations and reviewer permissions.
     enabled: ${MERCHIVRA_TEAM_ENABLED:false}
@@ -43,6 +54,11 @@ merchivra:
     tenant-name: ${MERCHIVRA_BOOTSTRAP_TENANT_NAME:Merchivra Workspace}
 
   spapi:
+    rate-limit:
+      # Conservative one SDK request / seller / family per cooldown interval.
+      # Shared across every app replica; unavailable Redis denies egress.
+      enabled: ${MERCHIVRA_SPAPI_RATE_LIMIT_ENABLED:false}
+      cooldown-ms: ${MERCHIVRA_SPAPI_RATE_LIMIT_COOLDOWN_MS:2000}
     # Real outbound requests remain disabled until approved per-seller OAuth/vault.
     enabled: ${MERCHIVRA_SPAPI_ENABLED:false}
     sandbox: ${MERCHIVRA_SPAPI_SANDBOX:true}
