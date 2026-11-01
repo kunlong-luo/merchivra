@@ -109,7 +109,7 @@ public class OperationsController {
     public OperationsAutomationService.RuleSetting saveRule(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
         @PathVariable String ruleCode,
-        @RequestBody OperationsAutomationService.SaveRule body) {
+        @Valid @RequestBody OperationsAutomationService.SaveRule body) {
         UUID tenant=access.currentTenant(auth,request);
         return service.saveRule(tenant,access.authenticatedUser(auth),
             marketplaceId,ruleCode,body);

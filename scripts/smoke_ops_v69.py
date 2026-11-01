@@ -74,6 +74,10 @@ post(path(mp1)+"/LOW_STOCK",
  {"enabled":True,"lowStockThreshold":10001,"expectedVersion":0},expected=400)
 post(path(mp1)+"/UNMAPPED_LISTING",
  {"enabled":False,"lowStockThreshold":None,"expectedVersion":-1},expected=400)
+post(path(mp1)+"/UNMAPPED_LISTING",
+ {"lowStockThreshold":None,"expectedVersion":0},expected=400)
+post(path(mp1)+"/UNMAPPED_LISTING",
+ {"enabled":False,"lowStockThreshold":None},expected=400)
 
 queue="/api/v1/operations"
 post(queue+"/scan")

@@ -50,7 +50,10 @@ public class OperationsAutomationService {
         "REFUND_REVIEW","FBA_INBOUND_REVIEW","ADS_REPORT_REVIEW");
     public record RuleSetting(String ruleCode,boolean enabled,Integer lowStockThreshold,
                               long version,String updatedAt) {}
-    public record SaveRule(boolean enabled,Integer lowStockThreshold,long expectedVersion) {}
+    public record SaveRule(@jakarta.validation.constraints.NotNull Boolean enabled,
+                           Integer lowStockThreshold,
+                           @jakarta.validation.constraints.NotNull
+                           @jakarta.validation.constraints.Min(0) Long expectedVersion) {}
     public record RuleAudit(String ruleCode,String actorId,Boolean oldEnabled,
                             boolean newEnabled,Integer oldThreshold,Integer newThreshold,
                             Long oldVersion,long newVersion,String createdAt) {}
@@ -91,7 +94,7 @@ public class OperationsAutomationService {
     public RuleSetting saveRule(UUID tenant,UUID actor,UUID marketplace,
         String code,SaveRule input) {
         checkRule(code);
-        if(input==null||input.expectedVersion()<0)
+        if(input==null||input.enabled()==null||input.expectedVersion()==null||input.expectedVersion()<0)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Expected version must be nonnegative");
         if("LOW_STOCK".equals(code) && (input.lowStockThreshold()==null
             ||input.lowStockThreshold()<0||input.lowStockThreshold()>10000))

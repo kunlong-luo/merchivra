@@ -43,6 +43,12 @@ class OperationsAutomationServiceTest {
         assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
             ()->service.saveRule(tenant,actor,finding,"LOW_STOCK",
                 new OperationsAutomationService.SaveRule(true,3,-1))).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->service.saveRule(tenant,actor,finding,"LOW_STOCK",
+                new OperationsAutomationService.SaveRule(null,3,0L))).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->service.saveRule(tenant,actor,finding,"LOW_STOCK",
+                new OperationsAutomationService.SaveRule(true,3,null))).getStatusCode());
         verifyNoInteractions(jdbc);
     }
 
