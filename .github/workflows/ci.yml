@@ -127,3 +127,28 @@ jobs:
             "SELECT count(*) FROM erp_lot_supplier_return_trace"
           echo "PostgreSQL 18 / V46-V52 Flyway migrations verified against a real server"
           kill "$app_pid" 2>/dev/null || true
+
+  compose-deployment-config:
+    name: Docker Compose / three-service and spark-db modes
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      MERCHIVRA_DB_PASSWORD: ci_disposable_not_an_actual_secret
+    steps:
+      - uses: actions/checkout@v5
+      - name: Validate both documented deployment modes without using real databases
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env.example -f deploy/compose.yaml config -q
+          bundled=$(docker compose --env-file .env.example -f deploy/compose.yaml config --services | sort | tr '\n' ' ')
+          test "$bundled" = "postgres server web "
+          docker compose --env-file .env.example -f deploy/compose.yaml --profile optional-cache config -q
+          docker compose --env-file .env.example -f deploy/compose.yaml --profile optional-cache config --services | grep -Fx redis
+          docker compose --env-file .env.example -f deploy/compose.spark-db.yaml config -q
+          external=$(docker compose --env-file .env.example -f deploy/compose.spark-db.yaml config --services | sort | tr '\n' ' ')
+          test "$external" = "server web "
+          docker compose --env-file .env.example -f deploy/compose.spark-db.yaml config | grep -F 'spark-iot-net'
+          docker compose --env-file .env.example -f deploy/compose.spark-db.yaml config | grep -F 'spark-postgres'
+          docker compose --env-file .env.example -f deploy/compose.spark-db.yaml -f deploy/compose.production.yaml config -q
+          echo "PASS: three bundled services, optional Redis, external spark-db reuse, production overlay"
