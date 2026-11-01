@@ -390,3 +390,13 @@
 - [x] 新增 V50 Owner/CSRF REST endpoints、React 三模块工作台与 JUnit/Vitest 数量守恒、双人审批、重复过账禁止、来源凭据校验测试，以最终 CI 为准。保留 React 19、Java 25 / Spring Boot 4.1、PostgreSQL 18 技术选型。
 - [ ] 仍需 PostgreSQL 18 真正 Flyway/Compose 与多用户/多租户 HTTP 并发验收；有凭据盘盈转入、目的仓 MISMATCH 纠错、隔离品物流证明和 Amazon SP-API 真正联调待后续。
 - 详见：[PO-013 V50 库位复核与异常处理](purchasing/lot-count-review-transfer-receiving-disposition-v50.md)。
+
+## V51 · 有来源盘盈绑定、目的仓少收纠正与处置凭据元数据独立复核（2026-11-01）
+
+- [x] V51 迁移：`erp_local_lot_exception_resolution` 保存 V50 EVIDENCE_REQUIRED 盘盈或 MISMATCH 目标仓短收的唯一来源、仓库/库位/库存快照、证据编号、独立 Owner、状态及真实签名 COUNT operation ID；`erp_local_lot_disposition_proof` 保存 V50 EXECUTED_REPORTED 的人工证明材料元数据（可选 SHA-256）及不同 Owner 的内部审核。迁移保持所有既有库存历史和 PostgreSQL18 选型。
+- [x] 盘盈只能从同一 V46 真实已 RELEASED、approved accepted 未分配完的原始根批次位置补充分配；再次核对 tenant、position/bin、quantity、signed warehouse SKU 可用余额、该来源所有根位置 placed 合计及仓库所有库位 remaining。审批只是增加 root placed/remaining 和 SURPLUS_BOUND 事件，不允许新增正向库存流水或伪造采购实际收货。
+- [x] V50 已由另一 Owner 证实的跨仓少收 MISMATCH 才能申请纠正。另一非申请人/原签收人核准，必须要求目标仓原调拨位置尚未再次出库、调拨、移位且库存快照未变化；同事务减目标位置余量并通过 V40 COUNT 减目标仓签名库存，追加 SHORTAGE_CORRECTED 来源事件；不新增第二次 TRANSFER_IN/OUT。
+- [x] 过期品实际处置已 EXECUTED_REPORTED 后可登记与处置方法一致的报废/供应商退货参考编号、可选 SHA-256 摘要、来源说明；不是附件上传或外部核验。不同于凭据登记者和原处置执行者的 Owner 可以标记 METADATA_REVIEWED/REJECTED，明确“内部审核元数据”，不冒充承运商签收或外部文件真伪验证，不产生任何库存流水。
+- [x] React V51 两个工作台、Owner/CSRF API、JUnit/Vitest 校验来源与审批者、防重复调账、非负库存和不误报文件核验；最终以前后端 CI 结论为准。
+- [ ] PostgreSQL18 Flyway/Compose 与多用户多租户 HTTP 并发真实性验收仍待专项完成；实际证据附件上传/摘要比对、外部物流/供应商签收核验和与 Amazon SP-API 的真实授权联调后续。
+- 文档：[PO-014 V51 有来源异常纠正与证明元数据](purchasing/lot-exception-source-corrections-proof-v51.md)。
