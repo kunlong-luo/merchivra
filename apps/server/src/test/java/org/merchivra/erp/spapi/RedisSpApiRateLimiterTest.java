@@ -120,6 +120,18 @@ class RedisSpApiRateLimiterTest {
     }
 
     @Test
+    void reportsUseConservativeInitialOneMinuteBudgetNotTheOrdersDefault() {
+        StringRedisTemplate redis=mock(StringRedisTemplate.class);
+        doReturn(0L).when(redis).execute(any(org.springframework.data.redis.core.script.RedisScript.class),
+            anyList(),anyString(),anyString());
+        var limiter=new RedisSpApiRateLimiter(redis,2000);
+        limiter.requireLegacyPermit(SpApiRegion.NA,SpApiOperation.GET_REPORTS,"test-grant");
+        limiter.requireLegacyPermit(SpApiRegion.NA,SpApiOperation.GET_REPORT_DOCUMENT,"test-grant");
+        verify(redis,times(2)).execute(any(org.springframework.data.redis.core.script.RedisScript.class),
+            anyList(),eq("60000"),eq("1"));
+    }
+
+    @Test
     void explicitBurstIsPassedOnlyToAtomicOperationScript() {
         StringRedisTemplate redis=mock(StringRedisTemplate.class);
         doReturn(0L).when(redis).execute(any(org.springframework.data.redis.core.script.RedisScript.class),
