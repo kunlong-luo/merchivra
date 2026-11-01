@@ -43,5 +43,9 @@ jobs:
             echo 'Wrapper already committed'
           else
             git commit -m 'build(gradle): commit official checksum-verified Gradle 9.2.1 wrapper'
+            # Other app/docs commits can land while this workflow is building.
+            # Replay only these generated wrapper files on the latest main.
+            git fetch origin main
+            git rebase origin/main
             git push origin HEAD:main
           fi
