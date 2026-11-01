@@ -5,6 +5,7 @@ import WarehouseAlertsPanel from './WarehouseAlertsPanel'
 import SupplierPurchasePlanningPanel from './SupplierPurchasePlanningPanel'
 import SupplierAsnPanel from './SupplierAsnPanel'
 import PurchaseQualityPanel from './PurchaseQualityPanel'
+import ReceiptBatchPanel from './ReceiptBatchPanel'
 import SupplierDisputesPanel from './SupplierDisputesPanel'
 import {createSupplier,fetchSuppliers,createPurchaseOrder,fetchPurchaseOrders,
  fetchPurchaseOrder,purchaseAction,receivePurchase,fetchWarehouses,createWarehouse,
@@ -72,7 +73,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  })
  const receipt=useMutation({mutationFn:()=>receivePurchase(selectedId,receiveLine,receiveQty,
    warehouseId,receiveAsnId||null),
-  onSuccess:d=>{setMessage('本地仓库收货和库存流水已追加：'+d.order.status);
+  onSuccess:d=>{setMessage('实物收货已登记到 V46 待检批次（尚未进入可用库存）：'+d.order.status);
     setReceiveAsnId('');setFailure('');refresh()},
   onError:(e:Error)=>setFailure(e.message)})
  function addSupplier(e:FormEvent){e.preventDefault();supplier.mutate()}
@@ -105,7 +106,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  }
  return <div className="core-workspace">
   <div className="core-intro"><strong>采购与供应商 · 本地业务</strong><p>
-   支持采购审批、指定本地仓库后分批收货，并记录不可覆盖的入库流水。
+   支持采购审批、真实收货待检批次、双人质检放行和不可覆盖的本地入库流水。
    本地累计入库不是可售库存，也不代表 Amazon FBA 已入仓；采购金额不等于平台结算。</p></div>
   <section className="panel full-panel" aria-label="本地仓库">
    <div className="panel-heading"><div><h2>本地仓库</h2>
@@ -363,6 +364,9 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
   <SupplierDisputesPanel key={'disputes-'+(selectedId||'no-order')}
    tenantId={tenantId} orderId={selectedId} lines={selected.data?.lines??[]}
    currentUserId={currentUserId}/>
+  <ReceiptBatchPanel key={'lot-'+(selectedId||'no-order')}
+   tenantId={tenantId} orderId={selectedId}
+   currentUserId={currentUserId} warehouses={warehouses.data??[]}/>
   <PurchaseQualityPanel key={'qc-'+(selectedId||'no-order')}
    tenantId={tenantId} orderId={selectedId} warehouses={warehouses.data??[]}/>
   <SupplierAsnPanel key={selectedId||'no-order'} tenantId={tenantId} orderId={selectedId}
