@@ -125,8 +125,9 @@ class ReleasedLotStockServiceTest {
     }
     @Test void previewIncludesPolicySortingAndExcludesExpiredLots(){
         service.preview(tenant,warehouse,sku,"FIFO");
-        verify(jdbc).query(allOf(contains("p.expiry_date>=CURRENT_DATE"),
-                contains("b.created_at ASC")),
+        verify(jdbc).query(argThat((String sql)->
+                sql.contains("p.expiry_date>=CURRENT_DATE")
+                  && sql.contains("b.created_at ASC")),
             any(RowMapper.class),eq(tenant),eq(warehouse),eq(sku),eq("FIFO"));
         verifyNoInteractions(stock);
     }
