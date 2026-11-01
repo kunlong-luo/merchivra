@@ -249,11 +249,14 @@ public class ReleasedLotLifecycleService {
         UUID destinationPosition=null;
         UUID operation=null;
         if("MOVE".equals(req.actionType()) || "TRANSFER".equals(req.actionType())) {
-            destinationWarehouse=binWarehouse(tenant,req.destinationBinId());
-            if("MOVE".equals(req.actionType()) && !destinationWarehouse.equals(src.warehouse()))
+            UUID binWh=binWarehouse(tenant,req.destinationBinId());
+            if("MOVE".equals(req.actionType()) && !binWh.equals(src.warehouse()))
                 throw conflict("In-warehouse move cannot cross warehouses");
-            if("TRANSFER".equals(req.actionType()) && destinationWarehouse.equals(src.warehouse()))
-                throw conflict("Cross-warehouse transfer must use another warehouse");
+            if("TRANSFER".equals(req.actionType())) {
+                if(binWh.equals(src.warehouse()))
+                    throw conflict("Cross-warehouse transfer must use another warehouse");
+                destinationWarehouse=binWh;
+            }
         }
         lockWarehouses(tenant,src.warehouse(),
             "TRANSFER".equals(req.actionType())?destinationWarehouse:null);
