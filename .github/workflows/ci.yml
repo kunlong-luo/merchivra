@@ -164,6 +164,7 @@ jobs:
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM ads_profile_reference")" = "0"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='64' AND success")" = "1"
           python3 scripts/smoke_fba_inbound.py
+          psql -h 127.0.0.1 -U merchivra -d merchivra -v ON_ERROR_STOP=1 -f scripts/smoke_ads_schema.sql
           echo "PostgreSQL 18 / Flyway / actual finance + FBA OpenAPI and local mock chain verified"
           kill "$app_pid" 2>/dev/null || true
       - name: Preserve verified V65 OpenAPI contract for Orval review
