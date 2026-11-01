@@ -23,7 +23,9 @@ export const syncTaskSnapshotSchema = z.object({
     running: z.number().int().nonnegative(),
     retrying: z.number().int().nonnegative(),
     paused: z.number().int().nonnegative(),
-    succeeded: z.number().int().nonnegative()
+    succeeded: z.number().int().nonnegative(),
+    dueNow: z.number().int().nonnegative(),
+    expiredRunningLeases: z.number().int().nonnegative()
   }),
   tasks: z.array(syncTaskSchema).max(100),
   limit: z.number().int().min(1).max(100),
