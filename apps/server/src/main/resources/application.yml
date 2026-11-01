@@ -25,12 +25,19 @@ spring:
       password: ${MERCHIVRA_REDIS_PASSWORD:}
       timeout: 2s
       connect-timeout: 2s
+    repositories:
+      enabled: false
   servlet:
     multipart:
       max-file-size: 2MB
       max-request-size: 3MB
 
 management:
+  health:
+    # Redis is optional in single-node mode. Enable this contributor only when
+    # Redis-backed sessions or SP-API throttling is explicitly configured.
+    redis:
+      enabled: ${MERCHIVRA_REDIS_HEALTH_ENABLED:false}
   endpoints:
     web:
       exposure:
