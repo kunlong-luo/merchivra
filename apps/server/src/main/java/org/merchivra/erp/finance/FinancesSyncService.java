@@ -214,7 +214,8 @@ public class FinancesSyncService {
  private void fail(Claim c,Exception e){
    int code=e instanceof SpApiHttpException h?h.status():0;
    boolean stale=code==400&&c.job().cursor()!=null;
-   boolean retry=stale||code==429||code==500||code==502||code==503||code==504;
+   boolean retry=stale||code==429||code==500||code==502||code==503||code==504
+       ||e instanceof SpApiAdmissionException;
    String reason=stale?"CURSOR_RESTART":retry?"UPSTREAM_RETRY":
      code==401||code==403||e instanceof SecurityException?
        "AUTHORIZATION_REJECTED":"SOURCE_ERROR";
