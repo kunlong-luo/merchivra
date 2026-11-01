@@ -549,3 +549,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - Burst 默认 capacity=1。仅人工审查 Amazon 真实 usage plan 之后允许通过 MERCHIVRA_SPAPI_APPROVED_BURSTS 显式设置 2–10，且只有观测到有效的逐操作 rate 时才生效；不得从 x-amzn-RateLimit-Limit 猜测 Amazon 允许的 burst。
 - 指标仅允许 operation/result/status 类低敏标签；不记录 sellerId、grant、token、订单、SKU 等。/actuator/metrics 不默认开放给普通店铺用户；tenant-safe Dashboard 另行设计。
 - CI 除 Java25/Gradle PG18 React 外，必须在 Redis8 真服务验证 GCRA 的缺省容量、显式 burst、429 fence、未知 metadata，禁用真实 SP-API、禁用 FLUSHALL/FLUSHDB。
+
+## 2026-11-01 · V57 后台同步任务监控策略
+
+- 只读任务监控文档：docs/operations/sync-task-monitor-v57.md；端点 /api/v1/operations/sync-tasks 必须从认证 Session 的 TenantAccessService.currentTenant（Owner 权限）推导租户，不接受客户端租户参数。三张 PostgreSQL 作业表每一支查询均必须带 tenant_id=?。
+- API 严禁查询/返回 Amazon refresh/access token、分页 cursor、lease_owner、原始订单或 Amazon 响应体；只提供任务状态、更新时间、重试次数、下次重试和固定安全错误码，响应 no-store。
+- React 只在 Owner「运营自动化」页面展示同步监控。对 401/403、空任务、运行中、429 等状态必须准确描述，不把空列表解释成同步完成。面板只读，无启动/强制重试按钮。
+- 测试覆盖后端 SQL 作用域与筛选限制、Session 租户、Zod 前端数据契约；不需要真实店铺授权。Java 25 / Spring Boot 4.1.2 / Gradle 9.2.1 / PostgreSQL 18 / React 19 不得回退。
