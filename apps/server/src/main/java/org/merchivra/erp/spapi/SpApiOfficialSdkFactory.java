@@ -43,6 +43,34 @@ public final class SpApiOfficialSdkFactory {
         return api;
     }
 
+    @FunctionalInterface
+    public interface TypedRead<A,T> {
+        ApiResponse<T> call(A api) throws Exception;
+    }
+
+    /**
+     * Safe typed SDK entrypoint. Unlike create(), no family-level permit is
+     * consumed: the operation permit is acquired immediately before building
+     * and invoking the reviewed read. This allows explicitly approved burst
+     * budgets without double-throttling the same request.
+     */
+    public <A,T> T executeObservedRead(SpApiSellerScope seller, SpApiOperation operation,
+        Class<A> apiClass, TypedRead<A,T> read) throws Exception {
+        Objects.requireNonNull(apiClass, "Official SDK API class required");
+        Objects.requireNonNull(read, "Reviewed typed method required");
+        String expected = switch (Objects.requireNonNull(operation)) {
+            case SEARCH_ORDERS -> "software.amazon.spapi.api.orders.v2026_01_01.SearchOrdersApi";
+            case SEARCH_LISTINGS -> "software.amazon.spapi.api.listings.items.v2021_08_01.ListingsApi";
+            case GET_FBA_INVENTORY -> "software.amazon.spapi.api.fba.inventory.v1.FbaInventoryApi";
+            case LIST_TRANSACTIONS -> "software.amazon.spapi.api.finances.v2024_06_19.DefaultApi";
+            default -> throw new SecurityException("Operation not approved for typed SDK budget");
+        };
+        if (!expected.equals(apiClass.getName()))
+            throw new SecurityException("SDK family does not match reviewed operation");
+        return executeObservedRead(seller, operation,
+            () -> read.call(build(apiClass, seller.region(), seller.refreshToken())));
+    }
+
     /**
      * An approved, read-only SDK operation acquires a shared per-operation
      * Redis permit before the generated client performs any remote request.
