@@ -12,6 +12,11 @@
 | M3 | 财务/成本/利润 | 费用、成本与估算报表 | 可对账、可追踪 |
 | M4 | Beta | 安全、运维、发布 | P0 验收通过、运行手册完成 |
 
+## 2026-11-01 · V68 预发布安全与数据恢复门禁（当前）
+- PostgreSQL 18 的 `pg_dump -Fc` / `pg_restore --single-transaction --exit-on-error` 一次性 Mock 恢复，覆盖所有 public 表行数+逻辑指纹、Flyway 历史/索引/约束；严格禁止非本机、非模拟数据使用。
+- Spring Security Test / 本机 HTTP 验证匿名拒绝、CSRF、Cookie、头部、注销失效；Operations 本机串行 p95 冒烟；Docker Compose 生产 overlay 默认安全配置静态校验。
+- CI 演练不等于线上生产容灾或安全批准；完整正式 RPO/RTO、KMS、真实 Amazon Seller/Ads、并发压测及安全签审继续列为阻塞。详见 [V68 验收手册](testing/release-readiness-v68.md)。
+
 ## 2026-11-01 · V67 运营自动化与成熟组件复用进度
 - Flyway V65 扩展既有 V10 运营队列，新增 FBA 本地货件复核、Ads 未授权日报审核来源，Owner 认领/释放、暂缓提醒/恢复、完整操作审计、ACTIONABLE 工作台筛选、Spring Boot Validation。
 - 基于实际 Spring MVC Controller 的 operations-v67 OpenAPI + Orval 8 生成客户端，替代前端原 V10 手写 HTTP；PG18 HTTP 与双 Owner 冒烟按 CI 运行验证。

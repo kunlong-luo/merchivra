@@ -4,7 +4,7 @@
 
 ## 当前 main 的必需工作流（M0～M2）
 
-- 后端：`mvn -B -f apps/server/pom.xml test`（只运行当前存在的快速单元测试）。
+- 后端：`./apps/server/gradlew -p apps/server test`（只运行当前存在的快速单元测试）。
 - 前端：`npm ci`（已有真实解析的 `package-lock.json`）、`npm run typecheck`、`npm run test`、`npm run build`。
 - 无 Playwright / Chromium / Firefox / WebKit、无 E2E 执行、无覆盖率阈值、无 Docker 全栈 CI、无性能预算或安全扫描的阻塞型门禁。
 - 不要求每个早期功能都拥有浏览器级自动化场景，不为 Mock 占位页创建 E2E 测试。
@@ -32,3 +32,7 @@
 产品核心业务流程基本可以走通且数据模型相对稳定时，创建 Playwright/DB 端到端契约测试；在 M4 Beta 上线前纳入必要的主分支质量门禁。具体任务跟踪见 [M0 Issue #2](https://github.com/kunlong-luo/merchivra/issues/2)。
 
 相关：[TEST-001](test-plan.md)、[验收用例](../requirements/acceptance.md)、[Pagevela 借鉴](../architecture/dependency-adoption.md)。
+
+## V68 实施情况（2026-11-01）
+
+本项目已从早期 M0/M2 演进到 V68 发布前准备：新增 PostgreSQL18 一次性恢复演练、Spring Security MockMvc/真实 HTTP Session/CSRF 检查、35 次本地 GET 性能冒烟、Docker Compose 生产 overlay 静态安全检查。原先“无 PG18 / 无 Chromium / 无容器”等陈述仅保留为历史早期策略，**不再代表当前主线 CI 的真实覆盖范围**。实测以 GitHub Actions 记录为准，详细清单见 [V68](release-readiness-v68.md)。
