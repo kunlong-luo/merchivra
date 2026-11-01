@@ -97,6 +97,31 @@ public class OperationsController {
             access.authenticatedUser(auth),findingId);
     }
 
+    @Operation(operationId="listOperationRules")
+    @GetMapping("/marketplaces/{marketplaceId}/rules")
+    public List<OperationsAutomationService.RuleSetting> rules(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId) {
+        return service.rules(access.currentTenant(auth,request),marketplaceId);
+    }
+
+    @Operation(operationId="saveOperationRule")
+    @PostMapping("/marketplaces/{marketplaceId}/rules/{ruleCode}")
+    public OperationsAutomationService.RuleSetting saveRule(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
+        @PathVariable String ruleCode,
+        @RequestBody OperationsAutomationService.SaveRule body) {
+        UUID tenant=access.currentTenant(auth,request);
+        return service.saveRule(tenant,access.authenticatedUser(auth),
+            marketplaceId,ruleCode,body);
+    }
+
+    @Operation(operationId="listOperationRuleAudit")
+    @GetMapping("/marketplaces/{marketplaceId}/rules/audit")
+    public List<OperationsAutomationService.RuleAudit> ruleAudit(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId) {
+        return service.ruleHistory(access.currentTenant(auth,request),marketplaceId);
+    }
+
     @Operation(operationId="getOperationFindingAttentionAudit")
     @GetMapping("/findings/{findingId}/attention-audit")
     public List<OperationsAutomationService.AttentionAudit> attentionAudit(

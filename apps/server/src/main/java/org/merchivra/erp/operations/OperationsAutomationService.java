@@ -44,6 +44,128 @@ public class OperationsAutomationService {
         String newAssignee,String oldSnoozedUntil,String newSnoozedUntil,
         String note,String createdAt) {}
     private record LockRow(String state,UUID assignedTo,OffsetDateTime snoozedUntil) {}
+    private record StoredRule(boolean enabled,Integer threshold,long version) {}
+    private static final List<String> RULES=List.of(
+        "UNMAPPED_LISTING","INVENTORY_UNKNOWN","LOW_STOCK",
+        "REFUND_REVIEW","FBA_INBOUND_REVIEW","ADS_REPORT_REVIEW");
+    public record RuleSetting(String ruleCode,boolean enabled,Integer lowStockThreshold,
+                              long version,String updatedAt) {}
+    public record SaveRule(boolean enabled,Integer lowStockThreshold,long expectedVersion) {}
+    public record RuleAudit(String ruleCode,String actorId,Boolean oldEnabled,
+                            boolean newEnabled,Integer oldThreshold,Integer newThreshold,
+                            Long oldVersion,long newVersion,String createdAt) {}
+    private static void checkRule(String code) {
+        if(!RULES.contains(code))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Unsupported operation rule");
+    }
+    private void requireMarketplace(UUID tenant,UUID marketplace) {
+        Integer count=jdbc.queryForObject("""
+            SELECT COUNT(*) FROM seller_marketplace m JOIN tenant t
+             ON t.id=m.tenant_id AND t.status='ACTIVE'
+            WHERE m.tenant_id=? AND m.id=?
+            """,Integer.class,tenant,marketplace);
+        if(count==null||count!=1)
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Marketplace not found");
+    }
+    @Transactional(readOnly=true)
+    public List<RuleSetting> rules(UUID tenant,UUID marketplace) {
+        requireMarketplace(tenant,marketplace);
+        return jdbc.query("""
+            WITH codes(rule_code) AS (VALUES
+             ('UNMAPPED_LISTING'),('INVENTORY_UNKNOWN'),('LOW_STOCK'),
+             ('REFUND_REVIEW'),('FBA_INBOUND_REVIEW'),('ADS_REPORT_REVIEW'))
+            SELECT codes.rule_code, COALESCE(r.enabled,TRUE) AS enabled,
+              CASE WHEN codes.rule_code='LOW_STOCK'
+                   THEN COALESCE(r.low_stock_threshold,?)
+                   ELSE NULL END AS low_stock_threshold,
+              COALESCE(r.version,0) AS version,r.updated_at
+            FROM codes LEFT JOIN ops_rule_setting r ON r.tenant_id=?
+             AND r.seller_marketplace_id=? AND r.rule_code=codes.rule_code
+            ORDER BY codes.rule_code
+            """,(rs,i)->new RuleSetting(rs.getString("rule_code"),rs.getBoolean("enabled"),
+                rs.getObject("low_stock_threshold",Integer.class),rs.getLong("version"),
+                at(rs.getObject("updated_at",OffsetDateTime.class))),
+            lowStockThreshold,tenant,marketplace);
+    }
+    @Transactional
+    public RuleSetting saveRule(UUID tenant,UUID actor,UUID marketplace,
+        String code,SaveRule input) {
+        checkRule(code);
+        if(input==null||input.expectedVersion()<0)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Expected version must be nonnegative");
+        if("LOW_STOCK".equals(code) && (input.lowStockThreshold()==null
+            ||input.lowStockThreshold()<0||input.lowStockThreshold()>10000))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Low stock threshold must be 0..10000");
+        if(!"LOW_STOCK".equals(code)&&input.lowStockThreshold()!=null)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Threshold applies only to LOW_STOCK");
+        // Same tenant lock used by scanning; changes cannot interleave with an
+        // in-progress scan or another Owner's write across server replicas.
+        var locked=jdbc.queryForList("""
+            SELECT id FROM tenant WHERE id=? AND status='ACTIVE' FOR UPDATE
+            """,UUID.class,tenant);
+        if(locked.isEmpty())throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Tenant inactive");
+        requireMarketplace(tenant,marketplace);
+        var rows=jdbc.query("""
+            SELECT enabled,low_stock_threshold,version
+            FROM ops_rule_setting
+            WHERE tenant_id=? AND seller_marketplace_id=? AND rule_code=? FOR UPDATE
+            """,(rs,i)->new StoredRule(rs.getBoolean(1),rs.getObject(2,Integer.class),
+                rs.getLong(3)),tenant,marketplace,code);
+        StoredRule previous=rows.isEmpty()?null:rows.getFirst();
+        long current=previous==null?0:previous.version();
+        if(input.expectedVersion()!=current)
+            throw new ResponseStatusException(HttpStatus.CONFLICT,"Rule modified, reload before retry");
+        Integer threshold="LOW_STOCK".equals(code)?input.lowStockThreshold():null;
+        if(previous!=null && previous.enabled()==input.enabled()
+            && java.util.Objects.equals(previous.threshold(),threshold))
+            return new RuleSetting(code,previous.enabled(),previous.threshold(),current,
+                jdbc.queryForObject("""
+                    SELECT updated_at::text FROM ops_rule_setting
+                    WHERE tenant_id=? AND seller_marketplace_id=? AND rule_code=?
+                    """,String.class,tenant,marketplace,code));
+        long next=current+1;
+        jdbc.update("""
+            INSERT INTO ops_rule_setting
+             (tenant_id,seller_marketplace_id,rule_code,enabled,low_stock_threshold,
+              version,updated_by)
+            VALUES (?,?,?,?,?,?,?)
+            ON CONFLICT (tenant_id,seller_marketplace_id,rule_code)
+            DO UPDATE SET enabled=EXCLUDED.enabled,
+              low_stock_threshold=EXCLUDED.low_stock_threshold,
+              version=EXCLUDED.version,updated_by=EXCLUDED.updated_by,updated_at=now()
+            """,tenant,marketplace,code,input.enabled(),threshold,next,actor);
+        jdbc.update("""
+            INSERT INTO ops_rule_setting_audit
+              (id,tenant_id,seller_marketplace_id,rule_code,actor_user_id,
+               old_enabled,new_enabled,old_threshold,new_threshold,old_version,new_version)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?)
+            """,UUID.randomUUID(),tenant,marketplace,code,actor,
+            previous==null?null:previous.enabled(),input.enabled(),
+            previous==null?null:previous.threshold(),threshold,
+            previous==null?null:previous.version(),next);
+        return jdbc.query("""
+            SELECT enabled,low_stock_threshold,version,updated_at
+            FROM ops_rule_setting WHERE tenant_id=? AND seller_marketplace_id=?
+              AND rule_code=?
+            """,(rs,i)->new RuleSetting(code,rs.getBoolean(1),
+                rs.getObject(2,Integer.class),rs.getLong(3),at(rs.getObject(4,OffsetDateTime.class))),
+            tenant,marketplace,code).getFirst();
+    }
+    @Transactional(readOnly=true)
+    public List<RuleAudit> ruleHistory(UUID tenant,UUID marketplace) {
+        requireMarketplace(tenant,marketplace);
+        return jdbc.query("""
+            SELECT rule_code,actor_user_id,old_enabled,new_enabled,old_threshold,
+              new_threshold,old_version,new_version,created_at
+            FROM ops_rule_setting_audit
+            WHERE tenant_id=? AND seller_marketplace_id=?
+            ORDER BY created_at DESC,id DESC LIMIT 100
+            """,(rs,i)->new RuleAudit(rs.getString(1),rs.getObject(2,UUID.class).toString(),
+                rs.getObject(3,Boolean.class),rs.getBoolean(4),
+                rs.getObject(5,Integer.class),rs.getObject(6,Integer.class),
+                rs.getObject(7,Long.class),rs.getLong(8),
+                at(rs.getObject(9,OffsetDateTime.class))),tenant,marketplace);
+    }
 
 
     @Transactional(readOnly = true)
@@ -185,6 +307,10 @@ public class OperationsAutomationService {
                'WARNING', l.data_origin, ?
         FROM marketplace_listing l
         WHERE l.tenant_id = ? AND l.mapping_status IN ('UNMAPPED','CONFLICT')
+         AND NOT EXISTS (SELECT 1 FROM ops_rule_setting config
+          WHERE config.tenant_id=l.tenant_id
+            AND config.seller_marketplace_id=l.seller_marketplace_id
+            AND config.rule_code='UNMAPPED_LISTING' AND NOT config.enabled)
         """ + UPSERT;
 
     private static final String INVENTORY_SOURCE = """
@@ -206,8 +332,12 @@ public class OperationsAutomationService {
                'INVENTORY_UNKNOWN', latest.seller_sku_raw, 'FBA 库存数据不完整',
                'WARNING', latest.data_origin, ?
         """ + INVENTORY_SOURCE + """
-        WHERE latest.quality IN ('UNKNOWN','STALE','PARTIAL')
-              OR latest.fulfillable IS NULL
+        WHERE (latest.quality IN ('UNKNOWN','STALE','PARTIAL')
+              OR latest.fulfillable IS NULL)
+         AND NOT EXISTS (SELECT 1 FROM ops_rule_setting config
+          WHERE config.tenant_id=latest.tenant_id
+            AND config.seller_marketplace_id=latest.seller_marketplace_id
+            AND config.rule_code='INVENTORY_UNKNOWN' AND NOT config.enabled)
         """ + UPSERT;
 
     private static final String LOW_STOCK_SQL = """
@@ -218,7 +348,15 @@ public class OperationsAutomationService {
                'CRITICAL', latest.data_origin, ?
         """ + INVENTORY_SOURCE + """
         WHERE latest.quality = 'OBSERVED' AND latest.fulfillable IS NOT NULL
-          AND latest.fulfillable <= ?
+          AND latest.fulfillable <= COALESCE((
+              SELECT config.low_stock_threshold FROM ops_rule_setting config
+              WHERE config.tenant_id=latest.tenant_id
+                AND config.seller_marketplace_id=latest.seller_marketplace_id
+                AND config.rule_code='LOW_STOCK'),?)
+         AND NOT EXISTS (SELECT 1 FROM ops_rule_setting config
+          WHERE config.tenant_id=latest.tenant_id
+            AND config.seller_marketplace_id=latest.seller_marketplace_id
+            AND config.rule_code='LOW_STOCK' AND NOT config.enabled)
         """ + UPSERT;
 
     private static final String REFUNDS_SQL = """
@@ -229,6 +367,10 @@ public class OperationsAutomationService {
                'INFO', o.data_origin, ?
         FROM sales_order o
         WHERE o.tenant_id = ? AND o.refund_status IN ('PARTIAL','FULL')
+         AND NOT EXISTS (SELECT 1 FROM ops_rule_setting config
+          WHERE config.tenant_id=o.tenant_id
+            AND config.seller_marketplace_id=o.seller_marketplace_id
+            AND config.rule_code='REFUND_REVIEW' AND NOT config.enabled)
         """ + UPSERT;
     private static final String FBA_REVIEW_SQL = """
         INSERT INTO ops_finding (id,tenant_id,seller_marketplace_id,rule_code,
@@ -239,6 +381,10 @@ public class OperationsAutomationService {
                               ELSE 'UNVERIFIED' END,?
         FROM fba_inbound_shipment s
         WHERE s.tenant_id=? AND s.state='REVIEWING'
+         AND NOT EXISTS (SELECT 1 FROM ops_rule_setting config
+          WHERE config.tenant_id=s.tenant_id
+            AND config.seller_marketplace_id=s.seller_marketplace_id
+            AND config.rule_code='FBA_INBOUND_REVIEW' AND NOT config.enabled)
         """ + UPSERT;
 
     private static final String ADS_REVIEW_SQL = """
@@ -250,6 +396,10 @@ public class OperationsAutomationService {
                               ELSE 'UNVERIFIED' END,?
         FROM ads_report_import r
         WHERE r.tenant_id=? AND r.state='STAGED'
+         AND NOT EXISTS (SELECT 1 FROM ops_rule_setting config
+          WHERE config.tenant_id=r.tenant_id
+            AND config.seller_marketplace_id=r.seller_marketplace_id
+            AND config.rule_code='ADS_REPORT_REVIEW' AND NOT config.enabled)
         """ + UPSERT;
 
     private LockRow lockFinding(UUID tenant,UUID id) {
