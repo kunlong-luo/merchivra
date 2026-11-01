@@ -11,7 +11,7 @@
 
 ## 四类动作与事务保证
 
-**1. MOVE 同仓真实库位移位**：只接受当前 tenant、同 warehouse 的 ACTIVE STORAGE 库位，要求和来源 bin 不同、提交上一次读取的 expectedRemaining。变更原位置 `bin_id`，保留人工 reason 和前后来源 bin，**不修改全仓可用库存**，不会生成订单、付款或 Amazon 记录。来源库位为零时不应再做实物移动。
+**1. MOVE 同仓真实库位移位**：只接受当前 tenant、同 warehouse 的 ACTIVE STORAGE 库位，要求和来源 bin 不同、提交上一次读取的 expectedBinId 与 expectedRemaining；任一来源快照变化即返回 409。变更原位置 `bin_id`，保留人工 reason 和前后来源 bin，**不修改全仓可用库存**，不会生成订单、付款或 Amazon 记录。来源库位为零时不应再做实物移动。
 
 **2. TRANSFER 跨仓批次调拨**：必须选择不同 ACTIVE 目标仓库和 STORAGE bin；来源 `remaining_quantity>0`、明确人工件数且未过期（基于人工有效期）和 expectedOnHand，重新锁住租户、来源位置、两仓及库存余额。先在同一事务中减少来源位置件数，调用既有 V40 `WarehouseStockOperationService.post(TRANSFER)` 写入完全等量的 `TRANSFER_OUT` 与 `TRANSFER_IN`，然后创建目标位置并将 `origin_position_id` 指向来源位置；目标位置保留原 receipt、lot 编号、SKU、人工有效期，`placed=remaining=本次调拨件数`。V48 FIFO/FEFO 可继续从目标仓按相同库存来源拣货。任一写入失败全部回滚。V40 自带全仓余额、仓库锁、租户、审计和严格的负数出库余额保护；跨仓调拨也必须要求两个真实仓库实际持有外部证据之外的本地收发凭证，此处**仅记录 Owner 对实物已转移的确认**。
 
@@ -24,7 +24,7 @@
 - `GET /api/v1/purchasing/lot-lifecycle/positions/{positionId}/lineage` 使用 tenant 限定的递归父位置链向上追到原始真实 `receipt_id`、首笔放行、历史仓/货位及人工有效期，最多 100 层；从当前仓可以向上查上一仓的库位来源，避免跨仓之后丢失批次身份。
 - `GET /api/v1/purchasing/lot-lifecycle/positions/{positionId}/history` 查询此位置作为来源或调拨目标的 V49 事件，包含原 bin、目标仓位、调拨签名 operation ID、盘点观察数量及操作者、原因。
 - `GET /api/v1/purchasing/lot-lifecycle/warehouses/{warehouseId}/expiry-alerts` 只读查询真实已上架、剩余数量为正且 `expiry_date <= CURRENT_DATE+30` 的位置，分 `EXPIRED`、`NEAR_EXPIRY`；未登记有效期不虚构预警，也不以此认定 FBA 可售。
-- `POST /api/v1/purchasing/lot-lifecycle/positions/{positionId}/actions` 统一携带 `requestKey,actionType,destinationBinId,quantity,expectedRemaining,expectedOnHand,observedQuantity,reason`。传入的来源租户/actor 字段不可信，**只从认证 Session / CSRF 中派生**。后端按动作严格限定允许字段与变更；同一请求键重放验证完整来源与操作者，不重复扣除库存。
+- `POST /api/v1/purchasing/lot-lifecycle/positions/{positionId}/actions` 统一携带 `requestKey,actionType,expectedBinId,destinationBinId,quantity,expectedRemaining,expectedOnHand,observedQuantity,reason`。传入的来源租户/actor 字段不可信，**只从认证 Session / CSRF 中派生**。后端按动作严格限定允许字段与变更；同一请求键重放验证完整来源与操作者，不重复扣除库存。
 - React 采购工作台新增 V49 面板：来源仓与真实货位、30 天到期预警、目的仓和 STORAGE bin、操作数量、实际盘点差异、操作原因与二次确认、不可覆盖的来源链和动作审计。盘点仅记事实，过期隔离会真实扣减本地库存；区别必须在 UI 明确。
 
 ## 不可夸大的范围与验收
