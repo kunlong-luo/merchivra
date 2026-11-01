@@ -110,10 +110,15 @@ public final class SpApiClient {
         for (String name : new String[]{"x-amzn-requestid", "x-amzn-ratelimit-limit", "retry-after"}) {
             response.headers().firstValue(name).ifPresent(v -> responseHeaders.put(name, v));
         }
+        Duration retryAfter = SpApiRetryPolicy.retryAfter(
+            responseHeaders.get("retry-after"), Instant.now());
+        rateLimiter.observeLegacyResponse(req.region(), req.operation(),
+            approvedSellerRefreshToken, response.statusCode(),
+            responseHeaders.get("x-amzn-ratelimit-limit"), retryAfter);
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            // Never log/throw raw response body or tokens.
+            // Never log/throw raw response body, Seller ID or tokens.
             throw new SpApiHttpException(req.operation().name(), response.statusCode(),
-                responseHeaders.getOrDefault("x-amzn-requestid", ""));
+                responseHeaders.getOrDefault("x-amzn-requestid", ""), retryAfter);
         }
         return new SpApiResponse(response.statusCode(), response.body(),
             Map.copyOf(responseHeaders));
