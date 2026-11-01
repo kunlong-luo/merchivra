@@ -58,6 +58,8 @@ CREATE TABLE erp_local_lot_action (
     REFERENCES erp_local_stock_bin(tenant_id,warehouse_id,id),
   FOREIGN KEY(tenant_id,destination_warehouse_id)
     REFERENCES erp_local_warehouse(tenant_id,id),
+  FOREIGN KEY(tenant_id,destination_bin_id)
+    REFERENCES erp_local_stock_bin(tenant_id,id),
   FOREIGN KEY(tenant_id,destination_position_id)
     REFERENCES erp_local_lot_position(tenant_id,id),
   FOREIGN KEY(tenant_id,operation_id)
