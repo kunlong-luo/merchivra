@@ -16,6 +16,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import org.merchivra.erp.spapi.SpApiHttpException;
+import org.merchivra.erp.spapi.SpApiOperation;
+import org.merchivra.erp.spapi.SpApiRetryPolicy;
 import org.merchivra.erp.spapi.SpApiOfficialModules;
 import org.merchivra.erp.spapi.SpApiOfficialSdkFactory;
 import org.merchivra.erp.spapi.SpApiSellerScope;
@@ -51,8 +53,10 @@ public final class TypedFinancesSdkReader {
     public TypedFinancesSdkReader(SpApiOfficialSdkFactory factory) {
         Objects.requireNonNull(factory);
         var api=new SpApiOfficialModules(factory);
-        this.call=(scope,after,before,cursor)->api.finances(scope)
-            .listTransactions(after,before,scope.marketplaceId(),null,null,null,cursor);
+        this.call=(scope,after,before,cursor)->factory.executeObservedRead(scope,
+            SpApiOperation.LIST_TRANSACTIONS,
+            () -> api.finances(scope).listTransactionsWithHttpInfo(
+                after,before,scope.marketplaceId(),null,null,null,cursor));
     }
     TypedFinancesSdkReader(ReadCall call) { this.call=Objects.requireNonNull(call); }
 
@@ -116,9 +120,11 @@ public final class TypedFinancesSdkReader {
             response=call.fetch(scope,OffsetDateTime.ofInstant(after,ZoneOffset.UTC),
                 OffsetDateTime.ofInstant(before,ZoneOffset.UTC),cursor);
         } catch(ApiException.RateLimitExceeded e) {
-            throw new SpApiHttpException("listTransactions",429,"");
+            throw new SpApiHttpException("listTransactions",429,"",
+                SpApiRetryPolicy.retryAfter(e.getResponseHeaders(),Instant.now()));
         } catch(ApiException e) {
-            throw new SpApiHttpException("listTransactions",e.getCode(),"");
+            throw new SpApiHttpException("listTransactions",e.getCode(),"",
+                SpApiRetryPolicy.retryAfter(e.getResponseHeaders(),Instant.now()));
         } catch(LWAException e) {
             throw new SecurityException("LWA authentication failed");
         }
