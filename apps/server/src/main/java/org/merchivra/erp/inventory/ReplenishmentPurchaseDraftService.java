@@ -9,6 +9,7 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.purchasing.PurchasingService;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -25,6 +26,7 @@ public class ReplenishmentPurchaseDraftService {
     private final PurchasingService purchasing;
     private final Clock clock;
 
+    @Autowired
     public ReplenishmentPurchaseDraftService(JdbcTemplate jdbc,PurchasingService purchasing) {
         this(jdbc,purchasing,Clock.systemUTC());
     }
