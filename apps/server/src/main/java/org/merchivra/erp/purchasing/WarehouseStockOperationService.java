@@ -186,6 +186,18 @@ public class WarehouseStockOperationService {
         int change=delta(req.type(),req.quantity(),before);
         long after=before+change;
         if(after<0)throw conflict("Insufficient local warehouse stock");
+        if(change<0) {
+            // V48 position quantities are traceable released goods. Generic
+            // stock operations may use only UNALLOCATED stock; dedicated FIFO/
+            // FEFO picks consume positions and global stock in one transaction.
+            Long positioned=jdbc.queryForObject("""
+                SELECT COALESCE(SUM(remaining_quantity),0)::bigint
+                FROM erp_local_lot_position
+                WHERE tenant_id=? AND warehouse_id=? AND product_sku_id=?
+                """,Long.class,tenant,req.warehouseId(),req.productSkuId());
+            if(after<(positioned==null?0:positioned))
+                throw conflict("Stock positioned in bins requires lot-aware picking");
+        }
         UUID id=UUID.randomUUID();
         jdbc.update("""
             INSERT INTO erp_local_stock_operation
