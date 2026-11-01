@@ -466,3 +466,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - `QC_RELEASE` 仅可在另一位不同 Owner 对 INSPECTED 批次显式放行时产生，正数数量必须等于已记录 acceptedQuantity；零合格不得产生移动。tenant 行锁 + 仓库行锁 + QC 唯一来源保证重复点击不双入账；必须保留追加式批次事件、released_by 和时间。
 - 批次码仅在 PENDING_QC 时允许变更，并校验原码版本和可打印安全字符、原因，所有修改留原值审计。供应商 ASN SHIPPED 仍不是承运商验证，待检不是可售或 FBA 已接收。可用库存与累计实收分别展示。
 - 详见 `docs/purchasing/held-receipt-lots-quality-release-v46.md`；**真实 PostgreSQL18 Flyway / 跨租户 HTTP / 并发锁**未经专项验收，严禁把 Java/React CI 成功误报为真实 Amazon 接入成功。
+
+## V47 · 收货分段、虚拟 QC 库位与补货证据约束（2026-11-01）
+
+- V47 的 `erp_receipt_lot_piece` 是**原始实收的待检分段标签**，只允许 PENDING_QC 阶段拆分/移动；其件数总和必须恒等于真实 receipt 对应 V46 batch.received_quantity。不得把它们当作售出批次、FEFO 扣减、真实物理货架验证或各片段独立 QC/放行。
+- 每个仓库自动创建系统内部 `QC-HOLD`，新增库位目的 `QC_HOLD` 或 `STORAGE`；只有同 tenant、同仓库、ACTIVE QC_HOLD 才能接收未检分段。系统虚拟默认库位不证明实物已扫描或上架。新增实收 ROOT 分段要随收货同事务创建，缺少 QC-HOLD 时失败回滚。
+- 拆分必须在 tenant+batch 锁下保存来源 qty - n 和新片段 qty=n，要求 1<=n<原片段当前件数、唯一分段码、目标待检库位、原因和 requestKey；移动需要来源 bin 预期值与目标 bin，重复 requestKey 不重复移动或分段，记录只追加事件。**任何分段/库位操作都不产生 `erp_local_stock_movement`，也不修改 `erp_purchase_receipt` 或 Amazon FBA。**
+- 库存补货压力视图必须把来自仓库已签库存流水的 usable、PENDING_QC、INSPECTED 待放行、ASN 申报 SHIPPED 未关联收货数量分开，不得相加成可售库存；V42 原补货决策仍以已发布本地库存流水为准，不能自动提交采购单。
+- 详见 `docs/purchasing/receipt-lot-locations-v47.md`。Java/React CI 不替代 PostgreSQL 18 Flyway、跨租户 HTTP 与多事务锁验收。
