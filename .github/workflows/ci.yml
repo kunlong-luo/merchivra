@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   backend:
-    name: Java 25 / Maven tests
+    name: Java 25 / Gradle tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -25,10 +25,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
-          cache: maven
-          cache-dependency-path: apps/server/pom.xml
-      - name: Run backend unit tests
-        run: mvn -B -f apps/server/pom.xml test
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.2.1'
+      - name: Gradle test and JaCoCo report
+        run: gradle -p apps/server --no-daemon --console plain test jacocoTestReport
 
   frontend:
     name: React 19 / TypeScript / Vitest / Vite
@@ -89,13 +90,14 @@ jobs:
         with:
           distribution: temurin
           java-version: '25'
-          cache: maven
-          cache-dependency-path: apps/server/pom.xml
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.2.1'
       - name: Start actual Spring Boot against isolated PostgreSQL 18
         shell: bash
         run: |
           set -euo pipefail
-          mvn -B -f apps/server/pom.xml -DskipTests spring-boot:run \
+          gradle -p apps/server --no-daemon --console plain bootRun \
             > /tmp/merchivra-flyway.log 2>&1 &
           app_pid=$!
           ready=0
