@@ -459,3 +459,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 不合格品独立隔离，供应商退货的所有非取消草稿累计不得大于拒收件数。退货 DISPATCHED 是人工申报发出，既不等于供应商签收或退款，**更不能在质检已隔离的库存上再次扣减**。所有动作保持租户复合 FK 和只追加事件。
 - 质检异常工作队列仅监控已有本地不合格品的未处置和超期 7 天，默认手动扫描；可选 `merchivra.purchase-quality.scheduler-enabled=true`。不自动采购、发货、退款、Amazon FBA/FBM 写入。
 - 实施与限制详见 `docs/purchasing/receipt-quality-and-supplier-returns-v44.md`。真实 PostgreSQL 18 迁移、并发/权限及业务集成验收仍须单独完成，不可把编译 CI 视为生产验证。
+
+## V45 · 供应商差异与索赔的可信度边界（2026-11-01）
+
+- `PO_SHORTAGE` 与 `ASN_SHORTAGE` 只是 Owner 记录的**当前未收足快照**，不能当成最终供应商损失；`OVERAGE_UNPOSTED` 只是人工观察到的额外实物，绝不能自动修改 `erp_purchase_receipt` 或本地库存正数流水，也不能悄悄突破原采购单收货上限。
+- 人工差异必须带来源采购行/可选 ASN、请求 UUID、原因及原始数量快照；审核差异的 Owner 与报告人不同，复核/建立索赔/提交/审批时要对真实收货或采购剩余容量重新校验，过期来源一律拒绝。原始事件、审核人和审计不能覆盖。
+- 索赔仅能以**已经另一 Owner 复核的差异**或 V44 已完成质检的不合格品为来源，一次来源最多一份索赔，件数不超过来源。索赔另走 DRAFT → SUBMITTED → 另一 Owner APPROVED → 带说明 CLOSED；不自动向供应商发信、不创建赔偿金/信用票据、不更改 Amazon FBA、财务或结算。
+- 供应商统计只使用已审批采购单实收、质检不合格和可核对的异常数；禁止没有承运商证据就输出虚构“准时率”、退款到账或跨币种总成本。本模块接口与未验收项见 `docs/purchasing/supplier-discrepancies-claims-v45.md`；后端 CI 不代替 PG18/HTTP/并发实测。
