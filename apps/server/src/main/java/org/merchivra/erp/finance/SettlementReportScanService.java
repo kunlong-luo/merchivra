@@ -161,8 +161,7 @@ public class SettlementReportScanService {
                       AND state IN ('READY','RETRY','RUNNING')
                       AND (lease_expires_at IS NULL OR lease_expires_at<=now())
                     """,tenant,mp);
-                throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Seller Finance role no longer approved");
+                return null; // Commit PAUSED; do not roll back this transaction.
             }
             Job j=job(tenant,mp,true);
             Instant now=clock.instant();
@@ -196,6 +195,7 @@ public class SettlementReportScanService {
                 """,epoch,owner,db(now.plus(Duration.ofMinutes(10))),tenant,j.id());
             return new Claim(tenant,mp,m,j,owner,epoch,scope);
         });
+        if(c==null)return status(tenant,mp);
         try {
             var part=worker.scanPage(c.tenant(),c.market().account(),c.market().site(),
                 db(c.job().from()),db(c.job().until()),c.job().token(),
