@@ -57,6 +57,12 @@ public final class SpApiOfficialSdkFactory {
         if (!enabled) throw new IllegalStateException("Official Amazon SDK is disabled");
         if (operation.mutatesRemoteState())
             throw new SecurityException("Observed typed SDK read cannot perform remote writes");
+        if (operation.requiresOrdersReadRole()
+            && !seller.approvedRoles().contains("Inventory and Order Tracking"))
+            throw new SecurityException("Orders role not verified");
+        if (operation.requiresFinanceRole()
+            && !seller.approvedRoles().contains("Finance and Accounting"))
+            throw new SecurityException("Finances role not verified");
         rateLimiter.requireLegacyPermit(seller.region(), operation, seller.refreshToken());
         try {
             ApiResponse<T> response = Objects.requireNonNull(call.call(), "SDK response required");
