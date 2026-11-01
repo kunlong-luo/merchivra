@@ -17,8 +17,7 @@ BEGIN
   SELECT x.tenant_id,x.id,x.currency_code
     INTO t,m,market_currency
     FROM seller_marketplace x
-    WHERE (SELECT COUNT(*) FROM seller_marketplace WHERE tenant_id=x.tenant_id)>=2
-      AND (SELECT COUNT(*) FROM membership WHERE tenant_id=x.tenant_id)>=2
+    WHERE (SELECT COUNT(*) FROM membership WHERE tenant_id=x.tenant_id)>=2
     ORDER BY x.created_at DESC,x.id DESC LIMIT 1;
   IF m IS NULL THEN RAISE EXCEPTION 'V66 requires a local Marketplace from V65 smoke'; END IF;
   SELECT user_id INTO creator FROM membership WHERE tenant_id=t ORDER BY user_id LIMIT 1;
@@ -27,7 +26,15 @@ BEGIN
   IF reviewer IS NULL THEN RAISE EXCEPTION 'V66 requires two local Owners'; END IF;
   SELECT id INTO foreign_mp FROM seller_marketplace
     WHERE tenant_id=t AND id<>m ORDER BY id LIMIT 1;
-  IF foreign_mp IS NULL THEN RAISE EXCEPTION 'V66 requires a second Marketplace'; END IF;
+  IF foreign_mp IS NULL THEN
+    -- Set up an additional Marketplace ONLY inside this rolled-back test.
+    foreign_mp := gen_random_uuid();
+    INSERT INTO seller_marketplace
+      (id,tenant_id,seller_account_id,marketplace_id,currency_code,timezone)
+    SELECT foreign_mp,tenant_id,seller_account_id,
+      'V66_CI_SECONDARY_MARKET',currency_code,timezone
+    FROM seller_marketplace WHERE tenant_id=t AND id=m;
+  END IF;
   SELECT COUNT(*) INTO rows_before FROM finance_ad_spend_reference WHERE tenant_id=t;
   INSERT INTO ads_profile_reference
     (id,tenant_id,seller_marketplace_id,profile_reference,origin,created_by)
