@@ -98,7 +98,9 @@ class LotReconciliationServiceTest {
     @Test void onlyAnObservationCanCreateCountEvidenceAndCannotModifyStock()
         throws Exception {
         active();observation(7);position();warehouse();stockBalance(20);
-        countStored(count(7,"PENDING_REVIEW",null,null));
+        when(jdbc.query(contains("FROM erp_local_lot_count_review WHERE tenant_id=?"),
+            any(RowMapper.class),eq(tenant),any(UUID.class)))
+            .thenReturn(List.of(count(7,"PENDING_REVIEW",null,null)));
         var result=service.submitCount(tenant,observer,
             new LotReconciliationService.CountRequest(key,observation,
                 "Physical cartons were recounted"));
