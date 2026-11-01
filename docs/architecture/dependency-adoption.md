@@ -8,20 +8,20 @@
 
 | 领域 | 选择 | 为什么 |
 |---|---|---|
-| Java API | **Java 25 LTS + Spring Boot 4.1.2 + Spring MVC / Actuator / JDBC** | 新主线、原生模块化 Starter，继续使用 Maven |
+| Java API | **Java 25 LTS + Spring Boot 4.1.2 + Spring MVC / Actuator / JDBC** | 新主线、原生模块化 Starter，继续使用 Gradle Wrapper |
 | 数据层 | PostgreSQL + Flyway | 事务、约束与版本迁移，强业务事实在数据库侧校验 |
-| Vue HTTP 读取 | TanStack Vue Query v5 | 成熟的后台刷新/请求状态/缓存，减少自造任务状态 |
+| React HTTP 读取 | TanStack React Query v5 | 成熟的后台刷新/请求状态/缓存，减少自造任务状态 |
 | API 响应校验 | Zod v4 | 对外部 HTTP JSON 进行运行时解析，不只信 TypeScript 类型 |
 | 前端单元测试 | Vitest v5 | 与 Vite 共用转换环境，针对 Schema 边界编写负例 |
 | CI | GitHub Actions | Java 测试与前端类型检查/测试/构建独立执行；最小权限/并发取消 |
-| 更新治理 | GitHub Dependabot | npm、Maven、GitHub Actions 每周更新，经过 CI 验证 |
+| 更新治理 | GitHub Dependabot | npm、Gradle、GitHub Actions 每周更新，经过 CI 验证 |
 
-前端依然使用 **Vue 3**。Pagevela 是 React + Zustand + Dexie 的浏览器本地应用，而 Merchivra 具有多租户后台服务；直接复制 React/Zustand/Dexie 会增加迁移成本且可能破坏交易事实的一致性。
+前端已改为 **React 19**。Pagevela 的 Zustand/Dexie 浏览器本地数据架构不适用于后端多租户财务真实来源，不能直接复制。
 
 ## 待业务页面需要再引入（先不加空依赖）
 
-- **Pinia**：存在跨页面的活动租户、Seller 账号/筛选 UI 状态时再引入。严格禁止以浏览器状态作为后台权限证明。
-- **Vue Router**：有真正的多业务页面后引入，配合 server-side ACL；不以路由守卫作为唯一授权手段。
+- **TanStack Query**：已承担 React 服务端状态，无需 Pinia/Redux。跨页筛选如确有复杂需求再考虑 TanStack Router/URL 状态。
+- **TanStack Router（候选）**：业务模块深链/导航状态需要时再引入，始终由服务端 ACL 决定真实授权。
 - **Playwright**：**M0～M2 暂不引入或纳入 CI**。M3 核心订单/库存/财务流程基本稳定后再挑选关键 E2E，M4 Beta 前才考虑主分支门禁及跨浏览器覆盖。参考 [轻量 CI 决策](../testing/ci-policy.md)，不要在开发前期追求 Pagevela 级别的完整测试矩阵。
 - **Spring Security 7**：当前已有最小 Session/CSRF/租户 OWNER 权限实现，尚未通过安全签审、权限矩阵或真实 Amazon 数据验证；**Validation** 在复杂入参 DTO 出现时按需加入官方 starter。
 - **Resilience4j**：明确 SP-API 调用和 operation 限流模型后考虑；不能把通用自动重试当作财务幂等策略。
@@ -33,7 +33,7 @@
 
 ## 前端锁文件与工具链更新（2026-10-30）
 
-已通过一次性的 GitHub Actions 运行真实 npm registry 解析并提交 **`apps/web/package-lock.json`**（lockfile v3）。GitHub CI / Docker 统一使用 `npm ci`；一次性工作流已自动删除，不在常规 CI 增加测试负担。当前技术栈为 Node 24 LTS、Vite 8.3.5、TypeScript 6.0.3、vue-tsc 3.3.x、Vitest 5；后端为 Java 25 + Spring Boot 4.1.2。详细兼容项见 [DEP-002](stack-upgrade-2026-10-30.md)。
+已通过一次性的 GitHub Actions 运行真实 npm registry 解析并提交 **`apps/web/package-lock.json`**（lockfile v3）。GitHub CI / Docker 统一使用 `npm ci`；一次性工作流已自动删除，不在常规 CI 增加测试负担。当前技术栈为 Node 24 LTS、React 19、Vite 8、TypeScript 6、Vitest 5；后端为 Java 25 + Spring Boot 4.1.2。详细兼容项见 [DEP-002](stack-upgrade-2026-10-30.md)。
 
 锁文件管理：更新依赖时应运行 `cd apps/web && npm install`，**同时提交 package.json 与 package-lock.json**；日常本地构建与 CI 使用 `npm ci`。参考 [Issue #2](https://github.com/kunlong-luo/merchivra/issues/2)。
 
@@ -48,3 +48,7 @@ Pagevela 的集中写入协调器思想可用于 ERP 的 **Sync Stream + lease/f
 ## Superseding decision (2026-10-31): React-only
 
 The maintainer explicitly chose **React 19.3** over Vue. The earlier "Vue remains" decision is superseded. Replace TanStack Vue Query with TanStack React Query; keep Vite 8, TypeScript 6, Zod and Vitest; remove Vue SFC and related build dependencies. No requirement to migrate Spring Boot or PostgreSQL. [ADR](react-migration-2026-10-31.md).
+
+## V67 核验与复用决策（2026-11-01）
+
+详见 [V67 成熟组件复用审查](reuse-audit-v67.md)。本轮已经引入 Spring Boot 官方 Validation Starter，并把运营异常 API 切到实际 Controller OpenAPI + Orval；其余候选在实际业务触发前不安装，避免“为了不造轮子而堆轮子”。

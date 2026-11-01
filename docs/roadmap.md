@@ -12,6 +12,11 @@
 | M3 | 财务/成本/利润 | 费用、成本与估算报表 | 可对账、可追踪 |
 | M4 | Beta | 安全、运维、发布 | P0 验收通过、运行手册完成 |
 
+## 2026-11-01 · V67 运营自动化与成熟组件复用进度
+- Flyway V65 扩展既有 V10 运营队列，新增 FBA 本地货件复核、Ads 未授权日报审核来源，Owner 认领/释放、暂缓提醒/恢复、完整操作审计、ACTIONABLE 工作台筛选、Spring Boot Validation。
+- 基于实际 Spring MVC Controller 的 operations-v67 OpenAPI + Orval 8 生成客户端，替代前端原 V10 手写 HTTP；PG18 HTTP 与双 Owner 冒烟按 CI 运行验证。
+- 定时器、Seller OAuth、Ads OAuth、自动远程写入/消息发送仍关闭；成熟依赖新增时需有具体价值。见 [V67 技术复用](architecture/reuse-audit-v67.md)。
+
 ## 2026-11-01 · V66 开发进度（替代早期阶段描述）
 - V65 货件入仓/在途/差异本地 Mock 与 Orval 已经合并 `main`，真实 Amazon 入仓未授权。
 - V66 启动独立 Ads 来源：Flyway V64、离线 Ads Profile、按日 Campaign 花费与双 Owner 复核、防重、实际 Controller OpenAPI + Orval；真实 Ads OAuth/Reports API 仍关闭。
