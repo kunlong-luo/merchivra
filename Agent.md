@@ -482,3 +482,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - FIFO/FEFO 只在 Owner 确认真实出库后调用统一 V40 `OUTBOUND`；在 tenant/仓库串行锁下将批次库位扣减、标准签名出库流水、操作和 pick_line 审计组成同一事务，任何中间失败全部回滚。FEFO 有效期来自人工记录；过期批次禁入自动拣货、未知有效期排在已知日期后，不得虚构承运商或 Amazon 证明。
 - 普通 V40 OUTBOUND/TRANSFER/COUNT 减少库存后不可使余额低于定位批次余量，应拒绝并要求 lot-aware pick。不得只在 UI 实现该检查；支持原始 expectedOnHand、tenant+requestKey 幂等、来源和 actor 审计。
 - 详见 `docs/purchasing/graded-lot-putaway-fifo-fefo-v48.md`；Java/React CI 成功不等于 PostgreSQL18 真实 Flyway、竞争事务或跨租户 HTTP 完整验收，真实 Amazon SP-API 在核心功能后联调。
+
+## V49 · 已放行批次跨仓与过期隔离的不可突破约束（2026-11-01）
+
+- 已放行位置同仓 MOVE 只改来源库位且实际剩余>0，须 ACTIVE 同仓 STORAGE、expectedRemaining 一致、请求键幂等和追加式来源事件，不得改签名总库存。COUNT_OBSERVATION 只能记录真实清点数和差异/原因，不能直接调整库存、擅自生成供应商财务记录或伪造经过审批的 COUNT 操作。
+- V49 TRANSFER 只处理已由另一 Owner 放行并明确上架、未过期的真实批次余量；源和目标不同 ACTIVE 仓库/真实 STORAGE 库位，tenant+来源位置+两仓锁、expectedOnHand 校验，同事务扣位置和调用 V40 TRANSFER 签名仓库流水，创建 origin_position_id 指向源位置的目标位置，保留 receipt/lot/人工有效期，失败一律回滚。V48 原始 putaway 合格件额度仅统计 origin_position_id IS NULL 的根位置，不能因跨仓子位置导致原实收额度重复计算。
+- EXPIRED_QUARANTINE 只允许有登记有效期且确已过期的批次，人工确认后负向扣减已放行位置余量与本地签名可用库存，唯一 lot_action_id 来源的 LOT_QUARANTINE，不得伪装 V40 OUTBOUND。预警只是只读，不能替代真实物理扫码隔离；未知有效期不可自动认定过期。
+- V49 owner Session + CSRF，tenant requestKey、actor、payload 不允许重用为另一动作；所有来源、目标 bin 和仓库必须 tenant 复合验证。存储位置来源链可经递归 origin_position_id 找到最初 V46 真实收货，允许审计跨仓变化，但不可由这些本地记录推断 Amazon FBA 已接收或外部 WMS 已执行。
+- 详见 `docs/purchasing/released-lot-lifecycle-v49.md`。CI 不能替代 PostgreSQL 18 Flyway / Compose、HTTP 多租户、并发锁和真实 Amazon 授权验收。
