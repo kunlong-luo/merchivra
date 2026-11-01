@@ -581,3 +581,9 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - Reports 真实网络默认关闭，调度默认关闭，生产只用读操作及 Redis 8 fail-closed 操作级配额。不得由 UI 接收任意 Seller/租户 ID、URL、报表内容或授权 Token。
 - 报告与 Finances 只读对账按当前 tenant、Marketplace、SETTLEMENT_ID、币种精确匹配；不得自动视为会计入账、退款或银行支付。源合计一致仍必须标识未验真。
 - V57 的任务监控须包含 V55 REPORTS 任务，同时维持四条分支 tenant_id 条件和非敏感字段清单。
+
+## 2026-11-01 · V59 双人审核与可信财务来源
+- 阅读 docs/finance/settlement-source-review-v59.md。审核申请 Owner 与审批 Owner 必须不同，审计只追加、备注有界、权限由服务端 Session TenantAccessService 校验。
+- 来源 APPROVED 仅表示 Amazon Reports 与 LIVE Finances 在同站点、相同 Settlement ID/原币下有符号金额已通过双人来源复核；bankVerified 与 ledgerPosted 永远 false，不能借此过账或确认到账。
+- 哈希包含原始报告摘要与同一个 Settlement ID 精确关联的所有来源交易；证据变化显示 STALE 并需要重审，重复 Settlement ID 报表禁止批准。
+- 服务端 PostgreSQL 18 / Java 25 / Gradle、React 19 与真实 Amazon 默认为关闭的策略保持不变；有状态审核不得启用 Amazon 写接口或默许浏览器 tenant ID。
