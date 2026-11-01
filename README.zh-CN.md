@@ -16,7 +16,7 @@
 | `server` 后端 | Java 25 + Spring Boot 4.1.2 | Session/CSRF、业务 API、Flyway | http://127.0.0.1:8080 |
 | 数据库 | PostgreSQL **18** | 商品、采购、库存、订单、财务来源、审计和凭据原件 | 内置 `postgres` 或你的 `spark-postgres` |
 
-**Redis 不是当前运行必需服务。** 内置 Compose 的 Redis 已改为可选 profile；你现有 `spark-db` 中的 Redis、InfluxDB、PostGIS 和 pg_cron 都不需要为了 Merchivra 修改或删除。
+**Redis 8 已接入（默认关闭）。** 可用于共享 Spring Security Session/CSRF 和跨实例 Amazon SP-API 原子限流；单实例开发仍可不启动 Redis。复用 `spark-db` 时使用已有的 `spark-redis`，不会增加 Merchivra 容器、修改 `iot_farm` 或删除其他项目的 Key。你的 Redis 当前 `allkeys-lru` 不适合直接承担生产级 Session/限流，需要独立实例或评审无淘汰策略。详见 [Redis 8 部署与安全指南](docs/deployment/redis-session-spapi-v53.md)。
 
 <details>
 <summary>当前主要技术选型</summary>
@@ -46,7 +46,7 @@ docker compose --env-file .env -f deploy/compose.yaml ps
 
 打开 **http://127.0.0.1:3000** 登录。默认仅启动 `postgres` + `server` + `web`；`MERCHIVRA_DEMO_ENABLED=true` 仅在此内置本地 Compose 中启用虚构演示。后端首次启动自动运行 Flyway，数据库卷持久化。
 
-若想额外运行**非业务必需**的 Redis：`docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache up -d`。
+如需在本地验证**可选 Redis 8**：`docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache up -d`。
 
 ## 三、快速启动方案 B：复用你已有的 spark-db（推荐）
 
@@ -100,7 +100,7 @@ docker compose --env-file .env -f deploy/compose.spark-db.yaml up -d --build
 docker compose --env-file .env -f deploy/compose.spark-db.yaml ps
 ```
 
-**这一方案只新增两个 Merchivra 容器：`server` 和 `web`。第三层数据库复用 `spark-postgres`。** 不启动新 PostgreSQL，不占用你已有的 5432 端口，不修改其他 spark-db 数据卷；`spark-redis`、InfluxDB 等保持由原项目管理。
+**这一方案只新增两个 Merchivra 容器：`server` 和 `web`。第三层数据库复用 `spark-postgres`。** 不启动新 PostgreSQL，不占用你已有的 5432 端口，不修改其他 spark-db 数据卷；`spark-redis`、InfluxDB 等保持由原项目管理。可选择把 Redis 8 接入共享 Session 与 API 限流（详见[启用指南](docs/deployment/redis-session-spapi-v53.md)），不需要新 Redis 容器。
 
 默认前端仍为 http://127.0.0.1:3000，API 为 http://127.0.0.1:8080。若端口冲突，可在 `.env` 设置 `MERCHIVRA_WEB_PORT` / `MERCHIVRA_API_PORT`。
 
