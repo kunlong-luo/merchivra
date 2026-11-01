@@ -113,6 +113,22 @@ class WarehouseStockOperationServiceTest {
             request("OUTBOUND",null,2,5)));
         verify(jdbc,never()).update(anyString(),any(Object[].class));
     }
+    @Test void genericOutboundCannotConsumeAlreadyLocatedReleasedLots() {
+        stubActive(false,10);
+        when(jdbc.queryForObject(contains("FROM erp_local_lot_position"),
+            eq(Long.class),eq(tenant),eq(source),eq(sku))).thenReturn(9L);
+        status(HttpStatus.CONFLICT,()->service.post(tenant,actor,
+            request("OUTBOUND",null,2,10)));
+        verify(jdbc,never()).update(anyString(),any(Object[].class));
+    }
+    @Test void genericCountCannotErasePositionedAvailableStock() {
+        stubActive(false,10);
+        when(jdbc.queryForObject(contains("FROM erp_local_lot_position"),
+            eq(Long.class),eq(tenant),eq(source),eq(sku))).thenReturn(8L);
+        status(HttpStatus.CONFLICT,()->service.post(tenant,actor,
+            request("COUNT",null,7,10)));
+        verify(jdbc,never()).update(anyString(),any(Object[].class));
+    }
     @Test void transferWritesEqualAndOppositeMovementsInOneTransaction() {
         stubActive(true,10);
         var saved=new WarehouseStockOperationService.Operation(id.toString(),
