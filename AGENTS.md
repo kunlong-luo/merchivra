@@ -626,3 +626,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 每类金额不得超过来源绝对值、符号方向一致；允许 DRAFT 残差，但只有完全零残差才提交，**必须不同 Owner 独立审批**。审批哈希必须绑定来源、成本以及逐项金额和依据，变动则 STALE，旧分摊不可以用于 V61 利润。
 - 多 SKU 订单计入 V61 必须所有事件都获独立审批、分类与订单合计两层金额守恒、退款/调整阻塞解除。不得部分计入、重复计单、将财务来源完整度、银行到账或税务利润标为验证完成。
 - Session Owner+CSRF+租户与 Marketplace 复合约束/no-store，审计只追加。Flyway 迁移号 V60 不等于版本里程碑 V60（银行人工来源），代码仍为 Java25/Gradle/Spring Boot4.1.2、React19、PG18 和可选 Redis8，无 Amazon 远程写入。
+
+## 2026-11-01 · V63 退款成本来源复核防误判
+
+- 详见 docs/finance/refund-recovery-v63.md；Flyway V61 只是人工材料两人复核与审计。V34 数量 + V35 原币 PRODUCT_REFUND 金额 + 下单日有效 SKU 历史成本必须完整守恒。
+- RESTOCKED_CLAIMED 仅是 MANUAL_UNVERIFIED 的潜在成本回转敏感度，并非仓库已验收入库。actualCogsReversal=null、inventoryReceiptVerified=false、ledgerPosted=false；V61/V62 退款利润阻塞仍保留。
+- 双人审批人不等于申请人也不能是当前 V34/V35 的编制人；任一金额、数量、处分、成本或分类来源变化后证据 SHA256 作废，重新审核。Session Owner/CSRF/no-store，租户 Marketplace 复合 FK，行锁与可回溯审计。
+- 不自动修改 Amazon、银行流水、库存账或正式会计账。正式 COGS 回转必须有独立可信退货收货/处置凭证及 G1/G2 财务口径批准。
