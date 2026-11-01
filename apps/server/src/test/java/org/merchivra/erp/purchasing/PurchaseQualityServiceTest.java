@@ -107,6 +107,28 @@ class PurchaseQualityServiceTest {
             any(UUID.class),eq(tenant),eq(warehouse),eq(sku),
             any(UUID.class),eq(-3),eq(actor));
     }
+    @Test void newV46HeldReceiptQcDoesNotCreditOrDebitUsableStock() {
+        lockTenant();sourceReceipt(source(null));
+        when(jdbc.queryForList(contains("FROM erp_local_warehouse"),
+            eq(UUID.class),eq(tenant),eq(warehouse))).thenReturn(List.of(warehouse));
+        when(jdbc.query(contains("FROM erp_receipt_quality_batch"),
+            any(RowMapper.class),eq(tenant),eq(receiptId)))
+            .thenReturn(List.of("PENDING_QC"));
+        when(jdbc.query(contains("FROM erp_purchase_receipt_qc WHERE tenant_id=?"),
+            any(RowMapper.class),eq(tenant),any(UUID.class)))
+            .thenReturn(List.of(inspection()));
+        var qc=service.inspect(tenant,actor,receiptId,
+            new PurchaseQualityService.InspectRequest(requestId,7,3,"Packaging damaged"));
+        assertEquals(7,qc.acceptedQuantity());
+        verify(jdbc).update(contains("UPDATE erp_receipt_quality_batch"),
+            any(UUID.class),eq(tenant),eq(receiptId));
+        verify(jdbc).update(contains("INSERT INTO erp_receipt_quality_batch_event"),
+            any(UUID.class),eq(tenant),eq(receiptId),eq(actor),eq(7));
+        verify(jdbc,never()).queryForObject(contains("erp_local_stock_movement"),
+            eq(Long.class),any(Object[].class));
+        verify(jdbc,never()).update(contains("INSERT INTO erp_local_stock_movement"),
+            any(Object[].class));
+    }
     @Test void sameQcKeyReplaysWithoutPostingAgain() {
         lockTenant();
         when(jdbc.queryForList(contains("FROM erp_purchase_receipt_qc"),
