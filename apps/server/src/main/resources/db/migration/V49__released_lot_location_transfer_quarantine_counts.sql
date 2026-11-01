@@ -100,3 +100,12 @@ ALTER TABLE erp_local_stock_movement
          AND purchase_receipt_id IS NULL AND operation_id IS NULL
          AND inspection_id IS NULL)
   );
+
+-- Retain V48 putaway and pick history and extend position audit to V49 actions.
+ALTER TABLE erp_local_lot_event
+  DROP CONSTRAINT erp_local_lot_event_event_type_check;
+ALTER TABLE erp_local_lot_event
+  ADD CONSTRAINT erp_local_lot_event_event_type_check
+    CHECK(event_type IN (
+      'PUTAWAY','PICKED','MOVED','TRANSFER_OUT','TRANSFER_IN','QUARANTINED'
+    ));
