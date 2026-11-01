@@ -70,14 +70,14 @@ const server = createServer(async (req, res) => {
       nextAttemptAt:null,lastFailureCode:null
     })
   if (url.pathname === '/api/v1/operations/summary')
-    return respond(res, { open:1, acknowledged:0, done:0, cleared:0 })
+    return respond(res, { open:1, acknowledged:0, done:0, cleared:0, snoozed:0 })
   if (url.pathname === '/api/v1/operations/findings')
     return respond(res, [{
       id:'77777777-7777-4777-8777-777777777777',
       marketplaceId:market, ruleCode:'INVENTORY_UNKNOWN',
       sourceKey:'TEST-SKU-100', title:'FBA 库存数据不完整',
       severity:'WARNING', state:'OPEN', dataOrigin:'MOCK',
-      lastSeenAt:'2026-10-31T00:00:00Z'
+      lastSeenAt:'2026-10-31T00:00:00Z', assignedTo:null, snoozedUntil:null
     }])
   if (url.pathname.startsWith('/api/v1/')) {
     if (url.pathname === '/api/v1/seller-marketplaces' && mode === 'connected')
