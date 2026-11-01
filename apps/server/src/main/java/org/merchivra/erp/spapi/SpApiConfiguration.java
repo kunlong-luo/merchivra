@@ -89,13 +89,15 @@ public class SpApiConfiguration {
         @Value("${merchivra.spapi.lwa-client-id:}") String clientId,
         @Value("${merchivra.spapi.lwa-client-secret:}") String clientSecret,
         @Value("${merchivra.spapi.sandbox:true}") boolean sandbox,
-        @Value("${merchivra.spapi.allow-writes:false}") boolean allowWrites) {
+        @Value("${merchivra.spapi.allow-writes:false}") boolean allowWrites,
+        ObjectProvider<SpApiRateLimiter> admission) {
         var http = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .followRedirects(HttpClient.Redirect.NEVER).build();
         return SpApiClient.official(http,
             LwaTokenClient.official(http, clientId, clientSecret),
-            sandbox, true, allowWrites);
+            sandbox, true, allowWrites,
+            admission.getIfAvailable(SpApiRateLimiter::disabled));
     }
 
     @Bean
