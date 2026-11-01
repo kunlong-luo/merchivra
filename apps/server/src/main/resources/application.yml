@@ -141,6 +141,14 @@ merchivra:
     scheduler-enabled: ${MERCHIVRA_CATALOG_SYNC_SCHEDULER_ENABLED:false}
     scheduler-ms: ${MERCHIVRA_CATALOG_SYNC_SCHEDULER_MS:10000}
 
+  finance:
+    profit-report:
+      # Only progresses jobs explicitly created by a tenant Owner.
+      # Default OFF: Owner may manually advance one bounded batch via API.
+      # No Amazon, Ads or bank network access, no official ledger posting.
+      scheduler-enabled: ${MERCHIVRA_PROFIT_REPORT_SCHEDULER_ENABLED:false}
+      scheduler-ms: ${MERCHIVRA_PROFIT_REPORT_SCHEDULER_MS:15000}
+
   finances-sync:
     # Default OFF; verified Finance and Accounting role required per Seller.
     enabled: ${MERCHIVRA_FINANCES_SYNC_ENABLED:false}
