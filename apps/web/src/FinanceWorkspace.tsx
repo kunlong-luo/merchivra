@@ -8,6 +8,7 @@ import AdSpendPanel from './AdSpendPanel'
 import SettlementWorkspace from './SettlementWorkspace'
 import SettlementReportsPanel from './SettlementReportsPanel'
 import SkuProfitPanel from './SkuProfitPanel'
+import PeriodProfitReportPanel from './PeriodProfitReportPanel'
 import ItemAllocationPanel from './ItemAllocationPanel'
 import FinanceExceptionQueuePanel from './FinanceExceptionQueuePanel'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
@@ -102,6 +103,7 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
     </div>}
   </section>
   {currentId&&<SkuProfitPanel key={currentId} tenantId={tenantId} marketplaceId={currentId}/>}
+  {currentId&&<PeriodProfitReportPanel key={currentId} tenantId={tenantId} marketplaceId={currentId}/>}
   {currentId&&<SettlementReportsPanel key={currentId} tenantId={tenantId} marketplaceId={currentId} connected={markets.data?.find(m=>m.id===currentId)?.connectionStatus==='CONNECTED'}/>}
   {currentId&&<SettlementWorkspace key={currentId} tenantId={tenantId}
      marketplaceId={currentId}
