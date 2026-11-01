@@ -14,6 +14,7 @@ class SyncTaskMonitorServiceTest {
         assertTrue(sql.contains("FROM orders_sync_job WHERE tenant_id=?"));
         assertTrue(sql.contains("FROM spapi_catalog_sync_job WHERE tenant_id=?"));
         assertTrue(sql.contains("FROM spapi_finances_sync_job WHERE tenant_id=?"));
+        assertTrue(sql.contains("FROM spapi_settlement_scan_job WHERE tenant_id=?"));
         for (String forbidden : List.of("next_token", "refresh_token", "lease_owner",
                 "seller_id", "response_body", "access_token"))
             assertFalse(sql.contains(forbidden), forbidden);

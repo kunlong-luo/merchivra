@@ -1,6 +1,6 @@
 import {z} from 'zod'
 
-export const syncTaskKind = z.enum(['ALL','ORDERS','CATALOG_LISTINGS','CATALOG_FBA','FINANCES'])
+export const syncTaskKind = z.enum(['ALL','ORDERS','CATALOG_LISTINGS','CATALOG_FBA','FINANCES','REPORTS'])
 export const syncTaskState = z.enum(['ALL','READY','RUNNING','RETRY','WAITING_RETRY','PAUSED','SUCCEEDED'])
 
 export const syncTaskSchema = z.object({

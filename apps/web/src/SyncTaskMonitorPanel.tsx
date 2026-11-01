@@ -5,7 +5,7 @@ import type {SyncTaskKind,SyncTaskState} from './lib/sync-task-monitor'
 import {formatSourceTime} from './lib/core-view'
 
 const kindNames:Record<Exclude<SyncTaskKind,'ALL'>,string>={
- ORDERS:'订单',CATALOG_LISTINGS:'Listing',CATALOG_FBA:'FBA 库存',FINANCES:'财务'
+ ORDERS:'订单',CATALOG_LISTINGS:'Listing',CATALOG_FBA:'FBA 库存',FINANCES:'财务',REPORTS:'结算报告'
 }
 const stateNames:Record<Exclude<SyncTaskState,'ALL'>,string>={
  READY:'待执行',RUNNING:'运行中',RETRY:'等待重试',WAITING_RETRY:'等待重试',
@@ -32,11 +32,11 @@ export default function SyncTaskMonitorPanel({tenantId}:{tenantId:string}){
   ].map(item=><div key={item.name}><span>{item.name}</span><strong>{tasks.isPending?'—':item.count??0}</strong></div>)}</div>
   <div className="ops-toolbar">
    <label className="shop-filter"><span>同步类型</span><select aria-label="筛选同步类型" value={kind} onChange={e=>setKind(e.target.value as SyncTaskKind)}>
-    <option value="ALL">全部类型</option><option value="ORDERS">订单</option><option value="CATALOG_LISTINGS">Listing</option><option value="CATALOG_FBA">FBA 库存</option><option value="FINANCES">财务</option>
+    <option value="ALL">全部类型</option><option value="ORDERS">订单</option><option value="CATALOG_LISTINGS">Listing</option><option value="CATALOG_FBA">FBA 库存</option><option value="FINANCES">财务</option><option value="REPORTS">结算报告</option>
    </select></label>
    <label className="shop-filter"><span>执行状态</span><select aria-label="筛选执行状态" value={state} onChange={e=>setState(e.target.value as SyncTaskState)}>
     <option value="ALL">全部状态</option><option value="READY">待执行</option><option value="RUNNING">运行中</option>
-    <option value="RETRY">Catalog / 财务重试</option><option value="WAITING_RETRY">订单重试</option>
+    <option value="RETRY">Catalog / 财务 / 报告重试</option><option value="WAITING_RETRY">订单重试</option>
     <option value="PAUSED">已暂停</option><option value="SUCCEEDED">已完成</option>
    </select></label>
    <button type="button" className="refresh-button" disabled={tasks.isFetching} onClick={()=>void tasks.refetch()}>{tasks.isFetching?'读取中…':'刷新任务'}</button>

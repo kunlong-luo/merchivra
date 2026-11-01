@@ -27,7 +27,7 @@ public class SyncTaskMonitorService {
     public record Snapshot(Summary summary, List<Task> tasks, int limit,
         boolean hasMore) { }
 
-    // The same tenant predicate is applied independently to all three durable
+    // The same tenant predicate is applied independently to all four durable
     // job tables. No caller-supplied SQL identifiers or tenant parameters.
     static final String JOBS = """
         WITH jobs AS (
@@ -53,6 +53,13 @@ public class SyncTaskMonitorService {
                  (lease_expires_at IS NOT NULL AND lease_expires_at<=now()),
                  (lease_expires_at IS NOT NULL AND lease_expires_at>now())
           FROM spapi_finances_sync_job WHERE tenant_id=?
+          UNION ALL
+          SELECT id, seller_marketplace_id, 'REPORTS', 'LIVE',
+                 state, page_index, retry_count, retry_at, updated_at,
+                 last_failure_code,
+                 (lease_expires_at IS NOT NULL AND lease_expires_at<=now()),
+                 (lease_expires_at IS NOT NULL AND lease_expires_at>now())
+          FROM spapi_settlement_scan_job WHERE tenant_id=?
         )
         """;
 
@@ -61,7 +68,7 @@ public class SyncTaskMonitorService {
         if (limit < 1 || limit > 100) throw new IllegalArgumentException("Limit must be 1..100");
         String k = kind == null ? "ALL" : kind;
         String s = state == null ? "ALL" : state;
-        if (!List.of("ALL","ORDERS","CATALOG_LISTINGS","CATALOG_FBA","FINANCES").contains(k))
+        if (!List.of("ALL","ORDERS","CATALOG_LISTINGS","CATALOG_FBA","FINANCES","REPORTS").contains(k))
             throw new IllegalArgumentException("Unknown sync task kind");
         if (!List.of("ALL","READY","RUNNING","RETRY","WAITING_RETRY","PAUSED","SUCCEEDED").contains(s))
             throw new IllegalArgumentException("Unknown sync task state");
@@ -84,7 +91,7 @@ public class SyncTaskMonitorService {
             """,(rs,n)->new Summary(rs.getLong("total"),rs.getLong("ready"),
                 rs.getLong("running"),rs.getLong("retrying"),rs.getLong("paused"),
                 rs.getLong("succeeded"),rs.getLong("due_now"),
-                rs.getLong("expired_running")),tenant,tenant,tenant).getFirst();
+                rs.getLong("expired_running")),tenant,tenant,tenant,tenant).getFirst();
 
         List<Task> rows=jdbc.query(JOBS + """
             SELECT job_id, marketplace_id, kind, origin, state, pages,
@@ -101,7 +108,7 @@ public class SyncTaskMonitorService {
                 utc(rs.getObject("retry_at",OffsetDateTime.class)),
                 utc(rs.getObject("updated_at",OffsetDateTime.class)),
                 rs.getString("last_failure_code"),rs.getBoolean("lease_expired")),
-            tenant,tenant,tenant,k,k,s,s,limit+1);
+            tenant,tenant,tenant,tenant,k,k,s,s,limit+1);
         boolean more=rows.size()>limit;
         return new Snapshot(summary,more?List.copyOf(rows.subList(0,limit)):List.copyOf(rows),
             limit,more);
