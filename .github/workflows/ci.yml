@@ -151,7 +151,20 @@ jobs:
           )
           test -s apps/web/src/generated/fba-inbound.ts
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='63' AND success")" = "1"
+          curl -fsS http://127.0.0.1:8080/v3/api-docs/ads-reports > /tmp/ads-live.json
+          node scripts/normalize-ads-openapi.mjs /tmp/ads-live.json /tmp/ads-verified.json
+          cmp apps/web/openapi/ads-reports.json /tmp/ads-verified.json
+          cp /tmp/ads-verified.json apps/web/openapi/ads-reports.json
+          (
+            cd apps/web
+            npm run api:generate:ads
+          )
+          test -s apps/web/src/generated/ads-reports.ts
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM ads_report_reviewed_cost")" = "0"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM ads_profile_reference")" = "0"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='64' AND success")" = "1"
           python3 scripts/smoke_fba_inbound.py
+          psql -h 127.0.0.1 -U merchivra -d merchivra -v ON_ERROR_STOP=1 -f scripts/smoke_ads_schema.sql
           echo "PostgreSQL 18 / Flyway / actual finance + FBA OpenAPI and local mock chain verified"
           kill "$app_pid" 2>/dev/null || true
       - name: Preserve verified V65 OpenAPI contract for Orval review

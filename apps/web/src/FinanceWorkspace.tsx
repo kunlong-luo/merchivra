@@ -5,6 +5,7 @@ import OrderCostReadinessPanel from './OrderCostReadinessPanel'
 import OrderContributionPanel from './OrderContributionPanel'
 import RefundReviewPanel from './RefundReviewPanel'
 import AdSpendPanel from './AdSpendPanel'
+import AdsReportsPanel from './AdsReportsPanel'
 import SettlementWorkspace from './SettlementWorkspace'
 import SettlementReportsPanel from './SettlementReportsPanel'
 import SkuProfitPanel from './SkuProfitPanel'
@@ -106,6 +107,9 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
   {currentId&&<PeriodProfitReportPanel key={currentId} tenantId={tenantId} marketplaceId={currentId}/>}
   {currentId&&<SettlementReportsPanel key={currentId} tenantId={tenantId} marketplaceId={currentId} connected={markets.data?.find(m=>m.id===currentId)?.connectionStatus==='CONNECTED'}/>}
   {currentId&&<SettlementWorkspace key={currentId} tenantId={tenantId}
+     marketplaceId={currentId}
+     currency={markets.data?.find(m=>m.id===currentId)?.currency??'USD'}/>}
+  {currentId&&<AdsReportsPanel key={'ads-report-'+currentId} tenantId={tenantId}
      marketplaceId={currentId}
      currency={markets.data?.find(m=>m.id===currentId)?.currency??'USD'}/>}
   {currentId&&<AdSpendPanel key={currentId} tenantId={tenantId}
