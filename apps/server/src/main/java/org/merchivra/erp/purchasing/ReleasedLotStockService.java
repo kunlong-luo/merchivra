@@ -145,6 +145,13 @@ public class ReleasedLotStockService {
                || !java.util.Objects.equals(saved.expiryDate(),
                     req.expiryDate()==null?null:req.expiryDate().toString()))
                 throw conflict("Putaway request key already used with different source");
+            List<String> provenance=jdbc.query("""
+                SELECT reason,created_by FROM erp_local_lot_position
+                WHERE tenant_id=? AND id=?
+                """,(rs,i)->rs.getString("reason")+"|"+rs.getObject("created_by",UUID.class),
+                tenant,keys.getFirst());
+            if(provenance.size()!=1 || !provenance.getFirst().equals(detail+"|"+actor))
+                throw conflict("Putaway retry must preserve reason and submitting Owner");
             return saved;
         }
         Source src=source(tenant,req.receiptId());
