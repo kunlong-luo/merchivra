@@ -75,6 +75,6 @@ class LotProofBinaryServiceTest {
         assertEquals(info,service.upload(tenant,actor,proof,key,PDF));
         verify(jdbc).update(contains("INSERT INTO erp_local_lot_disposition_proof_file"),
             any(UUID.class),eq(tenant),eq(proof),eq(key),eq("application/pdf"),
-            aryEq(PDF),eq(PDF.length),eq(LotProofBinaryService.digest(PDF)),eq(actor));
+            org.mockito.AdditionalMatchers.aryEq(PDF),eq(PDF.length),eq(LotProofBinaryService.digest(PDF)),eq(actor));
     }
 }
