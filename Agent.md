@@ -625,3 +625,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - RESTOCKED_CLAIMED 仅是 MANUAL_UNVERIFIED 的潜在成本回转敏感度，并非仓库已验收入库。actualCogsReversal=null、inventoryReceiptVerified=false、ledgerPosted=false；V61/V62 退款利润阻塞仍保留。
 - 双人审批人不等于申请人也不能是当前 V34/V35 的编制人；任一金额、数量、处分、成本或分类来源变化后证据 SHA256 作废，重新审核。Session Owner/CSRF/no-store，租户 Marketplace 复合 FK，行锁与可回溯审计。
 - 不自动修改 Amazon、银行流水、库存账或正式会计账。正式 COGS 回转必须有独立可信退货收货/处置凭证及 G1/G2 财务口径批准。
+
+## 2026-11-01 · V64 整期持久报表/原币贡献
+
+- `docs/finance/period-profit-report-v64.md` 为 V64 规则；Flyway V62，当前技术栈 Java25、Gradle、Spring Boot4.1.2、React19、PG18。报表由 Owner 显式创建，固定 1–92 天 UTC 日期、最多 5000 LIVE 订单、最多 1000 distinct SKU、Marketplace 原币隔离；超限禁止默默截断。
+- 创建时以 REPEATABLE_READ 固定候选订单 UUID/次序，后续每批最多10单、各批独立 REPEATABLE_READ、原子提交，`SELECT FOR UPDATE SKIP LOCKED` 防并发双写。重启自动回滚未提交批，运行状态仅 READY/RETRY/PAUSED/SUCCEEDED，失败有限五次、安全错误码+审计。调度由 MERCHIVRA_PROFIT_REPORT_SCHEDULER_ENABLED 选择，默认 OFF；不开启时 Owner 手动逐批处理。
+- 不能声称全球同一时间点财务快照：`cohortFrozen=true` 只代表候选订单集合冻结，`globalSourceSnapshot=false`，每单 capturedAt/提取摘要可追溯但上游若后改不能证明仍是最新；新来源应发起新的 requestKey 报表版本。
+- 每单都复用 V61/V62 已审来源与成本计算，V63 退款成本仍未可信回转，故 blocked 订单 signed金额 NULL；只有 ELIGIBLE 金额进 SKU 和店铺贡献。Ads MANUAL_UNVERIFIED 独立展示不扣减，Finances/Reports 不重复计算。所有结果 `financialSourceComplete=false`、`bankVerified=false`、`ledgerPosted=false`。
+- 汇总必须仅使用持久冻结行；正式导出只能 SUCCEEDED，最多5000单/1000 SKU 固定表头并防 CSV formula injection。Owner Session + Marketplace + CSRF + no-store；不加真实银行/Amazon 出站或 GL posting。
