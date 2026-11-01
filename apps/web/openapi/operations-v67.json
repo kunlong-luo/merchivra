@@ -1,0 +1,536 @@
+{
+  "components": {
+    "schemas": {
+      "Attention": {
+        "properties": {
+          "assignedTo": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "snoozedUntil": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "AttentionAudit": {
+        "properties": {
+          "action": {
+            "type": "string"
+          },
+          "actorId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "newAssignee": {
+            "type": "string"
+          },
+          "newSnoozedUntil": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          },
+          "oldAssignee": {
+            "type": "string"
+          },
+          "oldSnoozedUntil": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ChangeState": {
+        "properties": {
+          "state": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Finding": {
+        "properties": {
+          "assignedTo": {
+            "type": "string"
+          },
+          "dataOrigin": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "lastSeenAt": {
+            "type": "string"
+          },
+          "marketplaceId": {
+            "type": "string"
+          },
+          "ruleCode": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "snoozedUntil": {
+            "type": "string"
+          },
+          "sourceKey": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "FindingChange": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "ScanResult": {
+        "properties": {
+          "clearedCount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "id": {
+            "type": "string"
+          },
+          "matchedCount": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "triggerType": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "Snooze": {
+        "properties": {
+          "minutes": {
+            "format": "int32",
+            "maximum": 1440,
+            "minimum": 15,
+            "type": "integer"
+          },
+          "note": {
+            "maxLength": 300,
+            "minLength": 10,
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "type": "object"
+      },
+      "Summary": {
+        "properties": {
+          "acknowledged": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "cleared": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "done": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "open": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "snoozed": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      }
+    },
+    "securitySchemes": {
+      "csrfHeader": {
+        "in": "header",
+        "name": "X-CSRF-TOKEN",
+        "type": "apiKey"
+      },
+      "sessionCookie": {
+        "in": "cookie",
+        "name": "JSESSIONID",
+        "type": "apiKey"
+      }
+    }
+  },
+  "info": {
+    "description": "V10/V67 advisory only, MOCK/UNVERIFIED or source-labeled; no Amazon calls.",
+    "title": "Merchivra V67 verified owner operations queue",
+    "version": "67.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/api/v1/operations/findings": {
+      "get": {
+        "operationId": "listOperationFindings",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "default": "ACTIVE",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Finding"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "operations-controller"
+        ]
+      }
+    },
+    "/api/v1/operations/findings/{findingId}/attention-audit": {
+      "get": {
+        "operationId": "getOperationFindingAttentionAudit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "findingId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AttentionAudit"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "operations-controller"
+        ]
+      }
+    },
+    "/api/v1/operations/findings/{findingId}/claim": {
+      "post": {
+        "operationId": "claimOperationFinding",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "findingId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Attention"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "operations-controller"
+        ]
+      }
+    },
+    "/api/v1/operations/findings/{findingId}/release": {
+      "post": {
+        "operationId": "releaseOperationFinding",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "findingId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Attention"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "operations-controller"
+        ]
+      }
+    },
+    "/api/v1/operations/findings/{findingId}/snooze": {
+      "post": {
+        "operationId": "snoozeOperationFinding",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "findingId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Snooze"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Attention"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "operations-controller"
+        ]
+      }
+    },
+    "/api/v1/operations/findings/{findingId}/state": {
+      "post": {
+        "operationId": "setOperationFindingState",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "findingId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeState"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/FindingChange"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "operations-controller"
+        ]
+      }
+    },
+    "/api/v1/operations/findings/{findingId}/unsnooze": {
+      "post": {
+        "operationId": "unsnoozeOperationFinding",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "findingId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Attention"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "operations-controller"
+        ]
+      }
+    },
+    "/api/v1/operations/scan": {
+      "post": {
+        "operationId": "scanOperationsNow",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScanResult"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "operations-controller"
+        ]
+      }
+    },
+    "/api/v1/operations/summary": {
+      "get": {
+        "operationId": "getOperationsSummary",
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Summary"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "operations-controller"
+        ]
+      }
+    }
+  },
+  "security": [
+    {
+      "sessionCookie": []
+    }
+  ],
+  "servers": [
+    {
+      "url": ""
+    }
+  ]
+}
