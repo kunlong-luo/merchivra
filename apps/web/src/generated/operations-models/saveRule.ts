@@ -7,7 +7,8 @@
  */
 
 export interface SaveRule {
-  enabled?: boolean;
-  expectedVersion?: number;
+  enabled: boolean;
+  /** @minimum 0 */
+  expectedVersion: number;
   lowStockThreshold?: number;
 }

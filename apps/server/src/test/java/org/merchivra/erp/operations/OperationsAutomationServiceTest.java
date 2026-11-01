@@ -33,16 +33,16 @@ class OperationsAutomationServiceTest {
     void v69InvalidRuleAndThresholdFailBeforeDatabase() {
         assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
             ()->service.saveRule(tenant,actor,finding,"FAKE",
-                new OperationsAutomationService.SaveRule(true,null,0))).getStatusCode());
+                new OperationsAutomationService.SaveRule(true,null,0L))).getStatusCode());
         assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
             ()->service.saveRule(tenant,actor,finding,"LOW_STOCK",
-                new OperationsAutomationService.SaveRule(true,-1,0))).getStatusCode());
+                new OperationsAutomationService.SaveRule(true,-1,0L))).getStatusCode());
         assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
             ()->service.saveRule(tenant,actor,finding,"REFUND_REVIEW",
-                new OperationsAutomationService.SaveRule(false,3,0))).getStatusCode());
+                new OperationsAutomationService.SaveRule(false,3,0L))).getStatusCode());
         assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
             ()->service.saveRule(tenant,actor,finding,"LOW_STOCK",
-                new OperationsAutomationService.SaveRule(true,3,-1))).getStatusCode());
+                new OperationsAutomationService.SaveRule(true,3,-1L))).getStatusCode());
         assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
             ()->service.saveRule(tenant,actor,finding,"LOW_STOCK",
                 new OperationsAutomationService.SaveRule(null,3,0L))).getStatusCode());
@@ -58,7 +58,7 @@ class OperationsAutomationServiceTest {
             .thenReturn(List.of());
         assertEquals(HttpStatus.FORBIDDEN,assertThrows(ResponseStatusException.class,
             ()->service.saveRule(tenant,actor,finding,"REFUND_REVIEW",
-                new OperationsAutomationService.SaveRule(false,null,0))).getStatusCode());
+                new OperationsAutomationService.SaveRule(false,null,0L))).getStatusCode());
         verify(jdbc,never()).update(anyString(),any(Object[].class));
     }
 

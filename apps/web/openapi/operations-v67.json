@@ -169,6 +169,7 @@
           },
           "expectedVersion": {
             "format": "int64",
+            "minimum": 0,
             "type": "integer"
           },
           "lowStockThreshold": {
@@ -176,6 +177,10 @@
             "type": "integer"
           }
         },
+        "required": [
+          "enabled",
+          "expectedVersion"
+        ],
         "type": "object"
       },
       "ScanResult": {
