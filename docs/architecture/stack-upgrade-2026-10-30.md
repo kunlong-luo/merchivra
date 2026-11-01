@@ -1,5 +1,8 @@
 # DEP-002 · 2026-10-30 前后端基础技术栈升级实施记录
 
+> **2026-11-01 构建工具更正（覆盖本文 10 月 30 日的 Maven 选型）：** 项目维护者明确淘汰 Maven。后端统一使用 **Gradle 9.2.1（Groovy DSL + 官方 Gradle Wrapper）**、Java 25、Spring Boot 4.1.2、`io.spring.dependency-management` 1.1.7；Docker/CI/README/Agent 规则均以 Gradle 为准。下文的 Maven/POM/构建镜像仅是历史决策与当时状态，不再是当前项目指令。推荐 `cd apps/server && ./gradlew test`、`./gradlew bootRun`、`./gradlew bootJar`。Kafka、Redis、InfluxDB、JPA 等不应从其他产品技术清单盲目复制进本 ERP。
+
+
 **状态：已在 `main` 实施并通过轻量 CI（Java 单元测试、Vue 类型检查/Vitest/Vite 构建）。这不是 PostgreSQL/Compose 完整运行或生产安全验收。**
 
 ## 版本对照
