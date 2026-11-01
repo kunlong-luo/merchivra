@@ -38,6 +38,10 @@ public class ReleasedLotLifecycleService {
     public record ExpiryAlert(String positionId,String lotCode,String binCode,
                               String productSkuId,int remainingQuantity,
                               String expiryDate,String urgency) {}
+    public record Lineage(String positionId,String originPositionId,String receiptId,
+                          String warehouseId,String binCode,String lotCode,
+                          int placedQuantity,int remainingQuantity,
+                          String expiryDate,int generation) {}
     private record Source(UUID id,UUID receipt,UUID warehouse,UUID sku,UUID bin,
                           int remaining,LocalDate expiry) {}
     private static ResponseStatusException bad(String text) {
@@ -122,6 +126,48 @@ public class ReleasedLotLifecycleService {
                 rs.getInt("remaining_quantity"),
                 rs.getObject("expiry_date",LocalDate.class).toString(),
                 rs.getString("urgency")),tenant,warehouse);
+    }
+    @Transactional(readOnly=true)
+    public List<Lineage> lineage(UUID tenant,UUID positionId) {
+        // Follow the immutable origin_position_id chain to the original released
+        // V46 receipt. The join never crosses tenant boundaries.
+        List<Lineage> rows=jdbc.query("""
+            WITH RECURSIVE ancestors AS (
+              SELECT p.id,p.origin_position_id,p.receipt_id,p.warehouse_id,
+                     p.bin_id,p.placed_quantity,p.remaining_quantity,
+                     p.expiry_date,p.tenant_id,0 AS depth
+              FROM erp_local_lot_position p WHERE p.tenant_id=? AND p.id=?
+              UNION ALL
+              SELECT parent.id,parent.origin_position_id,parent.receipt_id,
+                     parent.warehouse_id,parent.bin_id,parent.placed_quantity,
+                     parent.remaining_quantity,parent.expiry_date,
+                     parent.tenant_id,child.depth+1
+              FROM erp_local_lot_position parent
+              JOIN ancestors child ON child.origin_position_id=parent.id
+                AND child.tenant_id=parent.tenant_id
+              WHERE child.depth<100
+            )
+            SELECT a.id,a.origin_position_id,a.receipt_id,a.warehouse_id,
+              z.bin_code,b.lot_code,a.placed_quantity,a.remaining_quantity,
+              a.expiry_date,a.depth
+            FROM ancestors a
+            JOIN erp_local_stock_bin z ON z.tenant_id=a.tenant_id AND z.id=a.bin_id
+            JOIN erp_receipt_quality_batch b
+              ON b.tenant_id=a.tenant_id AND b.receipt_id=a.receipt_id
+            ORDER BY a.depth DESC
+            """,(rs,i)->{
+                UUID origin=rs.getObject("origin_position_id",UUID.class);
+                LocalDate expiry=rs.getObject("expiry_date",LocalDate.class);
+                return new Lineage(rs.getObject("id",UUID.class).toString(),
+                    origin==null?null:origin.toString(),
+                    rs.getObject("receipt_id",UUID.class).toString(),
+                    rs.getObject("warehouse_id",UUID.class).toString(),
+                    rs.getString("bin_code"),rs.getString("lot_code"),
+                    rs.getInt("placed_quantity"),rs.getInt("remaining_quantity"),
+                    expiry==null?null:expiry.toString(),rs.getInt("depth"));
+            },tenant,positionId);
+        if(rows.isEmpty())throw missing();
+        return rows;
     }
     private void lockTenant(UUID tenant) {
         List<UUID> ids=jdbc.queryForList("""
