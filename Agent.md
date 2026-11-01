@@ -556,3 +556,12 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - API 严禁查询/返回 Amazon refresh/access token、分页 cursor、lease_owner、原始订单或 Amazon 响应体；只提供任务状态、更新时间、重试次数、下次重试和固定安全错误码，响应 no-store。
 - React 只在 Owner「运营自动化」页面展示同步监控。对 401/403、空任务、运行中、429 等状态必须准确描述，不把空列表解释成同步完成。面板只读，无启动/强制重试按钮。
 - 测试覆盖后端 SQL 作用域与筛选限制、Session 租户、Zod 前端数据契约；不需要真实店铺授权。Java 25 / Spring Boot 4.1.2 / Gradle 9.2.1 / PostgreSQL 18 / React 19 不得回退。
+
+## 2026-11-01 · V58 Amazon Reports 结算来源隔离策略
+
+- 设计与实现边界：docs/finance/settlement-report-ingestion-v58.md。Amazon 结算报告应通过只读 getReports / getReportDocument 发现 Amazon 自动生成的文档，不能使用 createReport 假设可主动生成此类型。未完成的持久发现队列与授权本地验收不能称为已完成。
+- 读取需 VERIFIED/CONNECTED Seller+Marketplace 与独立 Finance and Accounting 审核权限，`MERCHIVRA_SPAPI_REPORTS_ENABLED=false` 默认关闭；真实出站还须 Redis 8 共享配额。Reports 缺少学习值时初始冷却至少 60 秒，不凭 `x-amzn-RateLimit-Limit` 猜测 burst。
+- getReportDocument 返回预签名短时效 URL 不可暴露浏览器或日志；只允许已审查的 AWS HTTPS 域名、无重定向、严格大小、内存处理且零磁盘落地；生产另需网络出口 ACL、防 DNS rebinding。
+- 原始 Settlement 报告数据只能在独立 tenant+marketplace 的 staging 表幂等保存白名单非 PII 列；报告金额不等于 Finances 入账，也不等于银行已结算。禁止直接写 finance_source_event、利润结果或自动将同笔 Reports + Finances 金额相加。
+- UTF-8/TSV/GZIP 解析要对未知列、列重复、混币、超大和错误金额 fail closed；报告 ID + 文档 SHA256 不能被静默覆盖。HTTP 只能提供当前 Session Owner 的只读摘要/明细。
+- 仍需开发：报告发现任务持久队列/租约和批量分页、脱敏异常审计、真实 Seller 最终本地联调、来源匹配复核和生产部署安全。Gradle / Java25 / Spring Boot4.1.2 / PostgreSQL18 / React19 不变。
