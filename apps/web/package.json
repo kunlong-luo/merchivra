@@ -11,7 +11,9 @@
     "build": "tsc --noEmit && vite build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "preview": "vite preview --host 127.0.0.1"
+    "preview": "vite preview --host 127.0.0.1",
+    "api:generate": "orval --config orval.config.ts",
+    "api:check": "npm run api:generate && git diff --exit-code -- src/generated"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.105.0",
