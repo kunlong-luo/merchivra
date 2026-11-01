@@ -18,8 +18,14 @@ services:
     # Not used by current Spring Boot code. Opt-in only, to keep the default
     # local stack to three services: postgres + server + web.
     profiles: ['optional-cache']
-    image: redis:7-alpine
-    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
+    image: redis:8.10.1-alpine
+    command: ["redis-server", "--save", "60", "1", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    # Local-only separate Redis has no AUTH, no published host port.
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     volumes:
       - redisdata:/data
     restart: unless-stopped
