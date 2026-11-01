@@ -341,3 +341,12 @@
 - [x] React 新增差异登记、复核、供应商索赔、审计历史和可信供应商统计（真实订购/实收/QC 拒收/活跃差异/逾期 ASN）；新增 Java、Vitest 契约测试，最终 CI 结论以对应提交为准。
 - [ ] 仍需 PostgreSQL 18 V45 实例真实 Flyway/Compose、真实 HTTP 跨租户/CSRF、多会话并发，完善待检货位、批次、质检独立审批，以及实际 RMA、外部索赔提交和 Amazon Inbound。
 - 详见 [PO-008 供应商差异与索赔](purchasing/supplier-discrepancies-claims-v45.md)。
+
+## V46 · 新收货待检批次与独立质量放行（2026-11-01）
+
+- [x] PostgreSQL V46 向前迁移：新实收专属 tenant+receipt 批次、仓库 SKU 下唯一批次编码、PENDING_QC/INSPECTED/RELEASED 状态、Owner 审计事件以及唯一 QC_RELEASE 正数库存来源；绝不更改历史 V20/V39–V45 实收和 V44 已记库存。
+- [x] `PurchasingService.receive` 原采购审批/ASN 真实收货事务仍生效，但其库存记录改为**先入待检批次**，不立刻进入可用库存；完成 QC 只保存合格/不合格证据，待另一 Owner 显式释放合格品才一次性写 `QC_RELEASE`，全数拒收没有可用库存入账。
+- [x] 旧 V44 无待检批次的收货继续按已入库历史单独负向隔离不合格品；二者数据不能混同。仓库真实累计实收与可用库存分开汇总，待检 SKU 也出现在库存表（可用为零）。
+- [x] 新建批次编码变更的版本比较和审计、批次查询/审批/事件 React 工作台，JUnit/Vitest 覆盖无重复入账、质检员不得自审、零合格放行、历史路径兼容及 CSRF。
+- [ ] 尚需 PostgreSQL 18 实例 Flyway/Compose、HTTP 多租户与并发、完整浏览器业务流程专项验收；批次拆分/序列号/物理货位及 Amazon 授权留后续。
+- 详见：[PO-009 V46 批次质检与独立放行](purchasing/held-receipt-lots-quality-release-v46.md)。
