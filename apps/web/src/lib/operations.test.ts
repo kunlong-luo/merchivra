@@ -10,11 +10,14 @@ describe('operations advisory UI contract', () => {
       marketplaceId: '22222222-2222-4222-8222-222222222222',
       ruleCode: 'LOW_STOCK', sourceKey: 'TEST-SKU',
       title: 'FBA 可售库存偏低', severity: 'CRITICAL', state: 'OPEN',
-      dataOrigin: 'MOCK', lastSeenAt: '2026-10-31T00:00:00Z'
+      dataOrigin: 'MOCK', lastSeenAt: '2026-10-31T00:00:00Z',
+      assignedTo:null,snoozedUntil:null
     }
     expect(findingSchema.safeParse(row).success).toBe(true)
     expect(findingSchema.safeParse({ ...row, dataOrigin: 'VERIFIED' }).success).toBe(false)
     expect(findingSchema.safeParse({ ...row, state: 'SENT_TO_AMAZON' }).success).toBe(false)
+    expect(findingSchema.safeParse({...row,ruleCode:'ADS_REPORT_REVIEW',dataOrigin:'UNVERIFIED'}).success).toBe(true)
+    expect(ruleNames.FBA_INBOUND_REVIEW).toContain('FBA')
     expect(ruleNames.LOW_STOCK).toContain('库存')
     expect(stateNames.CLEARED).toBe('条件已消失')
     expect(severityNames.CRITICAL).toBe('优先处理')
@@ -27,20 +30,18 @@ describe('operations advisory UI contract', () => {
         return new Response(JSON.stringify({
           token: 'safe-mock-csrf-token',
           headerName: 'X-CSRF-TOKEN'
-        }), { status: 200 })
+        }), { status: 200,headers:{'Content-Type':'application/json'} })
       }
       return new Response(JSON.stringify({
         id: '11111111-1111-4111-8111-111111111111',
         triggerType: 'MANUAL', matchedCount: 2, clearedCount: 0
-      }), { status: 200 })
+      }), { status: 200,headers:{'Content-Type':'application/json'} })
     }))
     expect((await scanOperations()).matchedCount).toBe(2)
     expect(requests).toHaveLength(2)
     expect(String(requests[1].input)).toBe('/api/v1/operations/scan')
     expect(requests[1].init?.method).toBe('POST')
-    expect(requests[1].init?.headers).toEqual({
-      'X-CSRF-TOKEN': 'safe-mock-csrf-token'
-    })
+    expect(new Headers(requests[1].init?.headers).get('X-CSRF-TOKEN')).toBe('safe-mock-csrf-token')
     expect(requests[1].init?.body).toBeUndefined()
   })
 })

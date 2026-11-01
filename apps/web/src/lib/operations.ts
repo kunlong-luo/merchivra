@@ -1,75 +1,73 @@
-import { z } from 'zod'
-import { csrfHeader } from './auth'
+import {z} from 'zod'
+import {
+ listOperationFindings,getOperationsSummary,scanOperationsNow,
+ setOperationFindingState,claimOperationFinding,releaseOperationFinding,
+ snoozeOperationFinding,unsnoozeOperationFinding,getOperationFindingAttentionAudit
+} from '../generated/operations-v67'
 
-export const findingSchema = z.object({
-  id: z.string().uuid(),
-  marketplaceId: z.string().uuid(),
-  ruleCode: z.enum(['UNMAPPED_LISTING', 'INVENTORY_UNKNOWN', 'LOW_STOCK', 'REFUND_REVIEW']),
-  sourceKey: z.string(),
-  title: z.string(),
-  severity: z.enum(['INFO', 'WARNING', 'CRITICAL']),
-  state: z.enum(['OPEN', 'ACKNOWLEDGED', 'DONE', 'CLEARED']),
-  dataOrigin: z.enum(['MOCK', 'UNVERIFIED', 'LIVE']),
-  lastSeenAt: z.string()
+export const findingSchema=z.object({
+ id:z.string().uuid(),marketplaceId:z.string().uuid(),
+ ruleCode:z.enum(['UNMAPPED_LISTING','INVENTORY_UNKNOWN','LOW_STOCK',
+  'REFUND_REVIEW','FBA_INBOUND_REVIEW','ADS_REPORT_REVIEW']),
+ sourceKey:z.string(),title:z.string(),
+ severity:z.enum(['INFO','WARNING','CRITICAL']),
+ state:z.enum(['OPEN','ACKNOWLEDGED','DONE','CLEARED']),
+ dataOrigin:z.enum(['MOCK','UNVERIFIED','LIVE']),
+ lastSeenAt:z.string(),
+ assignedTo:z.string().uuid().nullable(),
+ snoozedUntil:z.string().nullable()
 })
-export const summarySchema = z.object({
-  open: z.number().int().nonnegative(),
-  acknowledged: z.number().int().nonnegative(),
-  done: z.number().int().nonnegative(),
-  cleared: z.number().int().nonnegative()
+export const summarySchema=z.object({
+ open:z.number().int().nonnegative(),
+ acknowledged:z.number().int().nonnegative(),
+ done:z.number().int().nonnegative(),
+ cleared:z.number().int().nonnegative(),
+ snoozed:z.number().int().nonnegative()
 })
-export const scanSchema = z.object({
-  id: z.string().uuid(),
-  triggerType: z.literal('MANUAL'),
-  matchedCount: z.number().int().nonnegative(),
-  clearedCount: z.number().int().nonnegative()
+export const scanSchema=z.object({
+ id:z.string().uuid(),triggerType:z.literal('MANUAL'),
+ matchedCount:z.number().int().nonnegative(),clearedCount:z.number().int().nonnegative()
 })
-export type Finding = z.infer<typeof findingSchema>
-export type FindingState = 'OPEN' | 'ACKNOWLEDGED' | 'DONE'
-export type FindingFilter = 'ACTIVE' | 'ALL'
-export const ruleNames: Record<Finding['ruleCode'], string> = {
-  UNMAPPED_LISTING: 'Listing 映射待确认',
-  INVENTORY_UNKNOWN: 'FBA 库存数据不完整',
-  LOW_STOCK: 'FBA 可售库存偏低',
-  REFUND_REVIEW: '退款订单待核对'
+const attentionSchema=z.object({
+ id:z.string().uuid(),state:z.enum(['OPEN','ACKNOWLEDGED','DONE','CLEARED']),
+ assignedTo:z.string().uuid().nullable(),snoozedUntil:z.string().nullable()
+})
+const attentionAudit=z.object({
+ action:z.enum(['CLAIMED','RELEASED','SNOOZED','UNSNOOZED']),
+ actorId:z.string().uuid(),oldAssignee:z.string().uuid().nullable(),
+ newAssignee:z.string().uuid().nullable(),
+ oldSnoozedUntil:z.string().nullable(),newSnoozedUntil:z.string().nullable(),
+ note:z.string().nullable(),createdAt:z.string()
+})
+export type Finding=z.infer<typeof findingSchema>
+export type FindingState='OPEN'|'ACKNOWLEDGED'|'DONE'
+export type FindingFilter='ACTIVE'|'ACTIONABLE'|'ALL'
+export const ruleNames:Record<Finding['ruleCode'],string>={
+ UNMAPPED_LISTING:'Listing 映射待确认',
+ INVENTORY_UNKNOWN:'FBA 库存数据不完整',
+ LOW_STOCK:'FBA 可售库存偏低',
+ REFUND_REVIEW:'退款订单待核对',
+ FBA_INBOUND_REVIEW:'本地 FBA 货件入仓待复核',
+ ADS_REPORT_REVIEW:'离线 Ads 日报待独立审核'
 }
-export const stateNames: Record<Finding['state'], string> = {
-  OPEN: '待处理', ACKNOWLEDGED: '处理中',
-  DONE: '已处理', CLEARED: '条件已消失'
+export const stateNames:Record<Finding['state'],string>={
+ OPEN:'待处理',ACKNOWLEDGED:'处理中',DONE:'已处理',CLEARED:'条件已消失'
 }
-export const severityNames: Record<Finding['severity'], string> = {
-  INFO: '提示', WARNING: '注意', CRITICAL: '优先处理'
+export const severityNames:Record<Finding['severity'],string>={
+ INFO:'提示',WARNING:'注意',CRITICAL:'优先处理'
 }
-async function decode<T>(response: Response, schema: z.ZodType<T>): Promise<T> {
-  if (!response.ok) {
-    if (response.status === 401) throw new Error('登录已过期，请重新登录')
-    if (response.status === 403) throw new Error('当前租户没有操作权限')
-    if (response.status === 404) throw new Error('记录不存在或不属于当前租户')
-    if (response.status === 409) throw new Error('此记录已清除，请刷新列表')
-    throw new Error('运营自动化 API HTTP ' + response.status)
-  }
-  return schema.parse(await response.json())
-}
-export async function fetchFindings(filter: FindingFilter): Promise<Finding[]> {
-  return decode(await fetch('/api/v1/operations/findings?filter=' + filter, {
-    credentials: 'same-origin', cache: 'no-store', headers: { Accept: 'application/json' }
-  }), z.array(findingSchema))
-}
-export async function fetchOpsSummary() {
-  return decode(await fetch('/api/v1/operations/summary', {
-    credentials: 'same-origin', cache: 'no-store'
-  }), summarySchema)
-}
-export async function scanOperations() {
-  return decode(await fetch('/api/v1/operations/scan', {
-    method: 'POST', credentials: 'same-origin',
-    headers: await csrfHeader()
-  }), scanSchema)
-}
-export async function changeFindingState(id: string, state: FindingState) {
-  return decode(await fetch('/api/v1/operations/findings/' + encodeURIComponent(id) + '/state', {
-    method: 'POST', credentials: 'same-origin',
-    headers: { 'Content-Type': 'application/json', ...(await csrfHeader()) },
-    body: JSON.stringify({ state })
-  }), z.object({ id: z.string().uuid(), state: z.enum(['OPEN', 'ACKNOWLEDGED', 'DONE']) }))
-}
+export const fetchFindings=async(filter:FindingFilter)=>
+ z.array(findingSchema).max(100).parse((await listOperationFindings({filter})).data)
+export const fetchOpsSummary=async()=>summarySchema.parse((await getOperationsSummary()).data)
+export const scanOperations=async()=>scanSchema.parse((await scanOperationsNow()).data)
+export const changeFindingState=async(id:string,state:FindingState)=>
+ z.object({id:z.string().uuid(),state:z.enum(['OPEN','ACKNOWLEDGED','DONE'])})
+  .parse((await setOperationFindingState(id,{state})).data)
+export const claimFinding=async(id:string)=>attentionSchema.parse((await claimOperationFinding(id)).data)
+export const releaseFinding=async(id:string)=>attentionSchema.parse((await releaseOperationFinding(id)).data)
+export const snoozeFinding=async(id:string,minutes:15|60|240|1440,note:string)=>
+ attentionSchema.parse((await snoozeOperationFinding(id,{minutes,note})).data)
+export const unsnoozeFinding=async(id:string)=>
+ attentionSchema.parse((await unsnoozeOperationFinding(id)).data)
+export const fetchFindingAttentionHistory=async(id:string)=>
+ z.array(attentionAudit).max(100).parse((await getOperationFindingAttentionAudit(id)).data)
