@@ -108,3 +108,9 @@ cd apps/server
 ```
 
 On Windows use `gradlew.bat`. Wrapper Gradle distribution is checksum-pinned in `gradle/wrapper/gradle-wrapper.properties`. The CI runs the equivalent Gradle 9.2.1 tasks under Temurin 25, plus real PostgreSQL 18/Flyway and React checks. The strict coverage target is a **future quality gate**: enable it when the test suite has reached the required baseline, do not claim it has passed unless the specific command did. No Maven files are needed to build the backend.
+
+## Optional Redis 8 (2026-11-01)
+
+Redis is now implemented as an opt-in Spring Session and SP-API admission store, **not a PostgreSQL replacement**. In an existing spark-db environment, set `MERCHIVRA_REDIS_PASSWORD` locally to the password of `spark-redis`, `MERCHIVRA_REDIS_SESSIONS_ENABLED=true`, and optionally `MERCHIVRA_SPAPI_RATE_LIMIT_ENABLED=true`. Container access uses `spark-redis:6379`; a host-run Java process uses the Redis port mapped to `127.0.0.1:6379` and needs `MERCHIVRA_REDIS_HOST=127.0.0.1`. Do not export real passwords in scripts committed to Git.
+
+The standalone `deploy/compose.yaml` uses disposable `redis:8.10.1-alpine` under `--profile optional-cache`, with `noeviction` only for local testing; normal dev still uses just PostgreSQL + server + web. See [Redis runtime guide](deployment/redis-session-spapi-v53.md) for restart and Redis-unavailable smoke, the shared `allkeys-lru` hazard and production gating.
