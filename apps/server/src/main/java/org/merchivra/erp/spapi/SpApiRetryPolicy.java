@@ -5,6 +5,8 @@ import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 /** Shared bounded retry policy for durable workers; never sleeps on request threads. */
@@ -27,6 +29,20 @@ public final class SpApiRetryPolicy {
                 return Duration.ZERO;
             }
         }
+    }
+
+    /** SDK header maps may use any casing; ignore missing or empty metadata. */
+    public static String headerValue(Map<String,List<String>> headers, String name) {
+        if (headers == null || name == null) return null;
+        for (var entry : headers.entrySet()) {
+            if (name.equalsIgnoreCase(entry.getKey()) && entry.getValue() != null
+                && !entry.getValue().isEmpty()) return entry.getValue().getFirst();
+        }
+        return null;
+    }
+
+    public static Duration retryAfter(Map<String,List<String>> headers, Instant now) {
+        return retryAfter(headerValue(headers, "Retry-After"), now);
     }
 
     /** Exponential backoff with positive jitter and any server-declared minimum. */
