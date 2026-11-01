@@ -151,6 +151,22 @@ jobs:
           )
           test -s apps/web/src/generated/fba-inbound.ts
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='63' AND success")" = "1"
+          curl -fsS http://127.0.0.1:8080/v3/api-docs/ads-reports > /tmp/ads-live.json
+          node scripts/normalize-ads-openapi.mjs /tmp/ads-live.json /tmp/ads-verified.json
+          cp /tmp/ads-verified.json apps/web/openapi/ads-reports.json
+          (
+            cd apps/web
+            npm run api:generate:ads
+          )
+          test -s apps/web/src/generated/ads-reports.ts
+          echo 'MERCHIVRA_ADS_V66_TRANSFER_START'
+          for file in apps/web/openapi/ads-reports.json apps/web/src/generated/ads-reports.ts $(find apps/web/src/generated/ads-models -type f -name '*.ts' | sort); do
+            printf 'MERCHIVRA_ADS_V66_FILE %s\n' "$file"
+            base64 "$file"
+            printf 'MERCHIVRA_ADS_V66_FILE_END\n'
+          done
+          echo 'MERCHIVRA_ADS_V66_TRANSFER_END'
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='64' AND success")" = "1"
           python3 scripts/smoke_fba_inbound.py
           echo "PostgreSQL 18 / Flyway / actual finance + FBA OpenAPI and local mock chain verified"
           kill "$app_pid" 2>/dev/null || true

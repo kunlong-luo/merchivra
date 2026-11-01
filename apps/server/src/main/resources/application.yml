@@ -22,6 +22,9 @@ springdoc:
       paths-to-match:
         - /api/v1/fba/marketplaces/**/shipments
         - /api/v1/fba/marketplaces/**/shipments/**
+    - group: ads-reports
+      paths-to-match:
+        - /api/v1/ads/marketplaces/**
 
 spring:
   application:

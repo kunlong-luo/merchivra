@@ -136,8 +136,9 @@ public class AdsReportService {
                 VALUES(?,?,?,?,?,?)
                 """,id,tenant,marketplace,profile,origin,actor);
         }catch(DuplicateKeyException e){throw conflict("Ads profile reference already exists");}
-        return profiles(tenant,marketplace).stream()
-            .filter(p->p.id().equals(id.toString())).findFirst().orElseThrow();
+        return jdbc.query("""
+            SELECT * FROM ads_profile_reference WHERE tenant_id=? AND seller_marketplace_id=? AND id=?
+            """,AdsReportService::mapProfile,tenant,marketplace,id).getFirst();
     }
     static String origin(String candidate){
         if(!"MOCK".equals(candidate)&&!"MANUAL_UNVERIFIED".equals(candidate))
