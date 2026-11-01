@@ -36,19 +36,22 @@ public class SyncTaskMonitorService {
                  state::text AS state, page_index AS pages,
                  retry_count, next_attempt_at AS retry_at, updated_at,
                  last_failure_code,
-                 (lease_expires_at IS NOT NULL AND lease_expires_at<=now()) AS lease_expired
+                 (lease_expires_at IS NOT NULL AND lease_expires_at<=now()) AS lease_expired,
+                 (lease_expires_at IS NOT NULL AND lease_expires_at>now()) AS lease_active
           FROM orders_sync_job WHERE tenant_id=?
           UNION ALL
           SELECT id, seller_marketplace_id, 'CATALOG_' || stream, 'LIVE',
                  state, page_index, retry_count, retry_at, updated_at,
                  last_failure_code,
-                 (lease_expires_at IS NOT NULL AND lease_expires_at<=now())
+                 (lease_expires_at IS NOT NULL AND lease_expires_at<=now()),
+                 (lease_expires_at IS NOT NULL AND lease_expires_at>now())
           FROM spapi_catalog_sync_job WHERE tenant_id=?
           UNION ALL
           SELECT id, seller_marketplace_id, 'FINANCES', 'LIVE',
                  state, page_index, retry_count, retry_at, updated_at,
                  last_failure_code,
-                 (lease_expires_at IS NOT NULL AND lease_expires_at<=now())
+                 (lease_expires_at IS NOT NULL AND lease_expires_at<=now()),
+                 (lease_expires_at IS NOT NULL AND lease_expires_at>now())
           FROM spapi_finances_sync_job WHERE tenant_id=?
         )
         """;
@@ -70,10 +73,11 @@ public class SyncTaskMonitorService {
                    count(*) FILTER (WHERE state IN ('RETRY','WAITING_RETRY')) AS retrying,
                    count(*) FILTER (WHERE state='PAUSED') AS paused,
                    count(*) FILTER (WHERE state='SUCCEEDED') AS succeeded,
-                   count(*) FILTER (WHERE state='READY'
-                     OR (state IN ('RETRY','WAITING_RETRY')
-                       AND (retry_at IS NULL OR retry_at<=now()))
-                     OR (state='RUNNING' AND lease_expired)) AS due_now,
+                   count(*) FILTER (WHERE
+                     ((state IN ('READY','RETRY','WAITING_RETRY')
+                          AND NOT lease_active)
+                       OR (state='RUNNING' AND lease_expired))
+                     AND (retry_at IS NULL OR retry_at<=now())) AS due_now,
                    count(*) FILTER (WHERE state='RUNNING' AND lease_expired)
                      AS expired_running
             FROM jobs
