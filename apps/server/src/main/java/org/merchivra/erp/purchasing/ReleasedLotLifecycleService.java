@@ -318,6 +318,8 @@ public class ReleasedLotLifecycleService {
         int quantity=req.quantity();
         switch(req.actionType()) {
             case "MOVE" -> {
+                if(src.remaining()<1)
+                    throw conflict("Empty storage position has no physical goods to move");
                 if(oldBin.equals(req.destinationBinId()))
                     throw conflict("New STORAGE location must differ from old");
                 int n=jdbc.update("""
