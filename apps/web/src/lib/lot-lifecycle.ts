@@ -26,7 +26,7 @@ export type LotLifecycleAction=z.infer<typeof action>
 export type LotExpiryAlert=z.infer<typeof alert>
 export type LotActionRequest={
  requestKey:string;actionType:LotLifecycleAction['actionType'];
- destinationBinId:string|null;quantity:number;expectedRemaining:number;
+ expectedBinId:string;destinationBinId:string|null;quantity:number;expectedRemaining:number;
  expectedOnHand:number|null;observedQuantity:number|null;reason:string
 }
 async function api<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown):Promise<T>{
