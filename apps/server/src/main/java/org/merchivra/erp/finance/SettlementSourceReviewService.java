@@ -113,7 +113,7 @@ public class SettlementSourceReviewService {
     }
 
     static String validatedReason(String note) {
-        if(note==null||note.length()<10||note.length()>500
+        if(note==null||note.strip().length()<10||note.length()>500
             ||note.isBlank()||note.chars().anyMatch(Character::isISOControl))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "Review requires a 10-500 character non-sensitive rationale");
@@ -170,6 +170,12 @@ public class SettlementSourceReviewService {
         return display(stored(tenant,mp,report,false),current);
     }
 
+    static void requireIndependentReviewer(UUID requester,UUID reviewer) {
+        if(requester==null || reviewer==null || requester.equals(reviewer))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "Requester cannot decide own finance source review");
+    }
+
     /** A different Owner must approve, on unmodified matching source evidence. */
     @Transactional(isolation=Isolation.REPEATABLE_READ)
     public Review decide(UUID tenant,UUID mp,UUID report,UUID actor,
@@ -180,9 +186,7 @@ public class SettlementSourceReviewService {
         if(old==null||!"PENDING".equals(old.state()))
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "No pending source review");
-        if(old.requester().equals(actor))
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                "Requester cannot approve or reject own finance review");
+        requireIndependentReviewer(old.requester(),actor);
         Evidence current=evidence(tenant,mp,report);
         if(!old.evidence().equals(current.fingerprint())
             || !old.sourceState().equals(current.status()))
@@ -194,11 +198,11 @@ public class SettlementSourceReviewService {
         if(approve) {
             Integer duplicates=jdbc.queryForObject("""
                 SELECT count(*) FROM spapi_settlement_report r
-                JOIN spapi_settlement_report current ON current.tenant_id=r.tenant_id
-                  AND current.seller_marketplace_id=r.seller_marketplace_id
-                  AND current.settlement_reference=r.settlement_reference
-                WHERE current.tenant_id=? AND current.seller_marketplace_id=?
-                  AND current.id=?
+                JOIN spapi_settlement_report target ON target.tenant_id=r.tenant_id
+                  AND target.seller_marketplace_id=r.seller_marketplace_id
+                  AND target.settlement_reference=r.settlement_reference
+                WHERE target.tenant_id=? AND target.seller_marketplace_id=?
+                  AND target.id=?
                 """,Integer.class,tenant,mp,report);
             if(duplicates==null||duplicates!=1)
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
