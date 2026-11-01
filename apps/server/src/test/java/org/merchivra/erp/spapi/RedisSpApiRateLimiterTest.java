@@ -63,4 +63,40 @@ class RedisSpApiRateLimiterTest {
         assertThrows(IllegalArgumentException.class,()->new RedisSpApiRateLimiter(redis,0));
         assertThrows(IllegalArgumentException.class,()->new RedisSpApiRateLimiter(redis,60001));
     }
+
+    @Test
+    void legacyOperationLearnsPerOperationRateAndNeverStoresRawGrant() {
+        StringRedisTemplate redis=mock(StringRedisTemplate.class);
+        @SuppressWarnings("unchecked") ValueOperations<String,String> values=mock(ValueOperations.class);
+        when(redis.opsForValue()).thenReturn(values);
+        when(redis.hasKey(anyString())).thenReturn(false);
+        when(values.get(anyString())).thenReturn("500");
+        when(values.setIfAbsent(anyString(),eq("1"),eq(Duration.ofMillis(500))))
+            .thenReturn(true);
+        var limiter=new RedisSpApiRateLimiter(redis,2000);
+        String grant="SECRET-GRANT-NOT-FOR-REDIS";
+        limiter.observeLegacyResponse(SpApiRegion.NA,SpApiOperation.GET_ORDER,grant,
+            200,"2.0",Duration.ZERO);
+        limiter.requireLegacyPermit(SpApiRegion.NA,SpApiOperation.GET_ORDER,grant);
+        var keys=org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(values).set(keys.capture(),eq("500"),eq(Duration.ofHours(24)));
+        verify(values).setIfAbsent(keys.capture(),eq("1"),eq(Duration.ofMillis(500)));
+        assertTrue(keys.getAllValues().stream().allMatch(k->!k.contains(grant)));
+        assertTrue(keys.getAllValues().stream().allMatch(k->k.contains(":GET_ORDER:")));
+    }
+
+    @Test
+    void legacyPenaltyFenceDefersBeforeReservingASecondPermit() {
+        StringRedisTemplate redis=mock(StringRedisTemplate.class);
+        when(redis.hasKey(anyString())).thenReturn(true);
+        when(redis.getExpire(anyString(),eq(java.util.concurrent.TimeUnit.MILLISECONDS)))
+            .thenReturn(3200L);
+        var limiter=new RedisSpApiRateLimiter(redis,2000);
+        var denied=assertThrows(SpApiAdmissionException.class,
+            ()->limiter.requireLegacyPermit(SpApiRegion.NA,SpApiOperation.SEARCH_ORDERS,
+                "secret-refresh"));
+        assertEquals(SpApiAdmissionException.Reason.COOLDOWN,denied.reason());
+        assertEquals(Duration.ofMillis(3200),denied.retryAfter());
+        verify(redis,never()).opsForValue();
+    }
 }
