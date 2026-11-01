@@ -65,10 +65,14 @@ merchivra:
       # Official SDK core typed reads: conservative family gate + operation
       # admission and adaptive header learning; other SDK calls: family gate.
       # Legacy HTTP reads: same operation-specific Redis budget. All callers
-      # share the 429 cooling fence; best-effort response metadata may be absent. All replicas share Redis; unavailable
-      # Redis denies outbound admission; no real Amazon calls are enabled here.
+      # share an atomic Redis-time GCRA and 429 fence. No burst is assumed.
+      # All replicas share Redis; Redis errors fail closed.
       enabled: ${MERCHIVRA_SPAPI_RATE_LIMIT_ENABLED:false}
       cooldown-ms: ${MERCHIVRA_SPAPI_RATE_LIMIT_COOLDOWN_MS:2000}
+      # Default empty/one-token burst. Only configure manually approved
+      # read operations (e.g. SEARCH_ORDERS=2); a learned rate header is
+      # required before any configured burst takes effect.
+      approved-bursts: ${MERCHIVRA_SPAPI_APPROVED_BURSTS:}
     # Real outbound requests remain disabled until approved per-seller OAuth/vault.
     enabled: ${MERCHIVRA_SPAPI_ENABLED:false}
     sandbox: ${MERCHIVRA_SPAPI_SANDBOX:true}
