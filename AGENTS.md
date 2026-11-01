@@ -498,3 +498,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - EXPIRED_QUARANTINE 只允许有登记有效期且确已过期的批次，人工确认后负向扣减已放行位置余量与本地签名可用库存，唯一 lot_action_id 来源的 LOT_QUARANTINE，不得伪装 V40 OUTBOUND。预警只是只读，不能替代真实物理扫码隔离；未知有效期不可自动认定过期。
 - V49 owner Session + CSRF，tenant requestKey、actor、payload 不允许重用为另一动作；所有来源、目标 bin 和仓库必须 tenant 复合验证。存储位置来源链可经递归 origin_position_id 找到最初 V46 真实收货，允许审计跨仓变化，但不可由这些本地记录推断 Amazon FBA 已接收或外部 WMS 已执行。
 - 详见 `docs/purchasing/released-lot-lifecycle-v49.md`。CI 不能替代 PostgreSQL 18 Flyway / Compose、HTTP 多租户、并发锁和真实 Amazon 授权验收。
+
+## V50 · 双人盘点调整、跨仓确认与隔离处置必须保留的证据（2026-11-01）
+
+- V50 `erp_local_lot_count_review` 必须唯一引用 V49 COUNT_OBSERVATION 的真实位置、原 bin、仓库、SKU、expectedRemaining、实际实点数与观察人；提交时还需保存当时签名 warehouse expectedOnHand。审批者不能是观察人/提交人，必须再次核对 bin、位置和全仓库存快照。若少货，**同事务先将源位置 remaining 减少到实点，再使用 V40 COUNT 只做该差额的签名负向全仓调整**；任一失败必须全部回滚。无差异不调账；盘盈为 EVIDENCE_REQUIRED，不能凭审核意见虚构已放行合格件数或正向库存流水。
+- V49 TRANSFER 已同步产生源/目标仓签名流水、目标子位置；V50 目的仓 ACK 只是不同 Owner 对实际收到的数量、参考编号与原因的第二人确认，**不能再次执行 TRANSFER_IN**。MISMATCH 单独保留异常，不自动偷偷改变原有台账；超出已过账数的盘盈需另取来源证据。一个 TRANSFER 只允许一个确认键/来源。
+- V50 `erp_local_lot_disposition` 只有从 V49 EXPIRED_QUARANTINE 且存在唯一同等负数 `LOT_QUARANTINE` 签名移动的来源可申请。一个隔离 action 一个处置计划；提出人/原隔离执行人不能独立审批自己；审批人不能自己报告实际执行。批准和报告处置均**不得再次扣减或增加签名可用库存**，完成只表示人工记录，不能冒充承运商/供应商确认。
+- 所有 V50 操作从 Owner session 取得 tenant/actor，CSRF 必需；tenant + requestKey 幂等，历史证据不可覆盖。对盘点审核、跨仓确认和隔离处置必须分别有独立 API、来源、操作人与状态审核审计；测试应覆盖无双入账、无负库存以及审查前后库存或 bin 改变的拒绝行为。
+- 详见 `docs/purchasing/lot-count-review-transfer-receiving-disposition-v50.md`；CI 不能冒充 PostgreSQL 18 Flyway/Compose、多租户并发、真实 Amazon OAuth/SP-API 已验收。
