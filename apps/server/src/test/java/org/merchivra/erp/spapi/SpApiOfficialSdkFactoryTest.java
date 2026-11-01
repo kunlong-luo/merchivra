@@ -75,6 +75,16 @@ class SpApiOfficialSdkFactoryTest {
     }
 
     @Test
+    void observedTypedReadRejectsUnreviewedSdkFamilyBeforeAnyEgress() {
+        var limiter=mock(SpApiRateLimiter.class);
+        var sdk=new SpApiOfficialSdkFactory("fake-client","fake-secret",true,true,limiter);
+        assertThrows(SecurityException.class,()->sdk.executeObservedRead(
+            fakeSeller(),SpApiOperation.SEARCH_ORDERS,SellersApi.class,
+            api->new ApiResponse<>(200,Map.of(),"should-not-run")));
+        verifyNoInteractions(limiter);
+    }
+
+    @Test
     void sdk429HeadersAreObservedAndCallerMustScheduleRetry() {
         SpApiRateLimiter limiter=mock(SpApiRateLimiter.class);
         var sdk=new SpApiOfficialSdkFactory("fake-client","fake-secret",true,true,limiter);
