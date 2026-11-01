@@ -22,7 +22,7 @@ public class SyncTaskMonitorService {
         String updatedAt, String lastFailureCode, boolean leaseExpired) { }
 
     public record Summary(long total, long ready, long running, long retrying,
-        long paused, long succeeded) { }
+        long paused, long succeeded, long dueNow, long expiredRunningLeases) { }
 
     public record Snapshot(Summary summary, List<Task> tasks, int limit,
         boolean hasMore) { }
@@ -69,11 +69,18 @@ public class SyncTaskMonitorService {
                    count(*) FILTER (WHERE state='RUNNING') AS running,
                    count(*) FILTER (WHERE state IN ('RETRY','WAITING_RETRY')) AS retrying,
                    count(*) FILTER (WHERE state='PAUSED') AS paused,
-                   count(*) FILTER (WHERE state='SUCCEEDED') AS succeeded
+                   count(*) FILTER (WHERE state='SUCCEEDED') AS succeeded,
+                   count(*) FILTER (WHERE state='READY'
+                     OR (state IN ('RETRY','WAITING_RETRY')
+                       AND (retry_at IS NULL OR retry_at<=now()))
+                     OR (state='RUNNING' AND lease_expired)) AS due_now,
+                   count(*) FILTER (WHERE state='RUNNING' AND lease_expired)
+                     AS expired_running
             FROM jobs
             """,(rs,n)->new Summary(rs.getLong("total"),rs.getLong("ready"),
                 rs.getLong("running"),rs.getLong("retrying"),rs.getLong("paused"),
-                rs.getLong("succeeded")),tenant,tenant,tenant).getFirst();
+                rs.getLong("succeeded"),rs.getLong("due_now"),
+                rs.getLong("expired_running")),tenant,tenant,tenant).getFirst();
 
         List<Task> rows=jdbc.query(JOBS + """
             SELECT job_id, marketplace_id, kind, origin, state, pages,
