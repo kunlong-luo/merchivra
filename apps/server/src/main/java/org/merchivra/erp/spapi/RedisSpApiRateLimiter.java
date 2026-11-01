@@ -19,8 +19,8 @@ import org.springframework.stereotype.Component;
  * Atomic Redis SET NX PX: conservatively admits one request per seller and
  * generated SDK family per cooldown interval, across all backend instances.
  * Fixed TTL is anchored in Redis, not application clocks; no token or Seller
- * ID is logged or saved in plaintext. This is a conservative safety gate,
- * NOT a fully adaptive Amazon usage-plan / Retry-After token bucket.
+ * ID is logged or saved in plaintext. Official SDK family admission remains
+ * conservative; legacy HTTP operations also learn dynamic response quotas.
  *
  * Must be shared by every app node that uses the same Amazon application.
  * Redis errors FAIL CLOSED; callers must retry through durable SQL jobs.
@@ -73,7 +73,10 @@ public class RedisSpApiRateLimiter implements SpApiRateLimiter {
         String key = legacyKey(region, operation, approvedRefreshToken);
         try {
             // Amazon 429 cooling fence is shared across backend instances.
-            if (Boolean.TRUE.equals(redis.hasKey(key + ":429"))) {
+            Boolean fenced = redis.hasKey(key + ":429");
+            if (fenced == null)
+                throw new SpApiAdmissionException(SpApiAdmissionException.Reason.STORE_UNAVAILABLE);
+            if (fenced) {
                 throw new SpApiAdmissionException(SpApiAdmissionException.Reason.COOLDOWN,
                     remaining(key + ":429", cooldown));
             }
