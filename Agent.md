@@ -633,3 +633,12 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 不能声称全球同一时间点财务快照：`cohortFrozen=true` 只代表候选订单集合冻结，`globalSourceSnapshot=false`，每单 capturedAt/提取摘要可追溯但上游若后改不能证明仍是最新；新来源应发起新的 requestKey 报表版本。
 - 每单都复用 V61/V62 已审来源与成本计算，V63 退款成本仍未可信回转，故 blocked 订单 signed金额 NULL；只有 ELIGIBLE 金额进 SKU 和店铺贡献。Ads MANUAL_UNVERIFIED 独立展示不扣减，Finances/Reports 不重复计算。所有结果 `financialSourceComplete=false`、`bankVerified=false`、`ledgerPosted=false`。
 - 汇总必须仅使用持久冻结行；正式导出只能 SUCCEEDED，最多5000单/1000 SKU 固定表头并防 CSV formula injection。Owner Session + Marketplace + CSRF + no-store；不加真实银行/Amazon 出站或 GL posting。
+
+## 2026-11-01 · 成熟工具优先、不得重复造轮子（维护者明确要求）
+
+- **默认选择**：先调查当前仓库、官方 SDK、成熟维护库是否已有正确实现，评估许可证、社区维护、CVE、2026 版本兼容性、资源开销、升级成本和自动化测试支持；满足要求时优先复用，而非自己写另一套通用 HTTP 客户端、DTO/Query Hook 生成器、JSON Schema、鉴权框架、调度框架或底层基础设施。对已有可用成熟工具，原则上不批准无明确理由的平行手写实现。
+- **工程次序**：已有可靠工具 > 框架原语 > 少量受控适配层 > 仅在成熟方案确实不适用时自行实现。不能因新潮引入微服务、Kafka、无业务需求的 Redis、ORM 或多套同类依赖；实际兼容和 CI 优先于追新版本。
+- **V64.1 API 客户端**：Spring Boot 4.1.x 使用兼容的 springdoc-openapi 3.2.x 从真实 Controller 导出/检查契约；React19/TypeScript6 使用 Orval 8.x 生成请求类型和 TanStack Query 5 Hooks。统一 Session Cookie、CSRF、no-store 和错误处理；关键财务/库存/权限响应继续由 Zod4 验证运行时不变量。docs/api/openapi.json 仍为 Proposed 设计稿，不能直接作为已实现 API 契约，更不可在生产环境未经认证公开 OpenAPI/Swagger。
+- **验收门槛**：必须在 Node24 和真实 npm registry 下安装 Orval、更新并提交 apps/web/package-lock.json，经 npm ci + TypeScript + Vitest + Vite 构建；生成代码与真实 OpenAPI 漂移在 CI 检查；测试 Session、CSRF、错误码、no-store、租户和财务来源数据的安全门禁。以上未完成，不得声称“Orval 已接入”，也不能只改 package.json 而破坏锁文件。
+- **适当保留领域代码**：Amazon SP-API 必须优先官方 Java SDK；本地认证复用 Spring Security；事务和锁复用 Spring JDBC、PostgreSQL18 与 Flyway。SKU 费用分配、来源留痕、Maker/Checker、库存处置属于领域特殊逻辑，不盲目以通用库替代，不得降低数据守恒、审核、身份和财务验证要求。
+- **审查新增自研代码**：说明已有成熟替代、为何不适用、要承担哪些维护成本和安全负例、将来可替换路径。先清理重复的 fetch/类型/Hook/重试通用层，再开发 V65 后续模块；不要为了统一而一次性破坏现有接口。

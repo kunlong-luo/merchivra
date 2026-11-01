@@ -492,3 +492,13 @@
 - [ ] **不等于全局原子来源快照**：创建时只冻结订单候选列表，按批各自冻结来源结果；源后续变化需建新任务比对。正式净利润、税费/真实 Ads、可信退货实收和银行到账仍未达标，保持 blocked/null/false。
 - [ ] 下一阶段 **V65 FBA 货件、入仓、在途与差异的只读来源对账**。真实 Amazon 授权仍由 Owner 等所有核心代码完成后在本地执行。
 - 详细说明：[V64](finance/period-profit-report-v64.md)。
+
+## 2026-11-01 · V64.1 成熟工具与 API 客户端生成（优先于 V65）
+
+- [x] 维护者要求优先使用成熟工具，避免重复造轮子；选型纪律已落入根目录 Agent.md / AGENTS.md。
+- [x] 核对当前代码：React API 仍手写 fetch + Zod；Orval 尚未安装；docs/api/openapi.json 为 DESIGN ONLY 草案，不能生成现行生产客户端。
+- [ ] 验证 springdoc-openapi 3.2.x 与 Spring Boot 4.1.2 的实际 Controller 契约和 OpenAPI/Swagger 暴露权限。
+- [ ] Node24 + npm registry 安装锁定 Orval8.x，生成 TanStack Query5 客户端并提供 Cookie/CSRF/no-store/错误处理 mutator。
+- [ ] 从 V61/V64 两组 API 渐进迁移、保留必要 Zod 运行时安全规则；CI 执行再生成差异、npm ci、TS/Vitest/Vite、Gradle/PG18/Compose。
+- [ ] 上述验收通过后再以生成客户端支持 V65 FBA 等模块。**目前不可宣称 Orval 已安装或已接入。**
+- 详细选型和验收：[成熟工具优先 ADR](architecture/mature-tool-first-api-client-2026-11-01.md)。
