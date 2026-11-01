@@ -13,7 +13,7 @@
 
 ## 当前工程基线（2026-10-30）
 
-- **后端**：Java 25 LTS、Spring Boot 4.1.2、Spring Security 7、Jackson 3、Maven、Spring JDBC + Flyway、PostgreSQL 18，构建工具唯一选择 Gradle 9.2.1（Gradle Wrapper）。
+- **后端**：Java 25 LTS、Spring Boot 4.1.2、Spring Security 7、Jackson 3、Spring JDBC + Flyway、PostgreSQL 18，构建工具唯一选择 Gradle 9.2.1（Gradle Wrapper）。
 - **前端（2026-10-31 React 迁移覆盖早期 Vue 决策）**：Node 24 LTS、React 19.3、React DOM、TypeScript 6、Vite 8、TanStack React Query 5、Zod 4、Vitest；使用已提交的 `apps/web/package-lock.json` 与 **`npm ci`**，不要改回无锁安装。
 - **部署**：单体 API + React 静态页面、Docker Compose；Redis 8 已可选接入共享 Session/CSRF 与跨实例 SP-API 冷却，默认关闭且单实例无需 Redis。Dockerfile 与 GitHub Actions 必须和本地版本一致。
 - 维护者已淘汰 Maven：后端仅允许 Gradle Wrapper，必须同时更新 build.gradle、Dockerfile、GitHub Actions 和文档；禁止重新加入 pom.xml 或 mvn 命令。添加依赖前确认现有业务实际使用，避免把 Kafka/InfluxDB/Redis/JPA 强行变成运行必需。
@@ -538,3 +538,13 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - PostgreSQL 18 是订单、采购、财务、审计及同步 checkpoint 唯一事实来源；Redis 不可用时不能让 Amazon 出站限流或 HTTP 登录会话 fail-open。单实例且两开关关闭时必须能完全不依赖 Redis 启动。
 - 共享 `spark-db` 使用 `allkeys-lru`，可淘汰限流和 Session Key；生产不可直接当成强限流保证。要求独立 `noeviction` Redis/容量/ACL/TLS/告警方案，不能擅自修改现有全局 Redis 淘汰策略。
 - CI 应同时保持无 Redis 的普通 PG18 Java25 Gradle / React19 验收，以及专门 Redis **8** 的真实登录、重启恢复、故障 fail-closed 集成；API cooldown 只是保守限额，不代表已按 Amazon 动态 Usage Plan 正式验收。详见 `docs/deployment/redis-session-spapi-v53.md`。
+
+## 2026-11-01 · V55 Amazon SP-API 配额与后台任务退避约定
+
+- 统一使用 Gradle Wrapper / Java 25 / Spring Boot 4.1.2。Gradle 入口是 `apps/server/settings.gradle`，仓库不引入 Maven 构建。
+- Amazon 的 `x-amzn-RateLimit-Limit` 是按操作和授权维度尽力提供的响应元数据，不保证出现，也不代表所有 usage-plan 或 burst 限制。缺失/无效时保持保守配置。
+- 旧版经过审核的 SP-API HTTP 读通道把响应头写入 Redis，以区域+操作+受保护 grant 指纹学习 24h 冷却间隔；429 通过共享 Redis fence 保留较长期限，Redis 出错仍 fail-closed。
+- Amazon 生成式 SDK 目前只有每卖家/SDK 家族级安全阀，尚未接入每个 SDK 方法的动态响应头拦截及自适应令牌桶；不得声称全量 SP-API 动态配额完成。
+- `SpApiRetryPolicy` 支持 Retry-After 秒数和 HTTP-date；指数增长加随机抖动、上限 1 小时。重试必须写 PostgreSQL `next_attempt_at`，禁止 HTTP 请求线程 sleep 或原地无限重试。
+- Orders 后台同步对 429、临时 HTTP 错误与 Redis 拒绝在租约 fencing 后保存重试时间，最多 8 次，之后暂停；due 查询按租户交错公平分配。不得绕过租户/卖家授权。
+- 不需要真实 Amazon 授权做这一阶段编码；本地正式启用前需专用 noeviction Redis、真实店铺授权及独立角色审查、实际响应头验收和完整 CI；远端写入继续禁用。
