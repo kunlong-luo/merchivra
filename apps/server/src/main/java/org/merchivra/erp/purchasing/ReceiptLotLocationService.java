@@ -33,7 +33,7 @@ public class ReceiptLotLocationService {
                            long acceptedAwaitingReleaseUnits,long declaredAsnInTransitUnits) {}
 
     private record Action(String type,UUID receiptId,UUID pieceId,UUID relatedId,int quantity,
-                          UUID oldBin,UUID newBin,String reason) {}
+                          UUID oldBin,UUID newBin,String reason,UUID actor) {}
     private static ResponseStatusException bad(String message){
         return new ResponseStatusException(HttpStatus.BAD_REQUEST,message);
     }
@@ -148,7 +148,7 @@ public class ReceiptLotLocationService {
     private Action action(UUID tenant,UUID key) {
         return jdbc.query("""
             SELECT event_type,receipt_id,piece_id,related_piece_id,
-              quantity,old_bin_id,new_bin_id,note
+              quantity,old_bin_id,new_bin_id,note,actor_user_id
             FROM erp_receipt_lot_piece_event
             WHERE tenant_id=? AND request_key=?
             """,(rs,i)->new Action(rs.getString("event_type"),
@@ -156,7 +156,8 @@ public class ReceiptLotLocationService {
                 rs.getObject("piece_id",UUID.class),
                 rs.getObject("related_piece_id",UUID.class),
                 rs.getInt("quantity"),rs.getObject("old_bin_id",UUID.class),
-                rs.getObject("new_bin_id",UUID.class),rs.getString("note")),
+                rs.getObject("new_bin_id",UUID.class),rs.getString("note"),
+                rs.getObject("actor_user_id",UUID.class)),
             tenant,key).stream().findFirst().orElse(null);
     }
     private void event(UUID tenant,UUID actor,UUID receipt,UUID source,UUID destination,
@@ -179,7 +180,8 @@ public class ReceiptLotLocationService {
         tenantLock(tenant);
         Action old=action(tenant,body.requestKey());
         if(old!=null) {
-            if(!"SPLIT".equals(old.type()) || !old.receiptId().equals(receipt)
+            if(!"SPLIT".equals(old.type()) || !old.actor().equals(actor)
+                || !old.receiptId().equals(receipt)
                 || !old.pieceId().equals(body.pieceId())
                 || old.quantity()!=body.quantity()
                 || !Objects.equals(old.newBin(),body.destinationBinId())
@@ -223,7 +225,8 @@ public class ReceiptLotLocationService {
         tenantLock(tenant);
         Action old=action(tenant,body.requestKey());
         if(old!=null) {
-            if(!"MOVED".equals(old.type()) || !old.receiptId().equals(receipt)
+            if(!"MOVED".equals(old.type()) || !old.actor().equals(actor)
+                || !old.receiptId().equals(receipt)
                 || !old.pieceId().equals(body.pieceId())
                 || !Objects.equals(old.oldBin(),body.expectedBinId())
                 || !Objects.equals(old.newBin(),body.destinationBinId())
