@@ -62,9 +62,10 @@ merchivra:
 
   spapi:
     rate-limit:
-      # SDK: conservative per-seller API-family admission. Legacy HTTP:
-      # operation-specific adaptive interval (best-effort Amazon response header)
-      # plus shared 429 backoff fence. All replicas share Redis; unavailable
+      # Official SDK core typed reads: conservative family gate + operation
+      # admission and adaptive header learning; other SDK calls: family gate.
+      # Legacy HTTP reads: same operation-specific Redis budget. All callers
+      # share the 429 cooling fence; best-effort response metadata may be absent. All replicas share Redis; unavailable
       # Redis denies outbound admission; no real Amazon calls are enabled here.
       enabled: ${MERCHIVRA_SPAPI_RATE_LIMIT_ENABLED:false}
       cooldown-ms: ${MERCHIVRA_SPAPI_RATE_LIMIT_COOLDOWN_MS:2000}
