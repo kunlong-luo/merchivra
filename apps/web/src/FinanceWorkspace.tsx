@@ -99,7 +99,7 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
        <td>{b.currency} {b.amount}</td><td>{b.eventCount}</td></tr>)}</tbody></table>
     </div>}
   </section>
-  {currentId&&<SettlementReportsPanel key={currentId} tenantId={tenantId} marketplaceId={currentId}/>}
+  {currentId&&<SettlementReportsPanel key={currentId} tenantId={tenantId} marketplaceId={currentId} connected={markets.data?.find(m=>m.id===currentId)?.connectionStatus==='CONNECTED'}/>}
   {currentId&&<SettlementWorkspace key={currentId} tenantId={tenantId}
      marketplaceId={currentId}
      currency={markets.data?.find(m=>m.id===currentId)?.currency??'USD'}/>}
