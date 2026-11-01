@@ -214,6 +214,9 @@ public class ProfitReportJobService {
             """,(r,n)->r.getObject(1,UUID.class),tenant,jobId,BATCH_SIZE);
         int processed=job.processed();
         for(UUID orderId:next) {
+            SkuProfitPreviewEngine.OrderRow row;
+            List<SkuProfitPreviewEngine.SkuRow> perSku;
+            try {
             var c=costs.preview(tenant,mp,orderId);
             var p=contributions.preview(tenant,mp,orderId);
             var skus=c.items().stream().map(OrderCostEngine.Line::internalSku)
@@ -229,7 +232,18 @@ public class ProfitReportJobService {
                 :Map.of();
             var extract=SkuProfitPreviewEngine.calculate(job.currency(),
                 List.of(input),false,false,multi);
-            var row=extract.orders().getFirst();
+            row=extract.orders().getFirst();
+            perSku=extract.skus();
+            }catch(ResponseStatusException sourceChanged) {
+                // A cohort order may have been revoked/changed since creation.
+                // Keep the immutable cohort, but mark this one source BLOCKED.
+                // Only transient JDBC failures and unexpected logic errors
+                // cause bounded transaction rollback/retry.
+                row=new SkuProfitPreviewEngine.OrderRow(orderId.toString(),
+                    null,null,null,0,"SOURCE_EVIDENCE_UNAVAILABLE",
+                    job.currency(),0,null,null,null,null,null);
+                perSku=List.of();
+            }
             boolean ready=row.contribution()!=null;
             var payload=new StringBuilder(jobId.toString()).append('|')
                 .append(orderId).append('|').append(row.readiness()).append('|')
@@ -237,7 +251,7 @@ public class ProfitReportJobService {
                 .append('|').append(row.sales()).append('|')
                 .append(row.amazonFees()).append('|').append(row.fbaFees())
                 .append('|').append(row.cogs()).append('|').append(row.contribution());
-            for(var s:extract.skus())payload.append('|').append(s.sku())
+            for(var s:perSku)payload.append('|').append(s.sku())
                 .append(':').append(s.units()).append(':').append(s.sales())
                 .append(':').append(s.amazonFees()).append(':').append(s.fbaFees())
                 .append(':').append(s.cogs()).append(':').append(s.contribution());
@@ -256,7 +270,7 @@ public class ProfitReportJobService {
                 ready?new BigDecimal(row.contribution()):null,
                 hash(payload.toString()),tenant,jobId,orderId);
             if(updated!=1)throw new IllegalStateException("ORDER_ALREADY_CAPTURED");
-            for(var s:extract.skus()) {
+            for(var s:perSku) {
                 jdbc.update("""
                     INSERT INTO finance_profit_report_sku
                      (tenant_id,job_id,order_id,internal_sku,units,
