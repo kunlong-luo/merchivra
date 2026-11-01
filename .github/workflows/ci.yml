@@ -55,3 +55,75 @@ jobs:
         run: npm run test
       - name: Build
         run: npm run build
+
+  pg18-migrations:
+    name: PostgreSQL 18 / real Flyway migrations
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: merchivra
+          POSTGRES_PASSWORD: ci_disposable_database_password
+          POSTGRES_DB: merchivra
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U merchivra -d merchivra"
+          --health-interval 5s --health-timeout 3s --health-retries 12
+    env:
+      DB_HOST: 127.0.0.1
+      DB_PORT: '5432'
+      DB_USER: merchivra
+      DB_NAME: merchivra
+      DB_PASSWORD: ci_disposable_database_password
+      PGPASSWORD: ci_disposable_database_password
+      MERCHIVRA_SPAPI_ENABLED: 'false'
+      MERCHIVRA_SPAPI_OAUTH_ENABLED: 'false'
+      MERCHIVRA_DEMO_ENABLED: 'false'
+      MERCHIVRA_TEAM_ENABLED: 'false'
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+          cache-dependency-path: apps/server/pom.xml
+      - name: Start actual Spring Boot against isolated PostgreSQL 18
+        shell: bash
+        run: |
+          set -euo pipefail
+          mvn -B -f apps/server/pom.xml -DskipTests spring-boot:run \
+            > /tmp/merchivra-flyway.log 2>&1 &
+          app_pid=$!
+          ready=0
+          for i in $(seq 1 150); do
+            if curl -fsS http://127.0.0.1:8080/api/v1/ping >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$app_pid" 2>/dev/null; then
+              echo "Spring Boot startup process exited before health check"
+              tail -150 /tmp/merchivra-flyway.log
+              exit 1
+            fi
+            sleep 2
+          done
+          if [ "$ready" != 1 ]; then
+            echo "Spring Boot / Flyway failed to become ready"
+            tail -150 /tmp/merchivra-flyway.log
+            exit 1
+          fi
+          major=$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SHOW server_version_num")
+          test "${major:0:2}" = "18"
+          migration=$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc \
+            "SELECT count(*) FROM flyway_schema_history WHERE version IN ('46','47','48','49','50','51','52') AND success")
+          test "$migration" = "7"
+          psql -h 127.0.0.1 -U merchivra -d merchivra -v ON_ERROR_STOP=1 -Atc \
+            "SELECT count(*) FROM erp_local_lot_disposition_proof_file WHERE size_bytes > 2097152"
+          psql -h 127.0.0.1 -U merchivra -d merchivra -v ON_ERROR_STOP=1 -Atc \
+            "SELECT count(*) FROM erp_lot_supplier_return_trace"
+          echo "PostgreSQL 18 / V46-V52 Flyway migrations verified against a real server"
+          kill "$app_pid" 2>/dev/null || true
