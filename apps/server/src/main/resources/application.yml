@@ -62,8 +62,10 @@ merchivra:
 
   spapi:
     rate-limit:
-      # Conservative one SDK request / seller / family per cooldown interval.
-      # Shared across every app replica; unavailable Redis denies egress.
+      # SDK: conservative per-seller API-family admission. Legacy HTTP:
+      # operation-specific adaptive interval (best-effort Amazon response header)
+      # plus shared 429 backoff fence. All replicas share Redis; unavailable
+      # Redis denies outbound admission; no real Amazon calls are enabled here.
       enabled: ${MERCHIVRA_SPAPI_RATE_LIMIT_ENABLED:false}
       cooldown-ms: ${MERCHIVRA_SPAPI_RATE_LIMIT_COOLDOWN_MS:2000}
     # Real outbound requests remain disabled until approved per-seller OAuth/vault.
