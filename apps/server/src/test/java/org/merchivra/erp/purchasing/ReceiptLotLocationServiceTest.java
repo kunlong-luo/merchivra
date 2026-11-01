@@ -93,8 +93,9 @@ class ReceiptLotLocationServiceTest {
     }
     @Test void cannotMoveWithoutOriginalLocationSnapshot(){
         activeTenant();pending();storedPiece();
+        UUID staleBin=UUID.fromString("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa");
         assertEquals(HttpStatus.CONFLICT,assertThrows(ResponseStatusException.class,
-            ()->service.move(tenant,actor,receipt,move(to))).getStatusCode());
+            ()->service.move(tenant,actor,receipt,move(staleBin))).getStatusCode());
         verify(jdbc,never()).update(anyString(),any(Object[].class));
     }
     @Test void newQcLocationMustBelongToCurrentTenantWarehouse(){
