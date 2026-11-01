@@ -16,6 +16,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
@@ -37,6 +38,7 @@ public class CatalogSyncService {
     private final TypedCatalogSdkReader reader;
     private final Clock clock;
 
+    @Autowired
     public CatalogSyncService(JdbcTemplate jdbc,TransactionTemplate tx,
         SpApiSellerGrantVault vault,SpApiOfficialSdkFactory factory,
         @Value("${merchivra.demo.enabled:false}") boolean demo,
