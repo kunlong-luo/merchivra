@@ -435,7 +435,8 @@ public class OrdersSyncService {
                        PARTITION BY tenant_id ORDER BY updated_at,id
                      ) AS tenant_lane
               FROM orders_sync_job
-              WHERE state IN ('READY','WAITING_RETRY')
+              WHERE (state IN ('READY','WAITING_RETRY')
+                     OR (state='RUNNING' AND lease_expires_at<=now()))
                 AND (next_attempt_at IS NULL OR next_attempt_at<=now())
                 AND (lease_expires_at IS NULL OR lease_expires_at<=now())
                 AND mode=?
