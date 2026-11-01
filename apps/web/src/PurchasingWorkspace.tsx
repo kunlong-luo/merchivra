@@ -9,6 +9,7 @@ import ReceiptBatchPanel from './ReceiptBatchPanel'
 import ReceiptLotLocationPanel from './ReceiptLotLocationPanel'
 import ReleasedLotStockPanel from './ReleasedLotStockPanel'
 import LotLifecyclePanel from './LotLifecyclePanel'
+import LotReconciliationPanel from './LotReconciliationPanel'
 import SupplierDisputesPanel from './SupplierDisputesPanel'
 import {createSupplier,fetchSuppliers,createPurchaseOrder,fetchPurchaseOrders,
  fetchPurchaseOrder,purchaseAction,receivePurchase,fetchWarehouses,createWarehouse,
@@ -367,6 +368,9 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
   <SupplierDisputesPanel key={'disputes-'+(selectedId||'no-order')}
    tenantId={tenantId} orderId={selectedId} lines={selected.data?.lines??[]}
    currentUserId={currentUserId}/>
+  <LotReconciliationPanel key={'reconciliation-'+(selectedId||'no-order')}
+   tenantId={tenantId} currentUserId={currentUserId}
+   warehouses={warehouses.data??[]}/>
   <LotLifecyclePanel key={'lifecycle-'+(selectedId||'no-order')}
    tenantId={tenantId} warehouses={warehouses.data??[]}/>
   <ReleasedLotStockPanel key={'released-'+(selectedId||'no-order')}
