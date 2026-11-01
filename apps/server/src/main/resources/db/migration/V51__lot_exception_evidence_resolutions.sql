@@ -83,3 +83,42 @@ ALTER TABLE erp_local_lot_event
   ADD CONSTRAINT erp_local_lot_event_event_type_check
   CHECK(event_type IN ('PUTAWAY','PICKED','MOVED','TRANSFER_OUT',
         'TRANSFER_IN','QUARANTINED','SURPLUS_BOUND','SHORTAGE_CORRECTED'));
+
+-- Evidence metadata, not file storage or third-party verification. One
+-- approved/rejected internal metadata review for each V50 completed report.
+CREATE TABLE erp_local_lot_disposition_proof (
+  id UUID PRIMARY KEY,
+  tenant_id UUID NOT NULL REFERENCES tenant(id),
+  request_key UUID NOT NULL,
+  disposition_id UUID NOT NULL,
+  proof_kind VARCHAR(32) NOT NULL
+    CHECK(proof_kind IN ('DISPOSAL_CERTIFICATE','SUPPLIER_RETURN_RECEIPT')),
+  evidence_reference VARCHAR(120) NOT NULL
+    CHECK(length(btrim(evidence_reference)) BETWEEN 4 AND 120),
+  document_sha256 CHAR(64)
+    CHECK(document_sha256 ~ '^[a-f0-9]{64}$'),
+  explanation VARCHAR(300) NOT NULL
+    CHECK(length(btrim(explanation)) BETWEEN 5 AND 300),
+  submitted_by UUID NOT NULL,
+  status VARCHAR(24) NOT NULL DEFAULT 'PENDING_REVIEW'
+    CHECK(status IN ('PENDING_REVIEW','METADATA_REVIEWED','REJECTED')),
+  reviewed_by UUID,
+  review_reason VARCHAR(300),
+  reviewed_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(tenant_id,id),
+  UNIQUE(tenant_id,request_key),
+  UNIQUE(tenant_id,disposition_id),
+  CHECK((status='PENDING_REVIEW' AND reviewed_by IS NULL
+      AND review_reason IS NULL AND reviewed_at IS NULL)
+      OR (status<>'PENDING_REVIEW' AND reviewed_by IS NOT NULL
+        AND review_reason IS NOT NULL AND reviewed_at IS NOT NULL)),
+  FOREIGN KEY(tenant_id,disposition_id)
+    REFERENCES erp_local_lot_disposition(tenant_id,id),
+  FOREIGN KEY(tenant_id,submitted_by)
+    REFERENCES membership(tenant_id,user_id),
+  FOREIGN KEY(tenant_id,reviewed_by)
+    REFERENCES membership(tenant_id,user_id)
+);
+CREATE INDEX erp_local_lot_disposition_proof_review_idx
+  ON erp_local_lot_disposition_proof(tenant_id,status,created_at DESC);
