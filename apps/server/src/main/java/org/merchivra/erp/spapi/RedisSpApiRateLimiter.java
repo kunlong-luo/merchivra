@@ -7,6 +7,8 @@ import java.time.Duration;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import io.micrometer.core.instrument.MeterRegistry;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.redis.core.script.DefaultRedisScript;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Value;
@@ -20,7 +22,9 @@ import org.springframework.stereotype.Component;
  * generated SDK family per cooldown interval, across all backend instances.
  * Fixed TTL is anchored in Redis, not application clocks; no token or Seller
  * ID is logged or saved in plaintext. Official SDK family admission remains
- * conservative; legacy HTTP operations also learn dynamic response quotas.
+ * conservative; core operation calls use atomic Redis-time GCRA with no
+ * assumed burst unless an operator explicitly approves capacity after learning
+ * a usage-plan rate. A 429 fence and operation admission are checked together.
  *
  * Must be shared by every app node that uses the same Amazon application.
  * Redis errors FAIL CLOSED; callers must retry through durable SQL jobs.
@@ -38,15 +42,55 @@ public class RedisSpApiRateLimiter implements SpApiRateLimiter {
         return 1
         """, Long.class);
 
+    /** Atomic Redis-time GCRA. A positive return is milliseconds until eligible. */
+    private static final DefaultRedisScript<Long> OPERATION_GCRA = new DefaultRedisScript<>("""
+        local fence = redis.call('PTTL', KEYS[3])
+        if fence > 0 then return fence end
+        if fence == -1 then return 3600000 end
+        local learned = tonumber(redis.call('GET', KEYS[2]))
+        local interval = tonumber(ARGV[1])
+        local burst = 1
+        if learned and learned >= 250 and learned <= 3600000 then
+            interval = learned
+            burst = tonumber(ARGV[2])
+        end
+        local clock = redis.call('TIME')
+        local now = clock[1] * 1000 + math.floor(clock[2] / 1000)
+        local stored = redis.call('GET', KEYS[1])
+        local next = tonumber(stored) or now
+        if stored and not tonumber(stored) then return 3600000 end
+        local earliest = next - (burst - 1) * interval
+        if now < earliest then return math.max(1, math.ceil(earliest - now)) end
+        local updated = math.max(next, now) + interval
+        local ttl = math.max(1000, math.ceil(updated - now + (burst - 1) * interval + 1000))
+        redis.call('PSETEX', KEYS[1], ttl, tostring(updated))
+        return 0
+        """, Long.class);
+
     private final StringRedisTemplate redis;
     private final Duration cooldown;
+    private final SpApiBurstPolicy bursts;
+    private final MeterRegistry meters;
 
+    public RedisSpApiRateLimiter(StringRedisTemplate redis, long millis) {
+        this(redis, millis, "", null);
+    }
+
+    public RedisSpApiRateLimiter(StringRedisTemplate redis, long millis, String approvedBursts) {
+        this(redis, millis, approvedBursts, null);
+    }
+
+    @Autowired
     public RedisSpApiRateLimiter(StringRedisTemplate redis,
-        @Value("${merchivra.spapi.rate-limit.cooldown-ms:2000}") long millis) {
+        @Value("${merchivra.spapi.rate-limit.cooldown-ms:2000}") long millis,
+        @Value("${merchivra.spapi.rate-limit.approved-bursts:}") String approvedBursts,
+        MeterRegistry meters) {
         this.redis = Objects.requireNonNull(redis);
         if (millis < 250 || millis > 60000)
             throw new IllegalArgumentException("SP-API Redis cooldown must be 250..60000 ms");
         this.cooldown = Duration.ofMillis(millis);
+        this.bursts = new SpApiBurstPolicy(approvedBursts);
+        this.meters = meters;
     }
 
     @Override
@@ -72,27 +116,22 @@ public class RedisSpApiRateLimiter implements SpApiRateLimiter {
         String approvedRefreshToken) {
         String key = legacyKey(region, operation, approvedRefreshToken);
         try {
-            // Amazon 429 cooling fence is shared across backend instances.
-            Boolean fenced = redis.hasKey(key + ":429");
-            if (fenced == null)
+            // All three keys are checked/admitted atomically on Redis server time.
+            Long waitMillis = redis.execute(OPERATION_GCRA,
+                List.of(key + ":next", key + ":interval", key + ":429"),
+                Long.toString(cooldown.toMillis()), Integer.toString(bursts.capacity(operation)));
+            if (waitMillis == null || waitMillis < 0) {
+                admission(operation, "store_unavailable");
                 throw new SpApiAdmissionException(SpApiAdmissionException.Reason.STORE_UNAVAILABLE);
-            if (fenced) {
+            }
+            if (waitMillis > 0) {
+                admission(operation, "cooldown");
                 throw new SpApiAdmissionException(SpApiAdmissionException.Reason.COOLDOWN,
-                    remaining(key + ":429", cooldown));
+                    Duration.ofMillis(Math.min(3_600_000, waitMillis)));
             }
-            String learned = redis.opsForValue().get(key + ":interval");
-            Duration interval = cooldown;
-            if (learned != null) {
-                try {
-                    long millis = Long.parseLong(learned);
-                    if (millis >= 250 && millis <= 3_600_000)
-                        interval = Duration.ofMillis(millis);
-                } catch (NumberFormatException ignored) {
-                    // Missing or invalid advisory metadata -> conservative baseline.
-                }
-            }
-            reserve(key, interval);
+            admission(operation, "allowed");
         } catch (DataAccessException ex) {
+            admission(operation, "store_unavailable");
             throw new SpApiAdmissionException(SpApiAdmissionException.Reason.STORE_UNAVAILABLE);
         }
     }
@@ -101,6 +140,7 @@ public class RedisSpApiRateLimiter implements SpApiRateLimiter {
     public void observeLegacyResponse(SpApiRegion region, SpApiOperation operation,
         String approvedRefreshToken, int status, String observedRate, Duration retryAfter) {
         String key = legacyKey(region, operation, approvedRefreshToken);
+        response(operation, status);
         try {
             // Header is best-effort and cannot account for all Amazon usage plans.
             if (((status >= 200 && status < 300) || status == 400 || status == 404)
@@ -128,6 +168,18 @@ public class RedisSpApiRateLimiter implements SpApiRateLimiter {
         }
     }
 
+    private void admission(SpApiOperation operation, String result) {
+        if (meters != null) meters.counter("merchivra.spapi.admission",
+            "operation", operation.name(), "result", result).increment();
+    }
+
+    private void response(SpApiOperation operation, int status) {
+        if (meters == null) return;
+        String outcome = status == 429 ? "429" : status >= 500 ? "5xx"
+            : status >= 400 ? "4xx" : status >= 200 && status < 300 ? "2xx" : "other";
+        meters.counter("merchivra.spapi.response",
+            "operation", operation.name(), "status", outcome).increment();
+    }
     private static String legacyKey(SpApiRegion region, SpApiOperation operation,
         String approvedRefreshToken) {
         Objects.requireNonNull(region, "Region required");
@@ -136,12 +188,6 @@ public class RedisSpApiRateLimiter implements SpApiRateLimiter {
             throw new SecurityException("Approved Seller grant required");
         return "merchivra:spapi:quota:v1:legacy:" + region.name() + ":"
             + operation.name() + ":" + sha256(approvedRefreshToken);
-    }
-
-    private Duration remaining(String key, Duration fallback) {
-        Long millis = redis.getExpire(key, TimeUnit.MILLISECONDS);
-        if (millis == null || millis < 1) return fallback;
-        return Duration.ofMillis(Math.min(3_600_000, millis));
     }
 
     private void reserve(String key) {
