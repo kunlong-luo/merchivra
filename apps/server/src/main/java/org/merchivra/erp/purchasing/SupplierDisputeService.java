@@ -142,6 +142,7 @@ public class SupplierDisputeService {
     @Transactional
     public Variance report(UUID tenant,UUID actor,UUID orderId,Report req) {
         if(req==null || req.requestKey()==null || req.lineId()==null
+            || req.kind()==null
             || !List.of("PO_SHORTAGE","ASN_SHORTAGE","OVERAGE_UNPOSTED").contains(req.kind())
             || ("ASN_SHORTAGE".equals(req.kind()))!=(req.asnId()!=null)
             || req.reportedExcessQuantity()<0 || req.reportedExcessQuantity()>1_000_000
@@ -209,9 +210,32 @@ public class SupplierDisputeService {
         audit(tenant,actor,id,null,"VARIANCE_REPORTED",explanation);
         return variance(tenant,id);
     }
+    private void verifyVarianceSnapshot(UUID tenant,Variance observation) {
+        UUID order=UUID.fromString(observation.orderId());
+        UUID line=UUID.fromString(observation.lineId());
+        OrderState status=orderLock(tenant,order);
+        if(!List.of("APPROVED","RECEIVING","RECEIVED").contains(status.status()))
+            throw conflict("Source purchase order is no longer approved");
+        Quantities qty=quantities(tenant,order,line);
+        if("PO_SHORTAGE".equals(observation.kind())) {
+            if("RECEIVED".equals(status.status())
+                || qty.ordered()!=observation.expectedQuantity()
+                || qty.received()!=observation.observedQuantity())
+                throw conflict("Source purchase shortage has changed since observation");
+        } else if("ASN_SHORTAGE".equals(observation.kind())) {
+            AsnQuantities a=asnQuantities(tenant,order,line,
+                UUID.fromString(observation.asnId()));
+            if(!"SHIPPED".equals(a.status())
+                || a.quantity()!=observation.expectedQuantity()
+                || a.received()!=observation.observedQuantity())
+                throw conflict("Source ASN shipment/receipt evidence changed");
+        } else if((long)qty.ordered()-qty.received()!=observation.expectedQuantity())
+            throw conflict("PO receiving capacity changed after unposted overage report");
+    }
     @Transactional
     public Variance changeVariance(UUID tenant,UUID actor,UUID id,String action) {
-        if(!List.of("review","close").contains(action))throw bad("Invalid discrepancy action");
+        if(action==null || !List.of("review","close").contains(action))
+            throw bad("Invalid discrepancy action");
         tenantLock(tenant);
         Variance prior=variance(tenant,id);
         if("review".equals(action)) {
@@ -219,6 +243,7 @@ public class SupplierDisputeService {
             if(!"OPEN".equals(prior.state()))throw conflict("Discrepancy not open");
             if(prior.createdBy().equals(actor.toString()))
                 throw conflict("A different Owner must review the discrepancy");
+            verifyVarianceSnapshot(tenant,prior);
             jdbc.update("""
                 UPDATE erp_purchase_variance
                 SET state='REVIEWED',reviewed_by=?,reviewed_at=now(),updated_at=now()
@@ -300,6 +325,7 @@ public class SupplierDisputeService {
     public Claim createClaim(UUID tenant,UUID actor,ClaimRequest req) {
         if(req==null || req.requestKey()==null
             || (req.varianceId()==null)==(req.inspectionId()==null)
+            || req.remedy()==null
             || !List.of("REPLACEMENT","CREDIT_REQUEST").contains(req.remedy())
             || req.requestedQuantity()<1 || req.requestedQuantity()>1_000_000)
             throw bad("Invalid supplier claim");
@@ -321,8 +347,11 @@ public class SupplierDisputeService {
             return old;
         }
         Source src=source(tenant,req.varianceId(),req.inspectionId());
-        if(req.varianceId()!=null && !"REVIEWED".equals(src.status()))
-            throw conflict("Discrepancy must be reviewed before creating a claim");
+        if(req.varianceId()!=null) {
+            if(!"REVIEWED".equals(src.status()))
+                throw conflict("Discrepancy must be reviewed before creating a claim");
+            verifyVarianceSnapshot(tenant,variance(tenant,req.varianceId()));
+        }
         if(req.requestedQuantity()>src.maxQuantity())
             throw conflict("Claim cannot exceed source observed variance or rejected QC units");
         UUID id=UUID.randomUUID();
@@ -342,22 +371,11 @@ public class SupplierDisputeService {
         Variance observation=variance(tenant,UUID.fromString(value.varianceId()));
         if(!"REVIEWED".equals(observation.state()))
             throw conflict("Discrepancy review no longer current");
-        UUID order=UUID.fromString(observation.orderId());
-        UUID line=UUID.fromString(observation.lineId());
-        Quantities qty=quantities(tenant,order,line);
-        long received="ASN_SHORTAGE".equals(observation.kind())
-            ? asnQuantities(tenant,order,line,UUID.fromString(observation.asnId())).received()
-            : qty.received();
-        if(!"OVERAGE_UNPOSTED".equals(observation.kind())
-            && received!=observation.observedQuantity())
-            throw conflict("The actual receipt evidence changed since the shortage report");
-        if("OVERAGE_UNPOSTED".equals(observation.kind())
-            && (long)qty.ordered()-qty.received()!=observation.expectedQuantity())
-            throw conflict("Available PO receiving capacity changed after overage observation");
+        verifyVarianceSnapshot(tenant,observation);
     }
     @Transactional
     public Claim changeClaim(UUID tenant,UUID actor,UUID id,String action,String note) {
-        if(!List.of("submit","approve","close","cancel").contains(action))
+        if(action==null || !List.of("submit","approve","close","cancel").contains(action))
             throw bad("Unsupported claim action");
         String resolution="close".equals(action)?reason(note):null;
         tenantLock(tenant);
