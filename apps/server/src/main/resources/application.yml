@@ -82,6 +82,8 @@ merchivra:
       # LIVE Seller+Finance role, Redis quota, approved egress and secret vault.
       # No schedule or public remote-import route. Default OFF.
       enabled: ${MERCHIVRA_SPAPI_REPORTS_ENABLED:false}
+      scheduler-enabled: ${MERCHIVRA_SPAPI_REPORTS_SCHEDULER_ENABLED:false}
+      scheduler-ms: ${MERCHIVRA_SPAPI_REPORTS_SCHEDULER_MS:120000}
     orders-role-review:
       # Explicit two-person off-platform application-role verification.
       # Default OFF; reviewer RBAC is provisioned through trusted administration.
