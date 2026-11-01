@@ -117,9 +117,15 @@ public class RedisSpApiRateLimiter implements SpApiRateLimiter {
         String key = legacyKey(region, operation, approvedRefreshToken);
         try {
             // All three keys are checked/admitted atomically on Redis server time.
+            // Reports discovery/document metadata endpoints have much slower
+            // default Amazon plans than ordinary Orders reads. Until a real
+            // header is learned, never assume the generic 2s SDK cooldown.
+            long baseline = (operation == SpApiOperation.GET_REPORTS
+                || operation == SpApiOperation.GET_REPORT_DOCUMENT)
+                ? Math.max(60_000L,cooldown.toMillis()) : cooldown.toMillis();
             Long waitMillis = redis.execute(OPERATION_GCRA,
                 List.of(key + ":next", key + ":interval", key + ":429"),
-                Long.toString(cooldown.toMillis()), Integer.toString(bursts.capacity(operation)));
+                Long.toString(baseline), Integer.toString(bursts.capacity(operation)));
             if (waitMillis == null || waitMillis < 0) {
                 admission(operation, "store_unavailable");
                 throw new SpApiAdmissionException(SpApiAdmissionException.Reason.STORE_UNAVAILABLE);
