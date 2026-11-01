@@ -33,6 +33,30 @@ class ItemAllocationServiceTest {
                 "EVIDENCE-2026","A valid rationale for allocation"));
         verifyNoInteractions(jdbc);
     }
+    @Test void approvedEvidenceDigestFreezesExactItemAmountsAndReferences(){
+        var a=new ItemAllocationService.Allocation("item-A","AMAZON_FEE",
+            "-3.00","USD","EVIDENCE-2026-001");
+        var b=new ItemAllocationService.Allocation("item-B","AMAZON_FEE",
+            "-7.00","USD","EVIDENCE-2026-002");
+        String source="a".repeat(64);
+        String original=ItemAllocationService.digestApprovedLines(source,
+            java.util.List.of(a,b));
+        assertEquals(original,ItemAllocationService.digestApprovedLines(source,
+            java.util.List.of(b,a))); // canonical order, not submission order
+        assertNotEquals(original,ItemAllocationService.digestApprovedLines(source,
+            java.util.List.of(
+                new ItemAllocationService.Allocation("item-A","AMAZON_FEE",
+                    "-4.00","USD","EVIDENCE-2026-001"),
+                new ItemAllocationService.Allocation("item-B","AMAZON_FEE",
+                    "-6.00","USD","EVIDENCE-2026-002"))));
+        assertNotEquals(original,ItemAllocationService.digestApprovedLines(source,
+            java.util.List.of(
+                new ItemAllocationService.Allocation("item-A","AMAZON_FEE",
+                    "-3.00","USD","EVIDENCE-2026-003"),b)));
+        assertNotEquals(original,ItemAllocationService.digestApprovedLines("b".repeat(64),
+            java.util.List.of(a,b)));
+    }
+
     @Test void scopeComesFromOwnerSessionNotFromBrowserAndAlwaysNoStore(){
         var tenant=UUID.randomUUID();var market=UUID.randomUUID();
         var event=UUID.randomUUID();var user=UUID.randomUUID();
