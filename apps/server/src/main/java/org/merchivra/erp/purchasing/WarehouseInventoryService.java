@@ -90,13 +90,21 @@ public class WarehouseInventoryService {
     }
     void recordReceipt(UUID tenant,UUID actor,UUID warehouseId,UUID productSkuId,
                        UUID purchaseReceiptId,int quantity) {
+        // V46: receipt is REAL physical arrival but not usable stock.
+        // Historical V39 receipts retain existing ledger entries; only new
+        // receipts get a pending-QC lot. QC_RELEASE later posts accepted units.
+        String lotCode="LOT-"+purchaseReceiptId.toString().substring(0,12).toUpperCase();
         jdbc.update("""
-            INSERT INTO erp_local_stock_movement
-              (id,tenant_id,warehouse_id,product_sku_id,purchase_receipt_id,
-               movement_type,quantity,actor_user_id)
-            VALUES (?,?,?,?,?,'PURCHASE_RECEIPT',?,?)
-            """,UUID.randomUUID(),tenant,warehouseId,productSkuId,purchaseReceiptId,
-            quantity,actor);
+            INSERT INTO erp_receipt_quality_batch
+              (tenant_id,receipt_id,warehouse_id,product_sku_id,
+               received_quantity,lot_code,received_by)
+            VALUES (?,?,?,?,?,?,?)
+            """,tenant,purchaseReceiptId,warehouseId,productSkuId,quantity,lotCode,actor);
+        jdbc.update("""
+            INSERT INTO erp_receipt_quality_batch_event
+              (id,tenant_id,receipt_id,actor_user_id,event_type,new_lot_code,quantity,note)
+            VALUES (?,?,?,?,'RECEIVED_TO_HOLD',?,?,'Physical receipt pending inspection')
+            """,UUID.randomUUID(),tenant,purchaseReceiptId,actor,lotCode,quantity);
     }
     private void requireReadable(UUID tenant,UUID warehouseId) {
         if(warehouseId==null)throw bad("Warehouse ID is required");
@@ -108,21 +116,38 @@ public class WarehouseInventoryService {
     public List<Stock> stock(UUID tenant,UUID warehouseId) {
         requireReadable(tenant,warehouseId);
         return jdbc.query("""
-            SELECT m.warehouse_id,m.product_sku_id,s.internal_sku,
-                   SUM(CASE WHEN m.movement_type='PURCHASE_RECEIPT'
-                     THEN m.quantity ELSE 0 END)::bigint AS received_units,
-                   SUM(m.quantity)::bigint AS on_hand_units
-            FROM erp_local_stock_movement m
-            JOIN product_sku s ON s.tenant_id=m.tenant_id AND s.id=m.product_sku_id
-            WHERE m.tenant_id=? AND m.warehouse_id=?
-            GROUP BY m.warehouse_id,m.product_sku_id,s.internal_sku
+            WITH sku_keys AS (
+              SELECT m.tenant_id,m.warehouse_id,m.product_sku_id
+              FROM erp_local_stock_movement m
+              WHERE m.tenant_id=? AND m.warehouse_id=?
+              UNION
+              SELECT b.tenant_id,b.warehouse_id,b.product_sku_id
+              FROM erp_receipt_quality_batch b
+              WHERE b.tenant_id=? AND b.warehouse_id=?
+            )
+            SELECT k.warehouse_id,k.product_sku_id,s.internal_sku,
+              COALESCE((
+                SELECT SUM(r.quantity) FROM erp_purchase_receipt r
+                JOIN erp_purchase_order_line l
+                  ON l.tenant_id=r.tenant_id AND l.id=r.purchase_order_line_id
+                WHERE r.tenant_id=k.tenant_id AND r.warehouse_id=k.warehouse_id
+                  AND l.product_sku_id=k.product_sku_id
+              ),0)::bigint AS received_units,
+              COALESCE((
+                SELECT SUM(m.quantity) FROM erp_local_stock_movement m
+                WHERE m.tenant_id=k.tenant_id AND m.warehouse_id=k.warehouse_id
+                  AND m.product_sku_id=k.product_sku_id
+              ),0)::bigint AS on_hand_units
+            FROM sku_keys k
+            JOIN product_sku s
+              ON s.tenant_id=k.tenant_id AND s.id=k.product_sku_id
             ORDER BY s.internal_sku LIMIT 500
             """,(rs,i)->new Stock(
                 rs.getObject("warehouse_id",UUID.class).toString(),
                 rs.getObject("product_sku_id",UUID.class).toString(),
                 rs.getString("internal_sku"),rs.getLong("received_units"),
                 rs.getLong("on_hand_units")),
-            tenant,warehouseId);
+            tenant,warehouseId,tenant,warehouseId);
     }
     public List<Movement> ledger(UUID tenant,UUID warehouseId) {
         requireReadable(tenant,warehouseId);
