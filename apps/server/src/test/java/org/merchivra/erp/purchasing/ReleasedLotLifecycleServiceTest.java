@@ -33,7 +33,7 @@ class ReleasedLotLifecycleServiceTest {
 
     private ReleasedLotLifecycleService.Request request(String type,int qty,UUID bin,
         Integer observed) {
-        return new ReleasedLotLifecycleService.Request(key,type,bin,qty,10,
+        return new ReleasedLotLifecycleService.Request(key,type,oldBin,bin,qty,10,
             List.of("TRANSFER","EXPIRED_QUARANTINE").contains(type)?20L:null,
             observed,detail);
     }
@@ -85,7 +85,7 @@ class ReleasedLotLifecycleServiceTest {
                 request("COUNT_OBSERVATION",0,null,null))).getStatusCode());
         assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
             ()->service.act(tenant,actor,position,
-                new ReleasedLotLifecycleService.Request(key,"MOVE",newBin,0,10,
+                new ReleasedLotLifecycleService.Request(key,"MOVE",oldBin,newBin,0,10,
                     null,null,"bad"))).getStatusCode());
         verifyNoInteractions(jdbc,stock);
     }
@@ -102,6 +102,15 @@ class ReleasedLotLifecycleServiceTest {
         verify(jdbc,never()).update(contains("erp_local_stock_movement"),
             any(Object[].class));
         verifyNoInteractions(stock);
+    }
+    @Test void staleSourceBinRejectsEvenWhenPhysicalQuantityIsUnchanged() throws Exception {
+        activeTenant();source(null);
+        var stale=new ReleasedLotLifecycleService.Request(key,"MOVE",
+            newBin,oldBin,0,10,null,null,detail);
+        assertEquals(HttpStatus.CONFLICT,assertThrows(ResponseStatusException.class,
+            ()->service.act(tenant,actor,position,stale)).getStatusCode());
+        verifyNoInteractions(stock);
+        verify(jdbc,never()).update(anyString(),any(Object[].class));
     }
     @Test void withinWarehouseMoveDoesNotPostStock() throws Exception {
         activeTenant();source(null);warehouseLock(false);
