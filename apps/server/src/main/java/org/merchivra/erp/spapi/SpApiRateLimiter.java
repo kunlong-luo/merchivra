@@ -15,6 +15,10 @@ public interface SpApiRateLimiter {
     default void requireLegacyPermit(SpApiRegion region, SpApiOperation operation,
         String approvedRefreshToken) { }
 
+    /** Observe only non-secret Amazon response metadata; best effort after egress. */
+    default void observeLegacyResponse(SpApiRegion region, SpApiOperation operation,
+        String approvedRefreshToken, int status, String observedRate, java.time.Duration retryAfter) { }
+
     static SpApiRateLimiter disabled() {
         return (seller, family) -> { };
     }
