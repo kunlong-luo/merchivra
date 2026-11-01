@@ -30,6 +30,11 @@ public class ReleasedLotLifecycleController {
         HttpServletRequest req,@PathVariable UUID positionId) {
         return service.history(access.currentTenant(auth,req),positionId);
     }
+    @GetMapping("/positions/{positionId}/lineage")
+    public List<ReleasedLotLifecycleService.Lineage> lineage(Authentication auth,
+        HttpServletRequest req,@PathVariable UUID positionId) {
+        return service.lineage(access.currentTenant(auth,req),positionId);
+    }
     @GetMapping("/warehouses/{warehouseId}/expiry-alerts")
     public List<ReleasedLotLifecycleService.ExpiryAlert> expiry(Authentication auth,
         HttpServletRequest req,@PathVariable UUID warehouseId) {
