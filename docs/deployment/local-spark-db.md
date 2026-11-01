@@ -61,33 +61,41 @@ docker exec spark-postgres psql -U root -d postgres -Atc 'SHOW server_version;'
 
 **注意：** `spark-postgres` 容器内的 `localhost`、Merchivra `server` 容器内的 `localhost` 和本机 `127.0.0.1` 是不同的网络命名空间。两个容器通过 `spark-iot-net` 通信时，应使用 **`spark-postgres:5432`**，而不是 `127.0.0.1:5432`。
 
-### B2. 只在 spark-postgres 内建立 Merchivra 自己的库和角色
+### B2. 只在 spark-postgres 内初始化 Merchivra 专用角色与数据库（一次性）
 
-此步骤只需做一次，**不会更改或重建 `iot_farm`**：
+**请先检查是否已经存在**：此手工步骤只适用于**新集群 / 尚不存在 merchivra 数据库和角色**的情况。若已有任一对象，脚本会拒绝执行；必须先检查其当前权限和使用状态，**不要重新创建、删除、重命名、改 owner 或覆盖密码**，更不要接触 `iot_farm`。
 
-```bash
-docker exec -it spark-postgres psql -U root -d postgres
-```
-
-在出现的 `postgres=#` 提示符后逐条输入，`\password` 命令会在终端交互询问密码，避免在 shell 历史留下明文：
-
-```sql
-CREATE ROLE merchivra LOGIN;
-\password merchivra
-CREATE DATABASE merchivra OWNER merchivra;
-\l
-\q
-```
-
-如果库/角色已经存在，不要重复创建，更不要删除重建。使用该角色连接 `merchivra`，让 Flyway 仅在该库内管理自己的 `public` schema。创建的用户名密码需要与下述环境文件一致。请勿把给 Spark 系统使用的现有超级管理员密码复用为 Merchivra 的业务数据库密码。
-
-可选：检查新角色与库存在（仍不访问 `iot_farm`）：
+在仓库根目录、管理员已经确认目标 `spark-postgres` 为授权 PostgreSQL 18 集群，并已确认库/角色均不存在的前提下，手动执行：
 
 ```bash
-docker exec spark-postgres psql -U root -d postgres -Atc \
-  "SELECT datname FROM pg_database WHERE datname='merchivra'"
-docker exec spark-postgres psql -U root -d merchivra -Atc 'SHOW server_version_num;'
+# 只查询，不改变任何数据库状态；确认是正确的容器和维护库
+docker exec spark-postgres psql -X -U root -d postgres \
+  -c "SELECT current_database(), current_user, current_setting('server_version');"
+docker exec spark-postgres psql -X -U root -d postgres \
+  -c "SELECT rolname,rolcanlogin FROM pg_roles WHERE rolname='merchivra';"
+docker exec spark-postgres psql -X -U root -d postgres \
+  -c "SELECT datname FROM pg_database WHERE datname='merchivra';"
+
+# 仅管理员手动运行一次；每条语句 autocommit，首个错误立即停止。
+# 不要添加 -1/--single-transaction；不要交给 bootRun、CI 或 Compose 启动。
+docker exec -i spark-postgres psql -X -v ON_ERROR_STOP=1 \
+  -U root -d postgres < apps/server/scripts/provision-merchivra-database.sql
 ```
+
+[查看纯 SQL 一次性初始化脚本](../../apps/server/scripts/provision-merchivra-database.sql)。其中先在 `postgres` 维护库做超级用户和不存在性检查，再用 `NOLOGIN` 创建非超级用户 `merchivra` 与独立库、撤销数据库级 PUBLIC 默认权限。**没有任何明文密码、`ALTER ROLE ... LOGIN` 或 Flyway 表迁移**。途中失败时可能部分初始化（例如角色已建立、数据库尚未创建），重跑会拒绝；请人工检查 `pg_roles`、`pg_database`，不得自动修复。
+
+**初始化成功后，再由管理员单独完成密码与 LOGIN**：
+
+1. 在 DataGrip / IntelliJ IDEA / pgAdmin 的受保护角色属性界面设置 `merchivra` 专用强 SCRAM 密码；**或者**打开互动 `psql`（`docker exec -it spark-postgres psql -X -U root -d postgres`），先检查 `SHOW password_encryption;` 确认是 `scram-sha-256`，再使用 psql 的 `\password merchivra` 交互命令。`\password` 是 **psql 元命令，不能在 JDBC SQL 编辑器执行**，更不能放入 SQL 脚本或 shell 历史中。
+2. 在密码确实已设置之后，再在管理员 SQL 编辑器（或 psql 提示符）**单独执行** `ALTER ROLE merchivra LOGIN;`；未设置密码时绝不先启用 LOGIN。
+3. 在宿主机测试专用角色的真实 TCP 密码认证（使用 `-W` 提示输入，不把密码嵌入命令行或 Git）：
+
+```bash
+psql "host=127.0.0.1 port=5432 dbname=merchivra user=merchivra" -W \
+  -c "SELECT current_database(), current_user, current_setting('server_version');"
+```
+
+后端使用该非超级用户执行 Flyway，**只在独立 `merchivra` 数据库里建表**。宿主机直接运行 Spring Boot/IntelliJ 必须设置 `DB_PASSWORD`；Docker Compose `deploy/compose.spark-db.yaml` 使用 `.env` 中 `MERCHIVRA_DB_PASSWORD` 并传入后端。两者是不同的配置入口。自带数据库的 `deploy/compose.yaml` 使用 PostgreSQL 官方容器初始化环境变量，**不运行此脚本**。图形 SQL 工具务必将脚本设为每条语句自动提交、错误即停止、顺序执行，不能将 `CREATE DATABASE` 包装进单一事务。
 
 ### B3. 启动复用数据库的 Merchivra 前后端
 
@@ -110,7 +118,7 @@ docker compose --env-file .env -f deploy/compose.spark-db.yaml ps
 
 - 只新建 **`merchivra-server-1`、`merchivra-web-1`** 两个容器，数据库继续使用已有 `spark-postgres`。这就是 **三层服务，两个新增容器** 的结构。
 - `server` 同时接入项目自己的默认内部网络（供 `web` 的 Nginx 使用）及 `spark-iot-net`（仅供连接共享 PostgreSQL）；`web` 不直接连接共享数据库网络。
-- 首次启动时 Spring Boot 对 **`merchivra` 数据库** 自动执行 Flyway V1–V52（以及后续新增版本）。启动完成后访问 `http://127.0.0.1:3000`，登录后查看业务模块。
+- 首次启动时 Spring Boot 对 **`merchivra` 数据库** 自动执行 现有 Flyway 迁移（截至当前代码为 V1–V59；以后继续增加）。启动完成后访问 `http://127.0.0.1:3000`，登录后查看业务模块。
 - 当前 Compose 仍只在 `127.0.0.1` 公开 Web/API 调试端口，不具备公网 TLS 入口。你可以在 `.env` 使用 `MERCHIVRA_WEB_PORT` / `MERCHIVRA_API_PORT` 调整端口，避免占用其他项目的 3000/8080。
 
 排错：

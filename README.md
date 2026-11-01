@@ -47,22 +47,24 @@ You can reuse the PostgreSQL **18/PostGIS 3.6** instance in your existing `spark
 **Never point Merchivra at the existing `iot_farm` database.** Create a dedicated `merchivra` database with an independent non-superuser `merchivra` login, leaving all existing spark-db databases, extensions, volumes, Redis, and InfluxDB untouched.
 
 1. Start your original spark-db `postgres` service from its own Compose directory, then verify its network: `docker network inspect spark-iot-net`. The container must be attached to that network.
-2. Create the new database and role via an interactive PostgreSQL session:
+2. For a NEW, explicitly approved PostgreSQL 18 cluster with **neither** the `merchivra` role nor database present, provision both manually using the pure-SQL bootstrap script. Do not run it on an existing or partially initialized setup:
 
    ```bash
-   docker exec -it spark-postgres psql -U root -d postgres
+   # From the repository root; inspect the cluster and existing objects first.
+   docker exec spark-postgres psql -X -U root -d postgres \
+     -c "SELECT current_database(),current_user,current_setting('server_version');"
+   docker exec spark-postgres psql -X -U root -d postgres \
+     -c "SELECT rolname,rolcanlogin FROM pg_roles WHERE rolname='merchivra';"
+   docker exec spark-postgres psql -X -U root -d postgres \
+     -c "SELECT datname FROM pg_database WHERE datname='merchivra';"
+
+   # Explicit one-time administrator execution; STOP on first error, autocommit.
+   # Never pass -1/--single-transaction.
+   docker exec -i spark-postgres psql -X -v ON_ERROR_STOP=1 \
+     -U root -d postgres < apps/server/scripts/provision-merchivra-database.sql
    ```
 
-   Inside `psql` run the following **once** (choose a strong, unique password interactively):
-
-   ```sql
-   CREATE ROLE merchivra LOGIN;
-   \password merchivra
-   CREATE DATABASE merchivra OWNER merchivra;
-   \q
-   ```
-
-   Do not recreate these objects if they already exist.
+   The script creates a **NOLOGIN** restricted role, a dedicated database, and removes default PUBLIC database privileges. It never sets any password, changes `iot_farm`, or runs in Flyway, CI, bootRun, Docker, or Compose startup. In a trusted GUI role-password dialog or interactive `psql`, check `SHOW password_encryption;` equals `scram-sha-256` and set a unique strong password (interactive psql meta-command `\password merchivra`; **not executable SQL**). Only after the password is set, separately execute `ALTER ROLE merchivra LOGIN;` in your administrative SQL client. Test TCP with `psql -W` before configuring the app. See [complete local PostgreSQL provisioning guidance](docs/deployment/local-spark-db.md).
 
 3. In the Merchivra project directory, copy `.env.example` to `.env`. Set `MERCHIVRA_DB_NAME=merchivra`, `MERCHIVRA_DB_USER=merchivra`, `MERCHIVRA_DB_PASSWORD` to the new role's password, `MERCHIVRA_BOOTSTRAP_USERNAME`, and `MERCHIVRA_BOOTSTRAP_PASSWORD` (at least 16 characters). Keep `MERCHIVRA_DEMO_ENABLED=false` unless using *fictional* local data.
 4. Start **only two new containers** (web and server), which share the pre-existing PostgreSQL service as their third logical tier:

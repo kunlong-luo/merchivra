@@ -66,22 +66,27 @@ docker network inspect spark-iot-net
 docker exec spark-postgres psql -U root -d postgres -Atc 'SHOW server_version;'
 ```
 
-**步骤 2：** 第一次在已有 `spark-postgres` 中创建专用数据库角色（不要使用 `root` 作为应用账号）：
+**步骤 2：** 只在新的、尚不存在 `merchivra` 角色及数据库的受控 PostgreSQL 18 集群上，手工执行**一次性纯 SQL 初始化**。已存在其中任一对象时停止并人工检查，不允许重跑覆盖：
 
 ```bash
-docker exec -it spark-postgres psql -U root -d postgres
+# 在仓库根目录执行。先确认 PostgreSQL 管理员连接的是正确的 postgres 维护库：
+docker exec spark-postgres psql -X -U root -d postgres \
+  -c "SELECT current_database(),current_user,current_setting('server_version');"
+docker exec spark-postgres psql -X -U root -d postgres \
+  -c "SELECT rolname,rolcanlogin FROM pg_roles WHERE rolname='merchivra';"
+docker exec spark-postgres psql -X -U root -d postgres \
+  -c "SELECT datname FROM pg_database WHERE datname='merchivra';"
+
+# 只有角色与库都不存在，才由授权管理员显式手动执行；不得添加 -1
+docker exec -i spark-postgres psql -X -v ON_ERROR_STOP=1 \
+  -U root -d postgres < apps/server/scripts/provision-merchivra-database.sql
 ```
 
-在 `psql` 交互提示符逐条执行：
+脚本先创建 `merchivra NOLOGIN`，再创建独立数据库并撤销数据库级 PUBLIC 权限；**不设置密码、不启用 LOGIN、不碰 `iot_farm`，也不会被 Flyway、CI、Docker 或应用自动执行**。
 
-```sql
-CREATE ROLE merchivra LOGIN;
-\password merchivra
-CREATE DATABASE merchivra OWNER merchivra;
-\q
-```
+然后管理员单独通过安全 GUI 设置专用 SCRAM 密码；或在互动 `psql` 中检查 `SHOW password_encryption;` 后执行 `\password merchivra`。**`\password` 只能在 psql 交互提示符中执行，不是 SQL 编辑器语句。** 密码已设置后，再单独运行 `ALTER ROLE merchivra LOGIN;`。从宿主机通过 `psql -W` 测试 TCP 连接后，再配置 `.env` 或 IntelliJ。详见 [安全初始化与重试说明](docs/deployment/local-spark-db.md#b2-只在-spark-postgres-内初始化-merchivra-专用角色与数据库一次性)。
 
-> 若角色或数据库已存在，不要覆盖。为新角色使用独立强密码，**不要把你现有 spark-db 的管理员密码写进 Merchivra 配置**。
+> 如果角色或数据库已存在，跳过初始化、先核对现状；密码不得写入 Git、SQL 文件或命令行。**Compose 内置数据库模式不需要也不得运行此脚本。**
 
 **步骤 3：** 在 Merchivra 仓库根目录准备环境并只启动前端、后端：
 

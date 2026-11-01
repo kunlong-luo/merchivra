@@ -610,3 +610,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 用户的 IntelliJ 本地报错 `SCRAM-based authentication ... no password was provided` 是进程环境缺少 `DB_PASSWORD`。按 `docs/development.md` 配置 IDEA Run Configuration，并用交互式 psql 验证；不得提交密码、关掉 PostgreSQL 认证或破坏数据卷。
 - 保持 Java25、Spring Boot4.1.2、Gradle、React19、PostgreSQL18 和可选 Redis8；不用 Maven/Vue，不以 OpenTelemetry javaagent 为前置。不重复计算已有 OrderContribution/V29/V34–V36 来源事实。
 - Java/React/PG18 CI success 不等于用户本地成功或真实 Amazon/银行联调完成；产品 G1/G2/G3 尚待签署。依 Owner 要求先补齐所有核心代码，最后由 Owner 自己在本地授权并执行实际 API 验收。
+
+## 2026-11-01 · PostgreSQL 独立集群初始化安全边界
+
+- `apps/server/scripts/provision-merchivra-database.sql` 是仅供 DBA 手工一次性执行的**纯 SQL 集群操作**（仅外部 `spark-postgres` / 指定授权 PG18），不得放入 Flyway、`bootRun`、CI、`Dockerfile`、Compose 启动、自动安装或后台任务。
+- 必须以授权管理员连接 `postgres` 维护库，确认 `merchivra` Role/DB **均不存在**且目标正确；每条语句 AUTOCOMMIT / STOP ON ERROR / 顺序运行，禁用 `BEGIN`/`--single-transaction`。任一对象已存在必须检查现状，不能自动修复、重置 Owner、删除或覆盖。
+- 首先创建 `NOLOGIN`/非超级用户专用角色，独立数据库并撤销数据库级 PUBLIC 默认权限；实际 SCRAM 强密码只能通过受保护 GUI 或交互式 `psql` 设置，**确认设置成功后**才单独启用 `LOGIN`。`\password` 不属于可执行 SQL。
+- Compose 内置 PG 模式由官方 PostgreSQL 镜像自行 bootstrap，不得运行此脚本；应用的 Flyway 仅创建/更新已存在 `merchivra` 库内业务 Schema。绝不影响 `iot_farm`、其他项目的角色/库、磁盘卷或共享 Redis。
+- IDEA 直接运行使用本地进程 `DB_PASSWORD`；外部 Compose 从独立 `.env` 的 `MERCHIVRA_DB_PASSWORD` 注入。这些配置不应进入 Git/日志，且该脚本不能代替应用环境变量配置。

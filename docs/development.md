@@ -136,3 +136,9 @@ psql "host=127.0.0.1 port=5432 dbname=merchivra user=merchivra" -W \
 如果 psql 连不上，检查 `spark-postgres` 或本机 PG18 是否运行、端口是否暴露、是否存在 `merchivra` 独立数据库及同名 LOGIN 角色、是否使用为该角色单独设置的密码。**不可使用管理员 root 密码代替，不要关闭 SCRAM 或执行 `down -v`**。
 
 如果 psql 成功而 IntelliJ 报 `no password was provided`，检查当前正在运行的 IDEA Run Configuration 是否保存并注入了 `DB_PASSWORD`；重新启动 Java 进程后重试。成功标准是 Hikari 成功获取连接、Flyway 验证/迁移完成，以及 Spring Boot 就绪，而不只是 Tomcat initialized。密钥不得提交到仓库或发在聊天里。
+
+## One-time PostgreSQL 18 cluster provisioning (only for external spark-db)
+
+The role/database creation process is **not a Flyway migration**, `bootRun` lifecycle action, or CI/Compose startup hook. For a genuinely new `spark-postgres` cluster with no existing `merchivra` role/database, an authorized administrator may explicitly run [`apps/server/scripts/provision-merchivra-database.sql`](../apps/server/scripts/provision-merchivra-database.sql) once, with per-statement autocommit and stop-on-error. It first creates a `NOLOGIN` role, creates the `merchivra` database, then revokes database-level PUBLIC privileges. Setting a strong SCRAM password via trusted GUI or interactive `psql`, enabling LOGIN **afterwards**, and testing `psql -W` are separate manual operations.
+
+**If either the database or role already exists, do not run the script**; inspect state and privileges instead. Never use this procedure on `iot_farm` or as a workaround for a missing IDEA `DB_PASSWORD`. The integrated `deploy/compose.yaml` has its own supported Postgres image bootstrap and must not execute this script. See [`docs/deployment/local-spark-db.md`](deployment/local-spark-db.md) for inspection, safe execution, GUI client transaction settings and password verification.

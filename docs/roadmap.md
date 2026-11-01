@@ -460,3 +460,9 @@
 - [x] `deploy/compose.spark-db.yaml` 可直接复用原项目 `spark-redis:6379`；内置可选 `redis:8.10.1-alpine` + noeviction 仅开发使用；不新建额外 spark-db 容器/数据库，不触碰 `iot_farm`。新增 Redis session HTTP 真容器 login→Java 重启→Redis 故障失权冒烟。
 - [ ] 正式使用现有 `spark-db` 的 `allkeys-lru` 仍有配额 Key 被淘汰导致提前放行的风险，生产前需隔离无淘汰 Redis/足够内存、ACL/TLS、监控与容量；真实 Amazon 用量限制/Burst/Retry-After 仍待 Owner 完成功能后本地授权联调。
 - 指南：[Redis 8 Session/限流与使用现有 spark-db 的安全边界](deployment/redis-session-spapi-v53.md)。
+
+## 2026-11-01 · V61.1 本地 PostgreSQL 18 一次性手工初始化补充
+
+- [x] 参照已有 Lanveriq 仅供人工管理的示例，将其安全原则迁移为 **Merchivra 独立**的纯 SQL `apps/server/scripts/provision-merchivra-database.sql`；只创建 `merchivra NOLOGIN` 角色和专用数据库、移除 PUBLIC DB 权限，不依赖 Flyway/bootRun/Compose/CI，不包含密钥。
+- [x] 更新中英文 README、`docs/deployment/local-spark-db.md` 和 `docs/development.md`：只有**不存在**既有角色和数据库时才允许 DBA 手工初始化，分开密码设置与 LOGIN，GUI 需 autocommit、stop-on-error，不能单事务 `CREATE DATABASE`；本地 IntelliJ 仍需单独配置 `DB_PASSWORD`。
+- [ ] 用户在**自己的** PG18 上确认专用数据库已正确预置或现有状态无需初始化、专用密码认证成功、IDEA 启动正常。未在 CI/工具侧执行管理员级数据库创建，不可称本地连接问题已经解决。
