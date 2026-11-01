@@ -156,6 +156,32 @@ public class SettlementReportImportService {
         return saved;
     }
 
+    /**
+     * Advisory quick-check before downloading large Amazon documents. It does
+     * not replace the row-level immutable comparison in importDocument.
+     */
+    public boolean alreadyImported(SpApiSellerScope approved,String amazonReportId,
+        String documentId) {
+        if(approved==null || !approved.approvedRoles().contains("Finance and Accounting")
+            || !safeId(amazonReportId,160) || !safeId(documentId,256))
+            throw new SecurityException("Finance report scope required");
+        List<String> found=jdbc.query("""
+            SELECT r.report_document_id
+            FROM spapi_settlement_report r
+            JOIN seller_marketplace m ON m.tenant_id=r.tenant_id
+              AND m.id=r.seller_marketplace_id
+            WHERE r.tenant_id=? AND m.seller_account_id=?
+              AND m.marketplace_id=? AND r.amazon_report_id=?
+            """,(rs,n)->rs.getString(1),
+            approved.tenantId(),approved.sellerAccountId(),
+            approved.marketplaceId(),amazonReportId);
+        if(found.isEmpty())return false;
+        if(found.size()!=1 || !documentId.equals(found.getFirst()))
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Amazon report ID references a different immutable document");
+        return true;
+    }
+
     public List<Imported> list(UUID tenant,UUID marketplace) {
         return jdbc.query("""
             SELECT id,seller_marketplace_id,amazon_report_id,report_document_id,
