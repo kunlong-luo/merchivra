@@ -13,7 +13,7 @@
     "test": "vitest run",
     "preview": "vite preview --host 127.0.0.1",
     "api:generate": "orval --config orval.config.ts",
-    "api:check": "npm run api:generate && test -z \"$(git status --porcelain --untracked-files=all -- src/generated)\""
+    "api:check": "npm run api:generate && node ../../scripts/check-orval-generated.mjs"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.105.0",
