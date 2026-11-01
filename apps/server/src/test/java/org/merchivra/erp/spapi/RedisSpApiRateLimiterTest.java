@@ -65,32 +65,35 @@ class RedisSpApiRateLimiterTest {
     }
 
     @Test
-    void legacyOperationLearnsPerOperationRateAndNeverStoresRawGrant() {
+    void legacyOperationLearnsRateWithoutStoringRawGrant() {
         StringRedisTemplate redis=mock(StringRedisTemplate.class);
         @SuppressWarnings("unchecked") ValueOperations<String,String> values=mock(ValueOperations.class);
         when(redis.opsForValue()).thenReturn(values);
-        when(redis.hasKey(anyString())).thenReturn(false);
-        when(values.get(anyString())).thenReturn("500");
-        when(values.setIfAbsent(anyString(),eq("1"),eq(Duration.ofMillis(500))))
-            .thenReturn(true);
+        doReturn(0L).when(redis).execute(any(org.springframework.data.redis.core.script.RedisScript.class),
+            anyList(),anyString(),anyString());
         var limiter=new RedisSpApiRateLimiter(redis,2000);
         String grant="SECRET-GRANT-NOT-FOR-REDIS";
         limiter.observeLegacyResponse(SpApiRegion.NA,SpApiOperation.GET_ORDER,grant,
             200,"2.0",Duration.ZERO);
         limiter.requireLegacyPermit(SpApiRegion.NA,SpApiOperation.GET_ORDER,grant);
-        var keys=org.mockito.ArgumentCaptor.forClass(String.class);
-        verify(values).set(keys.capture(),eq("500"),eq(Duration.ofHours(24)));
-        verify(values).setIfAbsent(keys.capture(),eq("1"),eq(Duration.ofMillis(500)));
-        assertTrue(keys.getAllValues().stream().allMatch(k->!k.contains(grant)));
-        assertTrue(keys.getAllValues().stream().allMatch(k->k.contains(":GET_ORDER:")));
+        var learned=org.mockito.ArgumentCaptor.forClass(String.class);
+        verify(values).set(learned.capture(),eq("500"),eq(Duration.ofHours(24)));
+        @SuppressWarnings("unchecked")
+        org.mockito.ArgumentCaptor<java.util.List<String>> keys=
+            org.mockito.ArgumentCaptor.forClass(java.util.List.class);
+        verify(redis).execute(any(org.springframework.data.redis.core.script.RedisScript.class),
+            keys.capture(),eq("2000"),eq("1"));
+        assertEquals(3,keys.getValue().size());
+        assertTrue(keys.getValue().stream().allMatch(k->k.contains(":GET_ORDER:")));
+        assertTrue(keys.getValue().stream().noneMatch(k->k.contains(grant)));
+        assertFalse(learned.getValue().contains(grant));
     }
 
     @Test
-    void legacyPenaltyFenceDefersBeforeReservingASecondPermit() {
+    void atomic429FenceDefersWithRetryHintAndNeverReservesSeparatePermit() {
         StringRedisTemplate redis=mock(StringRedisTemplate.class);
-        when(redis.hasKey(anyString())).thenReturn(true);
-        when(redis.getExpire(anyString(),eq(java.util.concurrent.TimeUnit.MILLISECONDS)))
-            .thenReturn(3200L);
+        doReturn(3200L).when(redis).execute(any(org.springframework.data.redis.core.script.RedisScript.class),
+            anyList(),anyString(),anyString());
         var limiter=new RedisSpApiRateLimiter(redis,2000);
         var denied=assertThrows(SpApiAdmissionException.class,
             ()->limiter.requireLegacyPermit(SpApiRegion.NA,SpApiOperation.SEARCH_ORDERS,
@@ -98,5 +101,35 @@ class RedisSpApiRateLimiterTest {
         assertEquals(SpApiAdmissionException.Reason.COOLDOWN,denied.reason());
         assertEquals(Duration.ofMillis(3200),denied.retryAfter());
         verify(redis,never()).opsForValue();
+    }
+
+    @Test
+    void redisScriptFailureAndMissingReplyFailClosed() {
+        StringRedisTemplate redis=mock(StringRedisTemplate.class);
+        var limiter=new RedisSpApiRateLimiter(redis,2000);
+        var absent=assertThrows(SpApiAdmissionException.class,
+            ()->limiter.requireLegacyPermit(SpApiRegion.EU,SpApiOperation.GET_ORDER,"test-grant"));
+        assertEquals(SpApiAdmissionException.Reason.STORE_UNAVAILABLE,absent.reason());
+        doThrow(new DataAccessResourceFailureException("sensitive socket info"))
+            .when(redis).execute(any(org.springframework.data.redis.core.script.RedisScript.class),
+                anyList(),anyString(),anyString());
+        var failure=assertThrows(SpApiAdmissionException.class,
+            ()->limiter.requireLegacyPermit(SpApiRegion.EU,SpApiOperation.GET_ORDER,"test-grant"));
+        assertEquals(SpApiAdmissionException.Reason.STORE_UNAVAILABLE,failure.reason());
+        assertFalse(failure.getMessage().contains("sensitive"));
+    }
+
+    @Test
+    void explicitBurstIsPassedOnlyToAtomicOperationScript() {
+        StringRedisTemplate redis=mock(StringRedisTemplate.class);
+        doReturn(0L).when(redis).execute(any(org.springframework.data.redis.core.script.RedisScript.class),
+            anyList(),anyString(),anyString());
+        var limiter=new RedisSpApiRateLimiter(redis,2000,"SEARCH_ORDERS=3");
+        limiter.requireLegacyPermit(SpApiRegion.NA,SpApiOperation.SEARCH_ORDERS,"test-grant");
+        limiter.requireLegacyPermit(SpApiRegion.NA,SpApiOperation.GET_ORDER,"test-grant");
+        verify(redis).execute(any(org.springframework.data.redis.core.script.RedisScript.class),
+            anyList(),eq("2000"),eq("3"));
+        verify(redis).execute(any(org.springframework.data.redis.core.script.RedisScript.class),
+            anyList(),eq("2000"),eq("1"));
     }
 }
