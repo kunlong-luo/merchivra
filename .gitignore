@@ -1,7 +1,10 @@
-# Java
-target/
+# Java / Gradle
+.gradle/
+**/.gradle/
+build/
+**/build/
 *.class
-.mvn/wrapper/maven-wrapper.jar
+# Gradle Wrapper JAR IS tracked; never ignore it.
 # Node
 node_modules/
 dist/
