@@ -77,6 +77,11 @@ merchivra:
     enabled: ${MERCHIVRA_SPAPI_ENABLED:false}
     sandbox: ${MERCHIVRA_SPAPI_SANDBOX:true}
     allow-writes: ${MERCHIVRA_SPAPI_ALLOW_WRITES:false}
+    reports:
+      # Internal Amazon-generated settlement report discovery only. Requires
+      # LIVE Seller+Finance role, Redis quota, approved egress and secret vault.
+      # No schedule or public remote-import route. Default OFF.
+      enabled: ${MERCHIVRA_SPAPI_REPORTS_ENABLED:false}
     orders-role-review:
       # Explicit two-person off-platform application-role verification.
       # Default OFF; reviewer RBAC is provisioned through trusted administration.
