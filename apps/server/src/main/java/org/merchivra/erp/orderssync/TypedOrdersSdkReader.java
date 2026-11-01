@@ -13,7 +13,6 @@ import java.util.Objects;
 import org.merchivra.erp.spapi.SpApiHttpException;
 import org.merchivra.erp.spapi.SpApiOperation;
 import org.merchivra.erp.spapi.SpApiRetryPolicy;
-import org.merchivra.erp.spapi.SpApiOfficialModules;
 import org.merchivra.erp.spapi.SpApiOfficialSdkFactory;
 import org.merchivra.erp.spapi.SpApiPayloadDecoder;
 import org.merchivra.erp.spapi.SpApiSellerScope;
@@ -36,10 +35,10 @@ public final class TypedOrdersSdkReader {
 
     public TypedOrdersSdkReader(SpApiOfficialSdkFactory factory) {
         Objects.requireNonNull(factory);
-        SpApiOfficialModules modules=new SpApiOfficialModules(factory);
         this.caller=(seller,after,before,cursor) ->
             factory.executeObservedRead(seller, SpApiOperation.SEARCH_ORDERS,
-                () -> modules.searchOrders(seller).searchOrdersWithHttpInfo(
+                software.amazon.spapi.api.orders.v2026_01_01.SearchOrdersApi.class,
+                api -> api.searchOrdersWithHttpInfo(
                     null, null, after, before, null,
                     List.of(seller.marketplaceId()), null, 100,
                     cursor, List.of("PROCEEDS")));
