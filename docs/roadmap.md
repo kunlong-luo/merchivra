@@ -332,3 +332,12 @@
 - [x] React 质检与退货管理、库存来源展示及 JUnit/Vitest 合约用例；以最新 CI 记录确认测试状态。
 - [ ] PostgreSQL 18 V44 Flyway/Compose 真实迁移、跨租户 HTTP/并发、产品真实环境整体验收尚需单独执行。暂不支持待检实物货位、批次/序列号、供应商索赔与 RMA 物流签收、退款/信用票据。
 - 详见 [PO-007 质检与供应商退货](purchasing/receipt-quality-and-supplier-returns-v44.md)。
+
+## V45 · 采购差异、供应商索赔与可信交付概览（2026-11-01）
+
+- [x] V45 数据迁移：按租户/采购行/ASN 约束的人工数量差异不可覆盖快照（PO 未收足、ASN 申报未收足、未入账的额外实物）；独立审阅、索赔与追加式审计，保留所有早期 V20–V44 真实库存流水。
+- [x] 后端：Owner 人工登记差异，后续由另一位 Owner 复核；复核、建立来源型索赔、提交及审批前再次检验真实 PO/ASN 收货快照，不新建采购收货或 Amazon 货件状态。
+- [x] 索赔来源仅允许已复核的差异或 V44 不合格品，数量不能超来源，补发/信用折让仅是本地需求。索赔 DRAFT/SUBMITTED/APPROVED/CLOSED/CANCELLED，独立 Owner 审批与人工结案，绝不自动产生退款、财务票据或向供应商提交。
+- [x] React 新增差异登记、复核、供应商索赔、审计历史和可信供应商统计（真实订购/实收/QC 拒收/活跃差异/逾期 ASN）；新增 Java、Vitest 契约测试，最终 CI 结论以对应提交为准。
+- [ ] 仍需 PostgreSQL 18 V45 实例真实 Flyway/Compose、真实 HTTP 跨租户/CSRF、多会话并发，完善待检货位、批次、质检独立审批，以及实际 RMA、外部索赔提交和 Amazon Inbound。
+- 详见 [PO-008 供应商差异与索赔](purchasing/supplier-discrepancies-claims-v45.md)。
