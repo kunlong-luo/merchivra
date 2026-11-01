@@ -5,11 +5,31 @@ import java.util.List;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.merchivra.erp.security.TenantAccessService;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 class SyncTaskMonitorControllerTest {
+    @Test
+    void malformedFilterReturnsHttp400WithoutReachingOtherTenant() {
+        TenantAccessService access=mock(TenantAccessService.class);
+        SyncTaskMonitorService service=mock(SyncTaskMonitorService.class);
+        Authentication auth=mock(Authentication.class);
+        HttpServletRequest request=mock(HttpServletRequest.class);
+        UUID tenant=UUID.randomUUID();
+        when(access.currentTenant(auth,request)).thenReturn(tenant);
+        when(service.snapshot(tenant,"INVALID","ALL",50))
+            .thenThrow(new IllegalArgumentException("do not return sql"));
+        var controller=new SyncTaskMonitorController(access,service);
+        var error=assertThrows(ResponseStatusException.class,
+            ()->controller.snapshot(auth,request,"INVALID","ALL",50));
+        assertEquals(HttpStatus.BAD_REQUEST,error.getStatusCode());
+        assertFalse(error.getReason().contains("sql"));
+        verify(service).snapshot(tenant,"INVALID","ALL",50);
+    }
+
     @Test
     void getsTenantOnlyFromOwnerSessionAndRespondsNoStore() {
         TenantAccessService access=mock(TenantAccessService.class);
