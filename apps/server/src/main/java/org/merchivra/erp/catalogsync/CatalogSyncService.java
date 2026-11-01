@@ -309,7 +309,8 @@ public class CatalogSyncService {
 
     private void fail(Claim claim,Exception error) {
         int http=error instanceof SpApiHttpException e?e.status():0;
-        boolean retry=http==429 || http==500 || http==502 || http==503 || http==504;
+        boolean retry=http==429 || http==500 || http==502 || http==503 || http==504
+            || error instanceof org.merchivra.erp.spapi.SpApiAdmissionException;
         String code=retry?"UPSTREAM_RETRY":http==400 && claim.job().cursor()!=null
             ?"CURSOR_RESTART_REQUIRED":http==401 || http==403 ||
               error instanceof SecurityException?"AUTHORIZATION_REJECTED":"SOURCE_ERROR";
