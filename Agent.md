@@ -540,3 +540,12 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - `SpApiRetryPolicy` 支持 Retry-After 秒数和 HTTP-date；指数增长加随机抖动、上限 1 小时。重试必须写 PostgreSQL `next_attempt_at`，禁止 HTTP 请求线程 sleep 或原地无限重试。
 - Orders 后台同步对 429、临时 HTTP 错误与 Redis 拒绝在租约 fencing 后保存重试时间，最多 8 次，之后暂停；due 查询按租户交错公平分配。不得绕过租户/卖家授权。
 - 不需要真实 Amazon 授权做这一阶段编码；本地正式启用前需专用 noeviction Redis、真实店铺授权及独立角色审查、实际响应头验收和完整 CI；远端写入继续禁用。
+
+## 2026-11-01 · V56 Redis GCRA、批准的 Burst 与指标
+
+- 下一阶段的设计、接口、运行测试详见 docs/integrations/sp-api-quota-scheduler-v56.md；Java 25 / Spring Boot 4.1.2 / Gradle 9.2.1 / PostgreSQL 18 / React 保持不变。
+- 经审核的官方 SDK 只读 SEARCH_ORDERS、SEARCH_LISTINGS、GET_FBA_INVENTORY、LIST_TRANSACTIONS 走 operation-scoped wrapper，在请求前原子申请配额，用 WithHttpInfo 观察响应头，不能再重复使用 SDK builder 冷却以阻止已批准 burst。其他 SDK 调用仍未全面实现操作级限流。
+- Redis 8 GCRA 使用 Redis TIME，429 fence、速率和下一次允许时间必须在单个 Lua 操作内判断。Redis 空响应/失败一律拒绝，绝不在单机内存中绕过；不要在生产共享 allkeys-lru Redis 上宣称强保证。
+- Burst 默认 capacity=1。仅人工审查 Amazon 真实 usage plan 之后允许通过 MERCHIVRA_SPAPI_APPROVED_BURSTS 显式设置 2–10，且只有观测到有效的逐操作 rate 时才生效；不得从 x-amzn-RateLimit-Limit 猜测 Amazon 允许的 burst。
+- 指标仅允许 operation/result/status 类低敏标签；不记录 sellerId、grant、token、订单、SKU 等。/actuator/metrics 不默认开放给普通店铺用户；tenant-safe Dashboard 另行设计。
+- CI 除 Java25/Gradle PG18 React 外，必须在 Redis8 真服务验证 GCRA 的缺省容量、显式 burst、429 fence、未知 metadata，禁用真实 SP-API、禁用 FLUSHALL/FLUSHDB。
