@@ -1,6 +1,6 @@
 # V65: FBA local inbound shipments, transit and variance reconciliation
 
-Status: local backend, generated Orval client, and React owner UI committed on feature branch; further PG concurrency/integration coverage pending; real Amazon connection OFF.
+Status: local backend, generated Orval client, React owner UI and authenticated PG18 MOCK HTTP smoke committed on feature branch; further multi-Owner concurrency tests pending; real Amazon connection OFF.
 
 ## Scope and meaning
 
@@ -46,3 +46,5 @@ Outstanding before V65 is complete: generated Orval client + React UI, real PG i
 ## Runtime generation smoke
 
 The CI PG18 job now installs the locked Node 24 client toolchain, runs Orval 8 against ONLY the normalized live FBA contract, and preserves the schema and generated TypeScript model/hook files as the PR artifact. This runs with Amazon OAuth/Sp-API switched OFF; the generated files are committed and checked for drift. The React shipment panel uses those requests through the existing same-origin mutator and Zod response validation.
+
+PG18 CI runs scripts/smoke_fba_inbound.py with disposable bootstrap credentials and a fake Marketplace replay: checks POST idempotency, origin and Marketplace boundaries, reported overages, forbidden self-review, exact-match closing, accepted shortages and independent audit semantics without an external Seller connection.
