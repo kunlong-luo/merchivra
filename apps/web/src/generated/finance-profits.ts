@@ -91,50 +91,77 @@ export const listProfitReports = async (marketplaceId: string, options?: Paramet
 
 
 
-export const getListProfitReportsMutationKey = () => ['listProfitReports'] as const;
-
-export const getListProfitReportsMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof listProfitReports>>, TError,ListProfitReportsMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof listProfitReports>>, TError,ListProfitReportsMutationVariables, TContext> => {
-
-const mutationKey = getListProfitReportsMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof listProfitReports>>, ListProfitReportsMutationVariables> = (props) => {
-          const {marketplaceId} = props ?? {};
-
-          return  listProfitReports(marketplaceId,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type ListProfitReportsMutationResult = NonNullable<Awaited<ReturnType<typeof listProfitReports>>>
-
-    export type ListProfitReportsMutationError = ErrorType<unknown>
-    export type ListProfitReportsMutationVariables = {marketplaceId: string}
-
-    export const useListProfitReports = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof listProfitReports>>, TError,ListProfitReportsMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof listProfitReports>>,
-        TError,
-        ListProfitReportsMutationVariables,
-        TContext
-      > => {
-      return useMutation(getListProfitReportsMutationOptions(options), queryClient);
+export const getListProfitReportsQueryKey = (marketplaceId: string,) => {
+    return [
+    `/api/v1/finance/marketplaces/${marketplaceId}/profit-reports`
+    ] as const;
     }
+
+
+export const getListProfitReportsQueryOptions = <TData = Awaited<ReturnType<typeof listProfitReports>>, TError = ErrorType<unknown>>(marketplaceId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProfitReports>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListProfitReportsQueryKey(marketplaceId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listProfitReports>>> = ({ signal }) => listProfitReports(marketplaceId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: marketplaceId !== null && marketplaceId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listProfitReports>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListProfitReportsQueryResult = NonNullable<Awaited<ReturnType<typeof listProfitReports>>>
+export type ListProfitReportsQueryError = ErrorType<unknown>
+
+
+export function useListProfitReports<TData = Awaited<ReturnType<typeof listProfitReports>>, TError = ErrorType<unknown>>(
+ marketplaceId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProfitReports>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listProfitReports>>,
+          TError,
+          Awaited<ReturnType<typeof listProfitReports>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListProfitReports<TData = Awaited<ReturnType<typeof listProfitReports>>, TError = ErrorType<unknown>>(
+ marketplaceId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProfitReports>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listProfitReports>>,
+          TError,
+          Awaited<ReturnType<typeof listProfitReports>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListProfitReports<TData = Awaited<ReturnType<typeof listProfitReports>>, TError = ErrorType<unknown>>(
+ marketplaceId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProfitReports>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListProfitReports<TData = Awaited<ReturnType<typeof listProfitReports>>, TError = ErrorType<unknown>>(
+ marketplaceId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listProfitReports>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListProfitReportsQueryOptions(marketplaceId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export type createProfitReportResponse200 = {
   data: Job
@@ -186,83 +213,50 @@ return merchivraFetch<createProfitReportResponse>(getCreateProfitReportUrl(marke
 
 
 
-export const getCreateProfitReportQueryKey = (marketplaceId: string,
-    create?: BodyType<Create>,) => {
-    return [
-    'POST', `/api/v1/finance/marketplaces/${marketplaceId}/profit-reports`, create
-    ] as const;
+export const getCreateProfitReportMutationKey = () => ['createProfitReport'] as const;
+
+export const getCreateProfitReportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProfitReport>>, TError,CreateProfitReportMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createProfitReport>>, TError,CreateProfitReportMutationVariables, TContext> => {
+
+const mutationKey = getCreateProfitReportMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createProfitReport>>, CreateProfitReportMutationVariables> = (props) => {
+          const {marketplaceId,data} = props ?? {};
+
+          return  createProfitReport(marketplaceId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateProfitReportMutationResult = NonNullable<Awaited<ReturnType<typeof createProfitReport>>>
+    export type CreateProfitReportMutationBody = BodyType<Create>
+    export type CreateProfitReportMutationError = ErrorType<unknown>
+    export type CreateProfitReportMutationVariables = {marketplaceId: string;data: BodyType<Create>}
+
+    export const useCreateProfitReport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createProfitReport>>, TError,CreateProfitReportMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof createProfitReport>>,
+        TError,
+        CreateProfitReportMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateProfitReportMutationOptions(options), queryClient);
     }
-
-
-export const getCreateProfitReportQueryOptions = <TData = Awaited<ReturnType<typeof createProfitReport>>, TError = ErrorType<unknown>>(marketplaceId: string,
-    create: BodyType<Create>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof createProfitReport>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getCreateProfitReportQueryKey(marketplaceId,create);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof createProfitReport>>> = ({ signal }) => createProfitReport(marketplaceId,create, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: marketplaceId !== null && marketplaceId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof createProfitReport>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type CreateProfitReportQueryResult = NonNullable<Awaited<ReturnType<typeof createProfitReport>>>
-export type CreateProfitReportQueryError = ErrorType<unknown>
-
-
-export function useCreateProfitReport<TData = Awaited<ReturnType<typeof createProfitReport>>, TError = ErrorType<unknown>>(
- marketplaceId: string,
-    create: BodyType<Create>, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof createProfitReport>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof createProfitReport>>,
-          TError,
-          Awaited<ReturnType<typeof createProfitReport>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof merchivraFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useCreateProfitReport<TData = Awaited<ReturnType<typeof createProfitReport>>, TError = ErrorType<unknown>>(
- marketplaceId: string,
-    create: BodyType<Create>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof createProfitReport>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof createProfitReport>>,
-          TError,
-          Awaited<ReturnType<typeof createProfitReport>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof merchivraFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useCreateProfitReport<TData = Awaited<ReturnType<typeof createProfitReport>>, TError = ErrorType<unknown>>(
- marketplaceId: string,
-    create: BodyType<Create>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof createProfitReport>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useCreateProfitReport<TData = Awaited<ReturnType<typeof createProfitReport>>, TError = ErrorType<unknown>>(
- marketplaceId: string,
-    create: BodyType<Create>, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof createProfitReport>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getCreateProfitReportQueryOptions(marketplaceId,create,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
 
 export type getProfitReportResponse200 = {
   data: Report
@@ -310,50 +304,89 @@ export const getProfitReport = async (marketplaceId: string,
 
 
 
-export const getGetProfitReportMutationKey = () => ['getProfitReport'] as const;
-
-export const getGetProfitReportMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getProfitReport>>, TError,GetProfitReportMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof getProfitReport>>, TError,GetProfitReportMutationVariables, TContext> => {
-
-const mutationKey = getGetProfitReportMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getProfitReport>>, GetProfitReportMutationVariables> = (props) => {
-          const {marketplaceId,jobId,params} = props ?? {};
-
-          return  getProfitReport(marketplaceId,jobId,params,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type GetProfitReportMutationResult = NonNullable<Awaited<ReturnType<typeof getProfitReport>>>
-
-    export type GetProfitReportMutationError = ErrorType<unknown>
-    export type GetProfitReportMutationVariables = {marketplaceId: string;jobId: string;params?: GetProfitReportParams}
-
-    export const useGetProfitReport = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getProfitReport>>, TError,GetProfitReportMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof getProfitReport>>,
-        TError,
-        GetProfitReportMutationVariables,
-        TContext
-      > => {
-      return useMutation(getGetProfitReportMutationOptions(options), queryClient);
+export const getGetProfitReportQueryKey = (marketplaceId: string,
+    jobId: string,
+    params?: GetProfitReportParams,) => {
+    return [
+    `/api/v1/finance/marketplaces/${marketplaceId}/profit-reports/${jobId}`, ...(params ? [params] : [])
+    ] as const;
     }
+
+
+export const getGetProfitReportQueryOptions = <TData = Awaited<ReturnType<typeof getProfitReport>>, TError = ErrorType<unknown>>(marketplaceId: string,
+    jobId: string,
+    params?: GetProfitReportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProfitReport>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetProfitReportQueryKey(marketplaceId,jobId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProfitReport>>> = ({ signal }) => getProfitReport(marketplaceId,jobId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: marketplaceId !== null && marketplaceId !== undefined && jobId !== null && jobId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getProfitReport>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetProfitReportQueryResult = NonNullable<Awaited<ReturnType<typeof getProfitReport>>>
+export type GetProfitReportQueryError = ErrorType<unknown>
+
+
+export function useGetProfitReport<TData = Awaited<ReturnType<typeof getProfitReport>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    jobId: string,
+    params: undefined |  GetProfitReportParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProfitReport>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProfitReport>>,
+          TError,
+          Awaited<ReturnType<typeof getProfitReport>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetProfitReport<TData = Awaited<ReturnType<typeof getProfitReport>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    jobId: string,
+    params?: GetProfitReportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProfitReport>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProfitReport>>,
+          TError,
+          Awaited<ReturnType<typeof getProfitReport>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetProfitReport<TData = Awaited<ReturnType<typeof getProfitReport>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    jobId: string,
+    params?: GetProfitReportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProfitReport>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetProfitReport<TData = Awaited<ReturnType<typeof getProfitReport>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    jobId: string,
+    params?: GetProfitReportParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProfitReport>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetProfitReportQueryOptions(marketplaceId,jobId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export type getProfitReportAuditResponse200 = {
   data: Audit[]
@@ -392,50 +425,83 @@ export const getProfitReportAudit = async (marketplaceId: string,
 
 
 
-export const getGetProfitReportAuditMutationKey = () => ['getProfitReportAudit'] as const;
-
-export const getGetProfitReportAuditMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getProfitReportAudit>>, TError,GetProfitReportAuditMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof getProfitReportAudit>>, TError,GetProfitReportAuditMutationVariables, TContext> => {
-
-const mutationKey = getGetProfitReportAuditMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getProfitReportAudit>>, GetProfitReportAuditMutationVariables> = (props) => {
-          const {marketplaceId,jobId} = props ?? {};
-
-          return  getProfitReportAudit(marketplaceId,jobId,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type GetProfitReportAuditMutationResult = NonNullable<Awaited<ReturnType<typeof getProfitReportAudit>>>
-
-    export type GetProfitReportAuditMutationError = ErrorType<unknown>
-    export type GetProfitReportAuditMutationVariables = {marketplaceId: string;jobId: string}
-
-    export const useGetProfitReportAudit = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getProfitReportAudit>>, TError,GetProfitReportAuditMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof getProfitReportAudit>>,
-        TError,
-        GetProfitReportAuditMutationVariables,
-        TContext
-      > => {
-      return useMutation(getGetProfitReportAuditMutationOptions(options), queryClient);
+export const getGetProfitReportAuditQueryKey = (marketplaceId: string,
+    jobId: string,) => {
+    return [
+    `/api/v1/finance/marketplaces/${marketplaceId}/profit-reports/${jobId}/audit`
+    ] as const;
     }
+
+
+export const getGetProfitReportAuditQueryOptions = <TData = Awaited<ReturnType<typeof getProfitReportAudit>>, TError = ErrorType<unknown>>(marketplaceId: string,
+    jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProfitReportAudit>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetProfitReportAuditQueryKey(marketplaceId,jobId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getProfitReportAudit>>> = ({ signal }) => getProfitReportAudit(marketplaceId,jobId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: marketplaceId !== null && marketplaceId !== undefined && jobId !== null && jobId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getProfitReportAudit>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetProfitReportAuditQueryResult = NonNullable<Awaited<ReturnType<typeof getProfitReportAudit>>>
+export type GetProfitReportAuditQueryError = ErrorType<unknown>
+
+
+export function useGetProfitReportAudit<TData = Awaited<ReturnType<typeof getProfitReportAudit>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    jobId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProfitReportAudit>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProfitReportAudit>>,
+          TError,
+          Awaited<ReturnType<typeof getProfitReportAudit>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetProfitReportAudit<TData = Awaited<ReturnType<typeof getProfitReportAudit>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProfitReportAudit>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getProfitReportAudit>>,
+          TError,
+          Awaited<ReturnType<typeof getProfitReportAudit>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetProfitReportAudit<TData = Awaited<ReturnType<typeof getProfitReportAudit>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProfitReportAudit>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetProfitReportAudit<TData = Awaited<ReturnType<typeof getProfitReportAudit>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getProfitReportAudit>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetProfitReportAuditQueryOptions(marketplaceId,jobId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export type exportProfitReportCsvResponse200 = {
   data: string
@@ -474,50 +540,83 @@ export const exportProfitReportCsv = async (marketplaceId: string,
 
 
 
-export const getExportProfitReportCsvMutationKey = () => ['exportProfitReportCsv'] as const;
-
-export const getExportProfitReportCsvMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exportProfitReportCsv>>, TError,ExportProfitReportCsvMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof exportProfitReportCsv>>, TError,ExportProfitReportCsvMutationVariables, TContext> => {
-
-const mutationKey = getExportProfitReportCsvMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof exportProfitReportCsv>>, ExportProfitReportCsvMutationVariables> = (props) => {
-          const {marketplaceId,jobId} = props ?? {};
-
-          return  exportProfitReportCsv(marketplaceId,jobId,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type ExportProfitReportCsvMutationResult = NonNullable<Awaited<ReturnType<typeof exportProfitReportCsv>>>
-
-    export type ExportProfitReportCsvMutationError = ErrorType<unknown>
-    export type ExportProfitReportCsvMutationVariables = {marketplaceId: string;jobId: string}
-
-    export const useExportProfitReportCsv = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exportProfitReportCsv>>, TError,ExportProfitReportCsvMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof exportProfitReportCsv>>,
-        TError,
-        ExportProfitReportCsvMutationVariables,
-        TContext
-      > => {
-      return useMutation(getExportProfitReportCsvMutationOptions(options), queryClient);
+export const getExportProfitReportCsvQueryKey = (marketplaceId: string,
+    jobId: string,) => {
+    return [
+    `/api/v1/finance/marketplaces/${marketplaceId}/profit-reports/${jobId}/export.csv`
+    ] as const;
     }
+
+
+export const getExportProfitReportCsvQueryOptions = <TData = Awaited<ReturnType<typeof exportProfitReportCsv>>, TError = ErrorType<unknown>>(marketplaceId: string,
+    jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportProfitReportCsv>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportProfitReportCsvQueryKey(marketplaceId,jobId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportProfitReportCsv>>> = ({ signal }) => exportProfitReportCsv(marketplaceId,jobId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: marketplaceId !== null && marketplaceId !== undefined && jobId !== null && jobId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportProfitReportCsv>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ExportProfitReportCsvQueryResult = NonNullable<Awaited<ReturnType<typeof exportProfitReportCsv>>>
+export type ExportProfitReportCsvQueryError = ErrorType<unknown>
+
+
+export function useExportProfitReportCsv<TData = Awaited<ReturnType<typeof exportProfitReportCsv>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    jobId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportProfitReportCsv>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportProfitReportCsv>>,
+          TError,
+          Awaited<ReturnType<typeof exportProfitReportCsv>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExportProfitReportCsv<TData = Awaited<ReturnType<typeof exportProfitReportCsv>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportProfitReportCsv>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportProfitReportCsv>>,
+          TError,
+          Awaited<ReturnType<typeof exportProfitReportCsv>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExportProfitReportCsv<TData = Awaited<ReturnType<typeof exportProfitReportCsv>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportProfitReportCsv>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useExportProfitReportCsv<TData = Awaited<ReturnType<typeof exportProfitReportCsv>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportProfitReportCsv>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getExportProfitReportCsvQueryOptions(marketplaceId,jobId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export type resumeProfitReportResponse200 = {
   data: Job
@@ -556,83 +655,50 @@ export const resumeProfitReport = async (marketplaceId: string,
 
 
 
-export const getResumeProfitReportQueryKey = (marketplaceId: string,
-    jobId: string,) => {
-    return [
-    'POST', `/api/v1/finance/marketplaces/${marketplaceId}/profit-reports/${jobId}/resume`
-    ] as const;
+export const getResumeProfitReportMutationKey = () => ['resumeProfitReport'] as const;
+
+export const getResumeProfitReportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resumeProfitReport>>, TError,ResumeProfitReportMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof resumeProfitReport>>, TError,ResumeProfitReportMutationVariables, TContext> => {
+
+const mutationKey = getResumeProfitReportMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof resumeProfitReport>>, ResumeProfitReportMutationVariables> = (props) => {
+          const {marketplaceId,jobId} = props ?? {};
+
+          return  resumeProfitReport(marketplaceId,jobId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ResumeProfitReportMutationResult = NonNullable<Awaited<ReturnType<typeof resumeProfitReport>>>
+
+    export type ResumeProfitReportMutationError = ErrorType<unknown>
+    export type ResumeProfitReportMutationVariables = {marketplaceId: string;jobId: string}
+
+    export const useResumeProfitReport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof resumeProfitReport>>, TError,ResumeProfitReportMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof resumeProfitReport>>,
+        TError,
+        ResumeProfitReportMutationVariables,
+        TContext
+      > => {
+      return useMutation(getResumeProfitReportMutationOptions(options), queryClient);
     }
-
-
-export const getResumeProfitReportQueryOptions = <TData = Awaited<ReturnType<typeof resumeProfitReport>>, TError = ErrorType<unknown>>(marketplaceId: string,
-    jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof resumeProfitReport>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getResumeProfitReportQueryKey(marketplaceId,jobId);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof resumeProfitReport>>> = ({ signal }) => resumeProfitReport(marketplaceId,jobId, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: marketplaceId !== null && marketplaceId !== undefined && jobId !== null && jobId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof resumeProfitReport>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type ResumeProfitReportQueryResult = NonNullable<Awaited<ReturnType<typeof resumeProfitReport>>>
-export type ResumeProfitReportQueryError = ErrorType<unknown>
-
-
-export function useResumeProfitReport<TData = Awaited<ReturnType<typeof resumeProfitReport>>, TError = ErrorType<unknown>>(
- marketplaceId: string,
-    jobId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof resumeProfitReport>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof resumeProfitReport>>,
-          TError,
-          Awaited<ReturnType<typeof resumeProfitReport>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof merchivraFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useResumeProfitReport<TData = Awaited<ReturnType<typeof resumeProfitReport>>, TError = ErrorType<unknown>>(
- marketplaceId: string,
-    jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof resumeProfitReport>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof resumeProfitReport>>,
-          TError,
-          Awaited<ReturnType<typeof resumeProfitReport>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof merchivraFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useResumeProfitReport<TData = Awaited<ReturnType<typeof resumeProfitReport>>, TError = ErrorType<unknown>>(
- marketplaceId: string,
-    jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof resumeProfitReport>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useResumeProfitReport<TData = Awaited<ReturnType<typeof resumeProfitReport>>, TError = ErrorType<unknown>>(
- marketplaceId: string,
-    jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof resumeProfitReport>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getResumeProfitReportQueryOptions(marketplaceId,jobId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
 
 export type advanceProfitReportResponse200 = {
   data: Job
@@ -671,83 +737,50 @@ export const advanceProfitReport = async (marketplaceId: string,
 
 
 
-export const getAdvanceProfitReportQueryKey = (marketplaceId: string,
-    jobId: string,) => {
-    return [
-    'POST', `/api/v1/finance/marketplaces/${marketplaceId}/profit-reports/${jobId}/step`
-    ] as const;
+export const getAdvanceProfitReportMutationKey = () => ['advanceProfitReport'] as const;
+
+export const getAdvanceProfitReportMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof advanceProfitReport>>, TError,AdvanceProfitReportMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof advanceProfitReport>>, TError,AdvanceProfitReportMutationVariables, TContext> => {
+
+const mutationKey = getAdvanceProfitReportMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof advanceProfitReport>>, AdvanceProfitReportMutationVariables> = (props) => {
+          const {marketplaceId,jobId} = props ?? {};
+
+          return  advanceProfitReport(marketplaceId,jobId,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type AdvanceProfitReportMutationResult = NonNullable<Awaited<ReturnType<typeof advanceProfitReport>>>
+
+    export type AdvanceProfitReportMutationError = ErrorType<unknown>
+    export type AdvanceProfitReportMutationVariables = {marketplaceId: string;jobId: string}
+
+    export const useAdvanceProfitReport = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof advanceProfitReport>>, TError,AdvanceProfitReportMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof advanceProfitReport>>,
+        TError,
+        AdvanceProfitReportMutationVariables,
+        TContext
+      > => {
+      return useMutation(getAdvanceProfitReportMutationOptions(options), queryClient);
     }
-
-
-export const getAdvanceProfitReportQueryOptions = <TData = Awaited<ReturnType<typeof advanceProfitReport>>, TError = ErrorType<unknown>>(marketplaceId: string,
-    jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof advanceProfitReport>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getAdvanceProfitReportQueryKey(marketplaceId,jobId);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof advanceProfitReport>>> = ({ signal }) => advanceProfitReport(marketplaceId,jobId, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: marketplaceId !== null && marketplaceId !== undefined && jobId !== null && jobId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof advanceProfitReport>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
-}
-
-export type AdvanceProfitReportQueryResult = NonNullable<Awaited<ReturnType<typeof advanceProfitReport>>>
-export type AdvanceProfitReportQueryError = ErrorType<unknown>
-
-
-export function useAdvanceProfitReport<TData = Awaited<ReturnType<typeof advanceProfitReport>>, TError = ErrorType<unknown>>(
- marketplaceId: string,
-    jobId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof advanceProfitReport>>, TError, TData>> & Pick<
-        DefinedInitialDataOptions<
-          Awaited<ReturnType<typeof advanceProfitReport>>,
-          TError,
-          Awaited<ReturnType<typeof advanceProfitReport>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof merchivraFetch>}
- , queryClient?: QueryClient
-  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAdvanceProfitReport<TData = Awaited<ReturnType<typeof advanceProfitReport>>, TError = ErrorType<unknown>>(
- marketplaceId: string,
-    jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof advanceProfitReport>>, TError, TData>> & Pick<
-        UndefinedInitialDataOptions<
-          Awaited<ReturnType<typeof advanceProfitReport>>,
-          TError,
-          Awaited<ReturnType<typeof advanceProfitReport>>
-        > , 'initialData'
-      >, request?: SecondParameter<typeof merchivraFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-export function useAdvanceProfitReport<TData = Awaited<ReturnType<typeof advanceProfitReport>>, TError = ErrorType<unknown>>(
- marketplaceId: string,
-    jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof advanceProfitReport>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
- , queryClient?: QueryClient
-  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
-
-export function useAdvanceProfitReport<TData = Awaited<ReturnType<typeof advanceProfitReport>>, TError = ErrorType<unknown>>(
- marketplaceId: string,
-    jobId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof advanceProfitReport>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
- , queryClient?: QueryClient
- ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
-
-  const queryOptions = getAdvanceProfitReportQueryOptions(marketplaceId,jobId,options)
-
-  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
-
-  return withQueryKey(query, queryOptions.queryKey);
-}
-
-
-
-
-
-
 
 export type getSkuProfitPreviewResponse200 = {
   data: Preview
@@ -793,50 +826,83 @@ export const getSkuProfitPreview = async (marketplaceId: string,
 
 
 
-export const getGetSkuProfitPreviewMutationKey = () => ['getSkuProfitPreview'] as const;
-
-export const getGetSkuProfitPreviewMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getSkuProfitPreview>>, TError,GetSkuProfitPreviewMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof getSkuProfitPreview>>, TError,GetSkuProfitPreviewMutationVariables, TContext> => {
-
-const mutationKey = getGetSkuProfitPreviewMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof getSkuProfitPreview>>, GetSkuProfitPreviewMutationVariables> = (props) => {
-          const {marketplaceId,params} = props ?? {};
-
-          return  getSkuProfitPreview(marketplaceId,params,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type GetSkuProfitPreviewMutationResult = NonNullable<Awaited<ReturnType<typeof getSkuProfitPreview>>>
-
-    export type GetSkuProfitPreviewMutationError = ErrorType<unknown>
-    export type GetSkuProfitPreviewMutationVariables = {marketplaceId: string;params: GetSkuProfitPreviewParams}
-
-    export const useGetSkuProfitPreview = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof getSkuProfitPreview>>, TError,GetSkuProfitPreviewMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof getSkuProfitPreview>>,
-        TError,
-        GetSkuProfitPreviewMutationVariables,
-        TContext
-      > => {
-      return useMutation(getGetSkuProfitPreviewMutationOptions(options), queryClient);
+export const getGetSkuProfitPreviewQueryKey = (marketplaceId: string,
+    params?: GetSkuProfitPreviewParams,) => {
+    return [
+    `/api/v1/finance/marketplaces/${marketplaceId}/sku-profit-preview`, ...(params ? [params] : [])
+    ] as const;
     }
+
+
+export const getGetSkuProfitPreviewQueryOptions = <TData = Awaited<ReturnType<typeof getSkuProfitPreview>>, TError = ErrorType<unknown>>(marketplaceId: string,
+    params: GetSkuProfitPreviewParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSkuProfitPreview>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetSkuProfitPreviewQueryKey(marketplaceId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getSkuProfitPreview>>> = ({ signal }) => getSkuProfitPreview(marketplaceId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: marketplaceId !== null && marketplaceId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getSkuProfitPreview>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type GetSkuProfitPreviewQueryResult = NonNullable<Awaited<ReturnType<typeof getSkuProfitPreview>>>
+export type GetSkuProfitPreviewQueryError = ErrorType<unknown>
+
+
+export function useGetSkuProfitPreview<TData = Awaited<ReturnType<typeof getSkuProfitPreview>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    params: GetSkuProfitPreviewParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSkuProfitPreview>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSkuProfitPreview>>,
+          TError,
+          Awaited<ReturnType<typeof getSkuProfitPreview>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSkuProfitPreview<TData = Awaited<ReturnType<typeof getSkuProfitPreview>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    params: GetSkuProfitPreviewParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSkuProfitPreview>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof getSkuProfitPreview>>,
+          TError,
+          Awaited<ReturnType<typeof getSkuProfitPreview>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useGetSkuProfitPreview<TData = Awaited<ReturnType<typeof getSkuProfitPreview>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    params: GetSkuProfitPreviewParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSkuProfitPreview>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useGetSkuProfitPreview<TData = Awaited<ReturnType<typeof getSkuProfitPreview>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    params: GetSkuProfitPreviewParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof getSkuProfitPreview>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getGetSkuProfitPreviewQueryOptions(marketplaceId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export type exportSkuProfitPreviewCsvResponse200 = {
   data: string
@@ -882,47 +948,74 @@ export const exportSkuProfitPreviewCsv = async (marketplaceId: string,
 
 
 
-export const getExportSkuProfitPreviewCsvMutationKey = () => ['exportSkuProfitPreviewCsv'] as const;
-
-export const getExportSkuProfitPreviewCsvMutationOptions = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>, TError,ExportSkuProfitPreviewCsvMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
-): UseMutationOptions<Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>, TError,ExportSkuProfitPreviewCsvMutationVariables, TContext> => {
-
-const mutationKey = getExportSkuProfitPreviewCsvMutationKey();
-const {mutation: mutationOptions, request: requestOptions} = options ?
-      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
-      options
-      : {...options, mutation: {...options.mutation, mutationKey}}
-      : {mutation: { mutationKey, }, request: undefined};
-
-
-
-
-      const mutationFn: MutationFunction<Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>, ExportSkuProfitPreviewCsvMutationVariables> = (props) => {
-          const {marketplaceId,params} = props ?? {};
-
-          return  exportSkuProfitPreviewCsv(marketplaceId,params,requestOptions)
-        }
-
-
-
-
-
-
-  return  { mutationFn, ...mutationOptions }}
-
-    export type ExportSkuProfitPreviewCsvMutationResult = NonNullable<Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>>
-
-    export type ExportSkuProfitPreviewCsvMutationError = ErrorType<unknown>
-    export type ExportSkuProfitPreviewCsvMutationVariables = {marketplaceId: string;params: ExportSkuProfitPreviewCsvParams}
-
-    export const useExportSkuProfitPreviewCsv = <TError = ErrorType<unknown>,
-    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>, TError,ExportSkuProfitPreviewCsvMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
- , queryClient?: QueryClient): UseMutationResult<
-        Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>,
-        TError,
-        ExportSkuProfitPreviewCsvMutationVariables,
-        TContext
-      > => {
-      return useMutation(getExportSkuProfitPreviewCsvMutationOptions(options), queryClient);
+export const getExportSkuProfitPreviewCsvQueryKey = (marketplaceId: string,
+    params?: ExportSkuProfitPreviewCsvParams,) => {
+    return [
+    `/api/v1/finance/marketplaces/${marketplaceId}/sku-profit-preview/export.csv`, ...(params ? [params] : [])
+    ] as const;
     }
+
+
+export const getExportSkuProfitPreviewCsvQueryOptions = <TData = Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>, TError = ErrorType<unknown>>(marketplaceId: string,
+    params: ExportSkuProfitPreviewCsvParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getExportSkuProfitPreviewCsvQueryKey(marketplaceId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>> = ({ signal }) => exportSkuProfitPreviewCsv(marketplaceId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: marketplaceId !== null && marketplaceId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ExportSkuProfitPreviewCsvQueryResult = NonNullable<Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>>
+export type ExportSkuProfitPreviewCsvQueryError = ErrorType<unknown>
+
+
+export function useExportSkuProfitPreviewCsv<TData = Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    params: ExportSkuProfitPreviewCsvParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>,
+          TError,
+          Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExportSkuProfitPreviewCsv<TData = Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    params: ExportSkuProfitPreviewCsvParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>,
+          TError,
+          Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useExportSkuProfitPreviewCsv<TData = Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    params: ExportSkuProfitPreviewCsvParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useExportSkuProfitPreviewCsv<TData = Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    params: ExportSkuProfitPreviewCsvParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof exportSkuProfitPreviewCsv>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getExportSkuProfitPreviewCsvQueryOptions(marketplaceId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
