@@ -7,6 +7,8 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.spapi.SpApiHttpException;
+import org.merchivra.erp.spapi.SpApiRetryPolicy;
+import org.merchivra.erp.spapi.SpApiAdmissionException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -392,7 +394,7 @@ public class OrdersSyncService {
         int http=error instanceof SpApiHttpException e ? e.status() : 0;
         // Exclude HTTP body, cursor, refresh/access token and raw exception message.
         boolean transientFailure=http==429 || http==500 || http==503 || http==502 || http==504
-            || error instanceof org.merchivra.erp.spapi.SpApiAdmissionException;
+            || error instanceof SpApiAdmissionException;
         boolean expiredCursor=http==400 && claim.stored().token()!=null;
         String code=expiredCursor?"CURSOR_EXPIRED":transientFailure?"UPSTREAM_RETRY":
             http==401 || http==403 || error instanceof SecurityException
@@ -403,7 +405,10 @@ public class OrdersSyncService {
                || !claim.owner().equals(current.leaseOwner())) return;
             int attempt=current.retries()+1;
             boolean retry=(transientFailure || expiredCursor) && attempt<=8;
-            long delay=Math.min(3600,180L*(1L<<Math.min(attempt-1,4)));
+            Duration serverMinimum = error instanceof SpApiHttpException e
+                ? e.retryAfter() : error instanceof SpApiAdmissionException e
+                    ? e.retryAfter() : Duration.ZERO;
+            Duration delay = SpApiRetryPolicy.nextDelay(attempt, serverMinimum);
             jdbc.update("""
                 UPDATE orders_sync_job SET state=?,retry_count=?,
                     next_attempt_at=?,last_failure_code=?,
@@ -415,7 +420,7 @@ public class OrdersSyncService {
                     updated_at=now()
                 WHERE tenant_id=? AND id=? AND lease_epoch=? AND lease_owner=?
                 """,retry?"WAITING_RETRY":"PAUSED",attempt,
-                dbTime(retry?clock.instant().plusSeconds(delay):null),code,
+                dbTime(retry?clock.instant().plus(delay):null),code,
                 expiredCursor,expiredCursor,expiredCursor,expiredCursor,
                 claim.tenant(),current.jobId(),claim.epoch(),claim.owner());
         });
@@ -424,12 +429,19 @@ public class OrdersSyncService {
     public List<UUID[]> due(int max) {
         if(max<1 || max>20)throw new IllegalArgumentException("batch must be 1..20");
         return jdbc.query("""
-            SELECT tenant_id,seller_marketplace_id FROM orders_sync_job
-            WHERE state IN ('READY','WAITING_RETRY')
-              AND (next_attempt_at IS NULL OR next_attempt_at<=now())
-              AND (lease_expires_at IS NULL OR lease_expires_at<=now())
-              AND mode=?
-            ORDER BY updated_at LIMIT ?
+            WITH eligible AS (
+              SELECT tenant_id,seller_marketplace_id,updated_at,
+                     ROW_NUMBER() OVER (
+                       PARTITION BY tenant_id ORDER BY updated_at,id
+                     ) AS tenant_lane
+              FROM orders_sync_job
+              WHERE state IN ('READY','WAITING_RETRY')
+                AND (next_attempt_at IS NULL OR next_attempt_at<=now())
+                AND (lease_expires_at IS NULL OR lease_expires_at<=now())
+                AND mode=?
+            )
+            SELECT tenant_id,seller_marketplace_id FROM eligible
+            ORDER BY tenant_lane,updated_at,tenant_id LIMIT ?
             """,(rs,n)->new UUID[]{rs.getObject(1,UUID.class),rs.getObject(2,UUID.class)},
             mode(),max);
     }
