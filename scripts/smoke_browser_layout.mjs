@@ -286,7 +286,7 @@ async function main() {
         "document.querySelector('.ops-workspace tbody tr')?.textContent?.includes('FBA 库存数据不完整')"),
         true, 'operations rule label')
       await waitFor(send,
-        "document.querySelector('[aria-label=\"站点异常规则表\"] tbody tr')?.textContent?.includes('库存')",
+        "[...document.querySelectorAll('[aria-label=\"站点异常规则表\"] tbody tr')].some(x=>x.textContent.includes('库存'))",
         'V69 Marketplace rule settings')
       await layout(send,width,'operations-360')
       await screenshot(send,'operations-360.png')

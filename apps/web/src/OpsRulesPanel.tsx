@@ -66,7 +66,7 @@ export default function OpsRulesPanel({tenantId}:{tenantId:string}){
      <select aria-label="选择异常规则站点" value={marketplaceId}
       onChange={e=>{setChosen(e.target.value);setShowAudit(false)}}>
       {marketplaces.data?.map(m=><option key={m.id} value={m.id}>
-       {m.marketplaceId} · {m.region} · {m.connectionStatus}</option>)}
+       {m.marketplaceId} · {m.region} · {m.sellerAccountId.slice(0,8)} · {m.connectionStatus}</option>)}
      </select></label>
      <button type="button" className="refresh-button" onClick={()=>setShowAudit(v=>!v)}>
       {showAudit?'收起规则审计':'查看规则审计'}</button>
