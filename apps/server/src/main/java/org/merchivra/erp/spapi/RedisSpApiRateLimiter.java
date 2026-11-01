@@ -54,6 +54,19 @@ public class RedisSpApiRateLimiter implements SpApiRateLimiter {
         reserve("merchivra:spapi:quota:v1:verification:" + region.name());
     }
 
+    @Override
+    public void requireLegacyPermit(SpApiRegion region, SpApiOperation operation,
+        String approvedRefreshToken) {
+        Objects.requireNonNull(region, "Region required");
+        Objects.requireNonNull(operation, "Operation required");
+        if (approvedRefreshToken == null || approvedRefreshToken.isBlank())
+            throw new SecurityException("Approved Seller grant required");
+        // Legacy HTTP calls lack a verified Seller ID, so use a hash of the
+        // server-only grant and operation. Never store or log raw tokens.
+        reserve("merchivra:spapi:quota:v1:legacy:" + region.name() + ":"
+            + operation.name() + ":" + sha256(approvedRefreshToken));
+    }
+
     private void reserve(String key) {
         try {
             Boolean inserted = redis.opsForValue().setIfAbsent(key, "1", cooldown);
