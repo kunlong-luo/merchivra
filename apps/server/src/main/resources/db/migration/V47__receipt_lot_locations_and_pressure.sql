@@ -68,6 +68,7 @@ CREATE TABLE erp_receipt_lot_piece_event (
   receipt_id UUID NOT NULL,
   piece_id UUID NOT NULL,
   related_piece_id UUID,
+  request_key UUID,
   actor_user_id UUID NOT NULL,
   event_type VARCHAR(24) NOT NULL
     CHECK(event_type IN ('RECEIVED','SPLIT','MOVED')),
@@ -76,6 +77,7 @@ CREATE TABLE erp_receipt_lot_piece_event (
   new_bin_id UUID,
   note VARCHAR(300),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(tenant_id,request_key),
   FOREIGN KEY(tenant_id,receipt_id)
     REFERENCES erp_receipt_quality_batch(tenant_id,receipt_id),
   FOREIGN KEY(tenant_id,piece_id) REFERENCES erp_receipt_lot_piece(tenant_id,id),
