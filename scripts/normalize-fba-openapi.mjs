@@ -4,7 +4,7 @@ const [source,destination]=process.argv.slice(2)
 if(!source||!destination)throw new Error('Usage: node normalize-fba-openapi.mjs input.json output.json')
 const raw=JSON.parse(fs.readFileSync(source,'utf8'))
 const expected=[
- 'listFbaInboundShipments','getFbaInboundShipment','createFbaInboundShipment',
+ 'listFbaInboundShipments','listFbaInboundTransit','getFbaInboundShipment','createFbaInboundShipment',
  'dispatchFbaInboundShipment','recordFbaInboundReceipt','startFbaInboundReview',
  'resolveFbaInboundVariance','finalizeFbaInboundReconciliation'
 ]

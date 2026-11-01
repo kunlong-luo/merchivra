@@ -28,6 +28,14 @@ public class FbaInboundController {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
             .body(service.list(access.currentTenant(auth,request),marketplaceId));
     }
+    @Operation(operationId="listFbaInboundTransit")
+    @GetMapping("/in-transit")
+    public ResponseEntity<List<FbaInboundService.TransitRow>> transit(
+        @Parameter(hidden=true) Authentication auth,
+        @Parameter(hidden=true) HttpServletRequest request,@PathVariable UUID marketplaceId){
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(service.transit(access.currentTenant(auth,request),marketplaceId));
+    }
     @Operation(operationId="getFbaInboundShipment")
     @GetMapping("/{shipmentId}")
     public ResponseEntity<FbaInboundService.Detail> get(

@@ -67,5 +67,7 @@ class FbaInboundServiceTest {
         verify(service).detail(tenant,mp,id);
         api.list(auth,request,mp);
         verify(service).list(tenant,mp);
+        api.transit(auth,request,mp);
+        verify(service).transit(tenant,mp);
     }
 }

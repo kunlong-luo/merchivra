@@ -8,6 +8,7 @@ Status: initial backend implementation on feature branch; real Amazon connection
 - Owner session supplies tenant and actor; every query scopes tenant and marketplace. All writes require CSRF. The HTTP handlers set no-store.
 - States: DRAFT → IN_TRANSIT → RECEIVING (optional) → REVIEWING → RECONCILED. Review freezes new receipt writes.
 - Only local MOCK or MANUAL_UNVERIFIED evidence is allowed. No official Amazon FBA shipment creation, Fulfillment Inbound API calls, seller authorization or stock mutation is involved.
+- Only IN_TRANSIT/RECEIVING shipments enter the per-SKU transit summary, grouped separately by MOCK vs MANUAL_UNVERIFIED origin. REVIEWING/RECONCILED shortfalls are never presented as stock still in transit.
 - Reported received is a SUM of local receipt evidence. Estimated in-transit = max(planned - reported, 0), but only after dispatch. A positive delta means reported overage; a negative delta means reported shortage.
 - Both amazonVerified and fbaStockCredited remain false. Do not combine those values with FBA fulfillable, reserved, Amazon inbound observation, finance events or local warehouse stock.
 - Nonzero deltas require an independent Owner resolution with an explanation; receipt evidence authors cannot accept their own discrepancies. Exact matches can be closed without a variance decision.
@@ -20,6 +21,7 @@ Prefix: /api/v1/fba/marketplaces/{marketplaceId}/shipments
 | Method | Suffix | operationId |
 | --- | --- | --- |
 | GET | / | listFbaInboundShipments |
+| GET | /in-transit | listFbaInboundTransit |
 | GET | /{shipmentId} | getFbaInboundShipment |
 | POST | / | createFbaInboundShipment |
 | POST | /{shipmentId}/dispatch | dispatchFbaInboundShipment |
@@ -30,7 +32,7 @@ Prefix: /api/v1/fba/marketplaces/{marketplaceId}/shipments
 
 ## Verified OpenAPI + Orval path
 
-Only export from the actual Spring MVC server, not from docs/api/openapi.json (DESIGN ONLY). A loopback-access-only endpoint is available when MERCHIVRA_CONTRACT_EXPORT_ENABLED=true. CI boots Java 25 + PG18 and verifies exactly eight operations against the running server. The normalized contract is uploaded as the v65-fba-live-openapi artifact.
+Only export from the actual Spring MVC server, not from docs/api/openapi.json (DESIGN ONLY). A loopback-access-only endpoint is available when MERCHIVRA_CONTRACT_EXPORT_ENABLED=true. CI boots Java 25 + PG18 and verifies exactly nine operations against the running server. The normalized contract is uploaded as the v65-fba-live-openapi artifact.
 
 To complete the frontend migration:
 1. Start the development server with PG18 and explicit contract export enabled, keeping Amazon OAuth/Sp-API disabled.

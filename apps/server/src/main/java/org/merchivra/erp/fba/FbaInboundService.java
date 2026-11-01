@@ -38,7 +38,10 @@ public class FbaInboundService {
                            String createdAt,String dispatchedAt,String reviewStartedAt,
                            String reconciledAt){}
     public record Line(String id,String sellerSku,int plannedQuantity,int reportedReceived,
-                       Integer estimatedInTransit,int delta,String decision,String reviewedBy){}
+                       Integer estimatedInTransit,int delta,String decision,String reviewedBy,
+                       String reviewNote,String reviewedAt){}
+    public record TransitRow(String sellerSku,String origin,long planned,long reportedReceived,
+                             long estimatedInTransit,boolean amazonVerified){}
     public record ReceiptEvent(String id,String sellerSku,int quantity,String evidenceReference,
                                String origin,String recordedBy,String recordedAt){}
     public record Detail(Shipment shipment,List<Line> lines,List<ReceiptEvent> receipts,
@@ -132,6 +135,34 @@ public class FbaInboundService {
             ORDER BY created_at DESC,id DESC LIMIT 100
             """,FbaInboundService::mapShipment,tenant,marketplace);
     }
+    /**
+     * Advisory in-transit, grouped BY SKU AND origin. This is not Amazon inbound
+     * and MUST NOT be added to FBA available quantity or warehouse on-hand.
+     */
+    public List<TransitRow> transit(UUID tenant,UUID marketplace){
+        requireMarketplace(tenant,marketplace);
+        return jdbc.query("""
+            WITH per_line AS (
+                SELECT l.seller_sku,s.evidence_origin,l.planned_quantity,
+                       COALESCE(SUM(e.quantity),0)::bigint AS received
+                FROM fba_inbound_shipment s
+                JOIN fba_inbound_line l ON l.tenant_id=s.tenant_id AND l.shipment_id=s.id
+                LEFT JOIN fba_inbound_receipt_event e ON e.tenant_id=l.tenant_id
+                    AND e.shipment_id=l.shipment_id AND e.line_id=l.id
+                WHERE s.tenant_id=? AND s.seller_marketplace_id=?
+                  AND s.state IN ('IN_TRANSIT','RECEIVING')
+                GROUP BY s.id,l.id,l.seller_sku,s.evidence_origin,l.planned_quantity
+            )
+            SELECT seller_sku,evidence_origin,SUM(planned_quantity)::bigint AS planned,
+                   SUM(received)::bigint AS reported,
+                   SUM(GREATEST(0,planned_quantity-received))::bigint AS transit
+            FROM per_line
+            GROUP BY seller_sku,evidence_origin
+            ORDER BY seller_sku,evidence_origin LIMIT 500
+            """,(r,i)->new TransitRow(r.getString("seller_sku"),
+                r.getString("evidence_origin"),r.getLong("planned"),
+                r.getLong("reported"),r.getLong("transit"),false),tenant,marketplace);
+    }
     public Detail detail(UUID tenant,UUID marketplace,UUID shipment){
         List<Shipment> header=jdbc.query("""
             SELECT id,reference,evidence_origin,state,created_at,dispatched_at,
@@ -143,14 +174,14 @@ public class FbaInboundService {
         List<Line> lines=jdbc.query("""
             SELECT l.id,l.seller_sku,l.planned_quantity,
               COALESCE(SUM(e.quantity),0)::integer AS received,
-              v.decision,v.reviewed_by
+              v.decision,v.reviewed_by,v.note,v.reviewed_at
             FROM fba_inbound_line l
             LEFT JOIN fba_inbound_receipt_event e
               ON e.tenant_id=l.tenant_id AND e.shipment_id=l.shipment_id AND e.line_id=l.id
             LEFT JOIN fba_inbound_variance_resolution v
               ON v.tenant_id=l.tenant_id AND v.shipment_id=l.shipment_id AND v.line_id=l.id
             WHERE l.tenant_id=? AND l.shipment_id=?
-            GROUP BY l.id,l.seller_sku,l.planned_quantity,v.decision,v.reviewed_by
+            GROUP BY l.id,l.seller_sku,l.planned_quantity,v.decision,v.reviewed_by,v.note,v.reviewed_at
             ORDER BY l.seller_sku
             """,(r,i)->{
                 int planned=r.getInt("planned_quantity"),received=r.getInt("received");
@@ -159,7 +190,8 @@ public class FbaInboundService {
                     r.getString("seller_sku"),planned,received,
                     estimatedInTransit(h.state(),planned,received),
                     received-planned,r.getString("decision"),
-                    reviewed==null?null:reviewed.toString());
+                    reviewed==null?null:reviewed.toString(),
+                    r.getString("note"),timestamp(r,"reviewed_at"));
             },tenant,shipment);
         List<ReceiptEvent> receipts=jdbc.query("""
             SELECT e.id,l.seller_sku,e.quantity,e.evidence_reference,e.evidence_origin,
