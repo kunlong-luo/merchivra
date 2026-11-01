@@ -1,6 +1,6 @@
 # V65: FBA local inbound shipments, transit and variance reconciliation
 
-Status: local backend and generated Orval client committed on feature branch; UI and full integration tests in progress; real Amazon connection OFF.
+Status: local backend, generated Orval client, and React owner UI committed on feature branch; further PG concurrency/integration coverage pending; real Amazon connection OFF.
 
 ## Scope and meaning
 
@@ -45,4 +45,4 @@ Outstanding before V65 is complete: generated Orval client + React UI, real PG i
 
 ## Runtime generation smoke
 
-The CI PG18 job now installs the locked Node 24 client toolchain, runs Orval 8 against ONLY the normalized live FBA contract, and preserves the schema and generated TypeScript model/hook files as the PR artifact. This runs with Amazon OAuth/Sp-API switched OFF; the generated files are committed and checked for drift, but are not yet imported by the React UI.
+The CI PG18 job now installs the locked Node 24 client toolchain, runs Orval 8 against ONLY the normalized live FBA contract, and preserves the schema and generated TypeScript model/hook files as the PR artifact. This runs with Amazon OAuth/Sp-API switched OFF; the generated files are committed and checked for drift. The React shipment panel uses those requests through the existing same-origin mutator and Zod response validation.
