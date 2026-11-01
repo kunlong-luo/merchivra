@@ -380,3 +380,13 @@
 - [x] Owner Session + CSRF V49 API / React 工作台：近 30 天到期提醒、同仓移位、跨仓调拨、盘点差异、过期隔离、不可覆盖操作审计及递归溯源到最初真实收货位置；JUnit/Vitest 覆盖无库存副作用、调拨和单次隔离等规则，以 CI 结论为准。
 - [ ] PostgreSQL 18 真正 Flyway / Compose、跨租户 HTTP 权限、并发多事务与多仓实物扫描仍需专项验收。后续 V50 优先正式盘点差异审批与调整、跨仓收发双人确认及独立隔离库位。
 - 详见：[PO-012 V49 批次移位/调拨/盘点/隔离](purchasing/released-lot-lifecycle-v49.md)。
+
+## V50 · 盘点差异独立复核、跨仓收货确认与隔离品审批（2026-11-01）
+
+- [x] PostgreSQL V50 迁移：与 V49 原始 COUNT_OBSERVATION 一对一的独立盘点复核单、跨仓 TRANSFER 一对一的第二人收货确认、与已签名 LOT_QUARANTINE 一对一的处置审批/执行记录，含请求键和 tenant/Owner 来源审计。
+- [x] 盘点少货经不同 Owner 审批后，在同一事务更新定位批次剩余数量并通过 V40 `COUNT` 生成标准负向签名库存流水；重查 bin、批次数、SKU 和 warehouse expectedOnHand，任一来源变化则拒绝并回滚。盘盈只标 `EVIDENCE_REQUIRED` 不凭空加库存；无差异/拒绝也不改账。
+- [x] V49 已过账的目的仓收货由另一名 Owner 独立核对：CONFIRMED 全额、MISMATCH 少收时保留真实异常，绝不重复创建 TRANSFER_IN 或未经核对自动调账；一次调拨仅一次带凭据核对。
+- [x] 已隔离过期品只有在能定位到唯一 V49 `LOT_QUARANTINE` 签名负数流水时才允许新增 DISPOSAL/SUPPLIER_RETURN 计划。不同 Owner 独立批准；审核人不得自己报告处置执行；人工报告仅更新状态、参考编号和责任事件，绝不第二次扣库存。
+- [x] 新增 V50 Owner/CSRF REST endpoints、React 三模块工作台与 JUnit/Vitest 数量守恒、双人审批、重复过账禁止、来源凭据校验测试，以最终 CI 为准。保留 React 19、Java 25 / Spring Boot 4.1、PostgreSQL 18 技术选型。
+- [ ] 仍需 PostgreSQL 18 真正 Flyway/Compose 与多用户/多租户 HTTP 并发验收；有凭据盘盈转入、目的仓 MISMATCH 纠错、隔离品物流证明和 Amazon SP-API 真正联调待后续。
+- 详见：[PO-013 V50 库位复核与异常处理](purchasing/lot-count-review-transfer-receiving-disposition-v50.md)。
