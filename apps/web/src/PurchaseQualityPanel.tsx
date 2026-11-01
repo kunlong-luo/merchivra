@@ -1,6 +1,7 @@
 import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
+import {fetchReceiptBatches} from './lib/receipt-batches'
 import {fetchQualityReceipts,inspectQualityReceipt,fetchQualityReturns,
  createQualityReturn,actQualityReturn,fetchQualityFindings,scanQualityFindings,
  changeQualityFinding,type QualityFindingState} from './lib/purchase-quality'
@@ -28,6 +29,8 @@ export default function PurchaseQualityPanel({tenantId,orderId,warehouses}:{
  const [message,setMessage]=useState(''),[failure,setFailure]=useState('')
  const [editing,setEditing]=useState('')
  const root=['purchasing',tenantId]
+ const batches=useQuery({queryKey:[...root,'receipt-batches',orderId],
+  queryFn:()=>fetchReceiptBatches(orderId),enabled:!!orderId,retry:false})
  const receipts=useQuery({queryKey:[...root,'quality-receipts',orderId],
   queryFn:()=>fetchQualityReceipts(orderId),enabled:!!orderId,retry:false})
  const returns=useQuery({queryKey:[...root,'quality-returns',inspectionId],
@@ -39,7 +42,10 @@ export default function PurchaseQualityPanel({tenantId,orderId,warehouses}:{
   mutationFn:()=>inspectQualityReceipt(receiptId,{requestKey:inspectionKey,
    acceptedQuantity:(selected?.receivedQuantity??0)-rejected,
    rejectedQuantity:rejected,reason:reason.trim()}),
-  onSuccess:r=>{setInspectionId(r.id);setMessage('已记录完整实收质检；不合格件数已从本地仓库余额隔离');
+  onSuccess:r=>{setInspectionId(r.id);setMessage(
+   batches.data?.some(b=>b.receiptId===r.receiptId)
+    ?'已完成待检批次质检；合格品仍待另一 Owner 放行，不合格品留在隔离区'
+    :'历史收货已完成回溯性质检，不合格件数已从本地台账隔离');
    setFailure('');setInspectionKey(crypto.randomUUID());setReceiptId('');
    setRejected(0);setReason('');refresh()},
   onError:(e:Error)=>setFailure(e.message)})
@@ -79,9 +85,9 @@ export default function PurchaseQualityPanel({tenantId,orderId,warehouses}:{
  }
  return <section className="panel full-panel" aria-label="本地采购到货质检及供应商退货">
   <div className="panel-heading"><div><h2>到货质检、隔离库存与供应商退货</h2>
-   <p>质检仅针对已经真实登记的本地采购收货，不能把 ASN 申报当作实收。
-    既有收货先入账，随后质检不合格件一次性扣到独立隔离记录；
-    供应商退货发出不重复扣库存。</p></div>
+   <p>质检仅针对真实登记的采购收货，不以 ASN 申报作为实收。
+    V46 新收货先处于待检状态，质检后还要由另一 Owner 放行合格件才进入可用库存；
+    对 V44 及更早已入账历史收货，仍使用回溯性负向隔离。</p></div>
    <button className="refresh-button" type="button" onClick={refresh}>刷新</button></div>
   {!orderId?<p className="empty-state">选择已有采购单后查看其实际收货及质检。</p>:<>
    <h3>实物收货与一次性质检</h3>
@@ -114,8 +120,8 @@ export default function PurchaseQualityPanel({tenantId,orderId,warehouses}:{
     </div>}
    {!!selected&&<form className="team-invite-form" onSubmit={submitInspection}>
     <h3>质检记录：实际收货 {selected.receivedQuantity} 件</h3>
-    <p className="setup-hint">仅允许对整条收货质检一次，合格件数自动等于实收减去不合格件数。
-     已有出库造成不足以隔离时，服务端会拒绝，不能产生负库存。</p>
+    <p className="setup-hint">仅允许对整条真实收货质检一次，合格 = 实收 − 不合格。
+     V46 待检批次不直接记入可用库存，待独立放行；历史已入账收货需确保可用余额足够隔离不合格件。</p>
     <label htmlFor="qc-rejected">本次不合格件数</label>
     <input id="qc-rejected" type="number" min={0}
      max={selected.receivedQuantity} step={1} value={rejected}
