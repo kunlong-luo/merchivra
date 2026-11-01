@@ -47,10 +47,22 @@ class WarehouseInventoryServiceTest {
         verify(jdbc,never()).query(contains("erp_local_stock_movement"),
             any(RowMapper.class),any(UUID.class),any(UUID.class));
     }
-    @Test void onlyOneSourceBoundMovementIsWrittenPerReceipt() {
+    @Test void newReceiptCreatesHeldLotAndAuditWithoutCreditingStock() {
         warehouse.recordReceipt(tenant,actor,location,sku,receipt,5);
-        verify(jdbc).update(contains("INSERT INTO erp_local_stock_movement"),
-            any(UUID.class),eq(tenant),eq(location),eq(sku),eq(receipt),eq(5),eq(actor));
+        verify(jdbc).update(contains("INSERT INTO erp_receipt_quality_batch"),
+            eq(tenant),eq(receipt),eq(location),eq(sku),eq(5),
+            startsWith("LOT-"),eq(actor));
+        verify(jdbc).update(contains("INSERT INTO erp_receipt_quality_batch_event"),
+            any(UUID.class),eq(tenant),eq(receipt),eq(actor),startsWith("LOT-"),eq(5));
+        verify(jdbc,never()).update(contains("erp_local_stock_movement"),
+            any(Object[].class));
+    }
+    @Test void recordedPhysicalReceiptsRemainSeparateFromReleasedStockQuery() {
+        when(jdbc.queryForObject(contains("erp_local_warehouse"),
+            eq(Integer.class),eq(tenant),eq(location))).thenReturn(1);
+        warehouse.stock(tenant,location);
+        verify(jdbc).query(contains("WITH sku_keys AS"),
+            any(RowMapper.class),eq(tenant),eq(location),eq(tenant),eq(location));
     }
     @Test void pendingReceiptsAreScopedToAuthenticatedTenant() {
         warehouse.pendingReceipts(tenant);
