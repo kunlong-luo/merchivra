@@ -18,6 +18,10 @@ springdoc:
         - /api/v1/finance/marketplaces/**/sku-profit-preview/**
         - /api/v1/finance/marketplaces/**/profit-reports
         - /api/v1/finance/marketplaces/**/profit-reports/**
+    - group: fba-inbound
+      paths-to-match:
+        - /api/v1/fba/marketplaces/**/shipments
+        - /api/v1/fba/marketplaces/**/shipments/**
 
 spring:
   application:
