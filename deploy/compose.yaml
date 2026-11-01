@@ -15,6 +15,9 @@ services:
     restart: unless-stopped
 
   redis:
+    # Not used by current Spring Boot code. Opt-in only, to keep the default
+    # local stack to three services: postgres + server + web.
+    profiles: ['optional-cache']
     image: redis:7-alpine
     command: ["redis-server", "--save", "60", "1", "--appendonly", "yes"]
     volumes:
