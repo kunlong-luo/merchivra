@@ -458,3 +458,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 人工差异必须带来源采购行/可选 ASN、请求 UUID、原因及原始数量快照；审核差异的 Owner 与报告人不同，复核/建立索赔/提交/审批时要对真实收货或采购剩余容量重新校验，过期来源一律拒绝。原始事件、审核人和审计不能覆盖。
 - 索赔仅能以**已经另一 Owner 复核的差异**或 V44 已完成质检的不合格品为来源，一次来源最多一份索赔，件数不超过来源。索赔另走 DRAFT → SUBMITTED → 另一 Owner APPROVED → 带说明 CLOSED；不自动向供应商发信、不创建赔偿金/信用票据、不更改 Amazon FBA、财务或结算。
 - 供应商统计只使用已审批采购单实收、质检不合格和可核对的异常数；禁止没有承运商证据就输出虚构“准时率”、退款到账或跨币种总成本。本模块接口与未验收项见 `docs/purchasing/supplier-discrepancies-claims-v45.md`；后端 CI 不代替 PG18/HTTP/并发实测。
+
+## V46 · 新收货待检与双人质量放行硬性边界（2026-11-01）
+
+- 新 V46 实物 `erp_purchase_receipt` 先进入 `erp_receipt_quality_batch` PENDING_QC，不能在 `receive` 同一动作立刻把全数收货加到本地可用余额；V44 及更早历史收货已经有库存流水，严禁回写、删除或重新生成正数放行流水。
+- 新批次检验仍采用单笔真实收货全数 `accepted+rejected=receipt.quantity`，只写一次不可变 QC 快照；V46 检验不生成仓库正/负库存移动，V44 历史检验仍保留原负数 QC_QUARANTINE 追溯路径。必须以后端存在的待检批次为判断依据，不能相信客户端切换标志。
+- `QC_RELEASE` 仅可在另一位不同 Owner 对 INSPECTED 批次显式放行时产生，正数数量必须等于已记录 acceptedQuantity；零合格不得产生移动。tenant 行锁 + 仓库行锁 + QC 唯一来源保证重复点击不双入账；必须保留追加式批次事件、released_by 和时间。
+- 批次码仅在 PENDING_QC 时允许变更，并校验原码版本和可打印安全字符、原因，所有修改留原值审计。供应商 ASN SHIPPED 仍不是承运商验证，待检不是可售或 FBA 已接收。可用库存与累计实收分别展示。
+- 详见 `docs/purchasing/held-receipt-lots-quality-release-v46.md`；**真实 PostgreSQL18 Flyway / 跨租户 HTTP / 并发锁**未经专项验收，严禁把 Java/React CI 成功误报为真实 Amazon 接入成功。
