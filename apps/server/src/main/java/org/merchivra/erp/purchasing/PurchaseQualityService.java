@@ -183,6 +183,29 @@ public class PurchaseQualityService {
         boolean pending=!batchStates.isEmpty();
         if(pending && !"PENDING_QC".equals(batchStates.getFirst()))
             throw conflict("Receipt batch already inspected or released");
+        if(pending) {
+            // If any V48 piece was graded, the legacy whole-receipt route MUST
+            // agree with every single graded piece; no bypassing partial QC.
+            List<long[]> graded=jdbc.query("""
+                SELECT COUNT(*) AS graded_count,
+                  COALESCE(SUM(accepted_quantity),0)::bigint AS accepted,
+                  COALESCE(SUM(rejected_quantity),0)::bigint AS rejected
+                FROM erp_receipt_piece_grade
+                WHERE tenant_id=? AND receipt_id=?
+                """,(rs,i)->new long[]{rs.getLong("graded_count"),
+                    rs.getLong("accepted"),rs.getLong("rejected")},tenant,receiptId);
+            if(!graded.isEmpty() && graded.getFirst()[0]>0) {
+                Long pieces=jdbc.queryForObject("""
+                    SELECT COUNT(*) FROM erp_receipt_lot_piece
+                    WHERE tenant_id=? AND receipt_id=?
+                    """,Long.class,tenant,receiptId);
+                long[] totals=graded.getFirst();
+                if(pieces==null || pieces.longValue()!=totals[0]
+                    || totals[1]!=request.acceptedQuantity()
+                    || totals[2]!=request.rejectedQuantity())
+                    throw conflict("Partial or mismatched V48 piece grades cannot be finalized");
+            }
+        }
         if(!pending) {
             long available=jdbc.queryForObject("""
                 SELECT COALESCE(SUM(quantity),0)::bigint
