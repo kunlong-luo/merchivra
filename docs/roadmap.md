@@ -493,12 +493,12 @@
 - [ ] 下一阶段 **V65 FBA 货件、入仓、在途与差异的只读来源对账**。真实 Amazon 授权仍由 Owner 等所有核心代码完成后在本地执行。
 - 详细说明：[V64](finance/period-profit-report-v64.md)。
 
-## 2026-11-01 · V64.1 成熟工具与 API 客户端生成（优先于 V65）
+## 2026-11-01 · V64.1 Orval 客户端代码生成（已实现）
 
-- [x] 维护者要求优先使用成熟工具，避免重复造轮子；选型纪律已落入根目录 Agent.md / AGENTS.md。
-- [x] 核对当前代码：React API 仍手写 fetch + Zod；Orval 尚未安装；docs/api/openapi.json 为 DESIGN ONLY 草案，不能生成现行生产客户端。
-- [ ] 验证 springdoc-openapi 3.2.x 与 Spring Boot 4.1.2 的实际 Controller 契约和 OpenAPI/Swagger 暴露权限。
-- [ ] Node24 + npm registry 安装锁定 Orval8.x，生成 TanStack Query5 客户端并提供 Cookie/CSRF/no-store/错误处理 mutator。
-- [ ] 从 V61/V64 两组 API 渐进迁移、保留必要 Zod 运行时安全规则；CI 执行再生成差异、npm ci、TS/Vitest/Vite、Gradle/PG18/Compose。
-- [ ] 上述验收通过后再以生成客户端支持 V65 FBA 等模块。**目前不可宣称 Orval 已安装或已接入。**
-- 详细选型和验收：[成熟工具优先 ADR](architecture/mature-tool-first-api-client-2026-11-01.md)。
+- [x] springdoc-openapi 3.2.0 对真实 Spring Boot 4.1.2 Controller 导出九条 V61/V64 利润 API，默认文档关闭且只允许显式开启的 loopback 导出。
+- [x] Node24/npm registry 安装 Orval 8.44.0 并提交 package-lock，生成 TypeScript 模型和 TanStack Query5 GET Query/POST Mutation Hooks。
+- [x] V61/V64 财务前端改用生成请求函数；统一 same-origin Session、CSRF/no-store/错误和 Orval8 {data,status,headers}，保留 Zod 财务不变量。
+- [x] CI 用 npm ci、重新生成漂移检测和 PG18 真实 Controller 契约比对；Java/React/PG18/Compose 四项成功。
+- [x] 一次性写权限的 Orval 引导工作流已移除，不留后台自动提交 main 的长期入口。
+- [ ] V65 FBA 以及其他 Orders/Finances/Ads 模块还需渐进纳入生成器，不应宣称全部 API 均已自动生成。
+- 架构说明：[V64.1 成熟工具优先 ADR](architecture/mature-tool-first-api-client-2026-11-01.md)。

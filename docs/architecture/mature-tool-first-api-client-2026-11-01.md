@@ -1,28 +1,33 @@
-# ADR · 成熟工具优先、API 契约驱动客户端生成（V64.1）
+# ADR · 成熟工具优先与现行 API 契约驱动生成（V64.1）
 
-日期：2026-11-01  
-状态：选型原则批准；Orval/springdoc 的项目安装和 CI 验收**尚未完成**  
-触发：维护者明确要求优先成熟工具，避免重复造轮子。
+日期：2026-11-01
+状态：**已实施；核心 Java/React/PG18/Compose CI 成功**
 
-## 选型纪律
+## 工程原则
 
-先评估仓库现有依赖/官方 SDK/成熟第三方库，至少检查活跃维护、许可证、版本兼容、安全漏洞、升级负担、测试和可替换性。首选已有可靠工具，其次框架原语，再次少量适配层；确实无法复用且理由被审查后才允许自研通用设施。不可把重构当成增加 Kafka、微服务、Maven、Vue 或强制 Redis 的理由。领域金额守恒、租户隔离、审核流程仍保留专门代码和负例测试。
+优先复用成熟工具、官方 SDK 与现有框架原语。只有明确的不适用情况才自研通用基础设施，并保留许可证、安全漏洞、升级/维护成本和专项负例审查。保持 Java25、Spring Boot4.1.2、Gradle、PostgreSQL18、React19、TypeScript6、可选 Redis8，不引入 Maven/Vue/强制微服务。
 
-## 当前状况与 V64.1 目标
+## 实际接入
 
-- 现有 apps/web/src/lib/period-profit.ts、sku-profit.ts 等使用手写 fetch + Zod。项目当前没有 Orval，也没有可供 Orval 直接生成正式客户端的**已验证的现行 API 契约**。docs/api/openapi.json 标为 DESIGN ONLY/未实现，是提案而非生产合同。
-- 后端推荐 Spring Boot4.1.2 兼容的 springdoc-openapi 3.2.x 生成当前 Controller 的 OpenAPI；应验证路径、方法、响应 DTO、状态码、UUID、金额字符串和 Session Cookie + CSRF。真实 OpenAPI/Swagger 不得在生产无授权暴露，不访问真实 Amazon。
-- 前端推荐 Orval8.x（开发期）、TanStack Query5 Hooks/Key/请求类型、可控 fetch mutator；统一 same-origin Cookie、no-store、CSRF 仅用于写入、受控错误、AbortSignal。已有 Zod4 的高风险金额和未核验标志继续做运行时验证。禁止在手写文件中维护另一份相同的 DTO/Hook。
-- 用 Node24 + npm registry 真实解析依赖并提交 package-lock.json；必须 npm ci 成功。生成物、Orval 配置和准确 OpenAPI 一并纳入 CI 的重新生成漂移校验，并执行 typecheck、Vitest、Vite build、Java25/Gradle、PG18 Flyway 与基础 Compose。
-- 从已实现的 V64 profit-reports 和 V61 sku-profit-preview 两组 API 渐进替换；保持旧版接口兼容。通过后再扩展 FBA、Orders、Finances。官方 Amazon SDK 继续独立承担 Amazon 接入；不得重写授权/限流/签名机制。
+- 后端使用 org.springdoc:springdoc-openapi-starter-webmvc-api:3.2.0，从已实现的 V61 SKU 利润与 V64 整期利润 Controller 的 9 个实际操作导出 OpenAPI。Swagger UI 未安装，MERCHIVRA_CONTRACT_EXPORT_ENABLED 默认 false；只有显式开启且客户端为 127.0.0.1/::1 时才可读取 /v3/api-docs。生产不要启用。
+- scripts/normalize-finance-openapi.mjs 检查操作 ID、稳定排序与 Session Cookie/CSRF 声明；已提交的现行契约是 apps/web/openapi/finance-profits.json。旧 docs/api/openapi.json 标注 DESIGN ONLY，禁止当作可运行生产 API 合约。
+- Node24/npm registry 实际安装 Orval8.44.0 并提交 package-lock.json。apps/web/orval.config.ts 从现行契约生成 src/generated/finance-profits.ts、finance-models 与 TanStack Query5 Hooks。GET 按默认规则生成 Query，POST 为 Mutation。
+- apps/web/src/lib/period-profit.ts 和 sku-profit.ts 现在调用 Orval 生成请求函数，不再维护独立的 fetch 和 API URL 组装。现有业务面板保留原 React Query 租户缓存键，Zod 继续验证金额、NULL、来源未核实等不变量。
+- apps/web/src/lib/merchivra-mutator.ts 统一内部 /api/v1/ 相对路径、same-origin Session、no-store、写请求 CSRF、HTTP 错误处理，并返回 Orval8 正确的 {data,status,headers}。严禁手动改写生成文件。
 
-## 验收清单
+## CI 和本地再生成
 
-- [ ] 当前实际 Controller 契约可离线生成并验证，生产安全边界未减弱。
-- [ ] Orval 包与传递依赖经真实 npm registry 安装、提交正确 lockfile、npm ci 通过。
-- [ ] 真实生成并使用至少 V61/V64 两组 API 的 TypeScript + Query 客户端，替换对应重复代码。
-- [ ] Session/CSRF/no-store/401/403/租户作用域/财务未验证标志负例测试通过。
-- [ ] GitHub CI 对 API 契约与生成结果检查漂移，Java/React/PostgreSQL18/Compose 全通过。
-- [ ] Agent.md、AGENTS.md、路线图与真实完成状态一致。
+- CI frontend 使用 npm ci、npm run api:check、typecheck、Vitest、Vite build；api:check 检查已跟踪文件的差异和新生成的未跟踪文件。
+- CI PG18 启动真实 Spring Boot + Flyway 并使用只限 loopback 的契约导出，规范化后与已提交 JSON 逐字节比较。构建和测试不需要真实 Amazon Seller 密钥。
+- 本地操作：使用开发数据库、显式设置 MERCHIVRA_CONTRACT_EXPORT_ENABLED=true 启动 Gradle bootRun；curl 获取 http://127.0.0.1:8080/v3/api-docs/finance-profits 写入 /tmp/finance-live.json；根目录运行 node scripts/normalize-finance-openapi.mjs /tmp/finance-live.json apps/web/openapi/finance-profits.json；进入 apps/web 执行 npm ci、npm run api:generate、npm run api:check、npm run typecheck、npm test、npm run build，再提交契约和所有生成文件。
+- 初次生成使用的临时 GitHub Actions contents:write 工作流已经移除，避免长期保留机器人写 main 的能力。后续开发者手动再生成并经过 CI 检查。
 
-本 ADR 目前只确认选型和迁移纪律；**不能称 Orval 已使用**。
+## 已验证与未覆盖
+
+- [x] 从真实 Spring Controller 导出、生成并锁定 V61/V64 财务请求客户端及 Query Hooks。
+- [x] Server-only Session/CSRF/no-store；未验证金额和来源仍由 Zod 与业务审批校验。
+- [x] GitHub Java/Gradle、PostgreSQL18、React19、Compose CI 已通过（run 41293168205）。
+- [ ] 其他 Orders、FBA、Finances、Ads 等全部 API 尚未迁移，V65 起按模块增量执行。
+- [ ] 真实 Amazon Seller 授权、银行账单以及生产环境权限/灾备验收仍待 Owner 在完成核心开发后本地验证。
+
+不得使用人工生成的旧设计草案替代实测 OpenAPI，也不得将自动生成的 API 类型冒充已实现的业务许可。

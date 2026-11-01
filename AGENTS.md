@@ -650,3 +650,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - **验收门槛**：必须在 Node24 和真实 npm registry 下安装 Orval、更新并提交 apps/web/package-lock.json，经 npm ci + TypeScript + Vitest + Vite 构建；生成代码与真实 OpenAPI 漂移在 CI 检查；测试 Session、CSRF、错误码、no-store、租户和财务来源数据的安全门禁。以上未完成，不得声称“Orval 已接入”，也不能只改 package.json 而破坏锁文件。
 - **适当保留领域代码**：Amazon SP-API 必须优先官方 Java SDK；本地认证复用 Spring Security；事务和锁复用 Spring JDBC、PostgreSQL18 与 Flyway。SKU 费用分配、来源留痕、Maker/Checker、库存处置属于领域特殊逻辑，不盲目以通用库替代，不得降低数据守恒、审核、身份和财务验证要求。
 - **审查新增自研代码**：说明已有成熟替代、为何不适用、要承担哪些维护成本和安全负例、将来可替换路径。先清理重复的 fetch/类型/Hook/重试通用层，再开发 V65 后续模块；不要为了统一而一次性破坏现有接口。
+
+## 2026-11-01 · V64.1 Orval/springdoc 已实际使用
+
+- springdoc-openapi 3.2.0 从真实 Spring Boot 4.1.2 Controller 导出 V61/V64 当前财务 API；仅显式 MERCHIVRA_CONTRACT_EXPORT_ENABLED=true + 127.0.0.1/::1 允许访问，默认关闭；未安装 Swagger UI。准确契约在 apps/web/openapi/finance-profits.json，旧 docs/api/openapi.json 仍为 G2 设计草案。
+- Orval 8.44.0 已实际从 npm registry 安装、锁定并生成 apps/web/src/generated/finance-profits.ts 和 models/Query Hooks。V61/V64 请求已调用生成方法。GET 生成 Query、POST 生成 Mutation，不手写重复 fetch、DTO 和 Hooks。
+- 安全 mutator 采用 /api/v1/、same-origin Session、写请求 CSRF、no-store、统一错误、{data,status,headers}；财务 Zod 仍守住金额 NULL、审核和未验证状态。
+- CI npm run api:check 检测生成漂移含未跟踪文件，PG18 实际导出与提交契约逐字节对比；一次性可写 main 的初始化工作流已移除。后续接口按模块渐进迁移，见 docs/architecture/mature-tool-first-api-client-2026-11-01.md。

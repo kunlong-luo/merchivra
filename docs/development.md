@@ -142,3 +142,11 @@ psql "host=127.0.0.1 port=5432 dbname=merchivra user=merchivra" -W \
 The role/database creation process is **not a Flyway migration**, `bootRun` lifecycle action, or CI/Compose startup hook. For a genuinely new `spark-postgres` cluster with no existing `merchivra` role/database, an authorized administrator may explicitly run [`apps/server/scripts/provision-merchivra-database.sql`](../apps/server/scripts/provision-merchivra-database.sql) once, with per-statement autocommit and stop-on-error. It first creates a `NOLOGIN` role, creates the `merchivra` database, then revokes database-level PUBLIC privileges. Setting a strong SCRAM password via trusted GUI or interactive `psql`, enabling LOGIN **afterwards**, and testing `psql -W` are separate manual operations.
 
 **If either the database or role already exists, do not run the script**; inspect state and privileges instead. Never use this procedure on `iot_farm` or as a workaround for a missing IDEA `DB_PASSWORD`. The integrated `deploy/compose.yaml` has its own supported Postgres image bootstrap and must not execute this script. See [`docs/deployment/local-spark-db.md`](deployment/local-spark-db.md) for inspection, safe execution, GUI client transaction settings and password verification.
+
+## V64.1 · springdoc + Orval API 生成（2026-11-01）
+
+本项目现行 V61/V64 财务客户端由 Orval8.44.0 + TanStack Query5 基于真实 Controller 的 OpenAPI 自动生成。生成文件在 apps/web/src/generated，禁止手改。财务 Zod 运行时校验、Session Cookie、CSRF、no-store 保持有效。
+
+默认 MERCHIVRA_CONTRACT_EXPORT_ENABLED=false，生产环境不要启用。仅本地隔离 PG18 环境显式启用时，环回地址可以访问 /v3/api-docs/finance-profits。
+
+从仓库根目录将 curl 的 JSON 输出保存到 /tmp/finance-live.json，执行 node scripts/normalize-finance-openapi.mjs /tmp/finance-live.json apps/web/openapi/finance-profits.json。之后 cd apps/web && npm ci && npm run api:generate && npm run api:check && npm run typecheck && npm test && npm run build。提交正确锁文件、已核对契约与生成产物；CI 与真实 PG18 输出再次对比。旧 docs/api/openapi.json 为 G2 草案，不能用于代码生成。
