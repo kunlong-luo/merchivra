@@ -5,6 +5,7 @@ import WarehouseAlertsPanel from './WarehouseAlertsPanel'
 import SupplierPurchasePlanningPanel from './SupplierPurchasePlanningPanel'
 import SupplierAsnPanel from './SupplierAsnPanel'
 import PurchaseQualityPanel from './PurchaseQualityPanel'
+import SupplierDisputesPanel from './SupplierDisputesPanel'
 import {createSupplier,fetchSuppliers,createPurchaseOrder,fetchPurchaseOrders,
  fetchPurchaseOrder,purchaseAction,receivePurchase,fetchWarehouses,createWarehouse,
  fetchWarehouseStock,fetchWarehouseLedger,fetchPendingReceipts,postStockOperation,
@@ -359,6 +360,9 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
      </div>}
    </>}
   </section>
+  <SupplierDisputesPanel key={'disputes-'+(selectedId||'no-order')}
+   tenantId={tenantId} orderId={selectedId} lines={selected.data?.lines??[]}
+   currentUserId={currentUserId}/>
   <PurchaseQualityPanel key={'qc-'+(selectedId||'no-order')}
    tenantId={tenantId} orderId={selectedId} warehouses={warehouses.data??[]}/>
   <SupplierAsnPanel key={selectedId||'no-order'} tenantId={tenantId} orderId={selectedId}
