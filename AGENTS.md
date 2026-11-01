@@ -587,3 +587,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 来源 APPROVED 仅表示 Amazon Reports 与 LIVE Finances 在同站点、相同 Settlement ID/原币下有符号金额已通过双人来源复核；bankVerified 与 ledgerPosted 永远 false，不能借此过账或确认到账。
 - 哈希包含原始报告摘要与同一个 Settlement ID 精确关联的所有来源交易；证据变化显示 STALE 并需要重审，重复 Settlement ID 报表禁止批准。
 - 服务端 PostgreSQL 18 / Java 25 / Gradle、React 19 与真实 Amazon 默认为关闭的策略保持不变；有状态审核不得启用 Amazon 写接口或默许浏览器 tenant ID。
+
+## 2026-11-01 · V60 银行人工来源不等于银行到账
+
+- 参考 `docs/finance/manual-bank-payout-v60.md`。标准化脱敏 CSV 银行参考只允许 MANUAL_UNVERIFIED；严格 7 列、最多 50 行 64 KiB，无账户号/PII/原始文件长期存储。SHA-256 和人工双人审查都不能证明款项真实到账。
+- 必须按 tenant+Marketplace+Settlement ID 关联 Reports、LIVE Finances 双人来源审核与银行参考；PostgreSQL 18 联合外键约束，不得跨站点链接或覆盖不可变银行观察。
+- 只能把同币种金额相等的人工银行来源交由独立 Owner REVIEWED；审批人既不能是上传人也不能是申请人。fx_rate 为人工声明值，跨币种差异仅用于显示，不允许自动批准为到账或对账完成。
+- 所有 HTTP 接口保持 Session Owner + CSRF + no-store；bankVerified=false 和 ledgerPosted=false 不可被业务 UI 或 API 偷改。真实银行确认需受信银行来源与另行设计的审核，不得由 Mock 升级真凭证。
+- 继续使用 Java25、Spring Boot4.1.2、Gradle、PostgreSQL18、React19；不启用真实 Amazon 写调用或未经验证的银行出站连接。
