@@ -1,5 +1,6 @@
 import {useState} from 'react'
 import SyncTaskMonitorPanel from './SyncTaskMonitorPanel'
+import OpsRulesPanel from './OpsRulesPanel'
 import OpsAttentionControls from './OpsAttentionControls'
 import {fetchViewer} from './lib/auth'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
@@ -40,6 +41,7 @@ export default function OperationsWorkspace({tenantId}:{tenantId:string}){
  </div></td></tr>)}</tbody></table></div>}
  <div className="panel-caption">最多显示 100 条。测试来源的待办不可直接用于自动补货、发货或财务结算。</div>
  </section>
+ <OpsRulesPanel tenantId={tenantId}/>
  <SyncTaskMonitorPanel tenantId={tenantId}/>
  </div>
 }
