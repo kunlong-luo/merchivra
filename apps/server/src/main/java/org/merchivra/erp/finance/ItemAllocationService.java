@@ -194,8 +194,8 @@ public class ItemAllocationService {
                 l.currency(),l.evidenceReference())).toList(),itemIds);
     }
     /** Freeze the exact submitted line set, not just the source totals. */
-    private static String frozenDigest(Source source,List<Allocation> lines) {
-        var canonical=new StringBuilder(source.digest()).append('|');
+    static String digestApprovedLines(String sourceDigest,List<Allocation> lines) {
+        var canonical=new StringBuilder(sourceDigest).append('|');
         lines.stream()
             .sorted(java.util.Comparator.comparing(Allocation::category)
                 .thenComparing(Allocation::externalItemId))
@@ -205,6 +205,9 @@ public class ItemAllocationService {
                 .append(l.currency()).append('|').append(l.evidenceReference())
                 .append(';'));
         return hash(canonical.toString());
+    }
+    private static String frozenDigest(Source source,List<Allocation> lines) {
+        return digestApprovedLines(source.digest(),lines);
     }
     private static boolean currentDigest(Source src,Stored stored,
         List<Allocation> lines) {
