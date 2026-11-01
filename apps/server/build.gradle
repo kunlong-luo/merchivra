@@ -15,6 +15,11 @@ java {
     }
 }
 
+configurations {
+    // Downloaded only for the explicit agent staging task (no telemetry export by default).
+    otelAgent
+}
+
 repositories {
     // Optional mirror for developers in regions with limited Maven Central access.
     maven { url = uri('https://maven.aliyun.com/repository/public') }
@@ -34,9 +39,23 @@ dependencies {
     implementation 'org.flywaydb:flyway-database-postgresql'
     runtimeOnly 'org.postgresql:postgresql'
 
+    otelAgent 'io.opentelemetry.javaagent:opentelemetry-javaagent:2.31.1'
+
     testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
     testImplementation 'org.springframework.security:spring-security-test'
     testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// Stage a verified-by-Gradle dependency under build/, never in source control.
+// The runtime image ships it but does NOT enable instrumentation by default.
+tasks.register('copyOtelAgent', Copy) {
+    from configurations.otelAgent
+    rename 'opentelemetry-javaagent-(.*).jar', 'opentelemetry-javaagent.jar'
+    into layout.buildDirectory.dir('agents')
+}
+
+tasks.named('build') {
+    dependsOn tasks.named('copyOtelAgent')
 }
 
 tasks.named('bootJar') {
