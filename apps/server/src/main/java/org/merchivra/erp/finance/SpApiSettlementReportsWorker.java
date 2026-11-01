@@ -30,6 +30,11 @@ public class SpApiSettlementReportsWorker {
         this.sdk=sdk;this.vault=vault;this.downloader=downloader;this.importer=importer;
     }
 
+    /** Cursor/page drift is recoverable by restarting the fixed scan window. */
+    public static class StaleCursorException extends IllegalStateException {
+        public StaleCursorException() {super("Reports cursor no longer stable");}
+    }
+
     @FunctionalInterface
     public interface FencedImport {
         void persist(SpApiSellerScope scope,String reportId,String documentId,
@@ -63,11 +68,11 @@ public class SpApiSettlementReportsWorker {
             throw new IllegalStateException("Reports list missing");
         var reports=result.getReports();
         if(offset>reports.size())
-            throw new IllegalArgumentException("Report page offset exceeds source");
+            throw new StaleCursorException();
         String following=result.getNextToken();
         if(following!=null && (following.isBlank() || following.length()>8192
             || following.equals(token)))
-            throw new IllegalArgumentException("Unsafe Reports next cursor");
+            throw new StaleCursorException();
         int inspected=0,imported=0,known=0,skipped=0;
         for(int i=offset;i<reports.size();i++) {
             if(imported>=maxNew)

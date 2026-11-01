@@ -148,7 +148,22 @@ public class SettlementReportScanService {
     public Status step(UUID tenant,UUID mp) {
         Claim c=tx.execute(t->{
             Market m=market(tenant,mp);
-            SpApiSellerScope scope=approved(tenant,m);
+            SpApiSellerScope scope;
+            try {scope=approved(tenant,m);}
+            catch(SecurityException denied) {
+                // Stop permanent retrying after Seller revocation or Finance
+                // evidence expiry. An Owner must re-approve before restart.
+                jdbc.update("""
+                    UPDATE spapi_settlement_scan_job
+                    SET state='PAUSED',last_failure_code='AUTHORIZATION_REJECTED',
+                        lease_owner=NULL,lease_expires_at=NULL,updated_at=now()
+                    WHERE tenant_id=? AND seller_marketplace_id=?
+                      AND state IN ('READY','RETRY','RUNNING')
+                      AND (lease_expires_at IS NULL OR lease_expires_at<=now())
+                    """,tenant,mp);
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Seller Finance role no longer approved");
+            }
             Job j=job(tenant,mp,true);
             Instant now=clock.instant();
             if(j==null||"PAUSED".equals(j.state())||"SUCCEEDED".equals(j.state()))
@@ -266,7 +281,8 @@ public class SettlementReportScanService {
 
     private void fail(Claim c,Exception failure) {
         int status=failure instanceof ApiException api?api.getCode():0;
-        boolean stale=(status==400||status==422)&&c.job().token()!=null;
+        boolean stale=failure instanceof SpApiSettlementReportsWorker.StaleCursorException
+            || ((status==400||status==422)&&c.job().token()!=null);
         boolean transientFailure=stale || status==429 || status>=500
             || failure instanceof SpApiAdmissionException
             || failure instanceof IOException || failure instanceof InterruptedException;
