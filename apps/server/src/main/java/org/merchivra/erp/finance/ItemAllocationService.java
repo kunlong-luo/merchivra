@@ -179,7 +179,7 @@ public class ItemAllocationService {
               evidence_reference
             FROM finance_item_allocation_line
             WHERE tenant_id=? AND event_id=?
-            ORDER BY category,external_item_id LIMIT 201
+            ORDER BY category,external_item_id LIMIT 301
             """,(r,n)->new Allocation(r.getString(1),r.getString(2),
                 r.getBigDecimal(3).toPlainString(),r.getString(4).trim(),
                 r.getString(5)),tenant,event);
@@ -193,10 +193,29 @@ public class ItemAllocationService {
                 l.category(),new BigDecimal(l.signedAmount()),
                 l.currency(),l.evidenceReference())).toList(),itemIds);
     }
+    /** Freeze the exact submitted line set, not just the source totals. */
+    private static String frozenDigest(Source source,List<Allocation> lines) {
+        var canonical=new StringBuilder(source.digest()).append('|');
+        lines.stream()
+            .sorted(java.util.Comparator.comparing(Allocation::category)
+                .thenComparing(Allocation::externalItemId))
+            .forEach(l->canonical.append(l.externalItemId().length()).append(':')
+                .append(l.externalItemId()).append('|').append(l.category())
+                .append('|').append(l.signedAmount()).append('|')
+                .append(l.currency()).append('|').append(l.evidenceReference())
+                .append(';'));
+        return hash(canonical.toString());
+    }
+    private static boolean currentDigest(Source src,Stored stored,
+        List<Allocation> lines) {
+        return stored!=null&&stored.orderId().equals(src.orderId())
+            &&stored.digest().equals("DRAFT".equals(stored.state())
+                ?src.digest():frozenDigest(src,lines));
+    }
+
     private static View display(UUID event,Source src,Stored stored,
         List<Allocation> lines) {
-        boolean current=stored!=null&&stored.digest().equals(src.digest())
-            &&stored.orderId().equals(src.orderId());
+        boolean current=currentDigest(src,stored,lines);
         ItemAllocationEngine.Summary amounts;
         try {amounts=summarize(src,lines);}
         catch(IllegalArgumentException stale) {
@@ -319,12 +338,13 @@ public class ItemAllocationService {
         if(!current.evidenceCurrent()||!current.amounts().fullyAllocated())
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "All eligible signed category totals must be allocated exactly");
+        String submitted=frozenDigest(src,lines(tenant,event));
         jdbc.update("""
             UPDATE finance_item_allocation_review SET state='PENDING',
-              requested_at=now() WHERE tenant_id=? AND event_id=?
-            """,tenant,event);
+              evidence_sha256=?,requested_at=now() WHERE tenant_id=? AND event_id=?
+            """,submitted,tenant,event);
         audit(tenant,event,old.version(),"SUBMITTED",null,null,null,
-            src.digest(),actor,note);
+            submitted,actor,note);
         return display(event,src,stored(tenant,event,false),lines(tenant,event));
     }
     @Transactional(isolation=Isolation.REPEATABLE_READ)
@@ -349,7 +369,7 @@ public class ItemAllocationService {
             WHERE tenant_id=? AND event_id=? AND state='PENDING'
             """,approve?"APPROVED":"REJECTED",actor,tenant,event);
         audit(tenant,event,old.version(),approve?"APPROVED":"REJECTED",
-            null,null,null,src.digest(),actor,note);
+            null,null,null,old.digest(),actor,note);
         return display(event,src,stored(tenant,event,false),lines(tenant,event));
     }
     static void requireIndependent(UUID maker,UUID reviewer) {
