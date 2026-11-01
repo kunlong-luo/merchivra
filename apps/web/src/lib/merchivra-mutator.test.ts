@@ -8,8 +8,9 @@ describe('Orval mature-client Session and CSRF transport',()=>{
    status:200,headers:{'content-type':'application/json'}
   }))
   vi.stubGlobal('fetch',get)
-  const result=await merchivraFetch<{hello:string}>('/api/v1/ping',{method:'GET'})
-  expect(result.hello).toBe('world')
+  const result=await merchivraFetch<{data:{hello:string},status:number,headers:Headers}>('/api/v1/ping',{method:'GET'})
+  expect(result.data.hello).toBe('world')
+  expect(result.status).toBe(200)
   const [url,init]=get.mock.calls[0]
   expect(url).toBe('/api/v1/ping')
   expect(init.credentials).toBe('same-origin')
@@ -48,6 +49,8 @@ describe('Orval mature-client Session and CSRF transport',()=>{
  it('does not parse a no-content success as JSON',async()=>{
   const get=vi.fn().mockResolvedValue(new Response(null,{status:204}))
   vi.stubGlobal('fetch',get)
-  expect(await merchivraFetch<void>('/api/v1/ping')).toBeUndefined()
+  const result=await merchivraFetch<{data:undefined,status:number}>('/api/v1/ping')
+  expect(result.data).toBeUndefined()
+  expect(result.status).toBe(204)
  })
 })

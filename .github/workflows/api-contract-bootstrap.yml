@@ -1,4 +1,4 @@
-name: One-time Orval finance contract bootstrap
+name: Orval finance contract bootstrap
 
 on:
   push:
@@ -65,6 +65,7 @@ jobs:
             http://127.0.0.1:8080/v3/api-docs/finance-profits > /tmp/finance-live.json
           node scripts/normalize-finance-openapi.mjs \
             /tmp/finance-live.json apps/web/openapi/finance-profits.json
+      # Regenerate after config updates; generated files stay committed.
       - name: Install Orval from real npm registry and generate React Query client
         working-directory: apps/web
         shell: bash

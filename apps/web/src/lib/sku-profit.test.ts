@@ -30,7 +30,9 @@ describe('V61 scoped contribution preview',()=>{
   expect(()=>skuProfitPreview.parse({...data,adsSourceOrigin:'LIVE_ADS'})).toThrow()
  })
  it('uses owner session and bounded URL without browser supplied tenant ID',async()=>{
-  const mock=vi.fn().mockResolvedValue({ok:true,json:async()=>data})
+  const mock=vi.fn().mockResolvedValue(new Response(JSON.stringify(data),{
+   status:200,headers:{'content-type':'application/json'}
+  }))
   vi.stubGlobal('fetch',mock)
   expect((await fetchSkuProfitPreview(mp,'2026-10-01','2026-11-01',0))
     .orders[0].contribution).toBeNull()

@@ -38,7 +38,9 @@ describe('V64 durable period contribution API',()=>{
    ...job,ledgerPosted:true}})).toThrow()
  })
  it('reads immutable extracted source amounts without browser tenant',async()=>{
-  const mock=vi.fn().mockResolvedValue({ok:true,json:async()=>report})
+  const mock=vi.fn().mockResolvedValue(new Response(JSON.stringify(report),{
+   status:200,headers:{'content-type':'application/json'}
+  }))
   vi.stubGlobal('fetch',mock)
   expect((await getPeriodProfitReport(mp,id)).orders[0].sales).toBeNull()
   const [url,init]=mock.mock.calls[0]
@@ -50,16 +52,17 @@ describe('V64 durable period contribution API',()=>{
   expect(()=>getPeriodProfitReport(mp,id,51)).toThrow()
  })
  it('creates an explicit idempotent job with CSRF and no outbound Amazon API',async()=>{
-  const mock=vi.fn().mockImplementation(async (url:string)=>({
-   ok:true,json:async()=>url.endsWith('/auth/csrf')?
-    {token:'1234567890abcdef',headerName:'X-CSRF-TOKEN'}:job
-  }))
+  const mock=vi.fn().mockImplementation(async (url:string)=>new Response(
+   JSON.stringify(url.endsWith('/auth/csrf')?
+    {token:'1234567890abcdef',headerName:'X-CSRF-TOKEN'}:job),{
+    status:200,headers:{'content-type':'application/json'}
+   }))
   vi.stubGlobal('fetch',mock)
   await createPeriodProfitReport(mp,requestKey,'2026-09-01','2026-10-01')
   const [url,init]=mock.mock.calls[1]
   expect(url).toContain('/marketplaces/'+mp+'/profit-reports')
   expect(init.method).toBe('POST')
-  expect(init.headers['X-CSRF-TOKEN']).toBe('1234567890abcdef')
+  expect(new Headers(init.headers).get('X-CSRF-TOKEN')).toBe('1234567890abcdef')
   expect(JSON.parse(init.body)).toEqual({
    requestKey,after:'2026-09-01',before:'2026-10-01'
   })

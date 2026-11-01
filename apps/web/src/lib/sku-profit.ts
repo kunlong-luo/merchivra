@@ -1,4 +1,5 @@
 import {z} from 'zod'
+import {getSkuProfitPreview,getGetSkuProfitPreviewUrl,getExportSkuProfitPreviewCsvUrl} from '../generated/finance-profits'
 
 const money=z.string().regex(/^-?[0-9]+(?:\.[0-9]+)?$/)
 export const skuProfitOrder=z.object({
@@ -36,27 +37,17 @@ export const skuProfitPreview=z.object({
 })
 export type SkuProfitPreview=z.infer<typeof skuProfitPreview>
 
-const root=(mp:string)=>
- '/api/v1/finance/marketplaces/'+encodeURIComponent(mp)+'/sku-profit-preview'
+
 export function profitQuery(mp:string,after:string,before:string,offset:number){
- const query=new URLSearchParams({after,before,offset:String(offset)})
- return root(mp)+'?'+query.toString()
+ return getGetSkuProfitPreviewUrl(mp,{after,before,offset})
 }
 export function profitCsvUrl(mp:string,after:string,before:string,offset:number){
- const query=new URLSearchParams({after,before,offset:String(offset)})
- return root(mp)+'/export.csv?'+query.toString()
+ return getExportSkuProfitPreviewCsvUrl(mp,{after,before,offset})
 }
 export async function fetchSkuProfitPreview(mp:string,after:string,before:string,offset:number){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(after)||
     !/^\d{4}-\d{2}-\d{2}$/.test(before)||
     offset<0||offset%30!==0||offset>3000)
   throw new Error('日期或页码不符合要求')
- const res=await fetch(profitQuery(mp,after,before,offset),{
-  credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}
- })
- if(!res.ok)throw new Error(res.status===403?'当前租户没有财务 Owner 权限':
-  res.status===400?'仅支持 1–92 天的 UTC 时间窗口':
-  res.status===404?'当前站点不存在':
-  '利润来源预览失败（HTTP '+res.status+'）')
- return skuProfitPreview.parse(await res.json())
+ return skuProfitPreview.parse((await getSkuProfitPreview(mp,{after,before,offset})).data)
 }

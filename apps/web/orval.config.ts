@@ -11,7 +11,7 @@ export default defineConfig({
       mode:'single',
       override:{
         mutator:{path:'./src/lib/merchivra-mutator.ts',name:'merchivraFetch'},
-        query:{useQuery:true,useMutation:true}
+        // Defaults: GET => useQuery; POST => useMutation (no unsafe GET mutations)
       }
     }
   }

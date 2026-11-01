@@ -29,11 +29,13 @@ export async function merchivraFetch<T>(url:string,options:RequestInit={}):Promi
    'API 请求失败（HTTP '+response.status+'）'
   throw new Error(reason)
  }
- if(response.status===204)return undefined as T
+ if(response.status===204)return {data:undefined,status:204,headers:response.headers} as T
  const contentType=response.headers.get('content-type')??''
- if(contentType.includes('application/json'))return response.json() as Promise<T>
- if(contentType.includes('text/csv'))return response.text() as Promise<T>
- return response.text() as Promise<T>
+ const data=contentType.includes('application/json')
+  ?await response.json():await response.text()
+ // Orval v8 custom Fetch response shape is {data,status,headers},
+ // not the raw JSON body (otherwise typed callers silently receive wrong data).
+ return {data,status:response.status,headers:response.headers} as T
 }
 export type ErrorType<E> = Error & {cause?:E}
 export type BodyType<T> = T

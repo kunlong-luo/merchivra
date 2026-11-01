@@ -54,6 +54,8 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Ensure React-only frontend
         run: node ../../scripts/check_frontend_stack.mjs
+      - name: Ensure Orval generated hooks match the reviewed OpenAPI
+        run: npm run api:check
       - name: Typecheck
         run: npm run typecheck
       - name: Unit tests
@@ -88,6 +90,7 @@ jobs:
       MERCHIVRA_SPAPI_OAUTH_ENABLED: 'false'
       MERCHIVRA_DEMO_ENABLED: 'false'
       MERCHIVRA_TEAM_ENABLED: 'false'
+      MERCHIVRA_CONTRACT_EXPORT_ENABLED: 'true'
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
@@ -95,6 +98,9 @@ jobs:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
       - name: Start actual Spring Boot against isolated PostgreSQL 18
         shell: bash
         run: |
@@ -129,7 +135,10 @@ jobs:
             "SELECT count(*) FROM erp_local_lot_disposition_proof_file WHERE size_bytes > 2097152"
           psql -h 127.0.0.1 -U merchivra -d merchivra -v ON_ERROR_STOP=1 -Atc \
             "SELECT count(*) FROM erp_lot_supplier_return_trace"
-          echo "PostgreSQL 18 / V46-V52 Flyway migrations verified against a real server"
+          curl -fsS http://127.0.0.1:8080/v3/api-docs/finance-profits > /tmp/merchivra-live-finance-openapi.json
+          node scripts/normalize-finance-openapi.mjs /tmp/merchivra-live-finance-openapi.json /tmp/merchivra-normalized-finance-openapi.json
+          cmp apps/web/openapi/finance-profits.json /tmp/merchivra-normalized-finance-openapi.json
+          echo "PostgreSQL 18 / Flyway / actual finance OpenAPI snapshot verified against a real server"
           kill "$app_pid" 2>/dev/null || true
 
   compose-deployment-config:

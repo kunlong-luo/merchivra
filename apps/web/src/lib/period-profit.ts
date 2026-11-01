@@ -1,5 +1,7 @@
 import {z} from 'zod'
-import {csrfHeader} from './auth'
+import {createProfitReport,listProfitReports,getProfitReport,
+  getProfitReportAudit,advanceProfitReport,resumeProfitReport,
+  getExportProfitReportCsvUrl} from '../generated/finance-profits'
 const money=z.string().regex(/^-?[0-9]+(?:\.[0-9]+)?$/)
 const job=z.object({
  id:z.string().uuid(),state:z.enum(['READY','RETRY','SUCCEEDED','PAUSED']),
@@ -44,44 +46,22 @@ export const periodProfitReport=z.object({
 export type PeriodProfitJob=z.infer<typeof job>
 export type PeriodProfitReport=z.infer<typeof periodProfitReport>
 
-const root=(marketplace:string)=>
- '/api/v1/finance/marketplaces/'+encodeURIComponent(marketplace)+'/profit-reports'
-const error=(status:number)=>
- status===401?'请先登录':
- status===403?'仅当前租户 Owner 可生成来源报表':
- status===404?'报表或 Marketplace 不在当前租户':
- status===409?'重复请求窗口冲突、待处理任务已达上限或任务状态不允许':
- status===422?'当前日期范围超过 5,000 个 LIVE 订单，请缩短时间窗口':
- '报表请求失败（HTTP '+status+'）'
-async function read<T>(url:string,schema:z.ZodType<T>){
- const res=await fetch(url,{credentials:'same-origin',cache:'no-store',
-  headers:{Accept:'application/json'}})
- if(!res.ok)throw new Error(error(res.status))
- return schema.parse(await res.json())
-}
-async function write<T>(url:string,body:unknown,schema:z.ZodType<T>){
- const res=await fetch(url,{method:'POST',credentials:'same-origin',cache:'no-store',
-  headers:{...(await csrfHeader()),'Content-Type':'application/json',
-   Accept:'application/json'},body:JSON.stringify(body)})
- if(!res.ok)throw new Error(error(res.status))
- return schema.parse(await res.json())
-}
-export const getPeriodProfitJobs=(mp:string)=>
- read(root(mp),z.array(job).max(20))
+
+export const getPeriodProfitJobs=async(mp:string)=>
+ z.array(job).max(20).parse((await listProfitReports(mp)).data)
 export const getPeriodProfitReport=(mp:string,id:string,offset=0)=>{
- if(offset<0||offset>5000||offset%100!==0)
-  throw new Error('无效报告分页')
- return read(root(mp)+'/'+encodeURIComponent(id)+'?offset='+offset,periodProfitReport)
+ if(offset<0||offset>5000||offset%100!==0)throw new Error('无效报告分页')
+ return getProfitReport(mp,id,{offset}).then(result=>periodProfitReport.parse(result.data))
 }
-export const getPeriodProfitAudit=(mp:string,id:string)=>
- read(root(mp)+'/'+encodeURIComponent(id)+'/audit',
-  z.array(z.object({action:z.string(),processedOrders:z.number().int().nonnegative(),
-   failureCode:z.string().nullable(),occurredAt:z.string()})).max(100))
-export const createPeriodProfitReport=(mp:string,requestKey:string,after:string,before:string)=>
- write(root(mp),{requestKey,after,before},job)
-export const progressPeriodProfitReport=(mp:string,id:string)=>
- write(root(mp)+'/'+encodeURIComponent(id)+'/step',{},job)
-export const resumePeriodProfitReport=(mp:string,id:string)=>
- write(root(mp)+'/'+encodeURIComponent(id)+'/resume',{},job)
+export const getPeriodProfitAudit=async(mp:string,id:string)=>
+ z.array(z.object({action:z.string(),processedOrders:z.number().int().nonnegative(),
+   failureCode:z.string().nullable(),occurredAt:z.string()})).max(100)
+  .parse((await getProfitReportAudit(mp,id)).data)
+export const createPeriodProfitReport=async(mp:string,requestKey:string,after:string,before:string)=>
+ job.parse((await createProfitReport(mp,{requestKey,after,before})).data)
+export const progressPeriodProfitReport=async(mp:string,id:string)=>
+ job.parse((await advanceProfitReport(mp,id)).data)
+export const resumePeriodProfitReport=async(mp:string,id:string)=>
+ job.parse((await resumeProfitReport(mp,id)).data)
 export const exportPeriodProfitUrl=(mp:string,id:string)=>
- root(mp)+'/'+encodeURIComponent(id)+'/export.csv'
+ getExportProfitReportCsvUrl(mp,id)
