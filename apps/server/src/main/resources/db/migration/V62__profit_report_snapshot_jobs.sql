@@ -3,6 +3,7 @@
 -- own commit batch. NOT an atomic historical snapshot of all external Finances.
 -- No bank verification, Ads deduction, GL posting or Amazon write.
 CREATE TABLE finance_profit_report_job (
+ request_key UUID NOT NULL,
  id UUID PRIMARY KEY,
  tenant_id UUID NOT NULL,
  seller_marketplace_id UUID NOT NULL,
@@ -24,6 +25,7 @@ CREATE TABLE finance_profit_report_job (
  completed_at TIMESTAMPTZ,
  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
  UNIQUE(tenant_id,id),
+ UNIQUE(tenant_id,seller_marketplace_id,request_key),
  FOREIGN KEY(tenant_id,seller_marketplace_id)
    REFERENCES seller_marketplace(tenant_id,id),
  FOREIGN KEY(tenant_id,created_by) REFERENCES membership(tenant_id,user_id),
@@ -51,7 +53,7 @@ CREATE TABLE finance_profit_report_order (
  signed_fba_fees NUMERIC(20,6),
  provisional_cogs NUMERIC(20,6),
  estimated_contribution NUMERIC(20,6),
- source_fingerprint CHAR(64) CHECK(source_fingerprint ~ '^[0-9a-f]{64}$'),
+ extract_sha256 CHAR(64) CHECK(extract_sha256 ~ '^[0-9a-f]{64}$'),
  captured_at TIMESTAMPTZ,
  PRIMARY KEY(tenant_id,job_id,order_id),
  UNIQUE(tenant_id,job_id,cohort_position),
@@ -59,10 +61,10 @@ CREATE TABLE finance_profit_report_order (
  FOREIGN KEY(tenant_id,order_id) REFERENCES sales_order(tenant_id,id),
  CHECK (
     (state='PENDING' AND readiness IS NULL AND captured_at IS NULL
-       AND source_fingerprint IS NULL)
+       AND extract_sha256 IS NULL)
     OR
     (state<>'PENDING' AND readiness IS NOT NULL AND captured_at IS NOT NULL
-       AND source_fingerprint IS NOT NULL)
+       AND extract_sha256 IS NOT NULL)
  ),
  CHECK (
     (state='ELIGIBLE' AND currency_code IS NOT NULL
@@ -98,3 +100,17 @@ CREATE TABLE finance_profit_report_sku (
 );
 CREATE INDEX finance_profit_report_sku_aggregate_v62
  ON finance_profit_report_sku(tenant_id,job_id,internal_sku);
+
+CREATE TABLE finance_profit_report_audit (
+ id UUID PRIMARY KEY,
+ tenant_id UUID NOT NULL,
+ job_id UUID NOT NULL,
+ action VARCHAR(24) NOT NULL
+   CHECK(action IN ('CREATED','BATCH_COMMITTED','RETRY_SCHEDULED','PAUSED','RESUMED','SUCCEEDED')),
+ processed_orders INTEGER NOT NULL CHECK(processed_orders BETWEEN 0 AND 5000),
+ failure_code VARCHAR(48),
+ occurred_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+ FOREIGN KEY(tenant_id,job_id) REFERENCES finance_profit_report_job(tenant_id,id)
+);
+CREATE INDEX finance_profit_report_audit_recent_v62
+ ON finance_profit_report_audit(tenant_id,job_id,occurred_at DESC,id);
