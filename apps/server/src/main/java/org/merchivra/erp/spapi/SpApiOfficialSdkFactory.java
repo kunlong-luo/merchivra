@@ -63,6 +63,8 @@ public final class SpApiOfficialSdkFactory {
             case SEARCH_LISTINGS -> "software.amazon.spapi.api.listings.items.v2021_08_01.ListingsApi";
             case GET_FBA_INVENTORY -> "software.amazon.spapi.api.fba.inventory.v1.FbaInventoryApi";
             case LIST_TRANSACTIONS -> "software.amazon.spapi.api.finances.v2024_06_19.DefaultApi";
+            case GET_REPORTS, GET_REPORT_DOCUMENT ->
+                "software.amazon.spapi.api.reports.v2021_06_30.ReportsApi";
             default -> throw new SecurityException("Operation not approved for typed SDK budget");
         };
         if (!expected.equals(apiClass.getName()))
