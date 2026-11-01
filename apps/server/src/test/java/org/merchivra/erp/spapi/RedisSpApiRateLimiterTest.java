@@ -25,9 +25,9 @@ class RedisSpApiRateLimiterTest {
             "CONFIDENTIAL-SELLER-123","ATVPDKIKX0DER",SpApiRegion.NA,
             "SECRET-REFRESH-TOKEN",Set.of("Inventory and Order Tracking"));
         limiter.requirePermit(seller,SellersApi.class);
-        var denied=assertThrows(IllegalStateException.class,
+        var denied=assertThrows(SpApiAdmissionException.class,
             ()->limiter.requirePermit(seller,SellersApi.class));
-        assertTrue(denied.getMessage().contains("cooldown"));
+        assertEquals(SpApiAdmissionException.Reason.COOLDOWN, denied.reason());
         var keys=org.mockito.ArgumentCaptor.forClass(String.class);
         verify(values,times(2)).setIfAbsent(keys.capture(),eq("1"),eq(Duration.ofMillis(2000)));
         assertEquals(keys.getAllValues().get(0),keys.getAllValues().get(1));
@@ -43,9 +43,9 @@ class RedisSpApiRateLimiterTest {
         var limiter=new RedisSpApiRateLimiter(redis,2000);
         var seller=new SpApiSellerScope(UUID.randomUUID(),UUID.randomUUID(),
             "SECRET-SELLER","ATVPDKIKX0DER",SpApiRegion.EU,"SECRET-TOKEN",Set.of());
-        var error=assertThrows(IllegalStateException.class,
+        var error=assertThrows(SpApiAdmissionException.class,
             ()->limiter.requirePermit(seller,SellersApi.class));
-        assertTrue(error.getMessage().contains("denied"));
+        assertEquals(SpApiAdmissionException.Reason.STORE_UNAVAILABLE, error.reason());
         assertFalse(error.getMessage().contains("SECRET"));
     }
 
