@@ -50,7 +50,7 @@ public class RedisSpApiRateLimiter implements SpApiRateLimiter {
             if (inserted == null)
                 throw new IllegalStateException("Redis admission result unknown; SP-API denied");
             if (!inserted)
-                throw new SpApiHttpException(apiFamily.getSimpleName(), 429, "");
+                throw new IllegalStateException("SP-API Redis cooldown active; outbound deferred");
         } catch (DataAccessException ex) {
             throw new IllegalStateException("Redis admission unavailable; SP-API denied");
         }
