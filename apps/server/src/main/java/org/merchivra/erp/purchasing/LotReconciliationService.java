@@ -30,7 +30,8 @@ public class LotReconciliationService {
                             String warehouseId,String productSkuId,String expectedBinId,
                             int expectedPositionQuantity,int observedQuantity,
                             long expectedOnHand,String reason,String status,
-                            String submittedBy,String reviewedBy,String operationId) {}
+                            String submittedBy,String reviewedBy,String operationId,
+                            String reviewReason) {}
     public record AckRequest(UUID requestKey,int receivedQuantity,String reference,String reason) {}
     public record Transfer(String actionId,String destinationWarehouseId,
                            String sourcePositionId,String destinationPositionId,
@@ -123,12 +124,13 @@ public class LotReconciliationService {
             uuid(rs,"expected_bin_id"),rs.getInt("expected_position_quantity"),
             rs.getInt("observed_quantity"),rs.getLong("expected_on_hand"),
             rs.getString("reason"),rs.getString("status"),uuid(rs,"submitted_by"),
-            uuid(rs,"reviewed_by"),uuid(rs,"operation_id"));
+            uuid(rs,"reviewed_by"),uuid(rs,"operation_id"),
+            rs.getString("review_reason"));
     }
     private static final String COUNT_SQL = """
         SELECT id,observation_action_id,position_id,warehouse_id,product_sku_id,
           expected_bin_id,expected_position_quantity,observed_quantity,
-          expected_on_hand,reason,status,submitted_by,reviewed_by,operation_id
+          expected_on_hand,reason,status,submitted_by,reviewed_by,operation_id,review_reason
         FROM erp_local_lot_count_review WHERE tenant_id=?
         """;
     private CountCase count(UUID tenant,UUID id) {
@@ -185,9 +187,10 @@ public class LotReconciliationService {
         lockTenant(tenant);
         CountCase c=count(tenant,id);
         if(!"PENDING_REVIEW".equals(c.status())) {
-            if(actor.toString().equals(c.reviewedBy()) &&
-               ("REJECT".equals(req.decision())?"REJECTED".equals(c.status()):
-                !"REJECTED".equals(c.status())))return c;
+            if(actor.toString().equals(c.reviewedBy())
+               && Objects.equals(c.reviewReason(),detail)
+               && ("REJECT".equals(req.decision())?"REJECTED".equals(c.status()):
+                   !"REJECTED".equals(c.status())))return c;
             throw conflict("Count case already reviewed");
         }
         Observation obs=observation(tenant,UUID.fromString(c.observationActionId()));
@@ -238,7 +241,8 @@ public class LotReconciliationService {
             var posted=stock.post(tenant,actor,new WarehouseStockOperationService.Request(
                 UUID.randomUUID(),"COUNT",warehouse,null,sku,
                 Math.toIntExact(target),before,
-                "V50 approved lot count shortage "+id+"; "+detail));
+                ("V50 count "+id+"; "+detail).substring(0,
+                    Math.min(300,("V50 count "+id+"; "+detail).length()))));
             operation=UUID.fromString(posted.id());
             state="APPLIED";
         }
