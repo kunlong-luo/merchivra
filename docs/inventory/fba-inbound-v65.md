@@ -1,6 +1,6 @@
 # V65: FBA local inbound shipments, transit and variance reconciliation
 
-Status: initial backend implementation on feature branch; real Amazon connection OFF.
+Status: local backend and generated Orval client committed on feature branch; UI and full integration tests in progress; real Amazon connection OFF.
 
 ## Scope and meaning
 
@@ -32,7 +32,7 @@ Prefix: /api/v1/fba/marketplaces/{marketplaceId}/shipments
 
 ## Verified OpenAPI + Orval path
 
-Only export from the actual Spring MVC server, not from docs/api/openapi.json (DESIGN ONLY). A loopback-access-only endpoint is available when MERCHIVRA_CONTRACT_EXPORT_ENABLED=true. CI boots Java 25 + PG18 and verifies exactly nine operations against the running server. The normalized contract is uploaded as the v65-fba-live-openapi artifact.
+Only export from the actual Spring MVC server, not from docs/api/openapi.json (DESIGN ONLY). A loopback-access-only endpoint is available when MERCHIVRA_CONTRACT_EXPORT_ENABLED=true. CI boots Java 25 + PG18 and verifies exactly nine operations against the running server. The normalized live contract is committed, compared byte-for-byte in PG18 CI, and uploaded as the v65-fba-live-openapi artifact.
 
 To complete the frontend migration:
 1. Start the development server with PG18 and explicit contract export enabled, keeping Amazon OAuth/Sp-API disabled.
@@ -45,4 +45,4 @@ Outstanding before V65 is complete: generated Orval client + React UI, real PG i
 
 ## Runtime generation smoke
 
-The CI PG18 job now installs the locked Node 24 client toolchain, runs Orval 8 against ONLY the normalized live FBA contract, and preserves the schema and generated TypeScript model/hook files as the PR artifact. This runs with Amazon OAuth/Sp-API switched OFF; the generated files are not yet committed or imported by the production React panels.
+The CI PG18 job now installs the locked Node 24 client toolchain, runs Orval 8 against ONLY the normalized live FBA contract, and preserves the schema and generated TypeScript model/hook files as the PR artifact. This runs with Amazon OAuth/Sp-API switched OFF; the generated files are committed and checked for drift, but are not yet imported by the React UI.
