@@ -173,8 +173,9 @@ public class ReceiptLotLocationService {
     @Transactional
     public List<Piece> split(UUID tenant,UUID actor,UUID receipt,Split body){
         if(receipt==null || body==null || body.requestKey()==null
-            || body.pieceId()==null || body.quantity()<1 || body.quantity()>1_000_000)
-            throw bad("Invalid lot split request");
+            || body.pieceId()==null || body.destinationBinId()==null
+            || body.quantity()<1 || body.quantity()>1_000_000)
+            throw bad("Split requires explicit target QC-hold location and request key");
         String label=pieceCode(body.pieceCode());
         String explanation=reason(body.reason());
         tenantLock(tenant);
