@@ -93,3 +93,18 @@ It captures 360/390/768/1280 screenshots and checks no page-level horizontal
 overflow, local table scrolling, table columns, and source/UNKNOWN semantics.
 It is opt-in, does not install Impeccable or Playwright, and is not part of the
 M0–M2 fast CI. It does not test real login, database, or Amazon connections.
+
+## Gradle 9.2.1 / Java 25 build standard (2026-11-01)
+
+The maintainer retired Maven. **Use the checked-in Gradle Wrapper**, not `mvn` or `apps/server/pom.xml`. Spring Boot remains 4.1.2. From the repository root:
+
+```bash
+cd apps/server
+./gradlew --version
+./gradlew test             # JUnit 5 + Jacoco XML/HTML reports
+./gradlew bootRun          # DB_HOST/DB_NAME/DB_USER/DB_PASSWORD must be set
+./gradlew bootJar          # build/libs/merchivra-server.jar
+./gradlew -PstrictCoverage check  # optional strict >=83% total LINE coverage target
+```
+
+On Windows use `gradlew.bat`. Wrapper Gradle distribution is checksum-pinned in `gradle/wrapper/gradle-wrapper.properties`. The CI runs the equivalent Gradle 9.2.1 tasks under Temurin 25, plus real PostgreSQL 18/Flyway and React checks. The strict coverage target is a **future quality gate**: enable it when the test suite has reached the required baseline, do not claim it has passed unless the specific command did. No Maven files are needed to build the backend.
