@@ -14,17 +14,26 @@ import software.amazon.spapi.api.sellers.v1.SellersApi;
 public final class SpApiOfficialSdkFactory {
     private final String clientId, clientSecret;
     private final boolean enabled, sandbox;
+    private final SpApiRateLimiter rateLimiter;
 
     public SpApiOfficialSdkFactory(String clientId, String clientSecret,
                                    boolean enabled, boolean sandbox) {
+        this(clientId,clientSecret,enabled,sandbox,SpApiRateLimiter.disabled());
+    }
+
+    public SpApiOfficialSdkFactory(String clientId, String clientSecret,
+        boolean enabled, boolean sandbox, SpApiRateLimiter rateLimiter) {
         this.clientId=clientId; this.clientSecret=clientSecret;
         this.enabled=enabled; this.sandbox=sandbox;
+        this.rateLimiter=java.util.Objects.requireNonNull(rateLimiter);
     }
 
 
     public <T> T create(Class<T> apiClass, SpApiSellerScope approvedScope) {
         if (approvedScope == null) throw new IllegalArgumentException("Approved Seller scope required");
-        return build(apiClass,approvedScope.region(),approvedScope.refreshToken());
+        T api=build(apiClass,approvedScope.region(),approvedScope.refreshToken());
+        rateLimiter.requirePermit(approvedScope,apiClass);
+        return api;
     }
 
     /**
@@ -33,7 +42,9 @@ public final class SpApiOfficialSdkFactory {
      */
     public SellersApi sellersForVerification(SpApiRegion region, String refreshToken) {
         if (sandbox) throw new IllegalStateException("Production Sellers verification cannot use sandbox");
-        return build(SellersApi.class,region,refreshToken);
+        SellersApi api=build(SellersApi.class,region,refreshToken);
+        rateLimiter.requireVerificationPermit(region);
+        return api;
     }
 
     private <T> T build(Class<T> apiClass, SpApiRegion region, String refreshToken) {
