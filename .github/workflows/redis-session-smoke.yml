@@ -12,6 +12,7 @@ on:
       - 'apps/server/src/main/java/org/merchivra/erp/spapi/SpApiOfficialSdkFactory.java'
       - deploy/compose.yaml
       - scripts/smoke_redis_session.py
+      - scripts/smoke_redis_quota.py
 
 permissions:
   contents: read
@@ -60,6 +61,9 @@ jobs:
             redis-cli INFO server | tr -d '\r' | grep -F 'redis_version:8.'
           docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache exec -T redis \
             redis-cli CONFIG GET maxmemory-policy | grep -F noeviction
+      - name: Exercise atomic SP-API Redis 8 quota and approved burst rules
+        shell: bash
+        run: python3 scripts/smoke_redis_quota.py
       - name: Authenticate with real Redis session and CSRF
         shell: bash
         run: |
