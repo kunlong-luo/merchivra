@@ -9,6 +9,8 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.spapi.SpApiHttpException;
+import org.merchivra.erp.spapi.SpApiRetryPolicy;
+import org.merchivra.erp.spapi.SpApiAdmissionException;
 import org.merchivra.erp.spapi.SpApiOfficialSdkFactory;
 import org.merchivra.erp.spapi.SpApiSellerGrantVault;
 import org.merchivra.erp.spapi.SpApiSellerScope;
@@ -66,7 +68,8 @@ public class CatalogSyncService {
         int generation,long leaseEpoch,String nextRetryAt,String lastFailureCode,
         String lastFinishedAt) {}
     private record Job(UUID id,String state,String cursor,Instant cursorIssued,
-        int generation,int page,long epoch,UUID owner,Instant leaseUntil,Instant retryAt) {}
+        int generation,int page,long epoch,UUID owner,Instant leaseUntil,Instant retryAt,
+        int retries) {}
     private record Claim(UUID tenant,UUID marketplace,Stream stream,Job job,
                          UUID owner,long epoch,SpApiSellerScope scope) {}
     private static OffsetDateTime dbTime(Instant instant){
@@ -116,7 +119,7 @@ public class CatalogSyncService {
     private Job job(UUID tenant,UUID mp,Stream stream,boolean lock) {
         List<Job> rows=jdbc.query("""
             SELECT id,state,next_token,token_issued_at,generation,page_index,lease_epoch,
-              lease_owner,lease_expires_at,retry_at
+              lease_owner,lease_expires_at,retry_at,retry_count
             FROM spapi_catalog_sync_job
             WHERE tenant_id=? AND seller_marketplace_id=? AND stream=?
             """+(lock?" FOR UPDATE":""),
@@ -124,7 +127,7 @@ public class CatalogSyncService {
                 rs.getString("next_token"),instant(rs,"token_issued_at"),
                 rs.getInt("generation"),rs.getInt("page_index"),rs.getLong("lease_epoch"),
                 rs.getObject("lease_owner",UUID.class),instant(rs,"lease_expires_at"),
-                instant(rs,"retry_at")),tenant,mp,stream.name());
+                instant(rs,"retry_at"),rs.getInt("retry_count")),tenant,mp,stream.name());
         return rows.isEmpty()?null:rows.getFirst();
     }
     private Status view(UUID tenant,UUID marketplace,Stream stream,Job job) {
@@ -164,7 +167,7 @@ public class CatalogSyncService {
                 SET state='READY',next_token=NULL,token_issued_at=NULL,
                     generation=generation+1,page_index=0,
                     lease_owner=NULL,lease_expires_at=NULL,retry_at=NULL,
-                    last_failure_code=NULL,updated_at=now()
+                    retry_count=0,last_failure_code=NULL,updated_at=now()
                 WHERE tenant_id=? AND id=?
                 """,tenant,existing.id());
             return view(tenant,marketplace,stream,job(tenant,marketplace,stream,false));
@@ -277,7 +280,7 @@ public class CatalogSyncService {
                     UPDATE spapi_catalog_sync_job SET
                       state=?,next_token=?,token_issued_at=?,page_index=page_index+1,
                       lease_owner=NULL,lease_expires_at=NULL,retry_at=NULL,
-                      last_failure_code=NULL,
+                      retry_count=0,last_failure_code=NULL,
                       last_finished_at=CASE WHEN ? THEN now() ELSE last_finished_at END,
                       updated_at=now()
                     WHERE tenant_id=? AND id=? AND lease_epoch=? AND lease_owner=?
@@ -295,13 +298,18 @@ public class CatalogSyncService {
     public List<JobKey> due(int max) {
         if(max<1||max>20)throw new IllegalArgumentException("batch must be 1..20");
         return jdbc.query("""
-            SELECT tenant_id,seller_marketplace_id,stream
-            FROM spapi_catalog_sync_job
-            WHERE (state IN ('READY','RETRY')
-                   OR (state='RUNNING' AND lease_expires_at<=now()))
-              AND (retry_at IS NULL OR retry_at<=now())
-              AND (lease_expires_at IS NULL OR lease_expires_at<=now())
-            ORDER BY updated_at LIMIT ?
+            WITH eligible AS (
+              SELECT tenant_id,seller_marketplace_id,stream,updated_at,
+                     ROW_NUMBER() OVER (PARTITION BY tenant_id ORDER BY updated_at,id)
+                       AS tenant_lane
+              FROM spapi_catalog_sync_job
+              WHERE (state IN ('READY','RETRY')
+                     OR (state='RUNNING' AND lease_expires_at<=now()))
+                AND (retry_at IS NULL OR retry_at<=now())
+                AND (lease_expires_at IS NULL OR lease_expires_at<=now())
+            )
+            SELECT tenant_id,seller_marketplace_id,stream FROM eligible
+            ORDER BY tenant_lane,updated_at,tenant_id LIMIT ?
             """,(rs,n)->new JobKey(rs.getObject(1,UUID.class),rs.getObject(2,UUID.class),
                 Stream.valueOf(rs.getString(3))),max);
     }
@@ -310,7 +318,7 @@ public class CatalogSyncService {
     private void fail(Claim claim,Exception error) {
         int http=error instanceof SpApiHttpException e?e.status():0;
         boolean retry=http==429 || http==500 || http==502 || http==503 || http==504
-            || error instanceof org.merchivra.erp.spapi.SpApiAdmissionException;
+            || error instanceof SpApiAdmissionException;
         String code=retry?"UPSTREAM_RETRY":http==400 && claim.job().cursor()!=null
             ?"CURSOR_RESTART_REQUIRED":http==401 || http==403 ||
               error instanceof SecurityException?"AUTHORIZATION_REJECTED":"SOURCE_ERROR";
@@ -318,13 +326,20 @@ public class CatalogSyncService {
             Job current=job(claim.tenant(),claim.marketplace(),claim.stream(),true);
             if(current==null || current.epoch()!=claim.epoch()
                 || !claim.owner().equals(current.owner()))return;
+            int attempt=current.retries()+1;
+            boolean mayRetry=retry && attempt<=8;
+            Duration minimum=error instanceof SpApiHttpException e ? e.retryAfter()
+                : error instanceof SpApiAdmissionException e ? e.retryAfter()
+                : Duration.ZERO;
+            Duration delay=SpApiRetryPolicy.nextDelay(attempt,minimum);
             jdbc.update("""
                 UPDATE spapi_catalog_sync_job
-                SET state=?,retry_at=?,last_failure_code=?,
+                SET state=?,retry_at=?,last_failure_code=?,retry_count=retry_count+1,
                     lease_owner=NULL,lease_expires_at=NULL,updated_at=now()
                 WHERE tenant_id=? AND id=? AND lease_epoch=? AND lease_owner=?
-                """,retry?"RETRY":"PAUSED",
-                dbTime(retry?clock.instant().plusSeconds(180):null),code,
+                """,mayRetry?"RETRY":"PAUSED",
+                dbTime(mayRetry?clock.instant().plus(delay):null),
+                mayRetry?code:retry?"RETRY_LIMIT_OR_"+code:code,
                 claim.tenant(),current.id(),claim.epoch(),claim.owner());
         });
     }
