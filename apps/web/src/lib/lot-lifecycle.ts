@@ -16,6 +16,12 @@ const alert=z.object({positionId:z.string().uuid(),lotCode:z.string(),
  binCode:z.string(),productSkuId:z.string().uuid(),
  remainingQuantity:z.number().int().positive(),expiryDate:z.string(),
  urgency:z.enum(['EXPIRED','NEAR_EXPIRY'])})
+const lineage=z.object({positionId:z.string().uuid(),
+ originPositionId:z.string().uuid().nullable(),receiptId:z.string().uuid(),
+ warehouseId:z.string().uuid(),binCode:z.string(),lotCode:z.string(),
+ placedQuantity:z.number().int().positive(),remainingQuantity:z.number().int().nonnegative(),
+ expiryDate:z.string().nullable(),generation:z.number().int().nonnegative()})
+export type LotLineage=z.infer<typeof lineage>
 export type LotLifecycleAction=z.infer<typeof action>
 export type LotExpiryAlert=z.infer<typeof alert>
 export type LotActionRequest={
@@ -42,3 +48,6 @@ export const fetchLotActionHistory=(positionId:string)=>api(
  root+'/positions/'+encodeURIComponent(positionId)+'/history',z.array(action))
 export const fetchLotExpiryAlerts=(warehouseId:string)=>api(
  root+'/warehouses/'+encodeURIComponent(warehouseId)+'/expiry-alerts',z.array(alert))
+
+export const fetchLotLineage=(positionId:string)=>api(
+ root+'/positions/'+encodeURIComponent(positionId)+'/lineage',z.array(lineage))
