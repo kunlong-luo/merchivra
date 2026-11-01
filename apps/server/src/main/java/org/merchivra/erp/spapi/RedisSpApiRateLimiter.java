@@ -5,6 +5,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.util.HexFormat;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import org.springframework.data.redis.core.script.DefaultRedisScript;
 import java.util.Objects;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -25,6 +28,16 @@ import org.springframework.stereotype.Component;
 @Component
 @ConditionalOnProperty(prefix = "merchivra.spapi.rate-limit", name = "enabled", havingValue = "true")
 public class RedisSpApiRateLimiter implements SpApiRateLimiter {
+    private static final Duration PLAN_TTL = Duration.ofHours(24);
+    private static final DefaultRedisScript<Long> FENCE_SCRIPT = new DefaultRedisScript<>("""
+        local current = redis.call('PTTL', KEYS[1])
+        local requested = tonumber(ARGV[1])
+        if current < requested then
+            redis.call('PSETEX', KEYS[1], requested, '1')
+        end
+        return 1
+        """, Long.class);
+
     private final StringRedisTemplate redis;
     private final Duration cooldown;
 
@@ -57,23 +70,89 @@ public class RedisSpApiRateLimiter implements SpApiRateLimiter {
     @Override
     public void requireLegacyPermit(SpApiRegion region, SpApiOperation operation,
         String approvedRefreshToken) {
+        String key = legacyKey(region, operation, approvedRefreshToken);
+        try {
+            // Amazon 429 cooling fence is shared across backend instances.
+            if (Boolean.TRUE.equals(redis.hasKey(key + ":429"))) {
+                throw new SpApiAdmissionException(SpApiAdmissionException.Reason.COOLDOWN,
+                    remaining(key + ":429", cooldown));
+            }
+            String learned = redis.opsForValue().get(key + ":interval");
+            Duration interval = cooldown;
+            if (learned != null) {
+                try {
+                    long millis = Long.parseLong(learned);
+                    if (millis >= 250 && millis <= 3_600_000)
+                        interval = Duration.ofMillis(millis);
+                } catch (NumberFormatException ignored) {
+                    // Missing or invalid advisory metadata -> conservative baseline.
+                }
+            }
+            reserve(key, interval);
+        } catch (DataAccessException ex) {
+            throw new SpApiAdmissionException(SpApiAdmissionException.Reason.STORE_UNAVAILABLE);
+        }
+    }
+
+    @Override
+    public void observeLegacyResponse(SpApiRegion region, SpApiOperation operation,
+        String approvedRefreshToken, int status, String observedRate, Duration retryAfter) {
+        String key = legacyKey(region, operation, approvedRefreshToken);
+        try {
+            // Header is best-effort and cannot account for all Amazon usage plans.
+            if (((status >= 200 && status < 300) || status == 400 || status == 404)
+                && observedRate != null) {
+                try {
+                    double rate = Double.parseDouble(observedRate.trim());
+                    if (Double.isFinite(rate) && rate > 0) {
+                        long interval = Math.max(250, Math.min(3_600_000,
+                            (long) Math.ceil(1000.0 / rate)));
+                        redis.opsForValue().set(key + ":interval",
+                            Long.toString(interval), PLAN_TTL);
+                    }
+                } catch (NumberFormatException ignored) {
+                    // Invalid, untrusted response metadata must not change budgets.
+                }
+            }
+            if (status == 429) {
+                Duration delay = SpApiRetryPolicy.nextDelay(1, retryAfter);
+                redis.execute(FENCE_SCRIPT, List.of(key + ":429"),
+                    Long.toString(delay.toMillis()));
+            }
+        } catch (DataAccessException ignored) {
+            // The request has already been sent: don't replay merely due to
+            // optional metadata storage failure. Next admission fails closed.
+        }
+    }
+
+    private static String legacyKey(SpApiRegion region, SpApiOperation operation,
+        String approvedRefreshToken) {
         Objects.requireNonNull(region, "Region required");
         Objects.requireNonNull(operation, "Operation required");
         if (approvedRefreshToken == null || approvedRefreshToken.isBlank())
             throw new SecurityException("Approved Seller grant required");
-        // Legacy HTTP calls lack a verified Seller ID, so use a hash of the
-        // server-only grant and operation. Never store or log raw tokens.
-        reserve("merchivra:spapi:quota:v1:legacy:" + region.name() + ":"
-            + operation.name() + ":" + sha256(approvedRefreshToken));
+        return "merchivra:spapi:quota:v1:legacy:" + region.name() + ":"
+            + operation.name() + ":" + sha256(approvedRefreshToken);
+    }
+
+    private Duration remaining(String key, Duration fallback) {
+        Long millis = redis.getExpire(key, TimeUnit.MILLISECONDS);
+        if (millis == null || millis < 1) return fallback;
+        return Duration.ofMillis(Math.min(3_600_000, millis));
     }
 
     private void reserve(String key) {
+        reserve(key, cooldown);
+    }
+
+    private void reserve(String key, Duration interval) {
         try {
-            Boolean inserted = redis.opsForValue().setIfAbsent(key, "1", cooldown);
+            Boolean inserted = redis.opsForValue().setIfAbsent(key, "1", interval);
             if (inserted == null)
                 throw new SpApiAdmissionException(SpApiAdmissionException.Reason.STORE_UNAVAILABLE);
             if (!inserted)
-                throw new SpApiAdmissionException(SpApiAdmissionException.Reason.COOLDOWN);
+                throw new SpApiAdmissionException(SpApiAdmissionException.Reason.COOLDOWN,
+                    remaining(key, interval));
         } catch (DataAccessException ex) {
             throw new SpApiAdmissionException(SpApiAdmissionException.Reason.STORE_UNAVAILABLE);
         }
