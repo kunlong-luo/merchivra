@@ -161,6 +161,12 @@ public class LotReconciliationService {
                 throw conflict("Count case idempotency key used differently");
             return prior;
         }
+        List<UUID> alreadySubmitted=jdbc.queryForList("""
+            SELECT id FROM erp_local_lot_count_review
+            WHERE tenant_id=? AND observation_action_id=?
+            """,UUID.class,tenant,req.observationActionId());
+        if(!alreadySubmitted.isEmpty())
+            throw conflict("Physical count observation already has a review case");
         Observation obs=observation(tenant,req.observationActionId());
         Snapshot src=position(tenant,obs.position());
         if(!src.warehouse().equals(obs.warehouse()) ||
