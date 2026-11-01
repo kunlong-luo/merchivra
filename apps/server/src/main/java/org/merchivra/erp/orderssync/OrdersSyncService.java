@@ -391,7 +391,8 @@ public class OrdersSyncService {
     private void fail(Claim claim,Exception error) {
         int http=error instanceof SpApiHttpException e ? e.status() : 0;
         // Exclude HTTP body, cursor, refresh/access token and raw exception message.
-        boolean transientFailure=http==429 || http==500 || http==503 || http==502 || http==504;
+        boolean transientFailure=http==429 || http==500 || http==503 || http==502 || http==504
+            || error instanceof org.merchivra.erp.spapi.SpApiAdmissionException;
         boolean expiredCursor=http==400 && claim.stored().token()!=null;
         String code=expiredCursor?"CURSOR_EXPIRED":transientFailure?"UPSTREAM_RETRY":
             http==401 || http==403 || error instanceof SecurityException
