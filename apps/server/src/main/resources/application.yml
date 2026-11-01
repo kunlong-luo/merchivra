@@ -31,6 +31,7 @@ springdoc:
         - /api/v1/operations/findings/**
         - /api/v1/operations/summary
         - /api/v1/operations/scan
+        - /api/v1/operations/marketplaces/**
 
 spring:
   application:

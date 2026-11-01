@@ -30,6 +30,33 @@ class OperationsAutomationServiceTest {
     }
 
     @Test
+    void v69InvalidRuleAndThresholdFailBeforeDatabase() {
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->service.saveRule(tenant,actor,finding,"FAKE",
+                new OperationsAutomationService.SaveRule(true,null,0))).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->service.saveRule(tenant,actor,finding,"LOW_STOCK",
+                new OperationsAutomationService.SaveRule(true,-1,0))).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->service.saveRule(tenant,actor,finding,"REFUND_REVIEW",
+                new OperationsAutomationService.SaveRule(false,3,0))).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->service.saveRule(tenant,actor,finding,"LOW_STOCK",
+                new OperationsAutomationService.SaveRule(true,3,-1))).getStatusCode());
+        verifyNoInteractions(jdbc);
+    }
+
+    @Test
+    void v69RuleWriterRequiresActiveTenantRowLock() {
+        when(jdbc.queryForList(contains("FOR UPDATE"),eq(UUID.class),eq(tenant)))
+            .thenReturn(List.of());
+        assertEquals(HttpStatus.FORBIDDEN,assertThrows(ResponseStatusException.class,
+            ()->service.saveRule(tenant,actor,finding,"REFUND_REVIEW",
+                new OperationsAutomationService.SaveRule(false,null,0))).getStatusCode());
+        verify(jdbc,never()).update(anyString(),any(Object[].class));
+    }
+
+    @Test
     void scansSerializeTenantAndWriteNoSellerDataOrAmazonRequests() {
         when(jdbc.queryForList(contains("FOR UPDATE"), eq(UUID.class), eq(tenant)))
             .thenReturn(List.of(tenant));
