@@ -1,6 +1,13 @@
 package org.merchivra.erp.spapi;
 
 import com.amazon.SellingPartnerAPIAA.LWAAuthorizationCredentials;
+import java.time.Instant;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.concurrent.Callable;
+import software.amazon.spapi.ApiException;
+import software.amazon.spapi.ApiResponse;
 import software.amazon.spapi.api.sellers.v1.SellersApi;
 
 /**
@@ -34,6 +41,40 @@ public final class SpApiOfficialSdkFactory {
         T api=build(apiClass,approvedScope.region(),approvedScope.refreshToken());
         rateLimiter.requirePermit(approvedScope,apiClass);
         return api;
+    }
+
+    /**
+     * An approved, read-only SDK operation acquires a shared per-operation
+     * Redis permit before the generated client performs any remote request.
+     * WithHttpInfo provides the best-effort usage plan on success and
+     * ApiException response headers on failure. Never logs or persists bodies.
+     */
+    public <T> T executeObservedRead(SpApiSellerScope seller, SpApiOperation operation,
+                                     Callable<ApiResponse<T>> call) throws Exception {
+        Objects.requireNonNull(seller, "Approved Seller scope required");
+        Objects.requireNonNull(operation, "Reviewed operation required");
+        Objects.requireNonNull(call, "Reviewed typed SDK call required");
+        if (!enabled) throw new IllegalStateException("Official Amazon SDK is disabled");
+        if (operation.mutatesRemoteState())
+            throw new SecurityException("Observed typed SDK read cannot perform remote writes");
+        rateLimiter.requireLegacyPermit(seller.region(), operation, seller.refreshToken());
+        try {
+            ApiResponse<T> response = Objects.requireNonNull(call.call(), "SDK response required");
+            observeOperation(seller, operation, response.getStatusCode(), response.getHeaders());
+            return response.getData();
+        } catch (ApiException remote) {
+            int status = remote instanceof ApiException.RateLimitExceeded
+                ? 429 : remote.getCode();
+            observeOperation(seller, operation, status, remote.getResponseHeaders());
+            throw remote;
+        }
+    }
+
+    private void observeOperation(SpApiSellerScope seller, SpApiOperation operation,
+        int status, Map<String,List<String>> headers) {
+        rateLimiter.observeLegacyResponse(seller.region(), operation, seller.refreshToken(),
+            status, SpApiRetryPolicy.headerValue(headers, "x-amzn-RateLimit-Limit"),
+            SpApiRetryPolicy.retryAfter(headers, Instant.now()));
     }
 
     /**
