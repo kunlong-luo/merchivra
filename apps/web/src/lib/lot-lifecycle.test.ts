@@ -47,7 +47,7 @@ describe('V49 released lot lifecycle API contracts',()=>{
  it('same-warehouse relocation only sends old lot snapshot and target STORAGE bin',async()=>{
   const calls=mocked(()=>action('MOVE'))
   const result=await actLotPosition(position,{
-   requestKey,actionType:'MOVE',destinationBinId:destinationBin,
+   requestKey,actionType:'MOVE',expectedBinId:sourceBin,destinationBinId:destinationBin,
    quantity:0,expectedRemaining:10,expectedOnHand:null,
    observedQuantity:null,reason})
   expect(result.actionType).toBe('MOVE')
@@ -55,14 +55,14 @@ describe('V49 released lot lifecycle API contracts',()=>{
   expect(post?.options?.headers).toMatchObject({
    'X-CSRF-TOKEN':'valid-lifecycle-csrf-token'})
   expect(JSON.parse(String(post?.options?.body))).toEqual({
-   requestKey,actionType:'MOVE',destinationBinId:destinationBin,
+   requestKey,actionType:'MOVE',expectedBinId:sourceBin,destinationBinId:destinationBin,
    quantity:0,expectedRemaining:10,expectedOnHand:null,
    observedQuantity:null,reason})
  })
  it('transfer requires expected signed warehouse balance and preserves action evidence',async()=>{
   const calls=mocked(()=>action('TRANSFER'))
   const saved=await actLotPosition(position,{
-   requestKey,actionType:'TRANSFER',destinationBinId:destinationBin,
+   requestKey,actionType:'TRANSFER',expectedBinId:sourceBin,destinationBinId:destinationBin,
    quantity:3,expectedRemaining:10,expectedOnHand:20,
    observedQuantity:null,reason})
   expect(saved.operationId).toBe(op)
@@ -75,7 +75,7 @@ describe('V49 released lot lifecycle API contracts',()=>{
  it('count observation explicitly has no warehouse deduction or stock approval',async()=>{
   const calls=mocked(()=>action('COUNT_OBSERVATION'))
   const saved=await actLotPosition(position,{
-   requestKey,actionType:'COUNT_OBSERVATION',destinationBinId:null,
+   requestKey,actionType:'COUNT_OBSERVATION',expectedBinId:sourceBin,destinationBinId:null,
    quantity:0,expectedRemaining:10,expectedOnHand:null,
    observedQuantity:8,reason})
   expect(saved.observedQuantity).toBe(8)
@@ -86,7 +86,7 @@ describe('V49 released lot lifecycle API contracts',()=>{
  it('expired goods use their own quarantine action rather than generic OUTBOUND',async()=>{
   const calls=mocked(()=>action('EXPIRED_QUARANTINE'))
   const saved=await actLotPosition(position,{
-   requestKey,actionType:'EXPIRED_QUARANTINE',destinationBinId:null,
+   requestKey,actionType:'EXPIRED_QUARANTINE',expectedBinId:sourceBin,destinationBinId:null,
    quantity:2,expectedRemaining:10,expectedOnHand:20,
    observedQuantity:null,reason})
   expect(saved.actionType).toBe('EXPIRED_QUARANTINE')
