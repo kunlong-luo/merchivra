@@ -27,7 +27,8 @@ export default function SyncTaskMonitorPanel({tenantId}:{tenantId:string}){
   <div className="ops-summary" aria-label="后台同步任务状态统计">{[
    {name:'任务总数',count:s?.total},{name:'待执行',count:s?.ready},
    {name:'运行中',count:s?.running},{name:'等待重试',count:s?.retrying},
-   {name:'已暂停',count:s?.paused},{name:'已完成',count:s?.succeeded}
+   {name:'已暂停',count:s?.paused},{name:'已完成',count:s?.succeeded},
+   {name:'到期可调度',count:s?.dueNow},{name:'过期运行租约',count:s?.expiredRunningLeases}
   ].map(item=><div key={item.name}><span>{item.name}</span><strong>{tasks.isPending?'—':item.count??0}</strong></div>)}</div>
   <div className="ops-toolbar">
    <label className="shop-filter"><span>同步类型</span><select aria-label="筛选同步类型" value={kind} onChange={e=>setKind(e.target.value as SyncTaskKind)}>
