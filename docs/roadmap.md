@@ -370,3 +370,13 @@
 - [x] React 分段质检、整笔核对、上架及 FIFO/FEFO 预览/人工拣货；新增后端与 Vitest 来源/幂等/审批/库位数量保护测试，以对应最新 CI 结果确认。
 - [ ] 仍需真实 PostgreSQL 18 Flyway/Compose、并发事务及 HTTP 权限/端到端环境专项验收；批次级部分放行、已放行库位间调拨、退货/盘点批次溯源、条码扫描和 Amazon API 仍待后续。
 - 文档：[PO-011 V48 分段质检及批次拣货](purchasing/graded-lot-putaway-fifo-fefo-v48.md)。
+
+## V49 · 已放行批次移位、跨仓调拨、盘点观察与过期隔离（2026-11-01）
+
+- [x] V49 迁移：批次位置 origin_position_id 来源父链、审计动作（MOVE/TRANSFER/EXPIRED_QUARANTINE/COUNT_OBSERVATION）、独立签名 LOT_QUARANTINE 负数移动及租户复合 FK/唯一幂等。V48、V46 历史收货与原始库存事件不重算。
+- [x] V48 已放行 STORAGE 位置同仓移位，明确旧库位、目标 STORAGE 和预期数量，写审计但不写总库存；剩余 0 不允许虚报实物移位。
+- [x] 跨仓有来源库存调拨：同一事务中扣来源位置、调用 V40 真实 TRANSFER_OUT/TRANSFER_IN，并创建目标仓来源子位置，保留实收 receipt、lot、SKU、原有人工有效期和父级位置。对已过期来源拒绝跨仓，已调拨子位置后续可按 V48 FIFO/FEFO 出库。
+- [x] 实物盘点观察只记录 expectedRemaining 与 observedQuantity、操作者、原因，不会未经独立复核直接生成正/负库存调整；过期预警只读，手工确认已过期品才同时扣减仓库签名可用与库位余量，写 LOT_QUARANTINE 源流水而非伪造销售出库。
+- [x] Owner Session + CSRF V49 API / React 工作台：近 30 天到期提醒、同仓移位、跨仓调拨、盘点差异、过期隔离、不可覆盖操作审计及递归溯源到最初真实收货位置；JUnit/Vitest 覆盖无库存副作用、调拨和单次隔离等规则，以 CI 结论为准。
+- [ ] PostgreSQL 18 真正 Flyway / Compose、跨租户 HTTP 权限、并发多事务与多仓实物扫描仍需专项验收。后续 V50 优先正式盘点差异审批与调整、跨仓收发双人确认及独立隔离库位。
+- 详见：[PO-012 V49 批次移位/调拨/盘点/隔离](purchasing/released-lot-lifecycle-v49.md)。
