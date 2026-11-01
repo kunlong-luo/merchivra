@@ -16,7 +16,10 @@ DECLARE
 BEGIN
   SELECT x.tenant_id,x.id,x.currency_code
     INTO t,m,market_currency
-    FROM seller_marketplace x ORDER BY created_at,id LIMIT 1;
+    FROM seller_marketplace x
+    WHERE (SELECT COUNT(*) FROM seller_marketplace WHERE tenant_id=x.tenant_id)>=2
+      AND (SELECT COUNT(*) FROM membership WHERE tenant_id=x.tenant_id)>=2
+    ORDER BY x.created_at DESC,x.id DESC LIMIT 1;
   IF m IS NULL THEN RAISE EXCEPTION 'V66 requires a local Marketplace from V65 smoke'; END IF;
   SELECT user_id INTO creator FROM membership WHERE tenant_id=t ORDER BY user_id LIMIT 1;
   SELECT user_id INTO reviewer FROM membership
