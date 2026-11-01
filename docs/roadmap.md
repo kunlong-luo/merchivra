@@ -417,3 +417,11 @@
 - [x] Docker 多阶段构建、GitHub CI Java 单测和真实 PG18 + Flyway bootRun、README/中文开发文档、Agent 工程规则切换到 Gradle。官方 Gradle Wrapper 含发行版 SHA-256 验证；JaCoCo XML/HTML 报告与可选 `-PstrictCoverage` 83% 行覆盖率验证。
 - [x] Maven `pom.xml`、`target/`、Maven CI 构建命令不再作为有效工程入口。Kafka、InfluxDB、Redis Repository、JPA、WebSocket 等尚无 Merchivra 代码使用，暂不引入以保持三服务部署不变。
 - [ ] 真实 Amazon Seller 授权及所有外部 API 仍待项目 Owner 在全部核心开发完成之后自行本地测试；Gradle 迁移成功不等于业务联调验收。
+
+## V54 · Redis 8 共享会话、SP-API 跨实例冷却与真实冒烟（2026-11-01）
+
+- [x] 后端 Gradle Spring Data Redis + Spring Session Data Redis：显式 `MERCHIVRA_REDIS_SESSIONS_ENABLED=true` 启用 Spring Security Session/CSRF 持久化，4 小时失效、独立 `merchivra:session:v1` 前缀；默认仍保留无 Redis 的单实例开发模式，Redis 故障不降级到隐式可信内存 Session。
+- [x] `RedisSpApiRateLimiter` 使用原子 `SET NX PX` + SHA-256 卖家摘要，SDK 每 Seller/Region/Family 共享冷却，Sellers 尚未获得 Seller ID 的验证入口另设按区域的保守冷却，旧 HTTP SP-API 入口以授予令牌摘要/operation 控制；Redis 不可用则拒绝真实出站，生产 SDK 配置要求显式开启限流。当前默认冷却 2000ms 只是初级配额保护，不是 Amazon 动态使用计划/429 反馈队列。
+- [x] `deploy/compose.spark-db.yaml` 可直接复用原项目 `spark-redis:6379`；内置可选 `redis:8.10.1-alpine` + noeviction 仅开发使用；不新建额外 spark-db 容器/数据库，不触碰 `iot_farm`。新增 Redis session HTTP 真容器 login→Java 重启→Redis 故障失权冒烟。
+- [ ] 正式使用现有 `spark-db` 的 `allkeys-lru` 仍有配额 Key 被淘汰导致提前放行的风险，生产前需隔离无淘汰 Redis/足够内存、ACL/TLS、监控与容量；真实 Amazon 用量限制/Burst/Retry-After 仍待 Owner 完成功能后本地授权联调。
+- 指南：[Redis 8 Session/限流与使用现有 spark-db 的安全边界](deployment/redis-session-spapi-v53.md)。
