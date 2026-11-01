@@ -104,6 +104,80 @@
         },
         "type": "object"
       },
+      "RuleAudit": {
+        "properties": {
+          "actorId": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string"
+          },
+          "newEnabled": {
+            "type": "boolean"
+          },
+          "newThreshold": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "newVersion": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "oldEnabled": {
+            "type": "boolean"
+          },
+          "oldThreshold": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "oldVersion": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "ruleCode": {
+            "type": "string"
+          }
+        },
+        "type": "object"
+      },
+      "RuleSetting": {
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "lowStockThreshold": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "ruleCode": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string"
+          },
+          "version": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
+      "SaveRule": {
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "expectedVersion": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "lowStockThreshold": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "ScanResult": {
         "properties": {
           "clearedCount": {
@@ -182,9 +256,9 @@
     }
   },
   "info": {
-    "description": "V10/V67 advisory only, MOCK/UNVERIFIED or source-labeled; no Amazon calls.",
-    "title": "Merchivra V67 verified owner operations queue",
-    "version": "67.1.0"
+    "description": "V10/V67/V69 advisory only, MOCK/UNVERIFIED or source-labeled; no Amazon calls.",
+    "title": "Merchivra V69 owner operations rule settings",
+    "version": "69.1.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -463,6 +537,139 @@
         "security": [
           {
             "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "operations-controller"
+        ]
+      }
+    },
+    "/api/v1/operations/marketplaces/{marketplaceId}/rules": {
+      "get": {
+        "operationId": "listOperationRules",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "marketplaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RuleSetting"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "operations-controller"
+        ]
+      }
+    },
+    "/api/v1/operations/marketplaces/{marketplaceId}/rules/{ruleCode}": {
+      "post": {
+        "operationId": "saveOperationRule",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "marketplaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "ruleCode",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveRule"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleSetting"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
+            "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "operations-controller"
+        ]
+      }
+    },
+    "/api/v1/operations/marketplaces/{marketplaceId}/rules/audit": {
+      "get": {
+        "operationId": "listOperationRuleAudit",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "marketplaceId",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RuleAudit"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
             "sessionCookie": []
           }
         ],
