@@ -18,7 +18,6 @@ import java.util.Set;
 import org.merchivra.erp.spapi.SpApiHttpException;
 import org.merchivra.erp.spapi.SpApiOperation;
 import org.merchivra.erp.spapi.SpApiRetryPolicy;
-import org.merchivra.erp.spapi.SpApiOfficialModules;
 import org.merchivra.erp.spapi.SpApiOfficialSdkFactory;
 import org.merchivra.erp.spapi.SpApiSellerScope;
 import software.amazon.spapi.ApiException;
@@ -52,10 +51,10 @@ public final class TypedFinancesSdkReader {
 
     public TypedFinancesSdkReader(SpApiOfficialSdkFactory factory) {
         Objects.requireNonNull(factory);
-        var api=new SpApiOfficialModules(factory);
         this.call=(scope,after,before,cursor)->factory.executeObservedRead(scope,
             SpApiOperation.LIST_TRANSACTIONS,
-            () -> api.finances(scope).listTransactionsWithHttpInfo(
+            software.amazon.spapi.api.finances.v2024_06_19.DefaultApi.class,
+            api -> api.listTransactionsWithHttpInfo(
                 after,before,scope.marketplaceId(),null,null,null,cursor));
     }
     TypedFinancesSdkReader(ReadCall call) { this.call=Objects.requireNonNull(call); }
