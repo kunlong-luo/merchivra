@@ -143,6 +143,13 @@ jobs:
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='63' AND success")" = "1"
           echo "PostgreSQL 18 / Flyway / actual finance OpenAPI snapshot verified against a real server"
           kill "$app_pid" 2>/dev/null || true
+      - name: Preserve verified V65 OpenAPI contract for Orval review
+        uses: actions/upload-artifact@v4
+        with:
+          name: v65-fba-live-openapi
+          path: /tmp/merchivra-normalized-fba-openapi.json
+          if-no-files-found: error
+          retention-days: 7
 
   compose-deployment-config:
     name: Docker Compose / three-service and spark-db modes

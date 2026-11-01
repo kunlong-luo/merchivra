@@ -1,0 +1,42 @@
+# V65: FBA local inbound shipments, transit and variance reconciliation
+
+Status: initial backend implementation on feature branch; real Amazon connection OFF.
+
+## Scope and meaning
+
+- Flyway V63 stores shipment plans, SKU lines, append-only reported receiving evidence, and immutable variance decisions.
+- Owner session supplies tenant and actor; every query scopes tenant and marketplace. All writes require CSRF. The HTTP handlers set no-store.
+- States: DRAFT → IN_TRANSIT → RECEIVING (optional) → REVIEWING → RECONCILED. Review freezes new receipt writes.
+- Only local MOCK or MANUAL_UNVERIFIED evidence is allowed. No official Amazon FBA shipment creation, Fulfillment Inbound API calls, seller authorization or stock mutation is involved.
+- Reported received is a SUM of local receipt evidence. Estimated in-transit = max(planned - reported, 0), but only after dispatch. A positive delta means reported overage; a negative delta means reported shortage.
+- Both amazonVerified and fbaStockCredited remain false. Do not combine those values with FBA fulfillable, reserved, Amazon inbound observation, finance events or local warehouse stock.
+- Nonzero deltas require an independent Owner resolution with an explanation; receipt evidence authors cannot accept their own discrepancies. Exact matches can be closed without a variance decision.
+- Client requestKey is required for shipment creation and each receipt; repeated identical requests return the same shipment/receipt-derived view, changed payloads are rejected.
+
+## Spring MVC operation IDs
+
+Prefix: /api/v1/fba/marketplaces/{marketplaceId}/shipments
+
+| Method | Suffix | operationId |
+| --- | --- | --- |
+| GET | / | listFbaInboundShipments |
+| GET | /{shipmentId} | getFbaInboundShipment |
+| POST | / | createFbaInboundShipment |
+| POST | /{shipmentId}/dispatch | dispatchFbaInboundShipment |
+| POST | /{shipmentId}/receipts | recordFbaInboundReceipt |
+| POST | /{shipmentId}/review | startFbaInboundReview |
+| POST | /{shipmentId}/variances | resolveFbaInboundVariance |
+| POST | /{shipmentId}/reconcile | finalizeFbaInboundReconciliation |
+
+## Verified OpenAPI + Orval path
+
+Only export from the actual Spring MVC server, not from docs/api/openapi.json (DESIGN ONLY). A loopback-access-only endpoint is available when MERCHIVRA_CONTRACT_EXPORT_ENABLED=true. CI boots Java 25 + PG18 and verifies exactly eight operations against the running server. The normalized contract is uploaded as the v65-fba-live-openapi artifact.
+
+To complete the frontend migration:
+1. Start the development server with PG18 and explicit contract export enabled, keeping Amazon OAuth/Sp-API disabled.
+2. Fetch http://127.0.0.1:8080/v3/api-docs/fba-inbound to a temporary JSON file.
+3. Run node scripts/normalize-fba-openapi.mjs input.json apps/web/openapi/fba-inbound.json.
+4. Add the fba-inbound entry to apps/web/orval.config.ts, reusing the existing merchivraFetch transport; run npm ci and npm run api:generate from apps/web. Commit both verified schema and generated client. Do not hand-edit generated hooks.
+5. Implement React shipment and variance panels on top of the generated Orval client, then run api:check, typecheck, Vitest and Vite build.
+
+Outstanding before V65 is complete: generated Orval client + React UI, real PG integration tests for concurrent idempotent receipts and two-Owner reviews, mock end-to-end workflow tests. No real Seller authorization until all core modules are finished and Owner tests locally.
