@@ -400,3 +400,13 @@
 - [x] React V51 两个工作台、Owner/CSRF API、JUnit/Vitest 校验来源与审批者、防重复调账、非负库存和不误报文件核验；最终以前后端 CI 结论为准。
 - [ ] PostgreSQL18 Flyway/Compose 与多用户多租户 HTTP 并发真实性验收仍待专项完成；实际证据附件上传/摘要比对、外部物流/供应商签收核验和与 Amazon SP-API 的真实授权联调后续。
 - 文档：[PO-014 V51 有来源异常纠正与证明元数据](purchasing/lot-exception-source-corrections-proof-v51.md)。
+
+## V52 · 真正的私有凭据原件、SHA-256 摘要检验、原供应商退货来源与 PG18 Flyway（2026-11-01）
+
+- [x] `V52__proof_binary_and_supplier_trace.sql`：按 tenant 和 V51 proof ID 唯一存储最多 2 MiB 的 PDF/PNG/JPEG 原始 BYTEA，带服务端实际 SHA-256、上传者/时间；供应商退货 trace 唯一引用已经 V50 审批且人工报告执行的过期品处置，来源按原始 V20 receipt/order/supplier 推导。
+- [x] Owner Session + CSRF multipart 真正上传、实际字节 magic/大小校验、SHA 与 V51 人工事先填写 digest 比对、上传后不可覆盖；GET 私有元数据，下载时重新校验 SHA 并强制 attachment/no-store/nosniff，不允许匿名查看文档。
+- [x] 对已独立审批并人工报告 SUPPLIER_RETURN 的 V50 过期品处置，保存人工运单及根据原真实采购订单解析的 supplier；另一位 Owner 人工记录供应商实收或 RECEIPT_MISMATCH，不能复用 V44 质检拒收品退货来源，不能重复扣库存或声称外部系统已经签收。
+- [x] 新增 React 19 原件上传/下载、哈希展示、原供应商来源和退货收货对账页面，Java 单测和 Vitest 覆盖文件/hash、审批后不可修改、供应商来源真实性、不同 Owner、回执差异与无重复库存流水。
+- [x] GitHub CI 增加真实 PostgreSQL 18 服务和 Spring Boot Flyway 全迁移作业，检查 V46–V52 及最新表；是否成功须以对应最终 SHA 的 CI 结果为准，不能将模拟单测等同于 PG18 已验收。
+- [ ] 未实现病毒扫描/对象存储加密、外部签名、物流接口和自动财务冲销；真实 Amazon OAuth/SP-API 仍由 Owner 在全部核心开发后本地授权。
+- 文档：[PO-015 V52 原件与供应商对账](purchasing/lot-proof-files-supplier-trace-v52.md)。
