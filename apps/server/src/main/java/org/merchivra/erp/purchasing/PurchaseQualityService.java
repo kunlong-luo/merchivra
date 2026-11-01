@@ -174,13 +174,24 @@ public class PurchaseQualityService {
             FOR UPDATE
             """,UUID.class,tenant,warehouse);
         if(locked.size()!=1)throw missing();
-        long available=jdbc.queryForObject("""
-            SELECT COALESCE(SUM(quantity),0)::bigint
-            FROM erp_local_stock_movement
-            WHERE tenant_id=? AND warehouse_id=? AND product_sku_id=?
-            """,Long.class,tenant,warehouse,UUID.fromString(source.productSkuId()));
-        if(available<request.rejectedQuantity())
-            throw conflict("Recorded local stock is insufficient to quarantine rejected units");
+        // V46 pending lots have never entered available local stock.
+        // Legacy receipts lack a batch row and retain V44 retrospective negative QC.
+        List<String> batchStates=jdbc.query("""
+            SELECT status FROM erp_receipt_quality_batch
+            WHERE tenant_id=? AND receipt_id=? FOR UPDATE
+            """,(rs,i)->rs.getString(1),tenant,receiptId);
+        boolean pending=!batchStates.isEmpty();
+        if(pending && !"PENDING_QC".equals(batchStates.getFirst()))
+            throw conflict("Receipt batch already inspected or released");
+        if(!pending) {
+            long available=jdbc.queryForObject("""
+                SELECT COALESCE(SUM(quantity),0)::bigint
+                FROM erp_local_stock_movement
+                WHERE tenant_id=? AND warehouse_id=? AND product_sku_id=?
+                """,Long.class,tenant,warehouse,UUID.fromString(source.productSkuId()));
+            if(available<request.rejectedQuantity())
+                throw conflict("Recorded local stock is insufficient to quarantine rejected units");
+        }
         UUID id=UUID.randomUUID();
         jdbc.update("""
             INSERT INTO erp_purchase_receipt_qc
@@ -191,13 +202,26 @@ public class PurchaseQualityService {
             """,id,tenant,request.requestKey(),receiptId,warehouse,
             UUID.fromString(source.productSkuId()),source.receivedQuantity(),
             request.acceptedQuantity(),request.rejectedQuantity(),reason,actor);
-        if(request.rejectedQuantity()>0)jdbc.update("""
+        if(!pending && request.rejectedQuantity()>0)jdbc.update("""
             INSERT INTO erp_local_stock_movement
               (id,tenant_id,warehouse_id,product_sku_id,inspection_id,
                movement_type,quantity,actor_user_id)
             VALUES (?,?,?,?,?,'QC_QUARANTINE',?,?)
             """,UUID.randomUUID(),tenant,warehouse,
             UUID.fromString(source.productSkuId()),id,-request.rejectedQuantity(),actor);
+        if(pending) {
+            jdbc.update("""
+                UPDATE erp_receipt_quality_batch
+                SET status='INSPECTED',inspection_id=?,updated_at=now()
+                WHERE tenant_id=? AND receipt_id=? AND status='PENDING_QC'
+                """,id,tenant,receiptId);
+            jdbc.update("""
+                INSERT INTO erp_receipt_quality_batch_event
+                  (id,tenant_id,receipt_id,actor_user_id,event_type,quantity,note)
+                VALUES (?,?,?,?,'QC_RECORDED',?,?)
+                """,UUID.randomUUID(),tenant,receiptId,actor,
+                request.acceptedQuantity(),"Inspected only; accepted units await second Owner");
+        }
         event(tenant,actor,id,null,"INSPECTED",request.rejectedQuantity(),reason);
         return inspection(tenant,id);
     }
