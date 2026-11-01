@@ -47,14 +47,32 @@ class WarehouseInventoryServiceTest {
         verify(jdbc,never()).query(contains("erp_local_stock_movement"),
             any(RowMapper.class),any(UUID.class),any(UUID.class));
     }
-    @Test void newReceiptCreatesHeldLotAndAuditWithoutCreditingStock() {
+    @Test void newReceiptCreatesHeldLotAndVirtualQcPieceWithoutCreditingStock() {
+        UUID bin=UUID.fromString("88888888-8888-4888-8888-888888888888");
+        when(jdbc.queryForList(contains("FROM erp_local_stock_bin"),
+            eq(UUID.class),eq(tenant),eq(location))).thenReturn(List.of(bin));
         warehouse.recordReceipt(tenant,actor,location,sku,receipt,5);
         verify(jdbc).update(contains("INSERT INTO erp_receipt_quality_batch"),
             eq(tenant),eq(receipt),eq(location),eq(sku),eq(5),
             startsWith("LOT-"),eq(actor));
         verify(jdbc).update(contains("INSERT INTO erp_receipt_quality_batch_event"),
             any(UUID.class),eq(tenant),eq(receipt),eq(actor),startsWith("LOT-"),eq(5));
+        verify(jdbc).update(contains("INSERT INTO erp_receipt_lot_piece"),
+            any(UUID.class),eq(tenant),eq(receipt),eq(location),eq(sku),
+            eq(bin),eq(5),eq(actor));
+        verify(jdbc).update(contains("INSERT INTO erp_receipt_lot_piece_event"),
+            any(UUID.class),eq(tenant),eq(receipt),any(UUID.class),eq(actor),
+            eq(5),eq(bin));
         verify(jdbc,never()).update(contains("erp_local_stock_movement"),
+            any(Object[].class));
+    }
+    @Test void missingDefaultQcBinRollsBackNewReceiptInsteadOfLosingItsLocation() {
+        when(jdbc.queryForList(contains("FROM erp_local_stock_bin"),
+            eq(UUID.class),eq(tenant),eq(location))).thenReturn(List.of());
+        assertEquals(HttpStatus.CONFLICT,assertThrows(ResponseStatusException.class,
+            ()->warehouse.recordReceipt(tenant,actor,location,sku,receipt,5))
+            .getStatusCode());
+        verify(jdbc,never()).update(contains("erp_receipt_lot_piece"),
             any(Object[].class));
     }
     @Test void recordedPhysicalReceiptsRemainSeparateFromReleasedStockQuery() {
