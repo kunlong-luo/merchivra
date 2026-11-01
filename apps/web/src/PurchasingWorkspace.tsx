@@ -12,6 +12,7 @@ import LotLifecyclePanel from './LotLifecyclePanel'
 import LotReconciliationPanel from './LotReconciliationPanel'
 import LotExceptionPanel from './LotExceptionPanel'
 import LotDispositionProofPanel from './LotDispositionProofPanel'
+import LotEvidenceFilesPanel from './LotEvidenceFilesPanel'
 import SupplierDisputesPanel from './SupplierDisputesPanel'
 import {createSupplier,fetchSuppliers,createPurchaseOrder,fetchPurchaseOrders,
  fetchPurchaseOrder,purchaseAction,receivePurchase,fetchWarehouses,createWarehouse,
@@ -370,6 +371,8 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
   <SupplierDisputesPanel key={'disputes-'+(selectedId||'no-order')}
    tenantId={tenantId} orderId={selectedId} lines={selected.data?.lines??[]}
    currentUserId={currentUserId}/>
+  <LotEvidenceFilesPanel key={'files-'+(selectedId||'no-order')}
+   tenantId={tenantId} currentUserId={currentUserId} warehouses={warehouses.data??[]}/>
   <LotDispositionProofPanel key={'proofs-'+(selectedId||'no-order')}
    tenantId={tenantId} currentUserId={currentUserId} warehouses={warehouses.data??[]}/>
   <LotExceptionPanel key={'exceptions-'+(selectedId||'no-order')}
