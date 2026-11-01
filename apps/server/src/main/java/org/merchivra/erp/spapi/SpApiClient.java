@@ -27,19 +27,36 @@ public final class SpApiClient {
     private final SpApiTokenProvider provider;
     private final Function<SpApiRegion, URI> endpoints;
     private final boolean enabled, allowWrites;
+    private final SpApiRateLimiter rateLimiter;
 
     public SpApiClient(SpApiHttpTransport transport, SpApiTokenProvider provider,
                        Function<SpApiRegion, URI> endpoints, boolean enabled, boolean allowWrites) {
+        this(transport, provider, endpoints, enabled, allowWrites,
+            SpApiRateLimiter.disabled());
+    }
+
+    public SpApiClient(SpApiHttpTransport transport, SpApiTokenProvider provider,
+                       Function<SpApiRegion, URI> endpoints, boolean enabled,
+                       boolean allowWrites, SpApiRateLimiter rateLimiter) {
         this.transport=transport; this.provider=provider; this.endpoints=endpoints;
         this.enabled=enabled; this.allowWrites=allowWrites;
+        this.rateLimiter=java.util.Objects.requireNonNull(rateLimiter);
     }
 
     public static SpApiClient official(java.net.http.HttpClient http,
                                        SpApiTokenProvider tokens, boolean sandbox,
                                        boolean enabled, boolean allowWrites) {
         // Endpoints are fixed by enum, never provided by user input or an API request.
+        return official(http,tokens,sandbox,enabled,allowWrites,
+            SpApiRateLimiter.disabled());
+    }
+
+    public static SpApiClient official(java.net.http.HttpClient http,
+                                       SpApiTokenProvider tokens, boolean sandbox,
+                                       boolean enabled, boolean allowWrites,
+                                       SpApiRateLimiter limiter) {
         return new SpApiClient(r -> http.send(r, HttpResponse.BodyHandlers.ofString()),
-            tokens, region -> region.endpoint(sandbox), enabled, allowWrites);
+            tokens, region -> region.endpoint(sandbox), enabled, allowWrites, limiter);
     }
 
     public SpApiResponse execute(SpApiRequest req, String approvedSellerRefreshToken) throws Exception {
@@ -72,6 +89,9 @@ public final class SpApiClient {
             });
         }
         URI destination = URI.create(base.toString() + target);
+        // Never acquire LWA access credentials or make remote HTTP when shared
+        // Redis admission is unavailable or the operation is cooling down.
+        rateLimiter.requireLegacyPermit(req.region(),req.operation(),approvedSellerRefreshToken);
         String accessToken = provider.accessToken(approvedSellerRefreshToken);
         if (accessToken == null || accessToken.isBlank()) throw new IllegalStateException("LWA returned no access token");
         HttpRequest.Builder b = HttpRequest.newBuilder(destination)
