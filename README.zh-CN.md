@@ -21,7 +21,7 @@
 <details>
 <summary>当前主要技术选型</summary>
 
-- 后端：Java 25、Spring Boot 4.1.2、Spring Security 7、Maven、Flyway、官方 Amazon SP-API Java SDK（真实出站默认关闭）。
+- 后端：Java 25、Spring Boot 4.1.2、Spring Security 7、Gradle 9.2.1、Flyway、官方 Amazon SP-API Java SDK（真实出站默认关闭）。
 - 前端：React 19、TypeScript 6、Vite 8、Node.js 24、TanStack React Query、Zod、Vitest。**已经完全弃用 Vue。**
 - 数据：PostgreSQL 18，支持自建独立数据库；Docker Compose 可选择内置 PostgreSQL 或复用现有 PG18 服务。
 - 架构：模块化单体，业务数据有来源标记，关键仓储写入使用事务、证据、审计与操作人复核。
@@ -108,7 +108,7 @@ docker compose --env-file .env -f deploy/compose.spark-db.yaml ps
 
 ## 四、源码本地开发（React 热更新 + Spring Boot）
 
-前提：**Java 25、Maven 3.9+、Node.js 24.11+** 和运行中的 PostgreSQL 18。可复用上述 `spark-postgres`，它已经将 PG 端口映射到本机 `127.0.0.1:5432`。
+前提：**Java 25、Gradle 9.2.1（项目内 Gradle Wrapper）、Node.js 24.11+** 和运行中的 PostgreSQL 18。可复用上述 `spark-postgres`，它已经将 PG 端口映射到本机 `127.0.0.1:5432`。
 
 终端 1：
 
@@ -117,7 +117,7 @@ export DB_HOST=127.0.0.1 DB_PORT=5432 DB_NAME=merchivra DB_USER=merchivra
 export DB_PASSWORD='your-dedicated-merchivra-password'
 export MERCHIVRA_BOOTSTRAP_USERNAME=your_admin
 export MERCHIVRA_BOOTSTRAP_PASSWORD='your-unique-16-plus-character-password'
-mvn -f apps/server/pom.xml spring-boot:run
+(cd apps/server && ./gradlew bootRun)
 ```
 
 终端 2：
@@ -177,7 +177,7 @@ docker compose --env-file .env -f deploy/compose.spark-db.yaml down --remove-orp
 curl -f http://127.0.0.1:8080/api/v1/ping
 curl -f http://127.0.0.1:8080/actuator/health
 
-mvn -f apps/server/pom.xml test
+(cd apps/server && ./gradlew test)
 cd apps/web && npm ci && npm run typecheck && npm run test && npm run build
 ```
 
