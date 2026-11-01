@@ -1,6 +1,12 @@
 package org.merchivra.erp.operations;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
+import io.swagger.v3.oas.annotations.Operation;
 import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.security.TenantAccessService;
@@ -25,7 +31,10 @@ public class OperationsController {
         this.service = service;
     }
     public record ChangeState(String state) {}
+    public record Snooze(@Min(15) @Max(1440) int minutes,
+                         @NotBlank @Size(min=10,max=300) String note) {}
 
+    @Operation(operationId="listOperationFindings")
     @GetMapping("/findings")
     public List<OperationsAutomationService.Finding> findings(
         Authentication auth, HttpServletRequest request,
@@ -33,17 +42,20 @@ public class OperationsController {
         return service.findings(access.currentTenant(auth, request), filter);
     }
 
+    @Operation(operationId="getOperationsSummary")
     @GetMapping("/summary")
     public OperationsAutomationService.Summary summary(Authentication auth, HttpServletRequest request) {
         return service.summary(access.currentTenant(auth, request));
     }
 
+    @Operation(operationId="scanOperationsNow")
     @PostMapping("/scan")
     public OperationsAutomationService.ScanResult scan(Authentication auth, HttpServletRequest request) {
         UUID tenant = access.currentTenant(auth, request);
         return service.scan(tenant, access.authenticatedUser(auth), "MANUAL");
     }
 
+    @Operation(operationId="setOperationFindingState")
     @PostMapping("/findings/{findingId}/state")
     public OperationsAutomationService.FindingChange change(
         Authentication auth, HttpServletRequest request,
@@ -52,4 +64,44 @@ public class OperationsController {
         return service.changeState(tenant, access.authenticatedUser(auth), findingId,
             body == null ? null : body.state());
     }
+    @Operation(operationId="claimOperationFinding")
+    @PostMapping("/findings/{findingId}/claim")
+    public OperationsAutomationService.Attention claim(Authentication auth,
+        HttpServletRequest request,@PathVariable UUID findingId) {
+        return service.claim(access.currentTenant(auth,request),
+            access.authenticatedUser(auth),findingId);
+    }
+
+    @Operation(operationId="releaseOperationFinding")
+    @PostMapping("/findings/{findingId}/release")
+    public OperationsAutomationService.Attention release(Authentication auth,
+        HttpServletRequest request,@PathVariable UUID findingId) {
+        return service.release(access.currentTenant(auth,request),
+            access.authenticatedUser(auth),findingId);
+    }
+
+    @Operation(operationId="snoozeOperationFinding")
+    @PostMapping("/findings/{findingId}/snooze")
+    public OperationsAutomationService.Attention snooze(Authentication auth,
+        HttpServletRequest request,@PathVariable UUID findingId,
+        @Valid @RequestBody Snooze value) {
+        return service.snooze(access.currentTenant(auth,request),
+            access.authenticatedUser(auth),findingId,value.minutes(),value.note());
+    }
+
+    @Operation(operationId="unsnoozeOperationFinding")
+    @PostMapping("/findings/{findingId}/unsnooze")
+    public OperationsAutomationService.Attention unsnooze(Authentication auth,
+        HttpServletRequest request,@PathVariable UUID findingId) {
+        return service.unsnooze(access.currentTenant(auth,request),
+            access.authenticatedUser(auth),findingId);
+    }
+
+    @Operation(operationId="getOperationFindingAttentionAudit")
+    @GetMapping("/findings/{findingId}/attention-audit")
+    public List<OperationsAutomationService.AttentionAudit> attentionAudit(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID findingId) {
+        return service.attentionHistory(access.currentTenant(auth,request),findingId);
+    }
+
 }

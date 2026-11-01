@@ -25,6 +25,12 @@ springdoc:
     - group: ads-reports
       paths-to-match:
         - /api/v1/ads/marketplaces/**
+    - group: operations-v67
+      paths-to-match:
+        - /api/v1/operations/findings
+        - /api/v1/operations/findings/**
+        - /api/v1/operations/summary
+        - /api/v1/operations/scan
 
 spring:
   application:
