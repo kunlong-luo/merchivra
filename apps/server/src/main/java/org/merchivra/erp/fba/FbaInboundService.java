@@ -66,6 +66,10 @@ public class FbaInboundService {
             throw bad("Only MOCK or MANUAL_UNVERIFIED local evidence is supported");
         return value;
     }
+    static Integer estimatedInTransit(String state,int planned,int received){
+        return "IN_TRANSIT".equals(state)||"RECEIVING".equals(state)
+            ?Math.max(0,planned-received):null;
+    }
     private static String timestamp(ResultSet r,String name)throws SQLException{
         OffsetDateTime date=r.getObject(name,OffsetDateTime.class);
         return date==null?null:date.toInstant().toString();
@@ -153,7 +157,7 @@ public class FbaInboundService {
                 UUID reviewed=r.getObject("reviewed_by",UUID.class);
                 return new Line(r.getObject("id",UUID.class).toString(),
                     r.getString("seller_sku"),planned,received,
-                    "DRAFT".equals(h.state())?null:Math.max(0,planned-received),
+                    estimatedInTransit(h.state(),planned,received),
                     received-planned,r.getString("decision"),
                     reviewed==null?null:reviewed.toString());
             },tenant,shipment);
