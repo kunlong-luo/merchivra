@@ -77,7 +77,7 @@ public final class SpApiOfficialSdkFactory {
      * WithHttpInfo provides the best-effort usage plan on success and
      * ApiException response headers on failure. Never logs or persists bodies.
      */
-    public <T> T executeObservedRead(SpApiSellerScope seller, SpApiOperation operation,
+    <T> T executeObservedRead(SpApiSellerScope seller, SpApiOperation operation,
                                      Callable<ApiResponse<T>> call) throws Exception {
         Objects.requireNonNull(seller, "Approved Seller scope required");
         Objects.requireNonNull(operation, "Reviewed operation required");
