@@ -2,6 +2,7 @@ import {useState} from 'react'
 import {useQuery} from '@tanstack/react-query'
 import {compareSettlementReport} from './lib/settlement-comparison'
 import SettlementReportScanPanel from './SettlementReportScanPanel'
+import SettlementSourceReviewPanel from './SettlementSourceReviewPanel'
 import {listSettlementReports,listSettlementReportLines,reviewSettlementReport} from './lib/settlement-reports'
 
 export default function SettlementReportsPanel({tenantId,marketplaceId,connected}:{tenantId:string;marketplaceId:string;connected:boolean}){
@@ -68,6 +69,9 @@ export default function SettlementReportsPanel({tenantId,marketplaceId,connected
        } as Record<string,string>)[compare.data.state]??compare.data.state}</strong></p>
      <p className="setup-hint">仅比较来源，不自动关联交易、不产生利润或会计凭证，也不代表银行已到账。</p>
     </div>}
+   {compare.data&&<SettlementSourceReviewPanel key={selected}
+     tenantId={tenantId} marketplaceId={marketplaceId} reportId={selected}
+     sourceState={compare.data.state}/>}
    {lines.isPending?<p>读取来源明细…</p>:
     lines.isError?<p className="setup-error" role="alert">{String(lines.error)}</p>:
     <div className="table-scroll" role="region" tabIndex={0} aria-label="Amazon 报告原始分类明细">
