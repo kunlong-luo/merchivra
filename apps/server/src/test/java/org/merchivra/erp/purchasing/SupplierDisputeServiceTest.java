@@ -78,7 +78,7 @@ class SupplierDisputeServiceTest {
     }
     private void storedVariance(SupplierDisputeService.Variance v){
         when(jdbc.query(contains("FROM erp_purchase_variance WHERE tenant_id=?"),
-            any(RowMapper.class),eq(tenant),eq(varianceId)))
+            any(RowMapper.class),eq(tenant),any(UUID.class)))
             .thenReturn(List.of(v));
     }
     private void storedClaim(SupplierDisputeService.Claim c){
