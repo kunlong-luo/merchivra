@@ -8,6 +8,7 @@ import AdSpendPanel from './AdSpendPanel'
 import SettlementWorkspace from './SettlementWorkspace'
 import SettlementReportsPanel from './SettlementReportsPanel'
 import SkuProfitPanel from './SkuProfitPanel'
+import ItemAllocationPanel from './ItemAllocationPanel'
 import FinanceExceptionQueuePanel from './FinanceExceptionQueuePanel'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchCoreMarketplaces,fetchCoreOrders} from './lib/core'
@@ -216,6 +217,9 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
       key={current.id} tenantId={tenantId} marketplaceId={currentId}
       eventId={current.id} origin={current.dataOrigin}
       rawBreakdowns={breakdowns.data}/>}
+    {current.dataOrigin==='LIVE'&&current.reviewStatus==='MATCHED'&&
+     <ItemAllocationPanel key={current.id} tenantId={tenantId}
+      marketplaceId={currentId} eventId={current.id}/>}
     {current.dataOrigin==='LIVE'&&current.reviewStatus==='MATCHED'&&
      <RefundReviewPanel key={current.id} tenantId={tenantId}
       marketplaceId={currentId} eventId={current.id}/>}
