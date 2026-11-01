@@ -181,13 +181,15 @@ public class WarehouseInventoryService {
         return jdbc.query("""
             SELECT m.id,m.warehouse_id,m.product_sku_id,s.internal_sku,
                    m.purchase_receipt_id,m.operation_id,m.inspection_id,
-                   m.quantity,m.movement_type,COALESCE(o.reason,q.reason) AS reason,m.created_at
+                   m.quantity,m.movement_type,COALESCE(o.reason,q.reason,a.reason) AS reason,m.created_at
             FROM erp_local_stock_movement m
             JOIN product_sku s ON s.tenant_id=m.tenant_id AND s.id=m.product_sku_id
             LEFT JOIN erp_local_stock_operation o
               ON o.tenant_id=m.tenant_id AND o.id=m.operation_id
             LEFT JOIN erp_purchase_receipt_qc q
               ON q.tenant_id=m.tenant_id AND q.id=m.inspection_id
+            LEFT JOIN erp_local_lot_action a
+              ON a.tenant_id=m.tenant_id AND a.id=m.lot_action_id
             WHERE m.tenant_id=? AND m.warehouse_id=?
             ORDER BY m.created_at DESC,m.id DESC LIMIT 100
             """,(rs,i)->{
