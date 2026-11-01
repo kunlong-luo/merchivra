@@ -85,7 +85,7 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
      ?'只记录实物盘点差异，不会自动修改库存。'
      :'确认真实货位已变更？不修改总库存。'
   if(!window.confirm(explanation))return
-  action.mutate({requestKey,actionType:type,
+  action.mutate({requestKey,actionType:type,expectedBinId:chosen.binId,
    destinationBinId:['MOVE','TRANSFER'].includes(type)?destBin:null,
    quantity:['TRANSFER','EXPIRED_QUARANTINE'].includes(type)?quantity:0,
    expectedRemaining:chosen.remainingQuantity,
