@@ -46,7 +46,7 @@ public class FbaInboundService {
                                String origin,String recordedBy,String recordedAt){}
     public record Detail(Shipment shipment,List<Line> lines,List<ReceiptEvent> receipts,
                          boolean amazonVerified,boolean fbaStockCredited){}
-    private record Locked(UUID id,String state,String origin){}
+    private record Locked(UUID id,String state,String origin,UUID createdBy){}
 
     private static ResponseStatusException bad(String message){
         return new ResponseStatusException(HttpStatus.BAD_REQUEST,message);
@@ -112,10 +112,11 @@ public class FbaInboundService {
     }
     private Locked lock(UUID tenant,UUID marketplace,UUID shipment){
         var rows=jdbc.query("""
-            SELECT id,state,evidence_origin FROM fba_inbound_shipment
+            SELECT id,state,evidence_origin,created_by FROM fba_inbound_shipment
             WHERE tenant_id=? AND seller_marketplace_id=? AND id=? FOR UPDATE
             """,(r,i)->new Locked(r.getObject("id",UUID.class),
-                r.getString("state"),r.getString("evidence_origin")),tenant,marketplace,shipment);
+                r.getString("state"),r.getString("evidence_origin"),
+                r.getObject("created_by",UUID.class)),tenant,marketplace,shipment);
         if(rows.isEmpty())throw missing();
         return rows.getFirst();
     }
@@ -342,6 +343,9 @@ public class FbaInboundService {
         if(note.length()<10)throw bad("Variance explanation must have at least 10 characters");
         Locked current=lock(tenant,marketplace,shipment);
         if(!"REVIEWING".equals(current.state()))throw conflict("Start review before resolving variance");
+        if(actor.equals(current.createdBy()))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "Shipment creator cannot approve a variance on their own shipment");
         Detail snapshot=detail(tenant,marketplace,shipment);
         Line line=snapshot.lines().stream().filter(l->l.sellerSku().equals(sellerSku))
             .findFirst().orElseThrow(()->bad("Unknown shipment SKU"));

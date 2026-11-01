@@ -11,7 +11,7 @@ Status: local backend, generated Orval client, React owner UI and authenticated 
 - Only IN_TRANSIT/RECEIVING shipments enter the per-SKU transit summary, grouped separately by MOCK vs MANUAL_UNVERIFIED origin. REVIEWING/RECONCILED shortfalls are never presented as stock still in transit.
 - Reported received is a SUM of local receipt evidence. Estimated in-transit = max(planned - reported, 0), but only after dispatch. A positive delta means reported overage; a negative delta means reported shortage.
 - Both amazonVerified and fbaStockCredited remain false. Do not combine those values with FBA fulfillable, reserved, Amazon inbound observation, finance events or local warehouse stock.
-- Nonzero deltas require an independent Owner resolution with an explanation; receipt evidence authors cannot accept their own discrepancies. Exact matches can be closed without a variance decision.
+- Nonzero deltas require an independent Owner resolution with an explanation; neither the shipment creator nor any receipt evidence author for that SKU may accept their own discrepancy. Exact matches can be closed without a variance decision.
 - Client requestKey is required for shipment creation and each receipt; repeated identical requests return the same shipment/receipt-derived view, changed payloads are rejected.
 
 ## Spring MVC operation IDs
@@ -47,4 +47,4 @@ Outstanding before V65 is complete: generated Orval client + React UI, real PG i
 
 The CI PG18 job now installs the locked Node 24 client toolchain, runs Orval 8 against ONLY the normalized live FBA contract, and preserves the schema and generated TypeScript model/hook files as the PR artifact. This runs with Amazon OAuth/Sp-API switched OFF; the generated files are committed and checked for drift. The React shipment panel uses those requests through the existing same-origin mutator and Zod response validation.
 
-PG18 CI runs scripts/smoke_fba_inbound.py with disposable bootstrap credentials and a fake Marketplace replay: checks POST idempotency, origin and Marketplace boundaries, reported overages, forbidden self-review, exact-match closing, accepted shortages and independent audit semantics without an external Seller connection.
+PG18 CI runs scripts/smoke_fba_inbound.py with disposable bootstrap credentials and a fake Marketplace replay: checks POST idempotency, origin and Marketplace boundaries, reported overages, forbidden self-review, exact-match closing, accepted shortages and dual-Owner maker/checker controls (creator and receipt author must differ from variance approver) without an external Seller connection.

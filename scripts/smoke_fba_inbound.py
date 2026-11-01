@@ -63,6 +63,53 @@ post(f"/api/v1/demo/sandbox/{mp}/replay", {"simulateFailure": False},
 listings = call(f"/api/v1/seller-marketplaces/{mp}/listings")
 assert len(listings) >= 1 and all(l["dataOrigin"] == "MOCK" for l in listings)
 sku = listings[0]["sellerSku"]
+
+# V65 maker/checker: activate a SECOND session Owner using local one-use invitation.
+# The disposable test environment enables local team invitations only for this CI.
+member = build_opener(HTTPCookieProcessor(http.cookiejar.CookieJar()))
+member_csrf = None
+
+
+def member_call(path, method="GET", body=None, expected=200, form=False):
+    global member_csrf
+    headers = {"Accept": "application/json"}
+    if member_csrf:
+        headers["X-CSRF-TOKEN"] = member_csrf
+    data = None
+    if body is not None:
+        if form:
+            data = urlencode(body).encode()
+            headers["Content-Type"] = "application/x-www-form-urlencoded"
+        else:
+            data = json.dumps(body).encode()
+            headers["Content-Type"] = "application/json"
+    req = Request(base + path, data=data, headers=headers, method=method)
+    try:
+        with member.open(req, timeout=20) as response:
+            status, payload = response.status, response.read()
+    except HTTPError as error:
+        status, payload = error.code, error.read()
+    assert status == expected, f"Second Owner {path}: expected {expected}, got {status}: {payload[:180]!r}"
+    try:
+        return json.loads(payload)
+    except ValueError:
+        return payload
+
+
+invite = post("/api/v1/team/invitations", {"loginName": "v65-ci-second-owner"})
+member_csrf = member_call("/api/v1/auth/csrf")["token"]
+member_password = "v65-disposable-second-owner-strong-password"
+member_call("/api/v1/auth/invitations/accept", method="POST",
+            body={"token": invite["token"], "password": member_password}, expected=204)
+member_csrf = member_call("/api/v1/auth/csrf")["token"]
+member_call("/api/v1/auth/login", method="POST",
+            body={"username": "v65-ci-second-owner", "password": member_password},
+            form=True)
+member_csrf = member_call("/api/v1/auth/csrf")["token"]
+member_viewer = member_call("/api/v1/auth/me")
+assert member_viewer["isOwner"] is True
+assert member_viewer["userId"] != viewer["userId"]
+
 route = f"/api/v1/fba/marketplaces/{mp}/shipments"
 assert call(route) == []
 assert call(route + "/in-transit") == []
@@ -139,13 +186,17 @@ id3 = third["shipment"]["id"]
 post(route + "/" + id3 + "/dispatch")
 post(route + "/" + id3 + "/review")
 post(route + "/" + id3 + "/reconcile", expected=409)
-resolved = post(route + "/" + id3 + "/variances",
-                {"sellerSku": sku, "note": "Reviewed local packing list; zero received as reported"})
+post(route + "/" + id3 + "/variances",
+     {"sellerSku": sku, "note": "Shipment creator cannot self-approve shortages"}, expected=403)
+resolved = member_call(route + "/" + id3 + "/variances", method="POST",
+                       body={"sellerSku": sku,
+                             "note": "Reviewed local packing list; zero received as reported"})
 assert resolved["lines"][0]["decision"] == "ACCEPT_VARIANCE"
 assert resolved["lines"][0]["delta"] == -10
 assert resolved["lines"][0]["reviewNote"].startswith("Reviewed local")
-post(route + "/" + id3 + "/variances",
-     {"sellerSku": sku, "note": "Rewriting immutable decision is forbidden"}, expected=409)
+member_call(route + "/" + id3 + "/variances", method="POST",
+            body={"sellerSku": sku, "note": "Rewriting immutable decision is forbidden"},
+            expected=409)
 closed = post(route + "/" + id3 + "/reconcile")
 assert closed["shipment"]["state"] == "RECONCILED"
 assert closed["lines"][0]["estimatedInTransit"] is None
