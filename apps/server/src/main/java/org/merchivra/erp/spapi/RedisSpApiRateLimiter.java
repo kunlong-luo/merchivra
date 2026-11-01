@@ -45,6 +45,16 @@ public class RedisSpApiRateLimiter implements SpApiRateLimiter {
             throw new SecurityException("Unapproved API family");
         String key = "merchivra:spapi:quota:v1:" + seller.region().name()
             + ":" + apiFamily.getSimpleName() + ":" + sha256(seller.sellerId());
+        reserve(key);
+    }
+
+    @Override
+    public void requireVerificationPermit(SpApiRegion region) {
+        Objects.requireNonNull(region, "Region required");
+        reserve("merchivra:spapi:quota:v1:verification:" + region.name());
+    }
+
+    private void reserve(String key) {
         try {
             Boolean inserted = redis.opsForValue().setIfAbsent(key, "1", cooldown);
             if (inserted == null)
