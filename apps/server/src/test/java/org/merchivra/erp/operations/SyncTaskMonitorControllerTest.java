@@ -38,7 +38,7 @@ class SyncTaskMonitorControllerTest {
         Authentication auth=mock(Authentication.class);
         UUID tenant=UUID.randomUUID();
         when(access.currentTenant(auth,request)).thenReturn(tenant);
-        var summary=new SyncTaskMonitorService.Summary(0,0,0,0,0,0);
+        var summary=new SyncTaskMonitorService.Summary(0,0,0,0,0,0,0,0);
         var snapshot=new SyncTaskMonitorService.Snapshot(summary,List.of(),50,false);
         when(service.snapshot(tenant,"ALL","ALL",50)).thenReturn(snapshot);
         var controller=new SyncTaskMonitorController(access,service);
