@@ -6,15 +6,12 @@ COPY settings.gradle build.gradle gradle.properties gradlew ./
 COPY gradle ./gradle
 RUN chmod +x ./gradlew
 COPY src ./src
-RUN ./gradlew --no-daemon --console plain bootJar copyOtelAgent
+RUN ./gradlew --no-daemon --console plain bootJar
 
 FROM eclipse-temurin:25-jre
 WORKDIR /app
 RUN useradd --system --uid 10001 merchivra
 COPY --from=build /build/build/libs/merchivra-server.jar /app/app.jar
-COPY --from=build /build/build/agents/opentelemetry-javaagent.jar /app/agents/opentelemetry-javaagent.jar
-# OTel agent is deliberately not enabled by default; set explicit JVM agent
-# flags and a trusted exporter only after the deployment has been reviewed.
 USER 10001
 EXPOSE 8080
 ENTRYPOINT ["java","-jar","/app/app.jar"]
