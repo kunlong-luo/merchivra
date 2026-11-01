@@ -1,0 +1,68 @@
+# Reuse the independently managed spark-db PostgreSQL 18/PostGIS instance.
+# This file is STANDALONE: do not combine with deploy/compose.yaml.
+# It launches ONLY the Merchivra API + React/Nginx; never creates/stops
+# spark-postgres, spark-redis, their Docker volumes or the iot_farm database.
+#
+# docker compose --env-file .env -f deploy/compose.spark-db.yaml up -d --build
+# The existing spark-db stack must have attached spark-postgres to spark-iot-net.
+name: merchivra
+
+services:
+  server:
+    build:
+      context: ../apps/server
+    restart: unless-stopped
+    environment:
+      DB_HOST: spark-postgres
+      DB_PORT: '5432'
+      DB_NAME: ${MERCHIVRA_DB_NAME:-merchivra}
+      DB_USER: ${MERCHIVRA_DB_USER:-merchivra}
+      DB_PASSWORD: ${MERCHIVRA_DB_PASSWORD:?Set the dedicated Merchivra database role password in .env}
+      MERCHIVRA_DEMO_ENABLED: ${MERCHIVRA_DEMO_ENABLED:-false}
+      MERCHIVRA_TEAM_ENABLED: ${MERCHIVRA_TEAM_ENABLED:-false}
+      MERCHIVRA_BOOTSTRAP_USERNAME: ${MERCHIVRA_BOOTSTRAP_USERNAME:-}
+      MERCHIVRA_BOOTSTRAP_PASSWORD: ${MERCHIVRA_BOOTSTRAP_PASSWORD:-}
+      MERCHIVRA_BOOTSTRAP_TENANT_NAME: ${MERCHIVRA_BOOTSTRAP_TENANT_NAME:-Merchivra Workspace}
+      MERCHIVRA_SESSION_COOKIE_SECURE: ${MERCHIVRA_SESSION_COOKIE_SECURE:-false}
+      MERCHIVRA_SPAPI_ENABLED: ${MERCHIVRA_SPAPI_ENABLED:-false}
+      MERCHIVRA_SPAPI_SANDBOX: ${MERCHIVRA_SPAPI_SANDBOX:-true}
+      MERCHIVRA_SPAPI_ALLOW_WRITES: 'false'
+      MERCHIVRA_SPAPI_OAUTH_ENABLED: ${MERCHIVRA_SPAPI_OAUTH_ENABLED:-false}
+      MERCHIVRA_SPAPI_APP_ID: ${MERCHIVRA_SPAPI_APP_ID:-}
+      MERCHIVRA_SPAPI_OAUTH_REDIRECT_URI: ${MERCHIVRA_SPAPI_OAUTH_REDIRECT_URI:-}
+      MERCHIVRA_SPAPI_OAUTH_AMAZON_ORIGINS: ${MERCHIVRA_SPAPI_OAUTH_AMAZON_ORIGINS:-}
+      MERCHIVRA_SPAPI_OAUTH_ENCRYPTION_KEY_BASE64: ${MERCHIVRA_SPAPI_OAUTH_ENCRYPTION_KEY_BASE64:-}
+      MERCHIVRA_LWA_CLIENT_ID: ${MERCHIVRA_LWA_CLIENT_ID:-}
+      MERCHIVRA_LWA_CLIENT_SECRET: ${MERCHIVRA_LWA_CLIENT_SECRET:-}
+      MERCHIVRA_ORDERS_SYNC_ENABLED: ${MERCHIVRA_ORDERS_SYNC_ENABLED:-false}
+      MERCHIVRA_ORDERS_SYNC_MODE: ${MERCHIVRA_ORDERS_SYNC_MODE:-MOCK}
+      MERCHIVRA_ORDERS_SYNC_LIVE_APPROVED: ${MERCHIVRA_ORDERS_SYNC_LIVE_APPROVED:-false}
+      MERCHIVRA_ORDERS_SYNC_SCHEDULER_ENABLED: ${MERCHIVRA_ORDERS_SYNC_SCHEDULER_ENABLED:-false}
+      MERCHIVRA_ORDERS_SYNC_SCHEDULER_MS: ${MERCHIVRA_ORDERS_SYNC_SCHEDULER_MS:-30000}
+      MERCHIVRA_OPS_SCHEDULER_ENABLED: ${MERCHIVRA_OPS_SCHEDULER_ENABLED:-false}
+      MERCHIVRA_CATALOG_SYNC_ENABLED: ${MERCHIVRA_CATALOG_SYNC_ENABLED:-false}
+      MERCHIVRA_CATALOG_SYNC_SCHEDULER_ENABLED: ${MERCHIVRA_CATALOG_SYNC_SCHEDULER_ENABLED:-false}
+      MERCHIVRA_FINANCES_SYNC_ENABLED: ${MERCHIVRA_FINANCES_SYNC_ENABLED:-false}
+      MERCHIVRA_FINANCES_SYNC_SCHEDULER_ENABLED: ${MERCHIVRA_FINANCES_SYNC_SCHEDULER_ENABLED:-false}
+    ports:
+      - '127.0.0.1:${MERCHIVRA_API_PORT:-8080}:8080'
+    networks:
+      - default
+      - spark_db
+
+  web:
+    build:
+      context: ../apps/web
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:${MERCHIVRA_WEB_PORT:-3000}:80'
+    depends_on:
+      - server
+    networks:
+      - default
+
+networks:
+  default: {}
+  spark_db:
+    external: true
+    name: spark-iot-net
