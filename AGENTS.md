@@ -514,3 +514,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - V51 已报告处置的 proof 只保存人工录入的 DISPOSAL_CERTIFICATE 或 SUPPLIER_RETURN_RECEIPT 参考编号、可选 SHA-256 摘要和说明，类型必须匹配 V50 已 EXECUTED_REPORTED 的 method。当前**没有文件上传和 SHA-256 对原件验算、物流/供应商第三方认证能力**。只有与凭据登记人、原处置执行报告人不同的 Owner 可以设置 METADATA_REVIEWED，意为本地元数据审核而非文件真实性/供应商签收核验，不得触发库存二次扣减。
 - V51 统一 tenant/actor 仅来自 Owner Session，写操作 CSRF；任何请求键重复重放必须同 actor/来源/数量和证据，异内容冲突。不要让普通 V40 COUNT/转仓绕过已有已定位批次保护。新增功能测试需覆盖审批人与业务来源分离、根来源合格与已定位双上限、跨仓目标位置快照、完整事务回滚及证明元数据的非库存副作用。
 - 详见 `docs/purchasing/lot-exception-source-corrections-proof-v51.md`。Java/React CI 成功不等于 PostgreSQL 18 真实迁移/Compose 并发、外部证明或 Amazon SP-API 已验收。
+
+## V52 · 私有真实凭据与手工供应商退货来源的硬性规则（2026-11-01）
+
+- 原件上传必须来自真实已登记的 V51 proof，只有 `PENDING_REVIEW`、本租户 Owner、CSRF 请求可新上传。只允许经服务端实际字节签名验证的 PDF/PNG/JPEG、上限 2 MiB；由服务端 SHA-256 计算真实文件摘要，与用户先前填写的 `document_sha256` 不一致直接拒绝。tenant+proof 和 tenant+requestKey 唯一，不得覆盖已上传的二进制，不得因重试上传不同文件。GET 文件字节须验证摘要/长度、授权 tenant、attachment+nosniff+no-store，文件名不得取自用户任意输入。
+- `METADATA_REVIEWED` 仍是**内部元数据审核**，不能等于原件合法、签名真实、供应商签收或承运商证实；当前没有恶意文件扫描、对象存储加密或电子签名验证。上传仅保存私有数据库字节，不可写入日志或公开附件链接。
+- V52 供应商退货严格引用 V50 `EXECUTED_REPORTED` 且 method=SUPPLIER_RETURN 的已扣库位过期品；原 supplierId 必须沿 V49 source_position → V48 original receipt → V20 original purchase order 得到，客户端不得指定。V44 erp_supplier_return 是 QC rejected 实物的另一个来源，**绝不可混同或重复计数已放行后过期隔离品**。人工回执需要非发运 Owner、数量不超过发运量；差异只记 RECEIPT_MISMATCH，不自动改变库存和应收财务，不能冒充 Amazon/第三方验证。
+- GitHub CI 后端/前端单测之外必须启动独立 postgres:18 实例运行全 Flyway 并校验 V46–V52 迁移；不能把 Mock Compose 队列运行、尚未完成的 PG18 job 算作验收通过。Java 25 / Spring Boot 4.1 / React 19 / PostgreSQL 18 持续固定。
+- 详见 `docs/purchasing/lot-proof-files-supplier-trace-v52.md`。
