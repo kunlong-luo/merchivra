@@ -3,7 +3,7 @@
 ## 完成范围与尚未完成
 
 - 已实现 Reports v2021-06-30 只读操作级限流入口：GET_REPORTS、GET_REPORT_DOCUMENT，要求已审核 Finance and Accounting 角色；前者只筛选 Amazon 自动生成的 GET_V2_SETTLEMENT_REPORT_DATA_FLAT_FILE_V2，绝不调用 createReport。
-- 已实现默认关闭的内部 SpApiSettlementReportsWorker；只有服务端持有 VERIFIED/CONNECTED Seller grant、独立财务角色证据且 Marketplace 一致时才允许请求。最多扫描 4 个列表页、每次最多处理 2 个文档；尚未创建持久发现队列与 Cron，未暴露任何 HTTP 触发 Amazon 调用的 API。
+- 已实现默认关闭的内部 SpApiSettlementReportsWorker；只有服务端持有 VERIFIED/CONNECTED Seller grant、独立财务角色证据且 Marketplace 一致时才允许请求。最多扫描 4 个列表页、每次最多导入 2 个新文档；按租户+Seller+Marketplace+reportId 跳过已导入的相同 documentId，避免重复下载及旧报告挤占额度。同一 reportId 的不同 documentId 冲突拒绝。尚未创建持久发现队列与 Cron，未暴露任何 HTTP 触发 Amazon 调用的 API。
 - 元数据来自 getReports / getReportDocument；必须 status=DONE、报告类型匹配且报告只属于所选 Marketplace。否则跳过，不尝试下载。
 - getReportDocument 返回的预签名 URL 有短期有效期。SignedReportDocumentDownloader 只允许 HTTPS、443/标准端口、*.amazonaws.com / *.cloudfront.net，禁用重定向，检查 DNS 非内网，限制下载 5 MiB，GZIP 解压最大 8 MiB，绝不把 URL、原始文档或凭证保存到数据库/磁盘。生产仍需网络出口层阻止内网和元数据 IP，防范 DNS rebinding。
 - TSV 解析严格识别 Amazon 结算摘要头/明细头，拒绝重复表头、坏 UTF-8、异常/混合币种、无签名金额、超过 10000 行或未知报表结构。不写原始整行与未列入白名单的列，降低包含买家 PII 的风险。只解析交易类型、金额类别、描述、订单参考、有符号金额与原币种。
