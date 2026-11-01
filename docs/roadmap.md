@@ -1,6 +1,6 @@
 # PLAN-001 · 文档先行与分阶段交付路线
 
-> **状态更新（2026-10-30）：PR #1 工程骨架与 PR #14 文档已合入 main；在 main 按 M0→M4 逐步开发。** G1/G2 业务与架构决策仍待签署，未确认部分不应作为真实 Amazon 生产契约。
+> **执行基线（2026-11-01，V61）：** 已有 Java 25 / Spring Boot 4.1.2 / Gradle / React 19 / PostgreSQL 18 代码及实际 CI；V61 最新 [CI #41285312468](https://github.com/kunlong-luo/merchivra/actions/runs/41285312468) 成功。但 CI 不能替代用户本地数据库运行或真实 Amazon/银行接口验收。G1/G2/G3 未正式签署；继续优先补齐核心代码，再由 Owner 本地授权验证。下文 V1–V54 是历史追加记录，其中部分旧「未实现／待 CI」描述已经过时，以本节当前状态为准。
 
 | 阶段 | 目标 | 交付物 | 通过条件 |
 |---|---|---|---|
@@ -11,6 +11,41 @@
 | M2 | 商品/订单/库存 | 业务 CRUD、数据同步 | 样本业务验证 |
 | M3 | 财务/成本/利润 | 费用、成本与估算报表 | 可对账、可追踪 |
 | M4 | Beta | 安全、运维、发布 | P0 验收通过、运行手册完成 |
+
+## 2026-11-01 · V61 计划复核与后续执行顺序（当前有效）
+
+**交付状态须分开**：代码提交 / 离线 CI 通过 / 本地 Mock 全链验收 / 真实 Amazon 或银行联调 / 生产上线批准，是五个不同关口。V61 为产品开发里程碑，**当前 Flyway 最新迁移为 V59**，不能混称数据库 V61。本文以下的历史段落不自动成为现行优先级。
+
+| 工作流 | 已提交的代码与证据 | 不得误称已完成的内容 |
+|---|---|---|
+| M0 环境和底座 | Java25/Gradle、React19、PG18 Flyway、Docker Compose；V61 CI 四项成功 | 使用者本机 IntelliJ 的 PG 密码配置与本机运行结果仍未验证 |
+| M1 Seller 与后台同步 | 公有/私有 Seller 授权代码、Seller Role、加密 Vault、Orders/Listing/FBA/Finances/Reports 只读 Worker、可选 Redis8 | 真实 Seller 授权、令牌撤销竞态、Amazon 实时负载、正式限流及出站安全验收 |
+| M2 商品、库存、采购、仓储 | SKU 历史映射、订单项、库存观测、补货/采购、ASN/QC、批次/库位与人工仓储审计 | 真实 FBA Shipment/Inbound/物流状态、完整并发/多租户 HTTP 实测 |
+| M3 财务、结算与分析 | V58B Reports 持久化、V59 双人来源审核、V60 银行人工参考、V61 店铺与单 SKU **按页贡献估算**；V61 CI 通过 | 多 SKU 分摊、可信退款成本回转、真实广告报表、整期财务快照、税费与汇兑、可信银行到账 |
+| M4 Beta | **未进入正式发布验收** | G1/G2/G3 决策签署、威胁模型、真实接口、备份恢复、并发压测、生产发布 |
+
+### 即时 P0：解决本地 IntelliJ 直启配置问题（V61.1）
+
+用户于 2026-11-01 提供的 IntelliJ 日志提示 `The server requested SCRAM-based authentication, but no password was provided`。`application.yml` 中 `DB_PASSWORD` 缺省为空；IDEA 直接启动 `MerchivraApplication` 不会自动读取 Compose 的 `.env`。本机运行先在 IntelliJ Run Configuration 配置 `DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASSWORD`，再用交互式 `psql -W` 验证专用数据库账号。详见 [开发指南的 IntelliJ 专节](development.md)。**不可通过禁用 SCRAM、硬编码明文密码、覆盖管理员角色或删除数据卷解决**。这是本地连接配置问题，不能误报为 PG18 Flyway SQL 失败或 V61 业务逻辑失败。
+
+### 接下来开发哪些功能
+
+| 顺序 | 计划工作包 | 可审计交付和验收门槛 |
+|---|---|---|
+| P0 · V61.1 | 本地开发及 Mock 全链稳定性 | IntelliJ / Gradle 连接指导；PG18 模拟业务、Session/CSRF、跨 Marketplace 数据隔离、重放与重启、可选 Redis 异常；无真实 Seller |
+| P0 · V62 | 多 SKU 订单逐行成本和费用归属 | 明确的订单项来源、人工审核分配、币种一致、签名金额守恒、版本/撤销审计，留存未分配差额；**不得默认按件数或销售额臆造费用归属** |
+| P0 · V63 | 退款/退货与成本回转 | 复用 V34/V35，退款源到订单行、实际库存处置与历史成本证据分开验证；未确认成本回转不得计入利润 |
+| P0 · V64 | **整期异步**店铺和 SKU 来源快照/导出 | 固定时间窗、来源版本、断点/重试、去重、可解释的数据覆盖率、币种隔离、可重新生成的报表；不把 V61 单页合计包装成整期净利润 |
+| P1 · V65 | FBA 货件、入仓/在途和差异 | 官方只读 API 适配与离线模拟、货件与本地 ASN/库存来源隔离、数量/时间/状态追溯；默认不向 Amazon 写入 |
+| P1 · V66 | 独立 Amazon Ads 授权和费用来源 | Ads OAuth 及只读报告、按币种去重、账户/站点隔离、SKU 归因审核；手工 `MANUAL_UNVERIFIED` 不能升级为受信 LIVE |
+| P1 · V67 | 自动化异常队列与经营提醒 | 异常聚合、租户作用域、去重、可审计的 Owner 处理动作；调度默认关闭、平台写调用仍关闭 |
+| 发布前 · V68 | 安全、性能、容灾和验收门禁 | 租户越权、文件/凭证保护、CSRF、事务/租约竞态、PG18 迁移与备份恢复、Redis noeviction、性能和可操作运行手册 |
+| **最后** | Owner 在本地真实 Amazon/银行联调 | Seller OAuth、角色、LIVE 接口/限流/失败恢复、独立银行受信来源与人工核对；业务代码全量补齐后再进行，不在公共 CI 使用真实凭证 |
+
+**财务边界**：Orders 预计款、Finances 原始交易、Reports 结算单与银行人工参考不得重复计入。来源双人审核不能证明银行到账；退款、广告/税费、FX 与多 SKU 分摊未知时仍只能显示贡献估算，而非净利润。
+
+**已确认工程基线**：Java 25、Spring Boot 4.1.2、**Gradle**、React 19（不使用 Vue）、PostgreSQL 18、可选 Redis 8；无必需 OpenTelemetry javaagent。优先复用已经实现的 V29/V33/V34/V35/V36 来源与金额审核，不重复造平行利润引擎。业务设计的 G1/G2/G3 正式签署仍待完成，不因 CI success 自动批准。
+
 
 ## 第二轮评审状态（2026-10-30）
 

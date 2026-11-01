@@ -26,4 +26,4 @@
 
 ## 环境基线（仅设计）
 
-开发：Java 21 / Spring Boot + Vue 3 / PostgreSQL / Redis / Docker Compose。生产建议以 TLS 反向代理、外部密钥管理、受限数据库网络、备份与指标平台包围服务；具体实例规格待压测。
+**已实施开发基线（2026-11-01）**：Java 25 / Spring Boot 4.1.2 / **Gradle 9.2.1**、React 19 / TypeScript 6 / Vite 8、PostgreSQL 18、Docker Compose；Redis 8 可选用于 Session/限流，不引入必需 OpenTelemetry javaagent。**Java 21、Vue 3 和 Maven 已淘汰**。生产仍需 TLS 反向代理、受保护密钥、限制数据库网络、可恢复备份、隔离 noeviction Redis、监控与压测；性能与恢复数值均为目标而非已验收承诺。

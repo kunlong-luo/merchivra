@@ -13,7 +13,7 @@
 | DEC-07 | 经营利润与费用 | 预估贡献毛利，与已入账/结算分列 | 待确认 | FIN、DATA、UI | 公式例子验算 |
 | DEC-08 | 汇率 | 保留原币，折算策略需选择 | 待确认 | FIN、报表 | 财务确认 |
 | DEC-09 | Auth/自举 | 早期本地实现采用环境变量首次 Owner 初始化 + Session/CSRF；正式 OIDC/MFA/RBAC 待确认 | 实施中，**未正式签署** | IAM、安全、API | 安全 ADR + 集成验证 |
-| DEC-10 | 技术架构 | 模块化单体 / PG / Vue | Proposed ADR-0001 | ARCH、部署 | 技术负责人 Accept |
+| DEC-10 | 技术架构 | **已实施工程基线**：模块化单体、Java 25 / Spring Boot 4.1.2 / Gradle、React 19、PostgreSQL 18，Redis 8 可选（不用 Vue/Maven） | 工程已实施，**ADR 仍待正式签署** | ARCH、部署 | 技术负责人 Accept + 生产评审 |
 | DEC-11 | 共享 Schema 租户隔离 | 租户字段 + 强制查询作用域 | Proposed ADR-0002 | ERD、安全 | 隔离威胁评审 |
 | DEC-12 | 财务事实不可变 | 追加更正事件，利润投影可重算 | Proposed ADR-0003 | FIN、DATA | 财务/技术签署 |
 | DEC-13 | 授权类型与操作权限 | 私有应用首发；具体 role 待获得 | 外部待确认 | INT | 注册/角色状态证明（不得贴密钥） |

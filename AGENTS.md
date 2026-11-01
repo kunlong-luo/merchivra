@@ -603,3 +603,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 报表分页每页 30，UTC 时间窗口不超过 92 天，offset 0..3000、必须按30对齐。页内 SKU 归集与 CSV 只能算当前页，不得暗示整期完成。`financialSourceComplete`、`bankVerified`、`ledgerPosted` 始终 false。
 - 手工 Ads 支出 `MANUAL_UNVERIFIED` 只能另示参考，不能伪装成可信 Ads API 或自动从贡献中扣除；零差额也不能声明完整净利润。
 - CSV 防 spreadsheet formula 注入，接口只从 Session Owner 推导租户、no-store，无数据写入/外部 Amazon 或银行调用。技术栈保持 Java 25、Gradle、Spring Boot4.1.2、PostgreSQL18、React19。
+
+## 2026-11-01 · V61 后计划复核与工程约束
+
+- 当前阶段顺序见 `docs/roadmap.md` 的 2026-11-01 V61 复核章节。旧 V1–V54 是历史记录。优先 V61.1 本地 DX/Mock 稳定性 → V62 多 SKU 审核分摊 → V63 退款回转 → V64 整期异步快照 → V65 FBA 货件只读 → V66 Ads 独立授权 → V67 自动异常 → V68 发布安全。
+- 用户的 IntelliJ 本地报错 `SCRAM-based authentication ... no password was provided` 是进程环境缺少 `DB_PASSWORD`。按 `docs/development.md` 配置 IDEA Run Configuration，并用交互式 psql 验证；不得提交密码、关掉 PostgreSQL 认证或破坏数据卷。
+- 保持 Java25、Spring Boot4.1.2、Gradle、React19、PostgreSQL18 和可选 Redis8；不用 Maven/Vue，不以 OpenTelemetry javaagent 为前置。不重复计算已有 OrderContribution/V29/V34–V36 来源事实。
+- Java/React/PG18 CI success 不等于用户本地成功或真实 Amazon/银行联调完成；产品 G1/G2/G3 尚待签署。依 Owner 要求先补齐所有核心代码，最后由 Owner 自己在本地授权并执行实际 API 验收。

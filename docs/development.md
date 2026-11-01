@@ -18,8 +18,13 @@ The web now requires local Session login; see [first-run authentication](securit
 # Start PostgreSQL/Redis using docker compose if desired
 docker compose --env-file .env -f deploy/compose.yaml up -d postgres redis
 
-# Shell 1 (set DB_PASSWORD to match .env)
-MERCHIVRA_DEMO_ENABLED=true MERCHIVRA_BOOTSTRAP_USERNAME=your_admin MERCHIVRA_BOOTSTRAP_PASSWORD=your_unique_random_password DB_PASSWORD=your_db_password (cd apps/server && ./gradlew bootRun)
+# Shell 1: these environment variables must be inherited by the Java process.
+export DB_HOST=127.0.0.1 DB_PORT=5432 DB_NAME=merchivra DB_USER=merchivra
+export DB_PASSWORD='your-local-dedicated-role-password'
+export MERCHIVRA_DEMO_ENABLED=true
+export MERCHIVRA_BOOTSTRAP_USERNAME=your_admin
+export MERCHIVRA_BOOTSTRAP_PASSWORD='your-unique-16-plus-character-password'
+(cd apps/server && ./gradlew bootRun)
 
 # Shell 2
 cd apps/web
@@ -114,3 +119,20 @@ On Windows use `gradlew.bat`. Wrapper Gradle distribution is checksum-pinned in 
 Redis is now implemented as an opt-in Spring Session and SP-API admission store, **not a PostgreSQL replacement**. In an existing spark-db environment, set `MERCHIVRA_REDIS_PASSWORD` locally to the password of `spark-redis`, `MERCHIVRA_REDIS_SESSIONS_ENABLED=true`, and optionally `MERCHIVRA_SPAPI_RATE_LIMIT_ENABLED=true`. Container access uses `spark-redis:6379`; a host-run Java process uses the Redis port mapped to `127.0.0.1:6379` and needs `MERCHIVRA_REDIS_HOST=127.0.0.1`. Do not export real passwords in scripts committed to Git.
 
 The standalone `deploy/compose.yaml` uses disposable `redis:8.10.1-alpine` under `--profile optional-cache`, with `noeviction` only for local testing; normal dev still uses just PostgreSQL + server + web. See [Redis runtime guide](deployment/redis-session-spapi-v53.md) for restart and Redis-unavailable smoke, the shared `allkeys-lru` hazard and production gating.
+
+## IntelliJ IDEA 本地启动与 PostgreSQL SCRAM 验证（2026-11-01）
+
+用户 2026-11-01 的 IDEA Java 启动日志定位到了数据库身份认证：`The server requested SCRAM-based authentication, but no password was provided`。这是 Flyway 启动前获取 JDBC 连接失败，不能据此判定 SQL 迁移失败；GitHub V61 CI 在隔离 PG18 环境中已通过，但不会替你本机设置数据库密码。
+
+本机 IDEA 直接运行 `org.merchivra.erp.MerchivraApplication`（不是 Docker 内运行）时，打开 **Run → Edit Configurations → MerchivraApplication → Environment variables**，为这一个运行配置设置 `DB_HOST=127.0.0.1`、`DB_PORT=5432`、`DB_NAME=merchivra`、`DB_USER=merchivra` 和你在本机专用数据库角色设置的 **`DB_PASSWORD`**。如需首次初始化，再设置 `MERCHIVRA_BOOTSTRAP_USERNAME` 和 `MERCHIVRA_BOOTSTRAP_PASSWORD`。`application.yml` 的 JDBC 密码是 `${DB_PASSWORD:}`，未提供变量就为空。IntelliJ **不会自动读取** Compose `--env-file .env`；需要在 IDE 的进程环境中单独配置，或者使用经过审核的本地、未纳入 Git 的环境注入机制。
+
+先在本机终端测试数据库连通（`-W` 交互输入，不将口令放在命令行或日志中）：
+
+```bash
+psql "host=127.0.0.1 port=5432 dbname=merchivra user=merchivra" -W \
+  -c "SELECT current_database(), current_user, current_setting('server_version');"
+```
+
+如果 psql 连不上，检查 `spark-postgres` 或本机 PG18 是否运行、端口是否暴露、是否存在 `merchivra` 独立数据库及同名 LOGIN 角色、是否使用为该角色单独设置的密码。**不可使用管理员 root 密码代替，不要关闭 SCRAM 或执行 `down -v`**。
+
+如果 psql 成功而 IntelliJ 报 `no password was provided`，检查当前正在运行的 IDEA Run Configuration 是否保存并注入了 `DB_PASSWORD`；重新启动 Java 进程后重试。成功标准是 Hikari 成功获取连接、Flyway 验证/迁移完成，以及 Spring Boot 就绪，而不只是 Tomcat initialized。密钥不得提交到仓库或发在聊天里。
