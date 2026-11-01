@@ -3,7 +3,6 @@ package org.merchivra.erp.finance;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 import org.merchivra.erp.spapi.SpApiOfficialSdkFactory;
 import org.merchivra.erp.spapi.SpApiOperation;
@@ -33,7 +32,7 @@ public class SpApiSettlementReportsWorker {
         this.sdk=sdk;this.vault=vault;this.downloader=downloader;this.importer=importer;
     }
 
-    public record Outcome(int inspected,int imported,int alreadyKnown,
+    public record Outcome(int inspected,int processed,
         int skipped,boolean hasMoreReports) {}
 
     /**
@@ -50,7 +49,7 @@ public class SpApiSettlementReportsWorker {
             || until.isAfter(OffsetDateTime.now().plusMinutes(1)))
             throw new IllegalArgumentException("Bounded trusted Reports scan scope required");
         SpApiSellerScope scope=approved(tenant,account,marketplace);
-        int inspected=0,imported=0,known=0,skipped=0;
+        int inspected=0,processed=0,skipped=0;
         String next=null;
         boolean hasMore=false;
         for(int page=0;page<4;page++) {
@@ -66,7 +65,7 @@ public class SpApiSettlementReportsWorker {
                 throw new IllegalStateException("Amazon Reports list has no response");
             for(var report:result.getReports()) {
                 inspected++;
-                if(imported>=2){hasMore=true;break;}
+                if(processed>=2){hasMore=true;break;}
                 if(report==null
                     || !SettlementReportImportService.TYPE.equals(report.getReportType())
                     || report.getProcessingStatus()==null
@@ -98,11 +97,9 @@ public class SpApiSettlementReportsWorker {
                 // return to browsers or log the URL/query string.
                 byte[] bytes=downloader.fetch(document.getUrl());
                 approved(tenant,account,marketplace);
-                var existing=importer.list(tenant,marketplaceId(tenant,account,marketplace))
-                    .stream().anyMatch(x->x.reportId().equals(report.getReportId()));
                 importer.importDocument(current,report.getReportId(),
                     report.getReportDocumentId(),bytes,gzip);
-                if(existing)known++;else imported++;
+                processed++;
             }
             next=result.getNextToken();
             if(hasMore || next==null || next.isBlank()) {
@@ -111,7 +108,7 @@ public class SpApiSettlementReportsWorker {
             }
             if(page==3)hasMore=true;
         }
-        return new Outcome(inspected,imported,known,skipped,hasMore);
+        return new Outcome(inspected,processed,skipped,hasMore);
     }
 
     private SpApiSellerScope approved(UUID tenant,UUID account,String marketplace) {
@@ -119,10 +116,4 @@ public class SpApiSettlementReportsWorker {
             .orElseThrow(()->new SecurityException("Current Finance Seller grant not approved"));
     }
 
-    private UUID marketplaceId(UUID tenant,UUID account,String marketplace) {
-        // Avoid adding a second public service accessor; if a report has already
-        // been saved the DB id is resolved by the importer. This helper is only
-        // for an advisory duplicate counter and must not be needed for safety.
-        return null;
-    }
 }
