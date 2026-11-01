@@ -111,6 +111,41 @@ class SpApiClientTest {
     }
 
     @Test
+    void preservesAmazonRetryAfterAndObservesQuotaWithoutReplaying429() {
+        AtomicInteger calls=new AtomicInteger();
+        AtomicReference<String> observedRate=new AtomicReference<>();
+        AtomicReference<java.time.Duration> observedDelay=new AtomicReference<>();
+        SpApiRateLimiter limiter=new SpApiRateLimiter() {
+            @Override public void requirePermit(SpApiSellerScope seller,Class<?> family) { }
+            @Override public void observeLegacyResponse(SpApiRegion region,SpApiOperation op,
+                String approvedGrant,int status,String rate,java.time.Duration delay) {
+                assertEquals(SpApiOperation.GET_ORDER,op);
+                assertEquals(429,status);
+                assertEquals("fake-refresh-for-unit-test",approvedGrant);
+                observedRate.set(rate);
+                observedDelay.set(delay);
+            }
+        };
+        SpApiClient client=new SpApiClient(request -> {
+            calls.incrementAndGet();
+            @SuppressWarnings("unchecked") HttpResponse<String> response=mock(HttpResponse.class);
+            when(response.statusCode()).thenReturn(429);
+            when(response.body()).thenReturn("sensitive upstream content");
+            when(response.headers()).thenReturn(HttpHeaders.of(Map.of(
+                "x-amzn-ratelimit-limit",List.of("0.5"),
+                "retry-after",List.of("40")), (k,v)->true));
+            return response;
+        }, refresh->"access", r->r.endpoint(true),true,false,limiter);
+        var error=assertThrows(SpApiHttpException.class,()->new SpApiReadOperations(client)
+            .getOrder(scope(Set.of("Inventory and Order Tracking")),"ORDER-001"));
+        assertEquals(1,calls.get());
+        assertEquals("0.5",observedRate.get());
+        assertEquals(java.time.Duration.ofSeconds(40),observedDelay.get());
+        assertEquals(java.time.Duration.ofSeconds(40),error.retryAfter());
+        assertFalse(error.getMessage().contains("sensitive"));
+    }
+
+    @Test
     void remoteWritesRequireIndependentExplicitApproval() {
         SpApiClient client = new SpApiClient(req -> response(200, "{}"),
             refresh -> "fake-access", r -> r.endpoint(true), true, false);
