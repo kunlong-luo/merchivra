@@ -3,6 +3,7 @@ import {useQuery} from '@tanstack/react-query'
 import {compareSettlementReport} from './lib/settlement-comparison'
 import SettlementReportScanPanel from './SettlementReportScanPanel'
 import SettlementSourceReviewPanel from './SettlementSourceReviewPanel'
+import ManualBankPanel from './ManualBankPanel'
 import {listSettlementReports,listSettlementReportLines,reviewSettlementReport} from './lib/settlement-reports'
 
 export default function SettlementReportsPanel({tenantId,marketplaceId,connected}:{tenantId:string;marketplaceId:string;connected:boolean}){
@@ -26,6 +27,7 @@ export default function SettlementReportsPanel({tenantId,marketplaceId,connected
    </div><button type="button" className="refresh-button" onClick={()=>void reports.refetch()} disabled={reports.isFetching}>
     {reports.isFetching?'读取中…':'刷新报告'}</button></div>
   {connected&&<SettlementReportScanPanel key={marketplaceId} tenantId={tenantId} marketplaceId={marketplaceId}/>}
+  <ManualBankPanel tenantId={tenantId} marketplaceId={marketplaceId} reportId={selected}/>
   {reports.isPending?<p className="empty-state">正在读取报告来源…</p>:
    reports.isError?<p className="setup-error" role="alert">
     {reports.error instanceof Error?reports.error.message:'报告读取失败'}</p>:
