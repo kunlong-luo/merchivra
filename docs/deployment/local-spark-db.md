@@ -237,3 +237,7 @@ cd apps/web && npm ci && npm run typecheck && npm run test && npm run build
 React 19 前端**已经实现并构建成功**，有实际登录/会话、核心数据、卖家授权代码入口、运营自动化、团队权限、采购与仓储（含 V49–V52 库位、盘点、退货与凭据）、财务来源与对账页面、Mock 演示，以及宽度响应式验证。它不是空白脚手架，也不是 Vue；但目前仍是 pre-alpha，尚未完成真实 Amazon 授权后的全业务联调、外部承运商回执核验或面向公网的安全认证，因此不能承诺“前端和整套 ERP 已达到生产可用”。
 
 近期实际独立 PG18 / Flyway、Spring 启动、Java 与 React 构建成功：[2026-11-01 CI](https://github.com/kunlong-luo/merchivra/actions/runs/41270021997)。这验证的是**空库迁移与构建**，并不表示当前用户的 spark-db 实例已被直接连接或修改。
+
+## 可选 Redis 8 接入（V54）
+
+现在不必新增 Docker 容器即可复用 `spark-redis`：将 `.env` 中 `MERCHIVRA_REDIS_PASSWORD` 设置为已有 `spark-db` 中的 Redis 密码，启用 `MERCHIVRA_REDIS_SESSIONS_ENABLED=true` 和（需要正式 Amazon 限流时）`MERCHIVRA_SPAPI_RATE_LIMIT_ENABLED=true`。不会自动修改 `spark-db` 的 `allkeys-lru` 全局策略，不得把共享 Redis 当成已经通过生产会话/配额认证。注意打开 Redis Session 后首次需重新登录；Redis 连接故障必须失败而非自动退回本机会话。完整说明和 Redis 8 实际容器验收见 [V54 Redis 指南](redis-session-spapi-v53.md)。
