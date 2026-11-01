@@ -25,8 +25,8 @@ public class ReleasedLotLifecycleService {
     public ReleasedLotLifecycleService(JdbcTemplate jdbc,WarehouseStockOperationService stock) {
         this.jdbc=jdbc;this.stock=stock;
     }
-    public record Request(UUID requestKey,String actionType,UUID destinationBinId,
-                          int quantity,int expectedRemaining,Long expectedOnHand,
+    public record Request(UUID requestKey,String actionType,UUID expectedBinId,
+                          UUID destinationBinId,int quantity,int expectedRemaining,Long expectedOnHand,
                           Integer observedQuantity,String reason) {}
     public record Action(String id,String actionType,String sourcePositionId,
                          String sourceWarehouseId,String sourceBinId,
@@ -220,7 +220,7 @@ public class ReleasedLotLifecycleService {
     }
     private static void check(Request req) {
         if(req==null || req.requestKey()==null || req.actionType()==null
-            || req.expectedRemaining()<0 || req.expectedRemaining()>1_000_000
+            || req.expectedBinId()==null || req.expectedRemaining()<0 || req.expectedRemaining()>1_000_000
             || !List.of("MOVE","TRANSFER","COUNT_OBSERVATION",
                 "EXPIRED_QUARANTINE").contains(req.actionType()))
             throw bad("Invalid released lot action");
@@ -259,12 +259,14 @@ public class ReleasedLotLifecycleService {
             """,UUID.randomUUID(),tenant,position,type,quantity,actor);
     }
     private void requireCurrent(Source src,Request req) {
-        if(src.remaining()!=req.expectedRemaining())
-            throw conflict("Position quantity changed; refresh before action");
+        if(src.remaining()!=req.expectedRemaining()
+            || !src.bin().equals(req.expectedBinId()))
+            throw conflict("Position quantity or source bin changed; refresh before action");
     }
     private void checkReplay(Action old,UUID actor,UUID sourceId,Request req) {
         if(!old.actorUserId().equals(actor.toString())
             || !old.sourcePositionId().equals(sourceId.toString())
+            || !old.sourceBinId().equals(req.expectedBinId().toString())
             || !old.actionType().equals(req.actionType())
             || !Objects.equals(old.destinationBinId(),
                  req.destinationBinId()==null?null:req.destinationBinId().toString())
