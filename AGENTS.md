@@ -506,3 +506,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - V50 `erp_local_lot_disposition` 只有从 V49 EXPIRED_QUARANTINE 且存在唯一同等负数 `LOT_QUARANTINE` 签名移动的来源可申请。一个隔离 action 一个处置计划；提出人/原隔离执行人不能独立审批自己；审批人不能自己报告实际执行。批准和报告处置均**不得再次扣减或增加签名可用库存**，完成只表示人工记录，不能冒充承运商/供应商确认。
 - 所有 V50 操作从 Owner session 取得 tenant/actor，CSRF 必需；tenant + requestKey 幂等，历史证据不可覆盖。对盘点审核、跨仓确认和隔离处置必须分别有独立 API、来源、操作人与状态审核审计；测试应覆盖无双入账、无负库存以及审查前后库存或 bin 改变的拒绝行为。
 - 详见 `docs/purchasing/lot-count-review-transfer-receiving-disposition-v50.md`；CI 不能冒充 PostgreSQL 18 Flyway/Compose、多租户并发、真实 Amazon OAuth/SP-API 已验收。
+
+## V51 · 盘盈来源再定位、短收纠正和内部凭据审核约束（2026-11-01）
+
+- 只有 V50 已独立审核成 EVIDENCE_REQUIRED 的盘盈才可申请 `RELEASED_SURPLUS_BIND`，来源必须是本 tenant 的 V46 RELEASED 且 accepted 的真实收货根位置（origin_position_id IS NULL）。审核时重新核对 position/bin/expected_remaining、全仓 signed balance、原实收所有根位置累计 placed<=accepted、当前仓该 SKU 所有定位 remaining 加待绑定差额<=signed usable。成功只能增加已存在的 root placed/remaining 并追加 SURPLUS_BOUND，**绝不创建新的正数库存流水、收货/质检或虚构商品**。超出已放行但未定位库存的真实盘盈仍须新合法实物入库与 QC，不得绕过。
+- 仅 V50 第二人已签收但数量少于 V49 原调拨的 MISMATCH 可申请 `TRANSFER_SHORTAGE`。审查人不能是申请人或原签收人，必须在 tenant/仓库锁内验证目标子位置尚未消耗/移位、remaining=原已过账调拨量、warehouse 签名余额与申请快照一致；同事务先减目标位置 remaining，再使用原 V40 COUNT 做等量负向签名库存调账并记录操作来源。禁止再生成 TRANSFER_IN/OUT；失败全部回滚。同源唯一 requestKey/唯一一次纠正。
+- V51 已报告处置的 proof 只保存人工录入的 DISPOSAL_CERTIFICATE 或 SUPPLIER_RETURN_RECEIPT 参考编号、可选 SHA-256 摘要和说明，类型必须匹配 V50 已 EXECUTED_REPORTED 的 method。当前**没有文件上传和 SHA-256 对原件验算、物流/供应商第三方认证能力**。只有与凭据登记人、原处置执行报告人不同的 Owner 可以设置 METADATA_REVIEWED，意为本地元数据审核而非文件真实性/供应商签收核验，不得触发库存二次扣减。
+- V51 统一 tenant/actor 仅来自 Owner Session，写操作 CSRF；任何请求键重复重放必须同 actor/来源/数量和证据，异内容冲突。不要让普通 V40 COUNT/转仓绕过已有已定位批次保护。新增功能测试需覆盖审批人与业务来源分离、根来源合格与已定位双上限、跨仓目标位置快照、完整事务回滚及证明元数据的非库存副作用。
+- 详见 `docs/purchasing/lot-exception-source-corrections-proof-v51.md`。Java/React CI 成功不等于 PostgreSQL 18 真实迁移/Compose 并发、外部证明或 Amazon SP-API 已验收。
