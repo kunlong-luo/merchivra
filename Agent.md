@@ -15,7 +15,7 @@
 
 - **后端**：Java 25 LTS、Spring Boot 4.1.2、Spring Security 7、Jackson 3、Maven、Spring JDBC + Flyway、PostgreSQL 18，构建工具唯一选择 Gradle 9.2.1（Gradle Wrapper）。
 - **前端（2026-10-31 React 迁移覆盖早期 Vue 决策）**：Node 24 LTS、React 19.3、React DOM、TypeScript 6、Vite 8、TanStack React Query 5、Zod 4、Vitest；使用已提交的 `apps/web/package-lock.json` 与 **`npm ci`**，不要改回无锁安装。
-- **部署**：单体 API + React 静态页面、Docker Compose；Redis 预留而非所有功能都必须用。Dockerfile 与 GitHub Actions 必须和本地版本一致。
+- **部署**：单体 API + React 静态页面、Docker Compose；Redis 8 已可选接入共享 Session/CSRF 与跨实例 SP-API 冷却，默认关闭且单实例无需 Redis。Dockerfile 与 GitHub Actions 必须和本地版本一致。
 - 维护者已淘汰 Maven：后端仅允许 Gradle Wrapper，必须同时更新 build.gradle、Dockerfile、GitHub Actions 和文档；禁止重新加入 pom.xml 或 mvn 命令。添加依赖前确认现有业务实际使用，避免把 Kafka/InfluxDB/Redis/JPA 强行变成运行必需。
 
 ## 测试与开发节奏
@@ -522,3 +522,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - Spring Boot 保持项目已验证的 `4.1.2`（高于模板 `4.1.1`），`io.spring.dependency-management` `1.1.7`，不要把另一项目的 `com.spark.iot` 包名/业务依赖直接复制过来；当前 group 必须是 `org.merchivra`。
 - 必需功能以 Spring JDBC、Flyway、Security、Web MVC、官方 Amazon SDK 和 PostgreSQL 18 为核心；Redis/Kafka/InfluxDB/JPA/PostGIS/WebSocket/Zen Engine/MapStruct/Lombok 等仅在有真实实现且测试覆盖时添加，当前 spark-db 共享环境不应因此被强制依赖。
 - CI 必须执行 Gradle test + JaCoCo 报告，真实 PostgreSQL 18 的 bootRun/Flyway 迁移，React 19 的 npm ci/typecheck/Vitest/build，及 Docker Compose 服务数量验证。83% 行覆盖率保留为 `-PstrictCoverage check` 严格目标，在未达到覆盖率前不得虚假标记通过。所有 Gradle 分发和 Wrapper JAR 应校验 SHA-256。
+
+## 2026-11-01 · V54 Redis 8 架构与安全约束
+
+- 已实现（但保持显式开关）：`MERCHIVRA_REDIS_SESSIONS_ENABLED=true` 将 Spring Security Session/CSRF 存入 Redis（4h/独立命名空间），`MERCHIVRA_SPAPI_RATE_LIMIT_ENABLED=true` 将官方 SDK 和旧读 HTTP 的出站限制到跨实例共用的原子 Redis cooldown；不应恢复仅内存的跨实例配额和 Session。
+- 现有 `spark-db` 上 Redis 8 可通过 `spark-iot-net` 的 `spark-redis:6379` 复用，密码由本地 `.env` 注入，禁止改动或删除用户的原 `spark-redis`、`iot_farm`、数据卷及其他服务 Key，禁止 FLUSHALL/FLUSHDB。
+- PostgreSQL 18 是订单、采购、财务、审计及同步 checkpoint 唯一事实来源；Redis 不可用时不能让 Amazon 出站限流或 HTTP 登录会话 fail-open。单实例且两开关关闭时必须能完全不依赖 Redis 启动。
+- 共享 `spark-db` 使用 `allkeys-lru`，可淘汰限流和 Session Key；生产不可直接当成强限流保证。要求独立 `noeviction` Redis/容量/ACL/TLS/告警方案，不能擅自修改现有全局 Redis 淘汰策略。
+- CI 应同时保持无 Redis 的普通 PG18 Java25 Gradle / React19 验收，以及专门 Redis **8** 的真实登录、重启恢复、故障 fail-closed 集成；API cooldown 只是保守限额，不代表已按 Amazon 动态 Usage Plan 正式验收。详见 `docs/deployment/redis-session-spapi-v53.md`。
