@@ -11,6 +11,10 @@ public interface SpApiRateLimiter {
     /** Pre-verification Seller ID is unknown; enforce a region-wide safety gate. */
     default void requireVerificationPermit(SpApiRegion region) { }
 
+    /** Legacy typed HTTP operation boundary (trusted server-side grant only). */
+    default void requireLegacyPermit(SpApiRegion region, SpApiOperation operation,
+        String approvedRefreshToken) { }
+
     static SpApiRateLimiter disabled() {
         return (seller, family) -> { };
     }
