@@ -44,6 +44,23 @@ class SettlementReportImportServiceTest {
     }
 
     @Test
+    void duplicateReportLookupNeverCrossesSellerScope() {
+        var finance=scope(Set.of("Finance and Accounting"));
+        when(jdbc.query(contains("JOIN seller_marketplace m"),
+            any(org.springframework.jdbc.core.RowMapper.class),
+            eq(finance.tenantId()),eq(finance.sellerAccountId()),
+            eq(finance.marketplaceId()),eq("REPORT-12345678")))
+            .thenReturn(java.util.List.of("DOCUMENT-12345678"));
+        assertTrue(service.alreadyImported(finance,"REPORT-12345678","DOCUMENT-12345678"));
+        assertThrows(org.springframework.web.server.ResponseStatusException.class,
+            ()->service.alreadyImported(finance,"REPORT-12345678","DOCUMENT-OTHER"));
+        verify(jdbc,times(2)).query(contains("r.tenant_id=?"),
+            any(org.springframework.jdbc.core.RowMapper.class),
+            eq(finance.tenantId()),eq(finance.sellerAccountId()),
+            eq(finance.marketplaceId()),eq("REPORT-12345678"));
+    }
+
+    @Test
     void reportReadsAlwaysRequireTenantAndMarketplaceBoundaries() {
         // Reflects SQL contract without executing PostgreSQL here; real Flyway
         // migration and live start are verified by separate PG18 CI job.
