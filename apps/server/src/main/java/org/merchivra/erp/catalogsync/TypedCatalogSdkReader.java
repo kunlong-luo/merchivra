@@ -10,7 +10,6 @@ import java.util.Set;
 import org.merchivra.erp.spapi.SpApiHttpException;
 import org.merchivra.erp.spapi.SpApiOperation;
 import org.merchivra.erp.spapi.SpApiRetryPolicy;
-import org.merchivra.erp.spapi.SpApiOfficialModules;
 import org.merchivra.erp.spapi.SpApiOfficialSdkFactory;
 import org.merchivra.erp.spapi.SpApiSellerScope;
 import software.amazon.spapi.ApiException;
@@ -34,16 +33,17 @@ public final class TypedCatalogSdkReader {
     private final StockCall inventory;
     public TypedCatalogSdkReader(SpApiOfficialSdkFactory factory) {
         Objects.requireNonNull(factory);
-        var modules=new SpApiOfficialModules(factory);
         this.listings=(scope,cursor)->factory.executeObservedRead(scope,
             SpApiOperation.SEARCH_LISTINGS,
-            () -> modules.listings(scope).searchListingsItemsWithHttpInfo(
+            software.amazon.spapi.api.listings.items.v2021_08_01.ListingsApi.class,
+            api -> api.searchListingsItemsWithHttpInfo(
                 scope.sellerId(),List.of(scope.marketplaceId()),null,List.of("summaries"),
                 null,null,null,null,null,null,null,null,null,null,null,
                 null,null,20,cursor));
         this.inventory=(scope,cursor)->factory.executeObservedRead(scope,
             SpApiOperation.GET_FBA_INVENTORY,
-            () -> modules.fbaInventory(scope).getInventorySummariesWithHttpInfo(
+            software.amazon.spapi.api.fba.inventory.v1.FbaInventoryApi.class,
+            api -> api.getInventorySummariesWithHttpInfo(
                 "Marketplace",scope.marketplaceId(),List.of(scope.marketplaceId()),
                 true,null,null,null,cursor));
     }
