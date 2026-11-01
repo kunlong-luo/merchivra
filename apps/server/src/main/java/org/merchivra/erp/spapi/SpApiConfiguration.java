@@ -3,6 +3,7 @@ package org.merchivra.erp.spapi;
 import java.net.http.HttpClient;
 import java.time.Duration;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,8 +20,17 @@ public class SpApiConfiguration {
     SpApiOfficialSdkFactory spApiOfficialSdkFactory(
         @Value("${merchivra.spapi.lwa-client-id:}") String clientId,
         @Value("${merchivra.spapi.lwa-client-secret:}") String clientSecret,
-        @Value("${merchivra.spapi.sandbox:true}") boolean sandbox) {
-        return new SpApiOfficialSdkFactory(clientId, clientSecret, true, sandbox);
+        @Value("${merchivra.spapi.sandbox:true}") boolean sandbox,
+        @Value("${merchivra.spapi.rate-limit.enabled:false}") boolean throttleEnabled,
+        ObjectProvider<SpApiRateLimiter> admission) {
+        // No real Amazon production egress without a shared fail-closed budget.
+        if (!sandbox && !throttleEnabled)
+            throw new IllegalStateException("Production SP-API requires Redis rate-limit enabled");
+        SpApiRateLimiter limiter=admission.getIfAvailable();
+        if (throttleEnabled && limiter==null)
+            throw new IllegalStateException("Redis SP-API rate-limit bean missing");
+        return new SpApiOfficialSdkFactory(clientId, clientSecret, true, sandbox,
+            limiter==null?SpApiRateLimiter.disabled():limiter);
     }
 
 
