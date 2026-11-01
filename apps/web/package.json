@@ -13,6 +13,7 @@
     "test": "vitest run",
     "preview": "vite preview --host 127.0.0.1",
     "api:generate": "orval --config orval.config.ts",
+    "api:generate:fba": "orval --config orval.fba.config.ts",
     "api:check": "npm run api:generate && node ../../scripts/check-orval-generated.mjs"
   },
   "dependencies": {

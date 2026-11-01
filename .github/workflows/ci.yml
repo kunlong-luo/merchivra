@@ -140,6 +140,13 @@ jobs:
           cmp apps/web/openapi/finance-profits.json /tmp/merchivra-normalized-finance-openapi.json
           curl -fsS http://127.0.0.1:8080/v3/api-docs/fba-inbound > /tmp/merchivra-live-fba-openapi.json
           node scripts/normalize-fba-openapi.mjs /tmp/merchivra-live-fba-openapi.json /tmp/merchivra-normalized-fba-openapi.json
+          cp /tmp/merchivra-normalized-fba-openapi.json apps/web/openapi/fba-inbound.json
+          (
+            cd apps/web
+            npm ci --no-audit --no-fund
+            npm run api:generate:fba
+          )
+          test -s apps/web/src/generated/fba-inbound.ts
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='63' AND success")" = "1"
           echo "PostgreSQL 18 / Flyway / actual finance OpenAPI snapshot verified against a real server"
           kill "$app_pid" 2>/dev/null || true
@@ -147,7 +154,10 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: v65-fba-live-openapi
-          path: /tmp/merchivra-normalized-fba-openapi.json
+          path: |
+            apps/web/openapi/fba-inbound.json
+            apps/web/src/generated/fba-inbound.ts
+            apps/web/src/generated/fba-models/
           if-no-files-found: error
           retention-days: 7
 

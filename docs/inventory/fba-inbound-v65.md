@@ -42,3 +42,7 @@ To complete the frontend migration:
 5. Implement React shipment and variance panels on top of the generated Orval client, then run api:check, typecheck, Vitest and Vite build.
 
 Outstanding before V65 is complete: generated Orval client + React UI, real PG integration tests for concurrent idempotent receipts and two-Owner reviews, mock end-to-end workflow tests. No real Seller authorization until all core modules are finished and Owner tests locally.
+
+## Runtime generation smoke
+
+The CI PG18 job now installs the locked Node 24 client toolchain, runs Orval 8 against ONLY the normalized live FBA contract, and preserves the schema and generated TypeScript model/hook files as the PR artifact. This runs with Amazon OAuth/Sp-API switched OFF; the generated files are not yet committed or imported by the production React panels.
