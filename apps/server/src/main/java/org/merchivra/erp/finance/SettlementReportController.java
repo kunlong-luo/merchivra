@@ -18,10 +18,11 @@ import org.springframework.web.bind.annotation.RestController;
 public class SettlementReportController {
     private final TenantAccessService tenants;
     private final SettlementReportImportService imports;
+    private final SettlementReportComparisonService comparisons;
 
     public SettlementReportController(TenantAccessService tenants,
-        SettlementReportImportService imports) {
-        this.tenants=tenants;this.imports=imports;
+        SettlementReportImportService imports,SettlementReportComparisonService comparisons) {
+        this.tenants=tenants;this.imports=imports;this.comparisons=comparisons;
     }
 
     @GetMapping
@@ -37,6 +38,14 @@ public class SettlementReportController {
         @PathVariable UUID reportId) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
             .body(imports.lines(tenants.currentTenant(auth,req),marketplaceId,reportId));
+    }
+
+    @GetMapping("/{reportId}/finance-comparison")
+    public ResponseEntity<SettlementReportComparisonService.Comparison> comparison(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID marketplaceId,
+        @PathVariable UUID reportId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(comparisons.compare(tenants.currentTenant(auth,req),marketplaceId,reportId));
     }
 
     @GetMapping("/{reportId}/review")
