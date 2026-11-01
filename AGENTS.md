@@ -482,3 +482,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 拆分必须在 tenant+batch 锁下保存来源 qty - n 和新片段 qty=n，要求 1<=n<原片段当前件数、唯一分段码、目标待检库位、原因和 requestKey；移动需要来源 bin 预期值与目标 bin，重复 requestKey 不重复移动或分段，记录只追加事件。**任何分段/库位操作都不产生 `erp_local_stock_movement`，也不修改 `erp_purchase_receipt` 或 Amazon FBA。**
 - 库存补货压力视图必须把来自仓库已签库存流水的 usable、PENDING_QC、INSPECTED 待放行、ASN 申报 SHIPPED 未关联收货数量分开，不得相加成可售库存；V42 原补货决策仍以已发布本地库存流水为准，不能自动提交采购单。
 - 详见 `docs/purchasing/receipt-lot-locations-v47.md`。Java/React CI 不替代 PostgreSQL 18 Flyway、跨租户 HTTP 与多事务锁验收。
+
+## V48 · 分段 QC、已放行 STORAGE 和 FIFO/FEFO 出库的硬性不变量（2026-11-01）
+
+- `erp_receipt_piece_grade` 只来源 V47 PENDING_QC 真实收货 piece，必须 1 次全量记录 `accepted+rejected=piece.quantity` 且留操作人与原因、租户 requestKey；一旦开始 grading，冻结所有分段拆分和待检移动。只有所有分段覆盖齐全且总和等于原始实际实收数量，才调用 V44/V46 唯一整笔 QC。旧 inspect API 不得绕过部分分段 QC；整笔放行仍需与最终 QC inspector 不同的 Owner。
+- `erp_local_lot_position` 仅允许 V46 `RELEASED` 的 accepted 商品显式放进同仓 ACTIVE `STORAGE`，累计 `placed_quantity<=QC.accepted`，`SUM(remaining_quantity)<=仓库同 SKU 真实签名可用余额`。上架动作绝不再次生成 QC_RELEASE 或正数库存移动；未建位置的历史存量不得假造来源/有效期。
+- FIFO/FEFO 只在 Owner 确认真实出库后调用统一 V40 `OUTBOUND`；在 tenant/仓库串行锁下将批次库位扣减、标准签名出库流水、操作和 pick_line 审计组成同一事务，任何中间失败全部回滚。FEFO 有效期来自人工记录；过期批次禁入自动拣货、未知有效期排在已知日期后，不得虚构承运商或 Amazon 证明。
+- 普通 V40 OUTBOUND/TRANSFER/COUNT 减少库存后不可使余额低于定位批次余量，应拒绝并要求 lot-aware pick。不得只在 UI 实现该检查；支持原始 expectedOnHand、tenant+requestKey 幂等、来源和 actor 审计。
+- 详见 `docs/purchasing/graded-lot-putaway-fifo-fefo-v48.md`；Java/React CI 成功不等于 PostgreSQL18 真实 Flyway、竞争事务或跨租户 HTTP 完整验收，真实 Amazon SP-API 在核心功能后联调。
