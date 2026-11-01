@@ -410,3 +410,10 @@
 - [x] GitHub CI 增加真实 PostgreSQL 18 服务和 Spring Boot Flyway 全迁移作业，检查 V46–V52 及最新表；是否成功须以对应最终 SHA 的 CI 结果为准，不能将模拟单测等同于 PG18 已验收。
 - [ ] 未实现病毒扫描/对象存储加密、外部签名、物流接口和自动财务冲销；真实 Amazon OAuth/SP-API 仍由 Owner 在全部核心开发后本地授权。
 - 文档：[PO-015 V52 原件与供应商对账](purchasing/lot-proof-files-supplier-trace-v52.md)。
+
+## V53 基础构建迁移 · Maven → Gradle（2026-11-01）
+
+- [x] 维护者明确要求后端淘汰 Maven，统一 `apps/server/build.gradle` Groovy DSL、Gradle **9.2.1**、Java **25**、Spring Boot **4.1.2**（保持当前较新的已验证小版本）和 dependency-management 1.1.7，group `org.merchivra`；不能复用别的项目 `com.spark.iot`。
+- [x] Docker 多阶段构建、GitHub CI Java 单测和真实 PG18 + Flyway bootRun、README/中文开发文档、Agent 工程规则切换到 Gradle。官方 Gradle Wrapper 含发行版 SHA-256 验证；JaCoCo XML/HTML 报告与可选 `-PstrictCoverage` 83% 行覆盖率验证。
+- [x] Maven `pom.xml`、`target/`、Maven CI 构建命令不再作为有效工程入口。Kafka、InfluxDB、Redis Repository、JPA、WebSocket 等尚无 Merchivra 代码使用，暂不引入以保持三服务部署不变。
+- [ ] 真实 Amazon Seller 授权及所有外部 API 仍待项目 Owner 在全部核心开发完成之后自行本地测试；Gradle 迁移成功不等于业务联调验收。
