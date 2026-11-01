@@ -610,3 +610,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 首先创建 `NOLOGIN`/非超级用户专用角色，独立数据库并撤销数据库级 PUBLIC 默认权限；实际 SCRAM 强密码只能通过受保护 GUI 或交互式 `psql` 设置，**确认设置成功后**才单独启用 `LOGIN`。`\password` 不属于可执行 SQL。
 - Compose 内置 PG 模式由官方 PostgreSQL 镜像自行 bootstrap，不得运行此脚本；应用的 Flyway 仅创建/更新已存在 `merchivra` 库内业务 Schema。绝不影响 `iot_farm`、其他项目的角色/库、磁盘卷或共享 Redis。
 - IDEA 直接运行使用本地进程 `DB_PASSWORD`；外部 Compose 从独立 `.env` 的 `MERCHIVRA_DB_PASSWORD` 注入。这些配置不应进入 Git/日志，且该脚本不能代替应用环境变量配置。
+
+## 2026-11-01 · V62 多 SKU 金额归属
+
+- 先读 `docs/finance/multi-sku-item-allocation-v62.md`。V60 Flyway 表是逐 `LIVE Finances event × 当前订单 external_item_id × 类别` 有符号归属，只接收人工批准的 Finances 分类叶节点 PRODUCT_SALES/AMAZON_FEE/FBA_FEE，不自动猜比例、不擅自分类退款或调整。
+- 原始同 Marketplace 的事件到订单 MATCHED 是前提，订单所有商品项必须在原订单日期正确映射 SKU/历史成本；缺失/重复/混币/未知数量只能阻塞。
+- 每类金额不得超过来源绝对值、符号方向一致；允许 DRAFT 残差，但只有完全零残差才提交，**必须不同 Owner 独立审批**。审批哈希必须绑定来源、成本以及逐项金额和依据，变动则 STALE，旧分摊不可以用于 V61 利润。
+- 多 SKU 订单计入 V61 必须所有事件都获独立审批、分类与订单合计两层金额守恒、退款/调整阻塞解除。不得部分计入、重复计单、将财务来源完整度、银行到账或税务利润标为验证完成。
+- Session Owner+CSRF+租户与 Marketplace 复合约束/no-store，审计只追加。Flyway 迁移号 V60 不等于版本里程碑 V60（银行人工来源），代码仍为 Java25/Gradle/Spring Boot4.1.2、React19、PG18 和可选 Redis8，无 Amazon 远程写入。

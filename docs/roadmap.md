@@ -466,3 +466,12 @@
 - [x] 参照已有 Lanveriq 仅供人工管理的示例，将其安全原则迁移为 **Merchivra 独立**的纯 SQL `apps/server/scripts/provision-merchivra-database.sql`；只创建 `merchivra NOLOGIN` 角色和专用数据库、移除 PUBLIC DB 权限，不依赖 Flyway/bootRun/Compose/CI，不包含密钥。
 - [x] 更新中英文 README、`docs/deployment/local-spark-db.md` 和 `docs/development.md`：只有**不存在**既有角色和数据库时才允许 DBA 手工初始化，分开密码设置与 LOGIN，GUI 需 autocommit、stop-on-error，不能单事务 `CREATE DATABASE`；本地 IntelliJ 仍需单独配置 `DB_PASSWORD`。
 - [ ] 用户在**自己的** PG18 上确认专用数据库已正确预置或现有状态无需初始化、专用密码认证成功、IDEA 启动正常。未在 CI/工具侧执行管理员级数据库创建，不可称本地连接问题已经解决。
+
+## 2026-11-01 · V62 多 SKU 来源费用人工分摊（当前实施状态）
+
+- [x] Flyway **V60**：同租户同 Marketplace 事件与订单、唯一项+类别分配、金额符号、完整人工双人审核和不可变审计。
+- [x] `ItemAllocationEngine` + `ItemAllocationService`：真实 LIVE Finances 已审核订单关联、V28 分类合计、历史成本版本、来源 SHA-256 + 已提交明细 SHA-256，全部类别精确守恒才可由另一 Owner APPROVED；重开删除旧明细并再次审核。
+- [x] `MultiSkuContributionService` 和 V61 页面汇总联动：所有相关事件审批完成、历史成本及订单财务合计吻合才计入逐 SKU 和单页总额；退款/调整及未知来源仍阻塞。
+- [x] React 财务事件逐项归属、费用残差、审核、版本审计，Java/Vitest 回归用例和文档。
+- [ ] 用户本地真实 Amazon 账号的 Finances 原始 leaf、退货与 Cost reconciliation、复杂晚到事件和真实费用分配仍需所有代码完成后做受控验收。V62 为可解释来源贡献估算，不是正式利润。
+- 详见：[FIN V62 多 SKU 分配说明](finance/multi-sku-item-allocation-v62.md)。
