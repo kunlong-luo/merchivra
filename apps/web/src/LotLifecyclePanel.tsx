@@ -4,7 +4,7 @@ import type {LocalWarehouse} from './lib/purchasing'
 import {fetchWarehouseStock} from './lib/purchasing'
 import {fetchStockBins} from './lib/lot-locations'
 import {fetchLotPositions} from './lib/released-lots'
-import {actLotPosition,fetchLotActionHistory,fetchLotExpiryAlerts,
+import {actLotPosition,fetchLotActionHistory,fetchLotExpiryAlerts,fetchLotLineage,
  type LotActionRequest} from './lib/lot-lifecycle'
 
 const labels:Record<LotActionRequest['actionType'],string>={
@@ -41,6 +41,8 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
   queryFn:()=>fetchStockBins(targetWh),enabled:!!targetWh,retry:false})
  const history=useQuery({queryKey:[...root,'lot-history',historyId],
   queryFn:()=>fetchLotActionHistory(historyId),enabled:!!historyId,retry:false})
+ const ancestry=useQuery({queryKey:[...root,'lot-lineage',historyId],
+  queryFn:()=>fetchLotLineage(historyId),enabled:!!historyId,retry:false})
  const usable=chosen?(stock.data?.find(s=>s.productSkuId===chosen.productSkuId)
   ?.onHandQuantity??0):0
  const chosenBinAllowed=bins.data?.some(b=>b.id===destBin&&
@@ -192,6 +194,22 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
     </button>
    </>}
    {!!historyId&&<>
+    <h3>从原始真实收货到当前库位的来源链</h3>
+    {ancestry.isPending?<p className="empty-state">读取原始批次链路…</p>:
+     ancestry.isError?<p className="setup-error" role="alert">{String(ancestry.error)}</p>:
+     <div className="table-scroll" role="region" tabIndex={0}>
+      <table><thead><tr><th scope="col">来源阶段</th><th scope="col">真实实收</th>
+       <th scope="col">仓库 / 库位</th><th scope="col">原始放置 / 当前余量</th>
+      </tr></thead><tbody>
+       {(ancestry.data??[]).map((a,i)=><tr key={a.positionId}>
+        <td>{i===0?'最初放行来源':'后续跨仓链路'}</td>
+        <td>{a.receiptId.slice(0,8)} · {a.lotCode}</td>
+        <td>{warehouses.find(w=>w.id===a.warehouseId)?.code??a.warehouseId.slice(0,8)}
+         {' / '+a.binCode}</td>
+        <td>{a.placedQuantity} / {a.remainingQuantity}</td>
+       </tr>)}
+      </tbody></table>
+     </div>}
     <h3>不可覆盖的批次操作审计</h3>
     {history.isPending?<p className="empty-state">读取操作历史…</p>:
      history.isError?<p className="setup-error" role="alert">{String(history.error)}</p>:
