@@ -1,6 +1,13 @@
 package org.merchivra.erp.spapi;
 
 import java.util.Set;
+import java.util.Map;
+import java.util.List;
+import java.time.Duration;
+import software.amazon.spapi.ApiException;
+import software.amazon.spapi.ApiResponse;
+import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.*;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import software.amazon.spapi.api.sellers.v1.SellersApi;
@@ -50,5 +57,36 @@ class SpApiOfficialSdkFactoryTest {
         assertThrows(IllegalArgumentException.class, () -> new SpApiSellerScope(
             UUID.randomUUID(), UUID.randomUUID(), "MOCK-FAKE", "ATVPDKIKX0DER",
             SpApiRegion.NA, "FAKE", Set.of()));
+    }
+
+    @Test
+    void observedReadAcquiresOperationPermitAndLearnsOfficialSdkResponseHeaders() throws Exception {
+        SpApiRateLimiter limiter=mock(SpApiRateLimiter.class);
+        var sdk=new SpApiOfficialSdkFactory("fake-client","fake-secret",true,true,limiter);
+        var seller=fakeSeller();
+        String result=sdk.executeObservedRead(seller,SpApiOperation.GET_CATALOG_ITEM,
+            ()->new ApiResponse<>(200,
+                Map.of("X-Amzn-RateLimit-Limit",List.of("0.25")),"fixture-data"));
+        assertEquals("fixture-data",result);
+        verify(limiter).requireLegacyPermit(seller.region(),SpApiOperation.GET_CATALOG_ITEM,
+            seller.refreshToken());
+        verify(limiter).observeLegacyResponse(seller.region(),SpApiOperation.GET_CATALOG_ITEM,
+            seller.refreshToken(),200,"0.25",Duration.ZERO);
+    }
+
+    @Test
+    void sdk429HeadersAreObservedAndCallerMustScheduleRetry() {
+        SpApiRateLimiter limiter=mock(SpApiRateLimiter.class);
+        var sdk=new SpApiOfficialSdkFactory("fake-client","fake-secret",true,true,limiter);
+        var seller=fakeSeller();
+        assertThrows(ApiException.class,()->sdk.executeObservedRead(seller,
+            SpApiOperation.GET_CATALOG_ITEM,()->{
+                throw new ApiException(429,Map.of("Retry-After",List.of("45")),"redacted");
+            }));
+        verify(limiter).observeLegacyResponse(seller.region(),SpApiOperation.GET_CATALOG_ITEM,
+            seller.refreshToken(),429,null,Duration.ofSeconds(45));
+        assertThrows(SecurityException.class,()->sdk.executeObservedRead(
+            seller,SpApiOperation.CREATE_REPORT,
+            ()->new ApiResponse<>(200,Map.of(),"must-not-run")));
     }
 }
