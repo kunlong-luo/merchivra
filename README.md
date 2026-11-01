@@ -16,7 +16,7 @@ The **default deployment uses exactly three services**:
 | `server` | Java 25, Spring Boot 4.1.2 | Session/CSRF, ERP APIs, Flyway migrations | http://127.0.0.1:8080 |
 | `postgres` **or existing `spark-postgres`** | PostgreSQL **18** | All business data, audit trails, uploaded evidence | Internal DB or existing PostgreSQL host |
 
-**Redis is optional and not used by the current application runtime.** The bundled Redis container is behind the `optional-cache` Compose profile. An existing Redis, InfluxDB, or PostGIS stack does not need to be modified. Frontend is **React-only (no Vue)**; the backend is a modular monolith. More information: [dependency decisions](docs/architecture/dependency-adoption.md).
+**Optional Redis 8 integration is implemented** for shared Spring Security Session/CSRF and atomic cross-instance Amazon SP-API admission, behind explicit flags (off by default). The bundled Redis remains behind `optional-cache`; existing `spark-redis` is reused without new containers. Your existing Redis `allkeys-lru` can evict session/throttle keys and is not adequate for production guarantees without an isolated no-eviction deployment. See the [Redis setup and safety guide](docs/deployment/redis-session-spapi-v53.md). Frontend remains **React-only (no Vue)**.
 
 ## Option A — quick start, bundled PostgreSQL 18 (three containers)
 
@@ -38,7 +38,7 @@ docker compose --env-file .env -f deploy/compose.yaml ps
 
 Visit **http://127.0.0.1:3000** and sign in with your initial admin credentials. The app starts local **fictional Demo** mode with the bundled Compose only; do not use real Amazon credentials here. The PostgreSQL 18 named Docker volume persists across container restarts. The API ping is at http://127.0.0.1:8080/api/v1/ping; health at `/actuator/health`.
 
-Optional unused Redis container: `docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache up -d`.
+Optional Redis 8 container for local integration testing: `docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache up -d`.
 
 ## Option B — reuse an existing spark-db PostgreSQL 18 (recommended if available)
 
