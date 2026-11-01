@@ -55,15 +55,15 @@ public class SettlementReportImportService {
               AND a.id=m.seller_account_id
             JOIN spapi_seller_authorization g ON g.tenant_id=a.tenant_id
               AND g.seller_account_id=a.id
-            JOIN spapi_finances_role_evidence role ON role.tenant_id=g.tenant_id
-              AND role.seller_account_id=g.seller_account_id
+            JOIN spapi_finances_role_evidence re ON re.tenant_id=g.tenant_id
+              AND re.seller_account_id=g.seller_account_id
             WHERE m.tenant_id=? AND a.id=? AND m.marketplace_id=?
               AND a.seller_id=? AND a.region=? AND a.connection_status='CONNECTED'
               AND g.status='VERIFIED' AND g.seller_id=a.seller_id
-              AND g.region=a.region AND role.role_code='Finance and Accounting'
-              AND role.evidence_kind='EXTERNAL_APP_ROLE_REVIEW'
-              AND role.grant_verified_at=g.verified_at
-              AND role.expires_at>now() AND role.revoked_at IS NULL
+              AND g.region=a.region AND re.role_code='Finance and Accounting'
+              AND re.evidence_kind='EXTERNAL_APP_ROLE_REVIEW'
+              AND re.grant_verified_at=g.verified_at
+              AND re.expires_at>now() AND re.revoked_at IS NULL
               AND EXISTS (
                 SELECT 1 FROM spapi_marketplace_verification v
                 WHERE v.tenant_id=g.tenant_id AND v.seller_account_id=g.seller_account_id
@@ -78,12 +78,12 @@ public class SettlementReportImportService {
                 JOIN role_binding owner ON owner.tenant_id=member.tenant_id
                   AND owner.user_id=member.user_id AND owner.role_code='OWNER'
                   AND owner.seller_account_id IS NULL
-                WHERE member.tenant_id=role.tenant_id
-                  AND member.user_id=role.reviewed_by
+                WHERE member.tenant_id=re.tenant_id
+                  AND member.user_id=re.reviewed_by
                   AND member.status='ACTIVE'
                   AND (reviewer.seller_account_id IS NULL
                     OR reviewer.seller_account_id=a.id))
-            FOR SHARE OF m,a,g,role
+            FOR SHARE OF m,a,g,re
             """,(rs,n)->new Market(rs.getObject(1,UUID.class),
                 rs.getString(2).trim()),
             approved.tenantId(),approved.sellerAccountId(),approved.marketplaceId(),
