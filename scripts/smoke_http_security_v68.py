@@ -43,7 +43,8 @@ for path in ["/api/v1/auth/me","/api/v1/seller-accounts",
  "/api/v1/ads/marketplaces/"+str(uuid4())+"/reports",
  "/api/v1/fba/marketplaces/"+str(uuid4())+"/shipments"]:
     call(path,expected=401)
-call("/api/v1/operations/scan",method="POST",body={},expected=403)
+# An anonymous write is rejected at the authentication boundary (401).
+call("/api/v1/operations/scan",method="POST",body={},expected=401)
 raw, headers=call("/actuator/health")
 assert json.loads(raw)=={"status":"UP"},raw[:140]
 assert "no-store" in headers.get("Cache-Control","")
