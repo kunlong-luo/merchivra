@@ -360,3 +360,13 @@
 - [x] React 管理库位、批次分段、数量核对、待检压力；JUnit/Vitest 新增数量守恒、跨仓拦截、来源快照、CSRF 与无库存副作用验证，以最终 CI 为准。
 - [ ] 真实 PostgreSQL 18 Flyway/Compose、跨租户 HTTP 与竞争事务仍需专项验收；真实批次级可用库存/序列号/FEFO/仓位盘点和 Amazon API 留后续。
 - 文档：[PO-010 V47 待检批次/库位](purchasing/receipt-lot-locations-v47.md)。
+
+## V48 · 分段质检、已放行批次库位台账及 FIFO/FEFO 原子出库（2026-11-01）
+
+- [x] V48 Postgres 迁移：V47 piece 逐段不可覆盖 QC、每来源唯一请求键；已放行真实 receipt 的 STORAGE 库位上架原数/余数、可选有效期、FIFO/FEFO 出库主记录、批次扣减明细及追加式审计事件。
+- [x] 分段质检必须守恒并覆盖全部分段，随后由原 V44/V46 inspect 生成唯一整笔 QC；第一段质检开始后冻结待检片段移动/拆分。旧整笔质检 API 如果发现部分分段已检也不能绕过数量和覆盖核对；V46 第二 Owner 放行规则保持。
+- [x] 已放行合格品可显式放入当前租户同仓 ACTIVE STORAGE 库位，最多上架原合格总量，且总库位余量不能大于仓库签名库存余额；上架仅分配来源，不会第二次写 QC_RELEASE。
+- [x] FIFO/FEFO 选择有位置且未过期的批次、校验 expectedOnHand；人工确认后同事务先扣 lot position、调用既有 V40 OUTBOUND 签名仓库流水并保存 pick 分配/审计，失败全部回滚，重复 requestKey 不重复出库。普通出库/调拨/盘点不允许侵占已定位批次余量。
+- [x] React 分段质检、整笔核对、上架及 FIFO/FEFO 预览/人工拣货；新增后端与 Vitest 来源/幂等/审批/库位数量保护测试，以对应最新 CI 结果确认。
+- [ ] 仍需真实 PostgreSQL 18 Flyway/Compose、并发事务及 HTTP 权限/端到端环境专项验收；批次级部分放行、已放行库位间调拨、退货/盘点批次溯源、条码扫描和 Amazon API 仍待后续。
+- 文档：[PO-011 V48 分段质检及批次拣货](purchasing/graded-lot-putaway-fifo-fefo-v48.md)。
