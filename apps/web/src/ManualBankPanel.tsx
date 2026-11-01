@@ -1,5 +1,6 @@
 import {useState} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
+import BankManualReviewPanel from './BankManualReviewPanel'
 import {compareManualBank,importManualBankCsv,listManualBankBatches,
  listManualBankEntries} from './lib/manual-bank'
 
@@ -103,6 +104,10 @@ export default function ManualBankPanel({tenantId,marketplaceId,reportId}:{
      折算应付总额：{comparison.data.expectedGross??'未知'}；
      银行币种差额：{comparison.data.sourceDifference??'未知'}。
     </p>}
+    {comparison.data.candidateCount===1&&
+     <BankManualReviewPanel key={reportId} tenantId={tenantId}
+      marketplaceId={marketplaceId} reportId={reportId}
+      comparisonState={comparison.data.state}/>}
     <p className="setup-hint">此视图不连接银行、不存储账户号、不验证文件真实性；
       即使金额为零差异或完成来源双人审核，也不能确认资金已到账。</p>
    </div>)}
