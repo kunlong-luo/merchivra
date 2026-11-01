@@ -271,6 +271,15 @@ public class ProfitReportJobService {
             processed++;
         }
         boolean completed=processed==job.total();
+        if(completed) {
+            Integer distinct=jdbc.queryForObject("""
+                SELECT COUNT(DISTINCT internal_sku)
+                FROM finance_profit_report_sku WHERE tenant_id=? AND job_id=?
+                """,Integer.class,tenant,jobId);
+            if(distinct==null||distinct>1000)
+                throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+                    "More than 1000 distinct SKUs; split the report date window");
+        }
         jdbc.update("""
             UPDATE finance_profit_report_job
             SET processed_orders=?,state=?,updated_at=now(),
