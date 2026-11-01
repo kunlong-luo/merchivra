@@ -10,7 +10,7 @@ const task = {
   leaseExpired:false
 }
 const snapshot={
-  summary:{total:1,ready:0,running:0,retrying:1,paused:0,succeeded:0},
+  summary:{total:1,ready:0,running:0,retrying:1,paused:0,succeeded:0,dueNow:1,expiredRunningLeases:0},
   tasks:[task],limit:50,hasMore:false
 }
 
