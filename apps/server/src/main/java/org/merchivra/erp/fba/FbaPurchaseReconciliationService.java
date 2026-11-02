@@ -2,8 +2,6 @@ package org.merchivra.erp.fba;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -50,9 +48,9 @@ public class FbaPurchaseReconciliationService {
           proof.id AS link_id,proof.state AS link_state,proof.proof_reference,
           po.id AS po_id,po.order_number,po.status AS po_state,
           po_line.ordered_quantity AS po_quantity,
-          local_receipt.quantity AS po_received,
+          COALESCE(local_receipt.quantity,0)::bigint AS po_received,
           a.id AS asn_id,a.status AS asn_state,a.quantity AS asn_quantity,
-          asn_receipt.quantity AS asn_received
+          COALESCE(asn_receipt.quantity,0)::bigint AS asn_received
         FROM recent_shipment recent
         JOIN fba_inbound_shipment s ON s.id=recent.id AND s.tenant_id=?
           AND s.seller_marketplace_id=?
@@ -101,7 +99,8 @@ public class FbaPurchaseReconciliationService {
         if("PROPOSED".equals(linkState))
             return new Finding("PENDING_IDENTITY_REVIEW","WARNING","SECOND_OWNER_REVIEW");
         if("CONFIRMED".equals(linkState) &&
-           (!List.of("APPROVED","RECEIVING","RECEIVED").contains(poState)
+           (!("APPROVED".equals(poState)||"RECEIVING".equals(poState)
+             ||"RECEIVED".equals(poState))
            || hasAsn && !"SHIPPED".equals(asnState)))
             return new Finding("LINK_SOURCE_CHANGED","WARNING","RECHECK_SOURCE_IDENTITY");
         if("REVIEWING".equals(shipmentState) && planned!=reported &&
@@ -118,10 +117,6 @@ public class FbaPurchaseReconciliationService {
         if(!hasAsn)
             return new Finding("CONFIRMED_PO_ONLY","INFO","OPTIONAL_ASN_EVIDENCE");
         return new Finding("IDENTITY_CONFIRMED","INFO","NONE");
-    }
-    private static String at(ResultSet r,String column)throws SQLException {
-        OffsetDateTime instant=r.getObject(column,OffsetDateTime.class);
-        return instant==null?null:instant.toInstant().toString();
     }
     private static String uuid(ResultSet r,String column)throws SQLException{
         UUID id=r.getObject(column,UUID.class);
