@@ -7,7 +7,9 @@ import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchFindings,fetchOpsSummary,scanOperations,changeFindingState,ruleNames,severityNames,stateNames} from './lib/operations'
 import type {FindingFilter,FindingState} from './lib/operations'
 import {formatSourceTime,sourceLabel} from './lib/core-view'
-export default function OperationsWorkspace({tenantId}:{tenantId:string}){
+export default function OperationsWorkspace({tenantId,onOpenFbaException}:{
+ tenantId:string;onOpenFbaException:(marketplaceId:string,lineId:string)=>void
+}){
  const client=useQueryClient()
  const [filter,setFilter]=useState<FindingFilter>('ACTIVE'),[message,setMessage]=useState(''),[failure,setFailure]=useState(''),[editing,setEditing]=useState('')
  const viewer=useQuery({queryKey:['auth','me'],queryFn:fetchViewer,staleTime:0})
@@ -36,6 +38,11 @@ export default function OperationsWorkspace({tenantId}:{tenantId:string}){
  <td>{stateNames[i.state]}</td><td className="small-cell">{formatSourceTime(i.lastSeenAt)}</td>
  <td><OpsAttentionControls finding={i} tenantId={tenantId} userId={viewer.data?.userId??''}/></td>
  <td><div className="ops-row-actions">
+ {(i.ruleCode==='FBA_PO_EVIDENCE_CHANGED'||
+   i.ruleCode==='FBA_PO_EXCEPTION_OVERDUE')&&
+  <button type="button" className="text-button"
+   onClick={()=>onOpenFbaException(i.marketplaceId,i.sourceKey)}>
+   查看 FBA 原处理单</button>}
  {(i.state==='OPEN'||i.state==='ACKNOWLEDGED')&&<button className="text-button" disabled={!!editing} onClick={()=>change.mutate({id:i.id,state:'DONE'})}>标记已处理</button>}
  {(i.state==='DONE'||i.state==='ACKNOWLEDGED')&&<button className="text-button" disabled={!!editing} onClick={()=>change.mutate({id:i.id,state:'OPEN'})}>重新打开</button>}
  </div></td></tr>)}</tbody></table></div>}

@@ -16,8 +16,8 @@ const sources:Record<InboundOrigin,string>={
  MOCK:'模拟数据',MANUAL_UNVERIFIED:'手工未核验'
 }
 const initialLine=():DraftLine=>({rowId:crypto.randomUUID(),sellerSku:'',quantity:1})
-export default function FbaInboundPanel({tenantId,marketplaceId}:{
- tenantId:string;marketplaceId:string
+export default function FbaInboundPanel({tenantId,marketplaceId,focusExceptionLine}:{
+ tenantId:string;marketplaceId:string;focusExceptionLine?:string
 }){
  const client=useQueryClient()
  const key=['fba-inbound',tenantId,marketplaceId]
@@ -110,6 +110,7 @@ export default function FbaInboundPanel({tenantId,marketplaceId}:{
   <FbaPurchaseReconciliationPanel tenantId={tenantId} marketplaceId={marketplaceId}
     onOpenShipment={id=>{setSelectedId(id);setFailure('');setNotice('')}}/>
   <FbaPurchaseExceptionPanel tenantId={tenantId} marketplaceId={marketplaceId}
+    focusLineId={focusExceptionLine}
     onOpenShipment={id=>{setSelectedId(id);setFailure('');setNotice('')}}/>
   <section className="core-tools" aria-label="SKU 在途预估">
    <h3>在途预估（不计入可售）</h3>

@@ -83,3 +83,23 @@ export const caseMetricsSchema=z.object({
 export type ExceptionCaseMetrics=z.infer<typeof caseMetricsSchema>
 export const getExceptionMetrics=(marketplace:string)=>
  get(root(marketplace)+'/metrics',caseMetricsSchema)
+
+/** V79 reuses the V77 atomic/CSRF-protected batch ledger for ASSIGN. */
+export const bulkAssignReceiptSchema=z.object({
+ requestKey:uuid,assigneeId:uuid,assignedCount:z.number().int().min(1).max(50)
+})
+export const assignOwnerLoadSchema=z.object({
+ userId:uuid,displayName:z.string(),
+ open:positive,acknowledged:positive,overdue:positive
+})
+export const ownerWorkloadSchema=z.object({
+ totalCases:positive,unassigned:positive,inactiveAssignee:positive,
+ owners:z.array(assignOwnerLoadSchema).max(100)
+})
+export type OwnerWorkload=z.infer<typeof ownerWorkloadSchema>
+export const getOwnerWorkload=(marketplace:string)=>
+ get(root(marketplace)+'/workload',ownerWorkloadSchema)
+export const bulkAssignCases=(marketplace:string,requestKey:string,
+ assigneeId:string,lines:BulkSelection[],note:string)=>
+ post(root(marketplace)+'/bulk-assign',{requestKey,assigneeId,lines,note},
+  bulkAssignReceiptSchema)

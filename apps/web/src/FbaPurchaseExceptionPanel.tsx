@@ -1,8 +1,9 @@
-import {useEffect,useState,type FormEvent} from 'react'
+import {useEffect,useRef,useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {
  getExceptionBoard,postExceptionAction,bulkAcknowledge,getExceptionHistory,
  saveReminderPolicy,getReminderPolicyHistory,getExceptionMetrics,
+ bulkAssignCases,getOwnerWorkload,
  type ExceptionAction,type ExceptionItem
 } from './lib/fba-purchase-exceptions'
 
@@ -16,14 +17,18 @@ const actions:Record<ExceptionAction,string>={
 const timeText=(value:string|null)=>value?new Date(value).toLocaleString():'—'
 
 export default function FbaPurchaseExceptionPanel({
- tenantId,marketplaceId,onOpenShipment
-}:{tenantId:string;marketplaceId:string;onOpenShipment:(id:string)=>void}){
+ tenantId,marketplaceId,onOpenShipment,focusLineId
+}:{tenantId:string;marketplaceId:string;onOpenShipment:(id:string)=>void;
+  focusLineId?:string}){
  const client=useQueryClient()
  const prefix=['fba-inbound',tenantId,marketplaceId]
  const query=useQuery({queryKey:[...prefix,'workbench-v77'],
   queryFn:()=>getExceptionBoard(marketplaceId),retry:false})
  const metrics=useQuery({queryKey:[...prefix,'metrics-v78'],
   queryFn:()=>getExceptionMetrics(marketplaceId),retry:false})
+ const workload=useQuery({queryKey:[...prefix,'owner-load-v79'],
+  queryFn:()=>getOwnerWorkload(marketplaceId),retry:false})
+ const lastFocused=useRef('')
  const [filter,setFilter]=useState<'ACTIONABLE'|'ALL'|'OVERDUE'|'RESOLVED'>('ACTIONABLE')
  const [chosen,setChosen]=useState<string[]>([])
  const [selectedId,setSelectedId]=useState('')
@@ -33,6 +38,9 @@ export default function FbaPurchaseExceptionPanel({
  const [note,setNote]=useState('')
  const [bulkNote,setBulkNote]=useState('')
  const [bulkKey,setBulkKey]=useState(()=>crypto.randomUUID())
+ const [assignOwner,setAssignOwner]=useState('')
+ const [assignNote,setAssignNote]=useState('')
+ const [assignKey,setAssignKey]=useState(()=>crypto.randomUUID())
  const [openHistory,setOpenHistory]=useState(false)
  const [openPolicyHistory,setOpenPolicyHistory]=useState(false)
  const [enabled,setEnabled]=useState(true)
@@ -50,6 +58,22 @@ export default function FbaPurchaseExceptionPanel({
   filter==='RESOLVED'&&row.state==='RESOLVED')
  const refresh=()=>void client.invalidateQueries({queryKey:prefix})
  useEffect(()=>{
+  if(!focusLineId||!data)return
+  const target=marketplaceId+':'+focusLineId
+  if(lastFocused.current===target)return
+  const match=data.items.find(row=>row.lineId===focusLineId)
+  if(match){
+   lastFocused.current=target
+   setFilter('ALL');setSelectedId(match.lineId)
+   setOperation('ACKNOWLEDGE');setAssignee(match.assigneeId??'')
+   onOpenShipment(match.shipmentId)
+   document.getElementById('v79-exception-workbench')?.scrollIntoView({block:'start'})
+  }else if(!query.isFetching){
+   lastFocused.current=target
+   setNotice('目标处理单不在当前最近 100 张货件 / 500 行范围，请到原单核查')
+  }
+ },[focusLineId,marketplaceId,data?.items,query.isFetching])
+ useEffect(()=>{
   if(!data)return
   setEnabled(data.policy.enabled)
   setLead(data.policy.leadHours)
@@ -63,7 +87,7 @@ export default function FbaPurchaseExceptionPanel({
  const toggle=(id:string)=>{
   setChosen(old=>old.includes(id)?old.filter(x=>x!==id):
    old.length<50?[...old,id]:old)
-  setBulkKey(crypto.randomUUID())
+  setBulkKey(crypto.randomUUID());setAssignKey(crypto.randomUUID())
  }
  const single=useMutation({
   mutationFn:()=>{
@@ -89,6 +113,17 @@ export default function FbaPurchaseExceptionPanel({
   onSuccess:result=>{
    setNotice('已批量确认 '+result.acknowledgedCount+' 条本地异常')
    setError('');setChosen([]);setBulkNote('');setBulkKey(crypto.randomUUID());refresh()
+  },
+  onError:(err:Error)=>{setNotice('');setError(err.message)}
+ })
+ const assignBatch=useMutation({
+  mutationFn:()=>bulkAssignCases(marketplaceId,assignKey,assignOwner,
+   selectedRows.map(x=>({lineId:x.lineId,expectedVersion:x.version,
+    expectedFingerprint:x.fingerprint})),assignNote.trim()),
+  onSuccess:receipt=>{
+   setNotice('已为 '+receipt.assignedCount+' 行设置负责人；仍须人工确认来源')
+   setError('');setChosen([]);setAssignNote('');setAssignKey(crypto.randomUUID())
+   refresh();void client.invalidateQueries({queryKey:['operations',tenantId]})
   },
   onError:(err:Error)=>{setNotice('');setError(err.message)}
  })
@@ -124,7 +159,7 @@ export default function FbaPurchaseExceptionPanel({
  const attention=(data?.items??[]).filter(x=>x.reminder==='OVERDUE').length
  const soon=(data?.items??[]).filter(x=>x.reminder==='DUE_SOON').length
  const changed=(data?.items??[]).filter(x=>x.stale).length
- return <section className="core-tools" aria-label="V77 采购与 FBA 异常处理工作台">
+ return <section id="v79-exception-workbench" className="core-tools" aria-label="V79 采购与 FBA 异常处理工作台">
   <div className="panel-heading"><div>
    <h3>V77 · 异常处理与期限跟进</h3>
    <p>基于 V76 本地证据分类的人工处理记录。已确认、已完成不等于 Amazon 官方签收，
@@ -149,6 +184,25 @@ export default function FbaPurchaseExceptionPanel({
     </div>
     <p className="panel-caption">SLA 统计覆盖本店铺全部已登记的本地处理单（不限于本页 100 货件/500 行），
      按最后一次人工完成事件计算，不代表 Amazon 入仓 SLA。巡检可将证据变化、超期同步进统一运营待办。</p>
+    <section className="core-tools" aria-label="V79 负责人工作量">
+     <h4>V79 · 负责人工作量（已登记本地处理单）</h4>
+     {workload.isPending?<p>正在读取负责人工作量…</p>:
+      workload.isError?<p role="alert" className="setup-error">负责人统计暂不可用，不能把缺失当作零</p>:
+      workload.data&&<>
+       <p className="setup-hint">全部已登记 {workload.data.totalCases} 单 ·
+        未完成且未分派 {workload.data.unassigned} 单 ·
+        负责人已停用/不可用 {workload.data.inactiveAssignee} 单。
+        不包含尚未登记为人工处理单的 FBA 行。</p>
+       <div className="table-scroll" role="region" tabIndex={0}
+        aria-label="各负责人未完成与逾期处理单">
+        <table><thead><tr><th scope="col">负责人</th><th scope="col">待处理</th>
+         <th scope="col">已确认待跟进</th><th scope="col">已超期</th></tr></thead>
+         <tbody>{workload.data.owners.map(owner=><tr key={owner.userId}>
+          <td>{owner.displayName}</td><td>{owner.open}</td>
+          <td>{owner.acknowledged}</td><td>{owner.overdue}</td>
+         </tr>)}</tbody></table></div>
+      </>}
+    </section>
     {data.truncated&&<p className="setup-error" role="alert">
      已触及 500 行读取上限，本页处理与汇总不代表全部历史。</p>}
     <label htmlFor="v77-filter">工作台筛选</label>
@@ -183,6 +237,28 @@ export default function FbaPurchaseExceptionPanel({
         onClick={()=>onOpenShipment(row.shipmentId)}>核查原货件</button></td>
      </tr>)}</tbody></table>
     </div>}
+    <form className="team-invite-form" onSubmit={e=>{
+      e.preventDefault()
+      if(selectedRows.length&&assignOwner&&noteValid(assignNote))assignBatch.mutate()
+    }}>
+     <h4>批量分派负责人（1–50 行，原子提交）</h4>
+     <p className="setup-hint">与 V77 批量确认共用请求幂等表及逐行审计。
+      任一行来源或版本发生变化时整批回滚；分派不等于已确认。</p>
+     <label htmlFor="v79-assignee">选择当前租户有效 Owner</label>
+     <select id="v79-assignee" required value={assignOwner}
+      onChange={e=>{setAssignOwner(e.target.value);setAssignKey(crypto.randomUUID())}}>
+      <option value="">请选择负责人</option>
+      {data.assignees.map(person=><option key={person.userId}
+       value={person.userId}>{person.displayName}</option>)}
+     </select>
+     <label htmlFor="v79-assign-note">分派依据（10–300 字）</label>
+     <textarea id="v79-assign-note" value={assignNote} minLength={10}
+      maxLength={300} rows={2}
+      onChange={e=>{setAssignNote(e.target.value);setAssignKey(crypto.randomUUID())}}/>
+     <button type="submit" className="primary-button"
+      disabled={!selectedRows.length||!assignOwner||!noteValid(assignNote)||assignBatch.isPending}>
+      为所选 {selectedRows.length} 行批量分派</button>
+    </form>
     <form className="team-invite-form" onSubmit={e=>{
       e.preventDefault();if(selectedRows.length&&noteValid(bulkNote))bulk.mutate()
     }}>

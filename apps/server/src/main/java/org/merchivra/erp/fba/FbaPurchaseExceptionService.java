@@ -53,6 +53,14 @@ public class FbaPurchaseExceptionService {
     public record Selection(UUID lineId,long expectedVersion,String expectedFingerprint) {}
     public record Bulk(UUID requestKey,List<Selection> lines,String note) {}
     public record BulkReceipt(String requestKey,int acknowledgedCount) {}
+    public record BulkAssign(UUID requestKey,UUID assigneeId,
+                             List<Selection> lines,String note) {}
+    public record BulkAssignReceipt(String requestKey,String assigneeId,
+                                    int assignedCount) {}
+    public record OwnerLoad(String userId,String displayName,long open,
+                            long acknowledged,long overdue) {}
+    public record Workload(long totalCases,long unassigned,long inactiveAssignee,
+                           List<OwnerLoad> owners) {}
     public record History(String action,String oldState,String newState,
         String oldAssignee,String newAssignee,String oldDueAt,String newDueAt,
         String oldFingerprint,String newFingerprint,String note,String actorId,
@@ -364,7 +372,7 @@ public class FbaPurchaseExceptionService {
         String payloadHash=hash(canonical);
         lockMarketplace(tenant,marketplace);
         var existing=jdbc.query("""
-            SELECT payload_hash,actor_user_id,acknowledged_count
+            SELECT payload_hash,actor_user_id,affected_count
             FROM fba_purchase_exception_batch
             WHERE tenant_id=? AND seller_marketplace_id=? AND request_key=?
             FOR UPDATE
@@ -391,12 +399,121 @@ public class FbaPurchaseExceptionService {
         jdbc.update("""
             INSERT INTO fba_purchase_exception_batch
               (id,tenant_id,seller_marketplace_id,request_key,payload_hash,
-               actor_user_id,acknowledged_count)
+               actor_user_id,affected_count)
             VALUES (?,?,?,?,?,?,?)
             """,UUID.randomUUID(),tenant,marketplace,body.requestKey(),
             payloadHash,actor,selected.size());
         return new BulkReceipt(body.requestKey().toString(),selected.size());
     }
+    /** V79: allocate 1..50 case lines atomically through the V77 audited ASSIGN
+     * action; reuse the same unique replay ledger, marketplace lock, case locks,
+     * evidence fingerprint and optimistic version checks. No auto-acknowledgement.
+     */
+    @Transactional
+    public BulkAssignReceipt bulkAssign(UUID tenant,UUID marketplace,UUID actor,
+                                         BulkAssign body) {
+        if(body==null || body.requestKey()==null || body.assigneeId()==null
+           || body.lines()==null || body.lines().isEmpty() || body.lines().size()>50)
+            throw bad("Bulk assignment requires requestKey, assignee and 1..50 lines");
+        String description=note(body.note());
+        List<Selection> selected=new ArrayList<>(body.lines());
+        if(selected.stream().anyMatch(x->x==null||x.lineId()==null
+           ||x.expectedVersion()<0 ||x.expectedFingerprint()==null
+           ||!x.expectedFingerprint().matches("[0-9a-f]{64}")))
+            throw bad("Invalid assignment selection");
+        selected.sort(Comparator.comparing(x->x.lineId().toString()));
+        if(new HashSet<>(selected.stream().map(Selection::lineId).toList()).size()
+           !=selected.size())throw bad("Duplicate line in bulk assignment");
+        String payloadHash=hash(actor+"|ASSIGN|"+body.assigneeId()+"|"
+                                +description+"|"+selected);
+        lockMarketplace(tenant,marketplace);
+        var prior=jdbc.query("""
+            SELECT payload_hash,actor_user_id,action_type,assignee_id,affected_count
+            FROM fba_purchase_exception_batch
+            WHERE tenant_id=? AND seller_marketplace_id=? AND request_key=?
+            FOR UPDATE
+            """,(r,i)->new Object[]{r.getString(1),r.getObject(2,UUID.class),
+                r.getString(3),r.getObject(4,UUID.class),r.getInt(5)},
+            tenant,marketplace,body.requestKey());
+        if(!prior.isEmpty()) {
+            Object[] previous=prior.getFirst();
+            if(!payloadHash.equals(previous[0])||!actor.equals(previous[1])
+               ||!"ASSIGN".equals(previous[2])
+               ||!body.assigneeId().equals(previous[3]))
+                throw conflict("Batch request key already belongs to another payload");
+            return new BulkAssignReceipt(body.requestKey().toString(),
+                body.assigneeId().toString(),(Integer)previous[4]);
+        }
+        activeOwner(tenant,body.assigneeId());
+        for(var choice:selected)scopedLine(tenant,marketplace,choice.lineId(),true);
+        var overview=reconciliation.overview(tenant,marketplace);
+        Map<String,FbaPurchaseReconciliationService.Line> byId=new HashMap<>();
+        for(var line:overview.lines())byId.put(line.inboundLineId(),line);
+        Policy settings=policy(tenant,marketplace);
+        for(var choice:selected) {
+            var line=byId.get(choice.lineId().toString());
+            if(line==null)throw conflict("Assignment line outside bounded review window");
+            apply(tenant,marketplace,actor,line,new Action("ASSIGN",
+                choice.expectedVersion(),choice.expectedFingerprint(),
+                body.assigneeId(),null,description),settings);
+        }
+        jdbc.update("""
+            INSERT INTO fba_purchase_exception_batch
+              (id,tenant_id,seller_marketplace_id,request_key,payload_hash,
+               actor_user_id,affected_count,action_type,assignee_id)
+            VALUES (?,?,?,?,?,?,?,?,?)
+            """,UUID.randomUUID(),tenant,marketplace,body.requestKey(),
+            payloadHash,actor,selected.size(),"ASSIGN",body.assigneeId());
+        return new BulkAssignReceipt(body.requestKey().toString(),
+            body.assigneeId().toString(),selected.size());
+    }
+    /** V79: all persisted cases in this marketplace, not the 500-line review
+     * window. Inactive/removed assignees are counted separately, not discarded.
+     */
+    @Transactional(readOnly=true)
+    public Workload workload(UUID tenant,UUID marketplace) {
+        requireMarketplace(tenant,marketplace);
+        List<OwnerLoad> owners=jdbc.query("""
+            SELECT u.id,u.identity_ref,
+              count(c.id) FILTER (WHERE c.state='OPEN') AS open_count,
+              count(c.id) FILTER (WHERE c.state='ACKNOWLEDGED') AS ack_count,
+              count(c.id) FILTER (WHERE c.state<>'RESOLVED'
+                                     AND c.due_at<now()) AS overdue_count
+            FROM membership m
+            JOIN app_user u ON u.id=m.user_id AND u.status='ACTIVE'
+            JOIN role_binding rb ON rb.tenant_id=m.tenant_id
+              AND rb.user_id=m.user_id AND rb.role_code='OWNER'
+              AND rb.seller_account_id IS NULL
+            LEFT JOIN fba_purchase_exception_case c ON c.tenant_id=m.tenant_id
+              AND c.seller_marketplace_id=? AND c.assignee_id=u.id
+            WHERE m.tenant_id=? AND m.status='ACTIVE'
+            GROUP BY u.id,u.identity_ref
+            ORDER BY u.identity_ref,u.id LIMIT 100
+            """,(r,i)->new OwnerLoad(id(r.getObject(1,UUID.class)),
+                r.getString(2),r.getLong(3),r.getLong(4),r.getLong(5)),
+            marketplace,tenant);
+        long[] counts=jdbc.queryForObject("""
+            SELECT count(*) AS total,
+              count(*) FILTER (WHERE assignee_id IS NULL AND state<>'RESOLVED') AS unassigned
+            FROM fba_purchase_exception_case
+            WHERE tenant_id=? AND seller_marketplace_id=?
+            """,(r,i)->new long[]{r.getLong(1),r.getLong(2)},tenant,marketplace);
+        long other=jdbc.queryForObject("""
+            SELECT count(*) FROM fba_purchase_exception_case c
+            WHERE c.tenant_id=? AND c.seller_marketplace_id=?
+              AND c.state<>'RESOLVED' AND c.assignee_id IS NOT NULL
+              AND NOT EXISTS (
+                SELECT 1 FROM membership m
+                JOIN app_user u ON u.id=m.user_id AND u.status='ACTIVE'
+                JOIN role_binding rb ON rb.tenant_id=m.tenant_id
+                  AND rb.user_id=m.user_id AND rb.role_code='OWNER'
+                  AND rb.seller_account_id IS NULL
+                WHERE m.tenant_id=c.tenant_id AND m.user_id=c.assignee_id
+                  AND m.status='ACTIVE')
+            """,Long.class,tenant,marketplace);
+        return new Workload(counts[0],counts[1],other,owners);
+    }
+
     @Transactional
     public Policy savePolicy(UUID tenant,UUID marketplace,UUID actor,SavePolicy input) {
         if(input==null||input.expectedVersion()<0||input.leadHours()<1
