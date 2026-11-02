@@ -14,7 +14,7 @@
 
 ## 2026-11-02 · V74 解释性补货优先级与本地采购核对（当前）
 - 只在 V22 新鲜完整 FBA 和 V70 完整 28 天订单项且 MOCK/LIVE 来源一致时展示历史下单速率推导的库存覆盖天数；UNKNOWN、混源、无订单、缺覆盖不推断断货。
-- 仅用 V37/V71 明确 Seller SKU 来源展示本地采购草稿/审批未收/本地实收，绝不作为 Amazon FBA 在途或可售；再建采购草稿前刷新既有 PO 并人工确认。Flyway V71 索引，详见 [INV-074](inventory/replenishment-priorities-v74.md)。
+- 仅用 V37/V71 明确 Seller SKU 来源展示本地采购草稿/审批未收/本地实收，绝不作为 Amazon FBA 在途或可售；再建采购草稿前刷新既有 PO 并人工确认。Flyway V71 索引以及 V72 纠正既有 V24 LIVE Catalog/FBA 来源约束，详见 [INV-074](inventory/replenishment-priorities-v74.md)。
 
 ## 2026-11-02 · V73 供应商履约证据评分与采购人工催办（当前）
 - 90 天完整 ASN 本地实际收货 vs 当时已申报 ETA、已检 QC 接受率；两类各至少 3 个样本才给暂定参考分，未观测不变成零。独立展示未结差异。

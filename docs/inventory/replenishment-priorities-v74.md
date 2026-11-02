@@ -1,6 +1,6 @@
 # INV-074 · V74 解释性补货优先级与本地采购核对
 
-2026-11-02。产品 V74 / Flyway V71。按原 V22（48h 内完整 OBSERVED FBA）、V70（完整 28d 已观测 OrderItems）、V71（V42 供应商 MOQ/箱规条款）、V37/V68（有来源快照的本地采购）构建**只读**分析。没有自动采购、付款、SP-API 写入或真实承运商查询。
+2026-11-02。产品 V74 / Flyway V71（查询索引）+ V72（既有 LIVE 来源约束修复）。按原 V22（48h 内完整 OBSERVED FBA）、V70（完整 28d 已观测 OrderItems）、V71（V42 供应商 MOQ/箱规条款）、V37/V68（有来源快照的本地采购）构建**只读**分析。没有自动采购、付款、SP-API 写入或真实承运商查询。
 
 ## API 与证据门禁
 
@@ -29,3 +29,7 @@ Flyway V71 只给 erp_replenishment_purchase_draft_source 增加 (tenant_id,sell
 JUnit + Vitest：缺库存、缺订单数据、零 SKU 速率、跨源、精确提前期边界、严格 null/enum 及 Session-only API；Chromium 360px 测试未知库存与已有本地 PO 提示。scripts/smoke_replenishment_priority_v74.py 在一次性 localhost PostgreSQL18、Mock 启用且 SP-API/OAuth 关闭场景，通过真实 HTTP + PG18 组装 28d 覆盖、FBA、V42 报价、V71 PO、双 Owner 审批、本地实收、MOCK/LIVE 冲突与库存 UNKNOWN。CI 不能证明真实供应商/承运商履约或 Amazon FBA 在途。
 
 后续再讨论可信 FBA Inbound 货件与本地 PO 的明确 ID 关联、商家预算/现金流审批、实际物流与供货合同 SLA 及真实授权联调。
+
+## V24 LIVE 读同步来源约束的前向修复
+
+真实 PG18 集成验证发现 V24 的只读 Catalog/FBA 同步写入 LIVE 来源标记，而 V5 的 marketplace_listing 与 fba_inventory_observation 原始 CHECK 仍仅允许 UNVERIFIED/MOCK。Flyway V72 显式拓宽为 UNVERIFIED/MOCK/LIVE，与 V11 Orders/OrderItems 的 LIVE 来源一致，不支持任何其他来源标记，不改变现有行、租户引用、库存/质量与金额校验。PG18 验收把 FBA 来源改为 LIVE，检查新约束能正确保存并触发 V74 与 MOCK 订单之间的风险阻断，恢复 MOCK 后保留历史观测案例。这是**只读同步写入已有数据表时的约束修复**，不是授权真实 Amazon API。
