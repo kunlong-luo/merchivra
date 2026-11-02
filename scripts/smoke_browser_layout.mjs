@@ -69,6 +69,14 @@ const server = createServer(async (req, res) => {
       windowAfter:null,windowBefore:null,lastSafeWatermark:null,
       nextAttemptAt:null,lastFailureCode:null
     })
+  if (url.pathname === '/api/v1/replenishment/marketplaces/' + market + '/demand-signals')
+    return respond(res, [{
+      sellerSku:'TEST-SKU-100',status:'INCOMPLETE_COVERAGE',sourceMode:'MOCK',
+      windowStart:'2026-10-01T00:00:00Z',windowEnd:'2026-10-29T00:00:00Z',
+      leadTimeDays:14,observedOrderCount:null,incompleteOrderCount:null,
+      observedUnits7d:null,observedUnits28d:null,observedDailyUnits28d:null,
+      illustrativeLeadTimeUnits:null
+    }])
   if (url.pathname === '/api/v1/operations/marketplaces/' + market + '/rules')
     return respond(res, [
       {ruleCode:'UNMAPPED_LISTING',enabled:true,lowStockThreshold:null,version:0,updatedAt:null},
