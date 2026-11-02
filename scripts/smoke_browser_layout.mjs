@@ -69,6 +69,52 @@ const server = createServer(async (req, res) => {
       windowAfter:null,windowBefore:null,lastSafeWatermark:null,
       nextAttemptAt:null,lastFailureCode:null
     })
+  if (url.pathname === '/api/v1/fba/marketplaces/' + market + '/shipments')
+    return respond(res,[{
+      id:'abcd1111-1111-4111-8111-111111111111',reference:'V75-LOCAL-FBA',
+      origin:'MOCK',state:'DRAFT',createdAt:'2026-11-02T00:00:00Z',
+      dispatchedAt:null,reviewStartedAt:null,reconciledAt:null
+    }])
+  if (url.pathname === '/api/v1/fba/marketplaces/' + market + '/shipments/in-transit')
+    return respond(res,[])
+  if (url.pathname === '/api/v1/fba/marketplaces/' + market +
+      '/shipments/abcd1111-1111-4111-8111-111111111111')
+    return respond(res,{
+      shipment:{id:'abcd1111-1111-4111-8111-111111111111',
+        reference:'V75-LOCAL-FBA',origin:'MOCK',state:'DRAFT',
+        createdAt:'2026-11-02T00:00:00Z',dispatchedAt:null,
+        reviewStartedAt:null,reconciledAt:null},
+      lines:[{id:'abcd2222-2222-4222-8222-222222222222',
+        sellerSku:'TEST-SKU-100',plannedQuantity:12,
+        reportedReceived:0,estimatedInTransit:null,delta:-12,
+        decision:null,reviewedBy:null,reviewNote:null,reviewedAt:null}],
+      receipts:[],amazonVerified:false,fbaStockCredited:false
+    })
+  if (url.pathname === '/api/v1/fba/marketplaces/' + market +
+      '/shipments/abcd1111-1111-4111-8111-111111111111/purchase-links')
+    return respond(res,[{
+      id:'abcd3333-3333-4333-8333-333333333333',
+      shipmentId:'abcd1111-1111-4111-8111-111111111111',
+      inboundLineId:'abcd2222-2222-4222-8222-222222222222',
+      sellerSku:'TEST-SKU-100',shipmentState:'DRAFT',shipmentOrigin:'MOCK',
+      inboundPlannedQuantity:12,inboundReportedReceived:0,
+      purchaseOrderId:'abcd4444-4444-4444-8444-444444444444',
+      purchaseOrderLineId:'abcd5555-5555-4555-8555-555555555555',
+      orderNumber:'PO-V75-LOCAL',purchaseState:'APPROVED',
+      poOrderedQuantity:20,localPoReceived:4,
+      asnId:null,asnStatus:null,asnQuantity:null,asnLocalReceived:null,
+      state:'PROPOSED',proofReference:'V75 synthetic proof is NOT Amazon evidence',
+      proposedBy:'abcd6666-6666-4666-8666-666666666666',
+      confirmedBy:null,createdAt:'2026-11-02T00:00:00Z',confirmedAt:null
+    }])
+  if (url.pathname.endsWith('/purchase-links/lines/abcd2222-2222-4222-8222-222222222222/candidates'))
+    return respond(res,[{
+      purchaseOrderId:'abcd4444-4444-4444-8444-444444444444',
+      purchaseOrderLineId:'abcd5555-5555-4555-8555-555555555555',
+      orderNumber:'PO-V75-LOCAL',supplierName:'V75 mock supplier',
+      orderedQuantity:20,localReceivedQuantity:4,asnId:null,
+      asnStatus:null,asnQuantity:null,asnReceivedQuantity:0
+    }])
   if (url.pathname === '/api/v1/purchasing/supplier-performance/scorecards')
     return respond(res,[{
       supplierId:'22222222-2222-4222-8222-222222222222',
@@ -347,6 +393,25 @@ async function main() {
         "?.textContent?.includes('已有 1 张进行中采购单')"),
         true, 'existing local PO must display manual dedupe review')
       await screenshot(send,'v74-replenishment-risk-360.png')
+      await waitFor(send,
+        "document.querySelector('[aria-label=\"货件历史表\"] tbody tr button')",
+        'V75 synthetic local shipment list')
+      await evaluate(send,
+        "document.querySelector('[aria-label=\"货件历史表\"] tbody tr button')?.click()")
+      await waitFor(send,
+        "document.querySelector('[aria-label=\"FBA 与采购证据关联表\"] tbody tr')" +
+        "?.textContent?.includes('PO-V75-LOCAL')",
+        'V75 explicit local PO identity proof')
+      assert.equal(await evaluate(send,
+        "document.querySelector('[aria-label=\"V75 FBA 货件与采购 ASN 明确关联\"]')" +
+        "?.textContent?.includes('待另一名 Owner 确认')"),
+        true,'V75 proof must distinguish proposal from independently confirmed evidence')
+      assert.equal(await evaluate(send,
+        "document.querySelector('[aria-label=\"V75 FBA 货件与采购 ASN 明确关联\"]')" +
+        "?.textContent?.includes('绝非 Amazon')"),
+        true,'V75 local proof never claims external Amazon verification')
+      await screenshot(send,'v75-explicit-po-asn-link-360.png')
+
 
       await evaluate(send, "(() => {const btn=[...document.querySelectorAll('.nav-link')]" +
         ".find(b=>b.textContent.includes('运营自动化'));if(!btn)throw Error('Missing operations navigation');btn.click();})()")
