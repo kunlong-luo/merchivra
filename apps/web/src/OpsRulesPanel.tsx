@@ -5,9 +5,14 @@ import {fetchOperationRules,fetchOperationRuleAudit,putOperationRule} from './li
 import type {OpsRule} from './lib/ops-rules'
 import {ruleNames} from './lib/operations'
 import {formatSourceTime} from './lib/core-view'
+import {getMyExceptionGrants} from './lib/exception-capabilities-v84'
 
-function RuleRow({rule,tenantId,marketplaceId}:{rule:OpsRule,tenantId:string,marketplaceId:string}){
+function RuleRow({rule,tenantId,marketplaceId,allowFbaEdit}:{
+ rule:OpsRule;tenantId:string;marketplaceId:string;allowFbaEdit:boolean
+}){
  const client=useQueryClient()
+ const forbiddenFba=(rule.ruleCode==='FBA_PO_EVIDENCE_CHANGED'||
+  rule.ruleCode==='FBA_PO_EXCEPTION_OVERDUE')&&!allowFbaEdit
  const [threshold,setThreshold]=useState(String(rule.lowStockThreshold??3))
  const [error,setError]=useState('')
  const action=useMutation({
@@ -33,7 +38,7 @@ function RuleRow({rule,tenantId,marketplaceId}:{rule:OpsRule,tenantId:string,mar
    <span className="panel-caption">—</span>}</td>
   <td className="small-cell">{rule.version===0?'部署默认值':'版本 '+rule.version}</td>
   <td><div className="ops-row-actions">
-   <button type="button" className="text-button" disabled={action.isPending}
+   <button type="button" className="text-button" disabled={action.isPending||forbiddenFba}
     onClick={()=>save(!rule.enabled)}>{rule.enabled?'暂停规则':'启用规则'}</button>
    {rule.ruleCode==='LOW_STOCK'&&<button type="button" className="text-button"
     disabled={action.isPending||!rule.enabled} onClick={()=>save(true)}>保存阈值</button>}
@@ -48,6 +53,9 @@ export default function OpsRulesPanel({tenantId}:{tenantId:string}){
   queryFn:fetchCoreMarketplaces,staleTime:30000})
  const marketplaceId=marketplaces.data?.some(m=>m.id===chosen)?chosen:
   marketplaces.data?.[0]?.id??''
+ const grant=useQuery({queryKey:['operations',tenantId,'fba-capabilities-v85',marketplaceId],
+  queryFn:()=>getMyExceptionGrants(marketplaceId),
+  enabled:!!marketplaceId,staleTime:15000,retry:false})
  const rules=useQuery({queryKey:['operations',tenantId,'rules',marketplaceId],
   queryFn:()=>fetchOperationRules(marketplaceId),enabled:!!marketplaceId,staleTime:30000})
  const history=useQuery({queryKey:['operations',tenantId,'rule-audit',marketplaceId],
@@ -79,7 +87,8 @@ export default function OpsRulesPanel({tenantId}:{tenantId:string}){
        .map(h=><th key={h} scope="col">{h}</th>)}</tr></thead>
        <tbody>{rules.data?.map(rule=><RuleRow
         key={marketplaceId+'-'+rule.ruleCode+'-'+rule.version} rule={rule}
-        marketplaceId={marketplaceId} tenantId={tenantId}/>)}</tbody>
+        marketplaceId={marketplaceId} tenantId={tenantId}
+        allowFbaEdit={grant.data?.grants.configure===true}/>)}</tbody>
       </table>
      </div>}
     {showAudit&&(history.isPending?<div className="empty-state">读取变更审计…</div>:
@@ -95,7 +104,7 @@ export default function OpsRulesPanel({tenantId}:{tenantId:string}){
         {a.newThreshold!==null?' / 阈值 '+a.newThreshold:''}</td>
         <td>{a.newVersion}</td></tr>)}</tbody>
       </table></div>)}
-    <p className="panel-caption">默认所有规则启用；阈值默认为部署配置（当前 3）。修改采用版本号冲突保护，需要“立即巡检”后才会更新异常队列；不会发邮件、写 Amazon 或改库存。</p>
+    <p className="panel-caption">V85：采购/FBA 人工异常两类规则需要当前 Owner 在站点拥有 VIEW 和 CONFIGURE；其他类别运营规则仍遵循原有 Owner 权限。服务器会在写入前独立校验。默认所有规则启用；阈值默认为部署配置（当前 3）。修改采用版本号冲突保护，需要“立即巡检”后才会更新异常队列；不会发邮件、写 Amazon 或改库存。</p>
    </>}
  </section>
 }
