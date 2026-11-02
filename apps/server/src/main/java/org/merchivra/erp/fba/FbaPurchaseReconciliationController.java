@@ -14,16 +14,20 @@ import org.springframework.web.bind.annotation.*;
 public class FbaPurchaseReconciliationController {
     private final TenantAccessService access;
     private final FbaPurchaseReconciliationService service;
+    private final FbaExceptionPermissionService permissions;
     public FbaPurchaseReconciliationController(TenantAccessService access,
-                                               FbaPurchaseReconciliationService service){
-        this.access=access;this.service=service;
+                                               FbaPurchaseReconciliationService service,
+                                               FbaExceptionPermissionService permissions){
+        this.access=access;this.service=service;this.permissions=permissions;
     }
     @GetMapping
     public ResponseEntity<FbaPurchaseReconciliationService.Overview> overview(
         Authentication authentication,HttpServletRequest request,
         @PathVariable UUID marketplaceId){
+        UUID tenant=access.currentTenant(authentication,request);
+        permissions.require(tenant,marketplaceId,access.authenticatedUser(authentication),
+            FbaExceptionPermissionService.Capability.VIEW);
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-            .body(service.overview(access.currentTenant(authentication,request),
-                                   marketplaceId));
+            .body(service.overview(tenant,marketplaceId));
     }
 }
