@@ -1,4 +1,5 @@
 import {useState} from 'react'
+import OpsExceptionPriorityPanel from './OpsExceptionPriorityPanel'
 import OpsExceptionHistoryPanel from './OpsExceptionHistoryPanel'
 import {useQuery} from '@tanstack/react-query'
 import {fetchCoreMarketplaces} from './lib/core'
@@ -66,6 +67,7 @@ export default function OpsExceptionInsightsPanel({tenantId,onOpenFbaException}:
       <p className="panel-caption">本地处理单闭环比例：
        {data.cases.total?Math.round(data.cases.resolved/data.cases.total*100)+'%':'暂无已登记处理单，无法计算'}。
        该比例仅代表人工标记完成，不代表 Amazon 已核验入仓或库存记账。</p>
+      <OpsExceptionPriorityPanel tenantId={tenantId} marketplaceId={marketplaceId}/>
       <OpsExceptionHistoryPanel tenantId={tenantId} marketplaceId={marketplaceId}
        onOpenFbaException={onOpenFbaException}/>
       <section className="core-tools" aria-label="跨模块运营异常分类">
