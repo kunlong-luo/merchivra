@@ -39,6 +39,22 @@ public class FbaPurchaseExceptionController {
         return service.bulkAssign(access.currentTenant(auth,request),marketplaceId,
             access.authenticatedUser(auth),body);
     }
+    /** POST because the selected row identities/versions are in the body;
+     * Session Owner + CSRF still apply, but the service never mutates. */
+    @PostMapping("/bulk-resolve/preflight")
+    public ResponseEntity<FbaPurchaseExceptionService.ResolvePreview> preflight(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
+        @RequestBody FbaPurchaseExceptionService.ResolvePreviewRequest body) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(service.preflightResolve(
+                access.currentTenant(auth,request),marketplaceId,body));
+    }
+    @GetMapping("/batches")
+    public ResponseEntity<List<FbaPurchaseExceptionService.BatchActivity>> batches(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(service.recentBatches(access.currentTenant(auth,request),marketplaceId));
+    }
     @PostMapping("/bulk-resolve")
     public FbaPurchaseExceptionService.BulkResolveReceipt bulkResolve(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,

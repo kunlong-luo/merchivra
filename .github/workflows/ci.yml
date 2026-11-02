@@ -191,6 +191,7 @@ jobs:
           python3 scripts/smoke_exception_insights_v80.py
           python3 scripts/smoke_exception_history_v81.py
           python3 scripts/smoke_exception_workflow_v82.py
+          python3 scripts/smoke_fba_exception_preflight_v83.py
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='77' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='76' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='75' AND success")" = "1"

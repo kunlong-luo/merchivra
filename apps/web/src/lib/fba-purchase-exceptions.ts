@@ -112,3 +112,33 @@ export const bulkResolveCases=(marketplace:string,requestKey:string,
  lines:BulkSelection[],note:string,confirmed:boolean)=>
  post(root(marketplace)+'/bulk-resolve',{requestKey,confirmed,lines,note},
   bulkResolveReceiptSchema)
+
+/** V83: advisory dry run. The transaction MUST repeat all checks on submit. */
+const resolveReason=z.enum([
+ 'READY','OUT_OF_SCOPE','CASE_NOT_REGISTERED','EVIDENCE_CHANGED',
+ 'VERSION_CONFLICT','NOT_ACKNOWLEDGED','NO_ASSIGNEE',
+ 'VARIANCE_REVIEW_REQUIRED','IDENTITY_REVIEW_REQUIRED'
+])
+export const resolvePreviewSchema=z.object({
+ allEligible:z.boolean(),selectedCount:z.number().int().min(1).max(50),
+ eligibleCount:z.number().int().min(0).max(50),
+ amazonVerified:z.literal(false),fbaStockCredited:z.literal(false),
+ lines:z.array(z.object({
+  lineId:uuid,shipmentReference:z.string().nullable(),
+  sellerSku:z.string().nullable(),state:state.nullable(),
+  assigneeId:uuid.nullable(),currentVersion:positive,
+  currentFingerprint:digest.nullable(),eligible:z.boolean(),
+  reasonCode:resolveReason
+ })).min(1).max(50)
+})
+export type ResolvePreview=z.infer<typeof resolvePreviewSchema>
+export const preflightBulkResolve=(marketplace:string,lines:BulkSelection[])=>
+ post(root(marketplace)+'/bulk-resolve/preflight',{lines},resolvePreviewSchema)
+
+export const batchActivitySchema=z.object({
+ requestKey:uuid,actionType:z.enum(['ACKNOWLEDGE','ASSIGN','RESOLVE']),
+ actorId:uuid,affectedCount:z.number().int().min(1).max(50),
+ createdAt:iso
+})
+export const getExceptionBatchActivities=(marketplace:string)=>
+ get(root(marketplace)+'/batches',z.array(batchActivitySchema).max(50))

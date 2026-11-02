@@ -5,6 +5,7 @@ import {
  getExceptionBoard,postExceptionAction,bulkAcknowledge,getExceptionHistory,
  saveReminderPolicy,getReminderPolicyHistory,getExceptionMetrics,
  bulkAssignCases,getOwnerWorkload,bulkResolveCases,
+ preflightBulkResolve,getExceptionBatchActivities,
  type ExceptionAction,type ExceptionItem
 } from './lib/fba-purchase-exceptions'
 
@@ -16,6 +17,17 @@ const actions:Record<ExceptionAction,string>={
  RESOLVE:'完成本地处理',REOPEN:'重新打开'
 }
 const timeText=(value:string|null)=>value?new Date(value).toLocaleString():'—'
+const resolveReasons:Record<string,string>={
+ READY:'符合本地完成的基本及来源复核条件',
+ OUT_OF_SCOPE:'处理行不属于当前站点最近 100 张货件 / 500 行窗口',
+ CASE_NOT_REGISTERED:'尚无已登记的本地人工处理单',
+ EVIDENCE_CHANGED:'来源指纹已改变，先刷新并重新确认',
+ VERSION_CONFLICT:'其他 Owner 更新了处理单版本，先刷新',
+ NOT_ACKNOWLEDGED:'需要先由 Owner 确认待跟进（已完成的单需重新打开）',
+ NO_ASSIGNEE:'缺少已分派的负责人',
+ VARIANCE_REVIEW_REQUIRED:'V65 本地入仓差异尚未独立复核',
+ IDENTITY_REVIEW_REQUIRED:'V75 身份证据尚需第二 Owner 独立确认'
+}
 
 export default function FbaPurchaseExceptionPanel({
  tenantId,marketplaceId,onOpenShipment,focusLineId
@@ -45,6 +57,10 @@ export default function FbaPurchaseExceptionPanel({
  const [resolveNote,setResolveNote]=useState('')
  const [resolveKey,setResolveKey]=useState(()=>crypto.randomUUID())
  const [resolveConfirmed,setResolveConfirmed]=useState(false)
+ const [previewResult,setPreviewResult]=useState<{
+  snapshot:string;result:Awaited<ReturnType<typeof preflightBulkResolve>>
+ }|null>(null)
+ const [showBatches,setShowBatches]=useState(false)
  const [openHistory,setOpenHistory]=useState(false)
  const [openPolicyHistory,setOpenPolicyHistory]=useState(false)
  const [enabled,setEnabled]=useState(true)
@@ -58,6 +74,11 @@ export default function FbaPurchaseExceptionPanel({
  const selectedRows=(data?.items??[]).filter(row=>chosen.includes(row.lineId))
  const allResolvable=selectedRows.length>0&&selectedRows.every(
   row=>row.state==='ACKNOWLEDGED'&&!row.stale&&!!row.assigneeId)
+ const selections=selectedRows.map(x=>({lineId:x.lineId,
+  expectedVersion:x.version,expectedFingerprint:x.fingerprint}))
+ const currentSnapshot=JSON.stringify({marketplaceId,lines:selections})
+ const verifiedPreview=previewResult?.snapshot===currentSnapshot?
+  previewResult.result:null
  const rows=(data?.items??[]).filter(row=>
   filter==='ALL'||filter==='ACTIONABLE'&&(row.stale||row.state!=='RESOLVED')||
   filter==='OVERDUE'&&['OVERDUE','DUE_SOON','RECHECK'].includes(row.reminder)||
@@ -95,6 +116,7 @@ export default function FbaPurchaseExceptionPanel({
    old.length<50?[...old,id]:old)
   setBulkKey(crypto.randomUUID());setAssignKey(crypto.randomUUID())
   setResolveKey(crypto.randomUUID());setResolveConfirmed(false)
+  setPreviewResult(null)
  }
  const single=useMutation({
   mutationFn:()=>{
@@ -134,6 +156,25 @@ export default function FbaPurchaseExceptionPanel({
   },
   onError:(err:Error)=>{setNotice('');setError(err.message)}
  })
+ const preflight=useMutation({
+  mutationFn:async(payload:{snapshot:string;lines:typeof selections})=>({
+   snapshot:payload.snapshot,
+   result:await preflightBulkResolve(marketplaceId,payload.lines)
+  }),
+  onSuccess:checked=>{
+   setPreviewResult(checked);setResolveConfirmed(false)
+   setError('');setNotice('已完成只读预检；提交时仍将重新核对所有行')
+  },
+  onError:(err:Error)=>{
+   setPreviewResult(null);setResolveConfirmed(false);setNotice('')
+   setError('预检未成功：'+err.message)
+  }
+ })
+ const batchActivities=useQuery({
+  queryKey:[...prefix,'batch-activities-v83'],
+  queryFn:()=>getExceptionBatchActivities(marketplaceId),
+  enabled:showBatches,retry:false
+ })
  const resolveBatch=useMutation({
   mutationFn:()=>bulkResolveCases(marketplaceId,resolveKey,
    selectedRows.map(x=>({lineId:x.lineId,expectedVersion:x.version,
@@ -141,10 +182,13 @@ export default function FbaPurchaseExceptionPanel({
   onSuccess:receipt=>{
    setNotice('已人工确认并批量完成 '+receipt.resolvedCount+' 条本地处理单；未向 Amazon 写入')
    setError('');setChosen([]);setResolveNote('');setResolveKey(crypto.randomUUID())
-   setResolveConfirmed(false);refresh()
+   setResolveConfirmed(false);setPreviewResult(null);refresh()
    void client.invalidateQueries({queryKey:['operations',tenantId]})
   },
-  onError:(err:Error)=>{setNotice('');setError(err.message);setResolveConfirmed(false)}
+  onError:(err:Error)=>{
+   setNotice('');setError(err.message);setResolveConfirmed(false)
+   setPreviewResult(null);refresh()
+  }
  })
  const policyMutation=useMutation({
   mutationFn:()=>{
@@ -299,14 +343,35 @@ export default function FbaPurchaseExceptionPanel({
     </form>
     <form className="team-invite-form" onSubmit={e=>{
       e.preventDefault()
-      if(allResolvable&&noteValid(resolveNote)&&resolveConfirmed)resolveBatch.mutate()
+      if(allResolvable&&verifiedPreview?.allEligible&&noteValid(resolveNote)
+         &&resolveConfirmed)resolveBatch.mutate()
      }}>
       <h4>V82 · 经人工确认后批量完成本地处理单</h4>
       <p className="setup-hint">仅允许选择已确认、已分派且来源未变化的处理单，
        最多 50 行；原有身份审核和差异复核条件仍由后端逐行检查。
        有一行不符合要求或版本变化则整批回滚，不会修改 Amazon 资料。</p>
       <p className="setup-hint">本次选择 {selectedRows.length} 行
-       · {allResolvable?'已满足基本状态条件，仍须逐行核对证据':'包含未确认、未分派或来源已变化的行，不能完成'}</p>
+       · {allResolvable?'本页基本状态满足要求，仍须服务端预检':'包含未确认、未分派或来源已变化的行，不能完成'}</p>
+      <button type="button" className="refresh-button" disabled={!selectedRows.length||
+       preflight.isPending||resolveBatch.isPending} onClick={()=>{
+        setResolveConfirmed(false)
+        preflight.mutate({snapshot:currentSnapshot,lines:selections})
+       }}>{preflight.isPending?'正在预检…':'预检所选处理单（不写入）'}</button>
+      {verifiedPreview&&<section aria-label="V83 批量完成预检详情">
+       <p className="panel-caption" role="status">预检结果：
+        可完成 {verifiedPreview.eligibleCount} / {verifiedPreview.selectedCount} 行；
+        {verifiedPreview.allEligible?'仍须人工确认并提交':'存在阻断条件，禁止整批提交'}。
+        这是只读快照，不能代替正式提交时的重新校验。</p>
+       <div className="table-scroll" role="region" tabIndex={0}
+        aria-label="逐行来源、版本和独立审核预检结果">
+        <table><thead><tr>{['本地货件 / SKU','状态','阻断原因 / 下一步']
+         .map(h=><th scope="col" key={h}>{h}</th>)}</tr></thead>
+         <tbody>{verifiedPreview.lines.map(line=><tr key={line.lineId}>
+          <td>{line.shipmentReference??'窗口外处理单'} · {line.sellerSku??line.lineId}</td>
+          <td>{line.eligible?'可继续':'必须处理阻断'}</td>
+          <td>{resolveReasons[line.reasonCode]??line.reasonCode}</td>
+         </tr>)}</tbody></table></div>
+      </section>}
       <ExceptionNoteTemplatePicker label="V82 批量完成理由模板" onApply={value=>{
        setResolveNote(value);setResolveKey(crypto.randomUUID());setResolveConfirmed(false)
       }}/>
@@ -319,14 +384,36 @@ export default function FbaPurchaseExceptionPanel({
        }}/>
       <label htmlFor="v82-resolve-confirm">
        <input id="v82-resolve-confirm" type="checkbox" checked={resolveConfirmed}
-        onChange={e=>setResolveConfirmed(e.target.checked)}/>
+        onChange={e=>setResolveConfirmed(e.target.checked)}
+        disabled={!verifiedPreview?.allEligible}/>
        我已逐条核实所选处理单来源、负责人及独立复核要求，明确同意仅执行本地 RESOLVE
       </label>
       <button type="submit" className="primary-button"
-       disabled={!allResolvable||!noteValid(resolveNote)||!resolveConfirmed||
-        resolveBatch.isPending}>
+       disabled={!allResolvable||!verifiedPreview?.allEligible||
+        !noteValid(resolveNote)||!resolveConfirmed||resolveBatch.isPending}>
        人工确认完成所选 {selectedRows.length} 行（原子提交）</button>
      </form>
+     <details className="core-tools" open={showBatches}
+      onToggle={e=>setShowBatches(e.currentTarget.open)}>
+      <summary>V83 · 最近 50 次已持久化批次操作记录</summary>
+      <p className="setup-hint">来自 V77/V79/V82 原批次幂等账本，
+       仅列出操作人、动作、成功行数、幂等键和提交时间。
+       具体处理单的逐行动作请进入该行的“处理 / 历史”查看；
+       本页不伪造不存在的批次与单行审计关联。</p>
+      {batchActivities.isPending?<p>正在读取批次账本…</p>:
+       batchActivities.isError?<p className="setup-error" role="alert">
+        批次账本读取失败：{String(batchActivities.error)}</p>:
+       !batchActivities.data?.length?<p>暂无已登记批次动作。</p>:
+       <div className="table-scroll" role="region" tabIndex={0} aria-label="批次提交审计摘要">
+        <table><thead><tr>{['动作','成功行数','操作人 ID','幂等键','提交时间']
+         .map(h=><th scope="col" key={h}>{h}</th>)}</tr></thead>
+         <tbody>{batchActivities.data.map(batch=><tr key={batch.requestKey}>
+          <td>{batch.actionType}</td><td>{batch.affectedCount}</td>
+          <td className="small-cell">{batch.actorId}</td>
+          <td className="small-cell">{batch.requestKey}</td>
+          <td>{timeText(batch.createdAt)}</td>
+         </tr>)}</tbody></table></div>}
+     </details>
      {selected&&<form className="team-invite-form" onSubmit={submitAction}>
      <h4>处理：{selected.shipmentReference} · {selected.sellerSku}</h4>
      <p className="setup-hint">当前状态：{statuses[selected.state]} ·

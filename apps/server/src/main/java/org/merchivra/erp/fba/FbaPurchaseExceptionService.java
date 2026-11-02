@@ -60,6 +60,19 @@ public class FbaPurchaseExceptionService {
     public record BulkResolve(UUID requestKey,boolean confirmed,List<Selection> lines,
                               String note) {}
     public record BulkResolveReceipt(String requestKey,int resolvedCount) {}
+    /** Advisory preview only; all RESOLVE guards run again inside the real
+     * transaction. No provider/employee data beyond the caller's marketplace.
+     */
+    public record ResolvePreviewRequest(List<Selection> lines) {}
+    public record ResolvePreviewLine(String lineId,String shipmentReference,
+        String sellerSku,String state,String assigneeId,long currentVersion,
+        String currentFingerprint,boolean eligible,String reasonCode) {}
+    public record ResolvePreview(boolean allEligible,int selectedCount,
+        int eligibleCount,boolean amazonVerified,boolean fbaStockCredited,
+        List<ResolvePreviewLine> lines) {}
+    public record BatchActivity(String requestKey,String actionType,
+        String actorId,int affectedCount,String createdAt) {}
+
     public record OwnerLoad(String userId,String displayName,long open,
                             long acknowledged,long overdue) {}
     public record Workload(long totalCases,long unassigned,long inactiveAssignee,
@@ -470,6 +483,80 @@ public class FbaPurchaseExceptionService {
         return new BulkAssignReceipt(body.requestKey().toString(),
             body.assigneeId().toString(),selected.size());
     }
+    private static String resolveEligibility(Selection requested,
+        FbaPurchaseReconciliationService.Line line,Case current) {
+        if(line==null)return "OUT_OF_SCOPE";
+        if(current==null)return "CASE_NOT_REGISTERED";
+        if(!fingerprint(line).equals(requested.expectedFingerprint())
+            ||!fingerprint(line).equals(current.fingerprint()))
+            return "EVIDENCE_CHANGED";
+        if(requested.expectedVersion()!=current.version())
+            return "VERSION_CONFLICT";
+        if(!"ACKNOWLEDGED".equals(current.state()))
+            return "NOT_ACKNOWLEDGED";
+        if(current.assignee()==null)return "NO_ASSIGNEE";
+        if("LOCAL_OVER_REPORT".equals(line.findingCode())
+            &&!"ACCEPT_VARIANCE".equals(line.localVarianceDecision()))
+            return "VARIANCE_REVIEW_REQUIRED";
+        if("PENDING_IDENTITY_REVIEW".equals(line.findingCode()))
+            return "IDENTITY_REVIEW_REQUIRED";
+        return "READY";
+    }
+
+    /** V83: read-only scoped dry run of exactly the V77 RESOLVE evidence
+     * gates. No locks or durable "approval"; caller MUST refresh on changes.
+     */
+    @Transactional(readOnly=true)
+    public ResolvePreview preflightResolve(UUID tenant,UUID marketplace,
+                                            ResolvePreviewRequest request) {
+        if(request==null||request.lines()==null||request.lines().isEmpty()
+           ||request.lines().size()>50)
+            throw bad("Preflight requires 1..50 selected case lines");
+        List<Selection> selected=request.lines();
+        if(selected.stream().anyMatch(x->x==null||x.lineId()==null
+            ||x.expectedVersion()<0||x.expectedFingerprint()==null
+            ||!x.expectedFingerprint().matches("[0-9a-f]{64}")))
+            throw bad("Preflight selection requires version and source fingerprint");
+        if(new HashSet<>(selected.stream().map(Selection::lineId).toList()).size()
+            !=selected.size())throw bad("Duplicate line in preflight");
+        requireMarketplace(tenant,marketplace);
+        Map<String,FbaPurchaseReconciliationService.Line> visible=new HashMap<>();
+        for(var item:reconciliation.overview(tenant,marketplace).lines())
+            visible.put(item.inboundLineId(),item);
+        List<ResolvePreviewLine> results=new ArrayList<>();
+        for(var item:selected){
+            var line=visible.get(item.lineId().toString());
+            Case current=line==null?null:caseFor(tenant,marketplace,item.lineId(),false);
+            String code=resolveEligibility(item,line,current);
+            results.add(new ResolvePreviewLine(item.lineId().toString(),
+                line==null?null:line.shipmentReference(),
+                line==null?null:line.sellerSku(),
+                current==null?null:current.state(),
+                current==null?null:id(current.assignee()),
+                current==null?0:current.version(),
+                line==null?null:fingerprint(line),"READY".equals(code),code));
+        }
+        int eligible=(int)results.stream().filter(ResolvePreviewLine::eligible).count();
+        return new ResolvePreview(eligible==selected.size(),selected.size(),
+            eligible,false,false,List.copyOf(results));
+    }
+
+    /** Existing V77/V79/V82 ledger, not a reconstructed per-row batch audit. */
+    @Transactional(readOnly=true)
+    public List<BatchActivity> recentBatches(UUID tenant,UUID marketplace) {
+        requireMarketplace(tenant,marketplace);
+        return jdbc.query("""
+            SELECT request_key,action_type,actor_user_id,affected_count,created_at
+            FROM fba_purchase_exception_batch
+            WHERE tenant_id=? AND seller_marketplace_id=?
+            ORDER BY created_at DESC,id DESC LIMIT 50
+            """,(r,i)->new BatchActivity(
+                id(r.getObject("request_key",UUID.class)),r.getString("action_type"),
+                id(r.getObject("actor_user_id",UUID.class)),r.getInt("affected_count"),
+                date(r.getObject("created_at",OffsetDateTime.class))),
+            tenant,marketplace);
+    }
+
     /** V82: confirmed human-only, all-or-nothing resolution of 1..50 already
      * assigned + ACKNOWLEDGED cases. Existing V77 RESOLVE evidence guards apply
      * to each line; no Amazon inventory, ASN or procurement writes.
