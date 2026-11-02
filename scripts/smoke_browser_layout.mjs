@@ -398,9 +398,10 @@ async function main() {
         "document.querySelector('[aria-label=\"货件历史表\"] tbody tr button')",
         'V75 synthetic local shipment list')
       } catch (error) {
-        console.error('V75 browser fixture diagnostic:',await evaluate(send,
-          "({section:document.querySelector('[aria-label=\\"本地 FBA 货件与差异对账\\"]')?.textContent?.slice(0,1100)," +
-          "tables:[...document.querySelectorAll('[aria-label]')].map(x=>x.getAttribute('aria-label')).filter(x=>x?.includes('货件'))})"))
+        console.error('V75 browser fixture diagnostic:',
+          await evaluate(send,
+            "({section:document.body.textContent.slice(0,1200)," +
+            "tables:document.querySelectorAll('table').length})"))
         throw error
       }
       await evaluate(send,
