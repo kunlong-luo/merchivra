@@ -24,6 +24,11 @@ export default function App({viewer,signingOut,onLogout}:{viewer:AuthViewer;sign
  const [activeView,setActiveView]=useState<View>(() => typeof window !== 'undefined' &&
   new URLSearchParams(window.location.search).get('amazon_oauth') === 'pending_verification'
   ? 'connections' : 'core'),[accountId,setAccountId]=useState(''),[syncMessage,setSyncMessage]=useState('')
+ const [fbaFocus,setFbaFocus]=useState<{marketplaceId:string;lineId:string}|null>(null)
+ const openFbaException=(marketplaceId:string,lineId:string)=>{
+  setFbaFocus({marketplaceId,lineId})
+  setActiveView('core')
+ }
  const client=useQueryClient()
  const demo=activeView!=='core'&&activeView!=='ops'&&activeView!=='team'&&activeView!=='connections'&&activeView!=='purchasing'&&activeView!=='finance'&&viewer.isOwner
  const ping=useQuery({queryKey:['api','ping'],queryFn:fetchPing,staleTime:30000,retry:1})
@@ -56,8 +61,8 @@ export default function App({viewer,signingOut,onLogout}:{viewer:AuthViewer;sign
  {demo&&<div className="heading-actions"><label className="shop-filter"><span>当前店铺</span><select aria-label="切换演示店铺" value={accountId} disabled={!overview.data?.accounts.length} onChange={e=>setAccountId(e.target.value)}>{(overview.data?.accounts??[]).map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
  <button className="refresh-button" disabled={overview.isFetching} onClick={()=>void overview.refetch()}>↻ {overview.isFetching?'读取中':'刷新'}</button></div>}</div>
  {demo&&<div className="mock-banner" role="status"><span className="mock-banner-icon" aria-hidden="true">✦</span><div><strong>MOCK 演示模式</strong><span>全部商品、订单、账户与库存为虚构数据；无真实 Amazon 凭证或财务结算。</span></div><span className="mock-pill">DEMO ONLY</span></div>}
- {activeView==='core'?<CoreWorkspace tenantId={viewer.activeTenantId} isOwner={viewer.isOwner}/>:
- activeView==='ops'&&viewer.isOwner?<OperationsWorkspace tenantId={viewer.activeTenantId}/>:
+ {activeView==='core'?<CoreWorkspace tenantId={viewer.activeTenantId} isOwner={viewer.isOwner} focusException={fbaFocus}/>:
+ activeView==='ops'&&viewer.isOwner?<OperationsWorkspace tenantId={viewer.activeTenantId} onOpenFbaException={openFbaException}/>:
  activeView==='team'&&viewer.isOwner?<TeamWorkspace tenantId={viewer.activeTenantId} currentUserId={viewer.userId}/>:
  activeView==='connections'&&viewer.isOwner?<SellerConnections tenantId={viewer.activeTenantId} currentUserId={viewer.userId}/>:
  activeView==='purchasing'&&viewer.isOwner?<PurchasingWorkspace tenantId={viewer.activeTenantId} currentUserId={viewer.userId}/>:
