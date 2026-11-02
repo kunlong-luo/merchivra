@@ -293,6 +293,14 @@ public class FbaPurchaseLinkService {
         if(rows.size()!=1)throw missing();
         return rows.getFirst();
     }
+    /** Route-scoped transition: a link from another shipment is never actionable. */
+    @Transactional
+    public Linked changeForShipment(UUID tenant,UUID marketplace,UUID shipment,UUID actor,
+                                  UUID linkId,String action,String reason){
+        Linked existing=get(tenant,marketplace,linkId);
+        if(!existing.shipmentId().equals(shipment.toString()))throw missing();
+        return change(tenant,marketplace,actor,linkId,action,reason);
+    }
     @Transactional
     public Linked change(UUID tenant,UUID marketplace,UUID actor,UUID id,
                          String action,String reason){

@@ -261,6 +261,13 @@ public class FbaInboundService {
             if("IN_TRANSIT".equals(current.state()))return detail(tenant,marketplace,shipment);
             throw conflict("Only DRAFT shipments can be dispatched");
         }
+        // Never freeze an unreviewed cross-module identity assertion on dispatch.
+        Integer pending=jdbc.queryForObject("""
+            SELECT COUNT(*) FROM fba_inbound_purchase_link
+            WHERE tenant_id=? AND shipment_id=? AND state='PROPOSED'
+            """,Integer.class,tenant,shipment);
+        if(pending!=null && pending>0)
+            throw conflict("A second Owner must confirm or revoke pending PO links before dispatch");
         jdbc.update("""
             UPDATE fba_inbound_shipment SET state='IN_TRANSIT',
                    dispatched_at=now(),updated_at=now()
