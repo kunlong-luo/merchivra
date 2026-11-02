@@ -5,6 +5,7 @@ import WarehouseAlertsPanel from './WarehouseAlertsPanel'
 import SupplierPurchasePlanningPanel from './SupplierPurchasePlanningPanel'
 import SupplierAsnPanel from './SupplierAsnPanel'
 import PurchaseDeliveryPanel from './PurchaseDeliveryPanel'
+import SupplierPerformancePanel from './SupplierPerformancePanel'
 import PurchaseQualityPanel from './PurchaseQualityPanel'
 import ReceiptBatchPanel from './ReceiptBatchPanel'
 import ReceiptLotLocationPanel from './ReceiptLotLocationPanel'
@@ -195,6 +196,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
    <form onSubmit={create}><button type="submit" className="primary-button"
      disabled={!supplierId||!draft.length||created.isPending}>保存采购单草稿</button></form>
   </section>
+  <SupplierPerformancePanel tenantId={tenantId} onOpenOrder={setSelectedId}/>
   <PurchaseDeliveryPanel tenantId={tenantId} onOpenOrder={orderId=>{
    setSelectedId(orderId);setReceiveAsnId('')
   }}/>
