@@ -494,7 +494,7 @@ public class FbaPurchaseExceptionService {
             marketplace,tenant);
         long[] counts=jdbc.queryForObject("""
             SELECT count(*) AS total,
-              count(*) FILTER (WHERE assignee_id IS NULL) AS unassigned
+              count(*) FILTER (WHERE assignee_id IS NULL AND state<>'RESOLVED') AS unassigned
             FROM fba_purchase_exception_case
             WHERE tenant_id=? AND seller_marketplace_id=?
             """,(r,i)->new long[]{r.getLong(1),r.getLong(2)},tenant,marketplace);
