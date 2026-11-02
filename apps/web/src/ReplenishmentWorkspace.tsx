@@ -2,13 +2,22 @@ import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchCoreListings} from './lib/core'
 import {getReplenishmentSuggestions,saveReplenishmentPolicy,removeReplenishmentPolicy,
- getReplenishmentPurchaseDrafts,createReplenishmentPurchaseDraft,type ReplenishmentAdvice}
+ getReplenishmentPurchaseDrafts,createReplenishmentPurchaseDraft,getReplenishmentDemandSignals,
+ type ReplenishmentDemandSignal,type ReplenishmentAdvice}
  from './lib/replenishment'
 import {fetchSuppliers} from './lib/purchasing'
 
 const labels:Record<string,string>={
  NO_OBSERVATION:'无库存观测，不能计算',STALE_OBSERVATION:'库存观测超 48 小时或时间异常',
  INCOMPLETE_OBSERVATION:'库存数据不完整，不能计算',REORDER:'可考虑补货',HEALTHY:'未触发补货点'
+}
+const demandLabels:Record<ReplenishmentDemandSignal['status'],string>={
+ UNMAPPED:'Listing 尚未具有有效的内部 SKU 映射',
+ INCOMPLETE_COVERAGE:'订单同步缺少完整 28 天窗口，不能估算',
+ INCOMPLETE_ITEMS:'订单行未完整观测或来源混杂，不能估算',
+ NO_OBSERVED_ORDERS:'有完整同步窗口，但没有观测到订单（不代表市场需求为零）',
+ MOCK_SAMPLE:'仅模拟订单样本，数字仅供检查计算',
+ OBSERVED_ONLY:'订单项历史观测（未扣退款、取消；非需求预测）'
 }
 export default function ReplenishmentWorkspace({tenantId,marketplaceId}:{
  tenantId:string;marketplaceId:string
@@ -25,11 +34,14 @@ export default function ReplenishmentWorkspace({tenantId,marketplaceId}:{
   queryFn:()=>fetchCoreListings(marketplaceId),retry:false})
  const suggestions=useQuery({queryKey:['replenishment','suggestions',tenantId,marketplaceId],
   queryFn:()=>getReplenishmentSuggestions(marketplaceId),retry:false})
+ const demand=useQuery({queryKey:['replenishment','demand',tenantId,marketplaceId],
+  queryFn:()=>getReplenishmentDemandSignals(marketplaceId),retry:false})
  const suppliers=useQuery({queryKey:['purchasing',tenantId,'suppliers'],
   queryFn:fetchSuppliers,enabled:selected!==null,retry:false})
  const drafts=useQuery({queryKey:['replenishment','draft-history',tenantId,marketplaceId],
   queryFn:()=>getReplenishmentPurchaseDrafts(marketplaceId),retry:false})
- const refresh=()=>void client.invalidateQueries({queryKey:['replenishment','suggestions',tenantId,marketplaceId]})
+ const refresh=()=>{void client.invalidateQueries({queryKey:['replenishment','suggestions',tenantId,marketplaceId]});
+  void client.invalidateQueries({queryKey:['replenishment','demand',tenantId,marketplaceId]})}
  const saved=useMutation({mutationFn:()=>saveReplenishmentPolicy(marketplaceId,sellerSku,
   reorder,target,lead),onSuccess:()=>{setMessage('补货策略已保存');setFailure('');refresh()},
   onError:(e:Error)=>setFailure(e.message)})
@@ -112,6 +124,29 @@ export default function ReplenishmentWorkspace({tenantId,marketplaceId}:{
        </div></td></tr>)}
      </tbody></table>
     </div>}
+   <section className="core-tools" aria-label="近 28 天订单销量观测参考">
+    <h3>7 / 28 天订单数量与提前期需求参考 · 仅分析</h3>
+    <p className="setup-hint">只统计当前站点、已映射 Seller SKU 的最新订单项（下单件数，不是净销量）。需最近 28 天完整的已提交订单同步窗口、全量已观测订单行和一致来源才能计算；窗口终点固定比当前时间早 30 分钟。Mock 来源仅演示，不用于采购审批、在途预测或 Amazon 写操作。</p>
+    {demand.isPending?<p className="empty-state">读取订单来源覆盖情况…</p>:
+     demand.isError?<p className="setup-error" role="alert">{String(demand.error)}</p>:
+     !demand.data?.length?<p className="empty-state">暂无配置补货策略的 SKU。</p>:
+     <div className="table-scroll" tabIndex={0} role="region" aria-label="订单销量覆盖率分析表">
+      <table><thead><tr><th scope="col">Seller SKU</th><th scope="col">28 天来源覆盖</th>
+       <th scope="col">近 7 / 28 天下单件数</th><th scope="col">28 天日均</th>
+       <th scope="col">提前期件数（示意）</th></tr></thead><tbody>
+       {demand.data.map(d=><tr key={d.sellerSku}>
+        <td className="strong-cell">{d.sellerSku}</td>
+        <td><span>{demandLabels[d.status]}</span><div className="panel-caption">
+         {d.sourceMode==='MOCK'?'MOCK 虚构来源':d.sourceMode==='LIVE'?'LIVE 来源标记（需真实联调）':'尚无来源'}
+         </div></td>
+        <td>{d.observedUnits28d===null?'不可计算':d.observedUnits7d+' / '+d.observedUnits28d}</td>
+        <td>{d.observedDailyUnits28d??'不可计算'}</td>
+        <td>{d.illustrativeLeadTimeUnits===null?'不提供':
+         d.illustrativeLeadTimeUnits+' 件 / '+d.leadTimeDays+' 天（不可直接下单）'}</td>
+       </tr>)}
+      </tbody></table>
+     </div>}
+   </section>
    {selected&&<section className="core-tools" aria-label="确认补货采购草稿">
     <h3>确认本地采购草稿</h3>
     <p>Seller SKU：{selected.policy.sellerSku} · 观测可售：
