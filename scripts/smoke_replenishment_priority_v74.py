@@ -148,8 +148,8 @@ pwd="v74-ci-disposable-reviewer-credential"
 post("/api/v1/auth/invitations/accept",{"token":inv["token"],"password":pwd},
  204,browser=reviewer,token=token)
 token=call("/api/v1/auth/csrf",browser=reviewer)["token"]
-post("/api/v1/auth/login",{"username":"v74-ci-approver","password":pwd},
- browser=reviewer,token=token,headers={"Content-Type":"application/x-www-form-urlencoded"})
+call("/api/v1/auth/login","POST",{"username":"v74-ci-approver","password":pwd},
+ form=True,browser=reviewer,token=token)
 token=call("/api/v1/auth/csrf",browser=reviewer)["token"]
 assert call("/api/v1/auth/me",browser=reviewer)["userId"]!=me["userId"]
 post("/api/v1/purchasing/orders/"+oid+"/approve",{},browser=reviewer,token=token)
