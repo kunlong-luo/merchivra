@@ -143,6 +143,8 @@ public class FbaExceptionPermissionService {
         jdbc.queryForObject("""
             SELECT id FROM seller_marketplace WHERE tenant_id=? AND id=? FOR UPDATE
             """,UUID.class,tenant,marketplace);
+        // Recheck under shared site lock to prevent concurrent mutual manager lockout.
+        require(tenant,marketplace,actor,Capability.MANAGE);
         var existing=jdbc.query("""
             SELECT version,can_view,can_assign,can_review,can_resolve,
                    can_configure,can_manage FROM fba_exception_owner_permission
