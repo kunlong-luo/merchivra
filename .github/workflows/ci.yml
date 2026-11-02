@@ -180,6 +180,9 @@ jobs:
           python3 scripts/smoke_ops_v69.py
           python3 scripts/smoke_replenishment_v70.py
           python3 scripts/smoke_replenishment_supplier_v71.py
+          python3 scripts/smoke_purchase_delivery_v72.py
+          v72_migration=$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='69' AND success")
+          test "$v72_migration" = "1"
           v71_migration=$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='68' AND success")
           test "$v71_migration" = "1"
           v70_migration=$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='67' AND success")
