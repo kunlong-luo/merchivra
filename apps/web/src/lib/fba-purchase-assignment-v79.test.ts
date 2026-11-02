@@ -40,7 +40,7 @@ describe('V79 owner load and batch allocation same-origin contract',()=>{
   vi.stubGlobal('fetch',vi.fn(async(url:string,options?:RequestInit)=>{
    requests.push({url:String(url),options})
    if(String(url).endsWith('/auth/csrf'))
-    return new Response(JSON.stringify({token:'V79-token',headerName:'X-CSRF-TOKEN'}),
+    return new Response(JSON.stringify({token:'V79-local-csrf-mock-token-0000',headerName:'X-CSRF-TOKEN'}),
       {headers:{'Content-Type':'application/json'}})
    return new Response(JSON.stringify({requestKey:key,assigneeId:reviewer,
     assignedCount:1}),{headers:{'Content-Type':'application/json'}})
@@ -52,7 +52,7 @@ describe('V79 owner load and batch allocation same-origin contract',()=>{
   const request=requests.at(-1)!
   expect(request.url).toContain('/workbench/bulk-assign')
   expect(request.options?.method).toBe('POST')
-  expect(new Headers(request.options?.headers).get('X-CSRF-TOKEN')).toBe('V79-token')
+  expect(new Headers(request.options?.headers).get('X-CSRF-TOKEN')).toBe('V79-local-csrf-mock-token-0000')
   const body=JSON.parse(String(request.options?.body))
   expect(body).toMatchObject({requestKey:key,assigneeId:reviewer})
   expect(body.lines[0].expectedVersion).toBe(3)
