@@ -71,4 +71,50 @@ describe('replenishment-to-purchase browser contract',()=>{
   expect(demandSignalSchema.safeParse({...base,observedUnits28d:-1}).success).toBe(false)
   expect(demandSignalSchema.safeParse({...base,status:'PREDICTED_ARRIVAL'}).success).toBe(false)
  })
+
+ it('V71 quotes remain read-only and quantity is never guessed from a missing observation',async()=>{
+  vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify([{
+   sellerSku:'SKU-A',productSkuId:product,supplierId:supplier,
+   supplierName:'Synthetic Supplier',supplierRuleUpdatedAt:'2026-11-02T01:00:00Z',
+   observationId:null,policyUpdatedAt:'2026-11-02T00:00:00Z',
+   baseSuggestedQuantity:0,minimumOrderQuantity:24,packMultiple:12,
+   supplierLeadTimeDays:18,currency:'USD',unitCost:'3.500000',
+   status:'NO_OBSERVATION',orderQuantity:null,estimatedTotal:null
+  }]),{status:200})))
+  const {getReplenishmentSupplierQuotes}=await import('./replenishment')
+  const quotes=await getReplenishmentSupplierQuotes(marketplace)
+  expect(quotes[0].orderQuantity).toBeNull()
+  expect(quotes[0].estimatedTotal).toBeNull()
+ })
+ it('V71 human request passes source rule version and pack-rounded quantity without tenant id',async()=>{
+  const requests:Array<{url:string;options?:RequestInit}>=[]
+  vi.stubGlobal('fetch',vi.fn(async(url:string,options?:RequestInit)=>{
+   requests.push({url,options})
+   if(url.endsWith('/auth/csrf'))return new Response(JSON.stringify({
+    token:'local-v71-csrf',headerName:'X-CSRF-TOKEN'}),{status:200})
+   return new Response(JSON.stringify({
+    order:{id:orderId,orderNumber:'PO-V71-MOCK',supplierId:supplier,status:'DRAFT',
+     currency:'USD',createdBy:actor,approvedBy:null,notes:null,
+     updatedAt:'2026-11-02T01:00:00Z'},
+    lines:[{id:'99999999-9999-4999-8999-999999999999',productSkuId:product,
+     orderedQuantity:36,receivedQuantity:0,unitCost:'3.500000'}]
+   }),{status:201})
+  }))
+  const result=await createReplenishmentPurchaseDraft(marketplace,{
+   requestKey:'11111111-1111-4111-8111-111111111111',
+   sellerSku:'SKU-A',supplierId:supplier,currency:'USD',unitCost:'3.500000',
+   expectedObservationId:evidence,expectedPolicyUpdatedAt:'2026-11-02T00:00:00Z',
+   expectedQuantity:18,expectedSupplierRuleUpdatedAt:'2026-11-02T01:00:00Z',
+   expectedOrderQuantity:36
+  })
+  expect(result.order.status).toBe('DRAFT')
+  expect(result.lines[0].orderedQuantity).toBe(36)
+  const posted=requests.find(x=>x.options?.method==='POST')
+  expect(posted?.url).toContain('/purchase-drafts')
+  expect(JSON.parse(String(posted?.options?.body))).toMatchObject({
+   expectedQuantity:18,expectedOrderQuantity:36,
+   expectedSupplierRuleUpdatedAt:'2026-11-02T01:00:00Z'})
+  expect(String(posted?.options?.body)).not.toContain('tenantId')
+  expect(posted?.options?.headers).toMatchObject({'X-CSRF-TOKEN':'local-v71-csrf'})
+ })
 })

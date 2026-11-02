@@ -45,6 +45,16 @@ class ReplenishmentPurchaseDraftServiceTest {
         assertEquals(HttpStatus.BAD_REQUEST,
             assertThrows(ResponseStatusException.class,
                 ()->service.create(tenant,actor,marketplace,noEvidence)).getStatusCode());
+        var quoteMissingQty=new ReplenishmentPurchaseDraftService.Request(key,"SKU-A",
+            supplier,"USD","4.50",original.expectedPolicyUpdatedAt(),
+            evidence,15,"2026-10-31T07:00:00Z",null);
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->service.create(tenant,actor,marketplace,quoteMissingQty)).getStatusCode());
+        var quoteWrongQty=new ReplenishmentPurchaseDraftService.Request(key,"SKU-A",
+            supplier,"USD","4.50",original.expectedPolicyUpdatedAt(),
+            evidence,15,"2026-10-31T07:00:00Z",14);
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->service.create(tenant,actor,marketplace,quoteWrongQty)).getStatusCode());
         verifyNoInteractions(jdbc,purchasing);
     }
 

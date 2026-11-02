@@ -69,6 +69,8 @@ const server = createServer(async (req, res) => {
       windowAfter:null,windowBefore:null,lastSafeWatermark:null,
       nextAttemptAt:null,lastFailureCode:null
     })
+  if (url.pathname === '/api/v1/replenishment/marketplaces/' + market + '/supplier-quotes')
+    return respond(res, [])
   if (url.pathname === '/api/v1/replenishment/marketplaces/' + market + '/demand-signals')
     return respond(res, [{
       sellerSku:'TEST-SKU-100',status:'INCOMPLETE_COVERAGE',sourceMode:'MOCK',
