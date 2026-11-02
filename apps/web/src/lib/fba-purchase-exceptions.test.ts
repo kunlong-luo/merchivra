@@ -81,7 +81,7 @@ describe('V77 local workflow / Zod and shared session transport',()=>{
    if(url==='/api/v1/auth/csrf')
     return new Response(JSON.stringify({token:'csrf-test-012345',
      headerName:'X-CSRF-TOKEN'}))
-   return new Response(JSON.stringify({...board.policy,version:1}))
+   return new Response(JSON.stringify({...board.policy,version:1}),{headers:{'Content-Type':'application/json'}})
   }))
   await saveReminderPolicy(mp,{enabled:false,leadHours:2,defaultDueHours:4,
    expectedVersion:0,note:'V77 local dashboard reminder changes'})
