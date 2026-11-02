@@ -39,7 +39,8 @@ def call(path,method="GET",body=None,expected=200,form=False):
     except HTTPError as err:
         status,payload=err.code,err.read()
     assert status==expected,(method,path,status,expected,payload[:500])
-    return json.loads(payload)
+    try:return json.loads(payload)
+    except (ValueError,TypeError):return payload
 foreign=str(uuid4())
 call("/api/v1/exception-insights/marketplaces/"+foreign,expected=401)
 csrf=call("/api/v1/auth/csrf")["token"]
