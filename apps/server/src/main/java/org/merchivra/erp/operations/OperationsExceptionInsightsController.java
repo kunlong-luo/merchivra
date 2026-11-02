@@ -53,27 +53,27 @@ public class OperationsExceptionInsightsController {
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
         @PathVariable String reasonCode,
         @RequestBody OperationsExceptionPriorityService.Change input) {
-        return priorities.save(access.currentTenant(auth,request),marketplaceId,
+        return priorities.save(permitted(auth,request,marketplaceId,FbaExceptionPermissionService.Capability.CONFIGURE),marketplaceId,
             access.authenticatedUser(auth),reasonCode,input);
     }
     @GetMapping("/marketplaces/{marketplaceId}/priority-rules/audit")
     public ResponseEntity<List<OperationsExceptionPriorityService.Audit>> priorityAudit(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-            .body(priorities.audit(access.currentTenant(auth,request),marketplaceId));
+            .body(priorities.audit(permitted(auth,request,marketplaceId,FbaExceptionPermissionService.Capability.VIEW),marketplaceId));
     }
 
     @GetMapping("/marketplaces/{marketplaceId}/history")
     public ResponseEntity<OperationsExceptionHistoryService.History> history(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-            .body(history.history(access.currentTenant(auth,request),marketplaceId));
+            .body(history.history(permitted(auth,request,marketplaceId,FbaExceptionPermissionService.Capability.VIEW),marketplaceId));
     }
 
     @GetMapping("/marketplaces/{marketplaceId}")
     public ResponseEntity<OperationsExceptionInsightsService.Insights> insights(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-            .body(service.insights(access.currentTenant(auth,request),marketplaceId));
+            .body(service.insights(permitted(auth,request,marketplaceId,FbaExceptionPermissionService.Capability.VIEW),marketplaceId));
     }
 }
