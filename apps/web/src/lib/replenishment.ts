@@ -48,3 +48,22 @@ export const getReplenishmentPurchaseDrafts=(marketplace:string)=>
  api(marketplace,'/purchase-drafts',z.array(draftOrigin))
 export const createReplenishmentPurchaseDraft=(marketplace:string,body:ReplenishmentDraftRequest)=>
  api(marketplace,'/purchase-drafts',purchaseDetailSchema,'POST',body)
+
+/** V70: observed Orders v2026 item units, not revenue, forecast or a PO request. */
+export const demandSignalSchema=z.object({
+ sellerSku:z.string(),
+ status:z.enum(['UNMAPPED','INCOMPLETE_COVERAGE','INCOMPLETE_ITEMS',
+   'NO_OBSERVED_ORDERS','MOCK_SAMPLE','OBSERVED_ONLY']),
+ sourceMode:z.enum(['MOCK','LIVE']).nullable(),
+ windowStart:z.string(),windowEnd:z.string(),
+ leadTimeDays:z.number().int().min(1).max(365),
+ observedOrderCount:z.number().int().nonnegative().nullable(),
+ incompleteOrderCount:z.number().int().nonnegative().nullable(),
+ observedUnits7d:z.number().int().nonnegative().nullable(),
+ observedUnits28d:z.number().int().nonnegative().nullable(),
+ observedDailyUnits28d:z.string().nullable(),
+ illustrativeLeadTimeUnits:z.number().int().nonnegative().nullable()
+})
+export type ReplenishmentDemandSignal=z.infer<typeof demandSignalSchema>
+export const getReplenishmentDemandSignals=(marketplace:string)=>
+ api(marketplace,'/demand-signals',z.array(demandSignalSchema).max(500))
