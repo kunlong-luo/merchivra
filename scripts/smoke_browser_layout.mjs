@@ -69,6 +69,18 @@ const server = createServer(async (req, res) => {
       windowAfter:null,windowBefore:null,lastSafeWatermark:null,
       nextAttemptAt:null,lastFailureCode:null
     })
+  if (url.pathname === '/api/v1/purchasing/supplier-performance/scorecards')
+    return respond(res,[{
+      supplierId:'22222222-2222-4222-8222-222222222222',
+      supplierName:'V73 Synthetic Supplier',
+      completeAsnSampleCount:1,observedOnTimeAsnCount:1,
+      inspectedReceiptSampleCount:0,acceptedQcUnits:0,inspectedQcUnits:0,
+      activeVarianceCount:0,observedOnTimePercent:'100.0',
+      inspectedAcceptancePercent:null,evidenceScore:null,
+      scoringStatus:'INSUFFICIENT_EVIDENCE'
+    }])
+  if (url.pathname === '/api/v1/purchasing/supplier-performance/followups')
+    return respond(res,[])
   if (url.pathname === '/api/v1/purchasing/delivery/overview')
     return respond(res,{
       asOfDateUtc:'2026-11-02',
@@ -335,6 +347,14 @@ async function main() {
         "document.querySelector('[aria-label=\"采购单交付追踪表\"] tbody tr')" +
         "?.textContent?.includes('已审批但没有有效供应商 ASN')"),
         true,'Missing ASN must not be reported as a shipped or late delivery')
+      await waitFor(send,
+        "document.querySelector('[aria-label=\"供应商履约样本评分表\"] tbody tr')" +
+        "?.textContent?.includes('未评分：样本不足')",
+        'V73 supplier evidence scorecard with insufficient samples')
+      assert.equal(await evaluate(send,
+        "document.querySelector('[aria-label=\"供应商履约评分与采购人工催办\"]')" +
+        "?.textContent?.includes('手动扫描待跟进采购')"),
+        true,'V73 human-only follow-up workflow must be visible')
       await layout(send,width,'supplier-delivery-360')
       await screenshot(send,'v72-local-supplier-delivery-360.png')
       // V15 Owner-only management surface must render independent reviewers,
