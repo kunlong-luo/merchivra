@@ -102,6 +102,20 @@ const server = createServer(async (req, res) => {
         deliveryState:'NO_ASN_RECORDED'
       }]
     })
+  if (url.pathname === '/api/v1/replenishment/marketplaces/' + market + '/priorities')
+    return respond(res, [{
+      sellerSku:'TEST-SKU-100',stockState:'NO_OBSERVATION',
+      demandStatus:'INCOMPLETE_COVERAGE',evidenceLevel:'STOCK_UNTRUSTED',
+      riskCode:'STOCK_NOT_OBSERVED',priorityCode:'BLOCKED',
+      stockSourceMode:null,demandSourceMode:'MOCK',observationId:null,
+      policyUpdatedAt:'2026-11-02T00:00:00Z',fulfillable:null,observedAt:null,
+      policyLeadTimeDays:14,observedUnits28d:null,observedDailyUnits28d:null,
+      illustrativeCoverageDays:null,illustrativePolicyLeadUnits:null,
+      readySupplierQuoteCount:0,shortestSupplierTermDays:null,
+      longestSupplierTermDays:null,
+      localDraftOrSubmittedUnits:36,localApprovedUnreceivedUnits:0,
+      localReceivedUnits:0,localPendingOrderCount:1,existingLocalOrderNeedsReview:true
+    }])
   if (url.pathname === '/api/v1/replenishment/marketplaces/' + market + '/supplier-quotes')
     return respond(res, [])
   if (url.pathname === '/api/v1/replenishment/marketplaces/' + market + '/demand-signals')
@@ -320,6 +334,20 @@ async function main() {
       assert.ok(cells.includes('未知'),'Unknown inventory must stay unknown')
       assert.ok(cells.includes('0'),'Observed zero must stay zero')
       await screenshot(send,'core-inventory-360.png',true)
+      await waitFor(send,
+        "[...document.querySelectorAll('[aria-label=\"V74 SKU 补货风险优先级表\"] tbody tr')]" +
+        ".some(x=>x.textContent.includes('TEST-SKU-100'))",
+        'V74 replenishment risk view')
+      assert.equal(await evaluate(send,
+        "document.querySelector('[aria-label=\"V74 SKU 补货风险优先级表\"]')" +
+        "?.textContent?.includes('阻断 · 不可量化')"),
+        true, 'unknown stock must block numerical risk')
+      assert.equal(await evaluate(send,
+        "document.querySelector('[aria-label=\"V74 SKU 补货风险优先级表\"]')" +
+        "?.textContent?.includes('已有 1 张进行中采购单')"),
+        true, 'existing local PO must display manual dedupe review')
+      await screenshot(send,'v74-replenishment-risk-360.png')
+
       await evaluate(send, "(() => {const btn=[...document.querySelectorAll('.nav-link')]" +
         ".find(b=>b.textContent.includes('运营自动化'));if(!btn)throw Error('Missing operations navigation');btn.click();})()")
       await waitFor(send,
