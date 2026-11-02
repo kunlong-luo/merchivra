@@ -445,7 +445,14 @@ public class OperationsAutomationService {
                 WHERE tenant_id=? AND seller_marketplace_id=?
                 AND rule_code IN ('FBA_PO_EVIDENCE_CHANGED','FBA_PO_EXCEPTION_OVERDUE')
                 """+excluded,keepArgs.toArray());
-            if(board.truncated())continue; // never pretend this was an exhaustive review
+            if(board.truncated()) {
+                jdbc.update("""
+                    UPDATE ops_finding SET last_scan_id=?
+                    WHERE tenant_id=? AND seller_marketplace_id=?
+                      AND rule_code IN ('FBA_PO_EVIDENCE_CHANGED','FBA_PO_EXCEPTION_OVERDUE')
+                    """,scanId,tenant,marketplace);
+                continue; // partial source evidence cannot safely clear prior signals
+            }
             List<String> changed=board.items().stream().filter(
                 FbaPurchaseExceptionService.WorkItem::stale).map(
                 FbaPurchaseExceptionService.WorkItem::lineId).toList();
