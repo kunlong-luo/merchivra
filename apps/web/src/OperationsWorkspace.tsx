@@ -2,6 +2,7 @@ import {useState} from 'react'
 import SyncTaskMonitorPanel from './SyncTaskMonitorPanel'
 import OpsRulesPanel from './OpsRulesPanel'
 import OpsAttentionControls from './OpsAttentionControls'
+import OpsExceptionInsightsPanel from './OpsExceptionInsightsPanel'
 import {fetchViewer} from './lib/auth'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchFindings,fetchOpsSummary,scanOperations,changeFindingState,ruleNames,severityNames,stateNames} from './lib/operations'
@@ -48,6 +49,7 @@ export default function OperationsWorkspace({tenantId,onOpenFbaException}:{
  </div></td></tr>)}</tbody></table></div>}
  <div className="panel-caption">最多显示 100 条；采购/FBA 异常需回到 FBA 本地工作台确认原证据及重新确认处理，不可仅以运营队列 DONE 代替原单闭环。测试来源的待办不可直接用于自动补货、发货或财务结算。</div>
  </section>
+ <OpsExceptionInsightsPanel tenantId={tenantId} onOpenFbaException={onOpenFbaException}/>
  <OpsRulesPanel tenantId={tenantId}/>
  <SyncTaskMonitorPanel tenantId={tenantId}/>
  </div>

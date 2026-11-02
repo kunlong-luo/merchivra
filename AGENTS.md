@@ -679,3 +679,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 不以 ASSIGN 代替人工 ACKNOWLEDGE，也不以 V78 Ops DONE 代替源单 RESOLVE；批量操作不改动 PO、ASN、入仓或 FBA 库存。已处理的案件不允许直接重分派。
 - Owner 负载汇总全部持久化的本地处理单，列出未分派以及离职/失效负责人案件，不以 V76 限量窗口代表所有业务事实；不把员工分派时长冒充 Amazon 平台 SLA。
 - Ops→FBA 跨模块焦点只利用已有 V78 租户级任务源键，须在当前 Session 允许的 Marketplace 中选择对应本地记录；超出源窗口要明示。详见 [INV-079](docs/inventory/fba-purchase-assignment-v79.md)。
+
+## V80 · 跨模块异常处理建议只读纪律（2026-11-02）
+
+- V80 复用 V10/V69 `ops_finding` 分类、V77 本地证据处理、V78 本地时效和 V79 Owner 负载，**不新增表、队列、写入动作或定时任务**。应用于 Operations 的 V80 站点级只读看板，源数据仍来自服务端 Session 及对应 Marketplace。
+- P0 来源变更/人工逾期，P1 独立身份审查/本地差异复核/临期/HIGH，P2 尚未指派或 WARNING，P3 常规；属于固定的可解释处理建议，绝不宣称平台风险预测或 Amazon SLA。历史已 RESOLVED 但来源变更必须重新关注。
+- 优先级仅基于 V76 最近 100 货件/500 行、最多显示 30 条；必须展示截断信息。进度/负载来自全部持久化处理单，不能混淆口径；无人可分派返回空建议，不自动分派、ACKNOWLEDGE 或 RESOLVE。
+- Ops 分类反映最近一次扫描，不在 GET 中暗中运行任务。读服务不得更改 PO、ASN、FBA 入仓、库存、财务和 Amazon Seller 数据。详见 [OPS-080](docs/operations/exception-insights-v80.md)。
