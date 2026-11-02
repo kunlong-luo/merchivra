@@ -33,16 +33,16 @@ export default function OpsAttentionControls({finding,tenantId,userId,
  function submit(e:FormEvent){e.preventDefault();if(note.trim().length>=10&&note.length<=300)snooze.mutate()}
  return <div className="ops-row-actions" aria-label="Owner 待办处理">
   {active&&!finding.assignedTo&&<button type="button" className="text-button"
-   disabled={busy||!userId||!canAssign} onClick={()=>claim.mutate()>认领给自己</button>}
+   disabled={busy||!userId||!canAssign} onClick={()=>claim.mutate()}>认领给自己</button>}
   {mine&&<button type="button" className="text-button"
-   disabled={busy||!canAssign} onClick={()=>release.mutate()>释放认领</button>}
+   disabled={busy||!canAssign} onClick={()=>release.mutate()}>释放认领</button>}
   {other&&<span className="setup-hint">其他 Owner 已认领</span>}
   {active&&!other&&!suppressed&&<button type="button" className="text-button"
-   disabled={busy||!canReview} onClick={()=>setShowSnooze(v=>!v)>暂缓提醒</button>}
+   disabled={busy||!canReview} onClick={()=>setShowSnooze(v=>!v)}>暂缓提醒</button>}
   {active&&suppressed&&<span className="setup-hint">
    暂缓至 {formatSourceTime(finding.snoozedUntil!)}</span>}
   {active&&suppressed&&!other&&<button type="button" className="text-button"
-   disabled={busy||!canReview} onClick={()=>unsnooze.mutate()>恢复提醒</button>}
+   disabled={busy||!canReview} onClick={()=>unsnooze.mutate()}>恢复提醒</button>}
   <button type="button" className="text-button"
    onClick={()=>setShowHistory(v=>!v)}>{showHistory?'收起':'审计'}</button>
   {showSnooze&&active&&!other&&<form onSubmit={submit} className="team-invite-form">
