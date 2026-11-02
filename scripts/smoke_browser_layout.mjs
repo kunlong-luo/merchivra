@@ -393,9 +393,16 @@ async function main() {
         "?.textContent?.includes('已有 1 张进行中采购单')"),
         true, 'existing local PO must display manual dedupe review')
       await screenshot(send,'v74-replenishment-risk-360.png')
+      try {
       await waitFor(send,
         "document.querySelector('[aria-label=\"货件历史表\"] tbody tr button')",
         'V75 synthetic local shipment list')
+      } catch (error) {
+        console.error('V75 browser fixture diagnostic:',await evaluate(send,
+          "({section:document.querySelector('[aria-label=\\"本地 FBA 货件与差异对账\\"]')?.textContent?.slice(0,1100)," +
+          "tables:[...document.querySelectorAll('[aria-label]')].map(x=>x.getAttribute('aria-label')).filter(x=>x?.includes('货件'))})"))
+        throw error
+      }
       await evaluate(send,
         "document.querySelector('[aria-label=\"货件历史表\"] tbody tr button')?.click()")
       await waitFor(send,
