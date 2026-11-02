@@ -51,14 +51,14 @@ describe('V73 supplier evidence and manual follow-up client',()=>{
   vi.stubGlobal('fetch',vi.fn(async(url:string,options?:RequestInit)=>{
    calls.push({url,options})
    if(url.includes('/auth/csrf'))return new Response(JSON.stringify({
-     token:'v73-token',headerName:'X-CSRF-TOKEN'}),{status:200})
+     token:'v73-token-1234567890',headerName:'X-CSRF-TOKEN'}),{status:200})
    return new Response(JSON.stringify({id:finding,triggerType:'MANUAL',
      matchedCount:1,clearedCount:0}),{status:200})
   }))
   const result=await scanPurchaseFollowups()
   expect(result.matchedCount).toBe(1)
   const scan=calls.find(x=>x.url.endsWith('/scan'))
-  expect(scan?.options?.headers).toMatchObject({'X-CSRF-TOKEN':'v73-token'})
+  expect(scan?.options?.headers).toMatchObject({'X-CSRF-TOKEN':'v73-token-1234567890'})
   expect(String(scan?.options?.body)).not.toContain('tenantId')
  })
  it('POST state change does not allow additional arbitrary fields',async()=>{
@@ -66,7 +66,7 @@ describe('V73 supplier evidence and manual follow-up client',()=>{
   vi.stubGlobal('fetch',vi.fn(async(url:string,options?:RequestInit)=>{
    calls.push({url,options})
    if(url.includes('/auth/csrf'))return new Response(JSON.stringify({
-    token:'v73-token',headerName:'X-CSRF-TOKEN'}),{status:200})
+    token:'v73-token-1234567890',headerName:'X-CSRF-TOKEN'}),{status:200})
    return new Response(JSON.stringify({id:finding,state:'DONE'}),{status:200})
   }))
   const done=await setPurchaseFollowupState(finding,'DONE')
