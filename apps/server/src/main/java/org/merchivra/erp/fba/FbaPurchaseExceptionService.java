@@ -72,6 +72,12 @@ public class FbaPurchaseExceptionService {
         List<ResolvePreviewLine> lines) {}
     public record BatchActivity(String requestKey,String actionType,
         String actorId,int affectedCount,String createdAt) {}
+    public record BatchLinkedAction(String lineId,String shipmentReference,
+        String sellerSku,String action,String actorId,String newState,
+        String occurredAt) {}
+    public record BatchDetail(BatchActivity batch,boolean lineageComplete,
+        int linkedCount,List<BatchLinkedAction> linkedActions) {}
+
 
     public record OwnerLoad(String userId,String displayName,long open,
                             long acknowledged,long overdue) {}
@@ -282,6 +288,11 @@ public class FbaPurchaseExceptionService {
     private WorkItem apply(UUID tenant,UUID marketplace,UUID actor,
                            FbaPurchaseReconciliationService.Line line,
                            Action action,Policy settings) {
+        return apply(tenant,marketplace,actor,line,action,settings,null);
+    }
+    private WorkItem apply(UUID tenant,UUID marketplace,UUID actor,
+                           FbaPurchaseReconciliationService.Line line,
+                           Action action,Policy settings,UUID batchId) {
         if(action==null || action.expectedVersion()<0
            ||action.expectedFingerprint()==null
            ||!action.expectedFingerprint().matches("[0-9a-f]{64}"))
@@ -356,12 +367,12 @@ public class FbaPurchaseExceptionService {
             INSERT INTO fba_purchase_exception_audit
               (id,tenant_id,case_id,actor_user_id,action,old_state,new_state,
                old_assignee,new_assignee,old_due_at,new_due_at,
-               old_fingerprint,new_fingerprint,note)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+               old_fingerprint,new_fingerprint,note,batch_id)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,UUID.randomUUID(),tenant,caseId,actor,operation,
             old==null?null:old.state(),next,old==null?null:old.assignee(),
             assignee,old==null?null:old.due(),due,
-            old==null?null:old.fingerprint(),live,description);
+            old==null?null:old.fingerprint(),live,description,batchId);
         return view(line,caseFor(tenant,marketplace,lineId,false),settings);
     }
     @Transactional
@@ -405,20 +416,21 @@ public class FbaPurchaseExceptionService {
         Map<String,FbaPurchaseReconciliationService.Line> byId=new HashMap<>();
         for(var line:lines)byId.put(line.inboundLineId(),line);
         Policy settings=policy(tenant,marketplace);
-        for(var choice:selected) {
-            var line=byId.get(choice.lineId().toString());
-            if(line==null)throw conflict("Bulk line outside visible bounded review window");
-            apply(tenant,marketplace,actor,line,new Action("ACKNOWLEDGE",
-                choice.expectedVersion(),choice.expectedFingerprint(),
-                null,null,description),settings);
-        }
+        UUID batchId=UUID.randomUUID();
         jdbc.update("""
             INSERT INTO fba_purchase_exception_batch
               (id,tenant_id,seller_marketplace_id,request_key,payload_hash,
                actor_user_id,affected_count)
             VALUES (?,?,?,?,?,?,?)
-            """,UUID.randomUUID(),tenant,marketplace,body.requestKey(),
+            """,batchId,tenant,marketplace,body.requestKey(),
             payloadHash,actor,selected.size());
+        for(var choice:selected) {
+            var line=byId.get(choice.lineId().toString());
+            if(line==null)throw conflict("Bulk line outside visible bounded review window");
+            apply(tenant,marketplace,actor,line,new Action("ACKNOWLEDGE",
+                choice.expectedVersion(),choice.expectedFingerprint(),
+                null,null,description),settings,batchId);
+        }
         return new BulkReceipt(body.requestKey().toString(),selected.size());
     }
     /** V79: allocate 1..50 case lines atomically through the V77 audited ASSIGN
@@ -466,20 +478,21 @@ public class FbaPurchaseExceptionService {
         Map<String,FbaPurchaseReconciliationService.Line> byId=new HashMap<>();
         for(var line:overview.lines())byId.put(line.inboundLineId(),line);
         Policy settings=policy(tenant,marketplace);
-        for(var choice:selected) {
-            var line=byId.get(choice.lineId().toString());
-            if(line==null)throw conflict("Assignment line outside bounded review window");
-            apply(tenant,marketplace,actor,line,new Action("ASSIGN",
-                choice.expectedVersion(),choice.expectedFingerprint(),
-                body.assigneeId(),null,description),settings);
-        }
+        UUID batchId=UUID.randomUUID();
         jdbc.update("""
             INSERT INTO fba_purchase_exception_batch
               (id,tenant_id,seller_marketplace_id,request_key,payload_hash,
                actor_user_id,affected_count,action_type,assignee_id)
             VALUES (?,?,?,?,?,?,?,?,?)
-            """,UUID.randomUUID(),tenant,marketplace,body.requestKey(),
+            """,batchId,tenant,marketplace,body.requestKey(),
             payloadHash,actor,selected.size(),"ASSIGN",body.assigneeId());
+        for(var choice:selected) {
+            var line=byId.get(choice.lineId().toString());
+            if(line==null)throw conflict("Assignment line outside bounded review window");
+            apply(tenant,marketplace,actor,line,new Action("ASSIGN",
+                choice.expectedVersion(),choice.expectedFingerprint(),
+                body.assigneeId(),null,description),settings,batchId);
+        }
         return new BulkAssignReceipt(body.requestKey().toString(),
             body.assigneeId().toString(),selected.size());
     }
@@ -557,6 +570,48 @@ public class FbaPurchaseExceptionService {
             tenant,marketplace);
     }
 
+    /** V84: explicit FK lineage for batches created on/after V84.
+     * Earlier batches predate the FK; absence is NOT proof of no audited action.
+     */
+    @Transactional(readOnly=true)
+    public BatchDetail batchDetail(UUID tenant,UUID marketplace,UUID requestKey) {
+        requireMarketplace(tenant,marketplace);
+        var found=jdbc.query("""
+            SELECT id,request_key,action_type,actor_user_id,affected_count,created_at
+            FROM fba_purchase_exception_batch
+            WHERE tenant_id=? AND seller_marketplace_id=? AND request_key=?
+            """,(r,i)->new Object[]{
+                r.getObject("id",UUID.class),
+                new BatchActivity(id(r.getObject("request_key",UUID.class)),
+                    r.getString("action_type"),id(r.getObject("actor_user_id",UUID.class)),
+                    r.getInt("affected_count"),
+                    date(r.getObject("created_at",OffsetDateTime.class)))
+            },tenant,marketplace,requestKey);
+        if(found.isEmpty())throw missing();
+        Object[] data=found.getFirst();
+        List<BatchLinkedAction> actions=jdbc.query("""
+            SELECT c.inbound_line_id,s.reference,l.seller_sku,
+                   a.action,a.actor_user_id,a.new_state,a.occurred_at
+            FROM fba_purchase_exception_audit a
+            JOIN fba_purchase_exception_case c ON c.tenant_id=a.tenant_id
+              AND c.id=a.case_id AND c.seller_marketplace_id=?
+            JOIN fba_inbound_shipment s ON s.tenant_id=c.tenant_id
+              AND s.id=c.shipment_id AND s.seller_marketplace_id=?
+            JOIN fba_inbound_line l ON l.tenant_id=c.tenant_id
+              AND l.shipment_id=c.shipment_id AND l.id=c.inbound_line_id
+            WHERE a.tenant_id=? AND a.batch_id=?
+            ORDER BY a.occurred_at,a.id
+            """,(r,i)->new BatchLinkedAction(
+                id(r.getObject("inbound_line_id",UUID.class)),r.getString("reference"),
+                r.getString("seller_sku"),r.getString("action"),
+                id(r.getObject("actor_user_id",UUID.class)),r.getString("new_state"),
+                date(r.getObject("occurred_at",OffsetDateTime.class))),
+            marketplace,marketplace,tenant,(UUID)data[0]);
+        BatchActivity batch=(BatchActivity)data[1];
+        return new BatchDetail(batch,actions.size()==batch.affectedCount(),
+            actions.size(),actions);
+    }
+
     /** V82: confirmed human-only, all-or-nothing resolution of 1..50 already
      * assigned + ACKNOWLEDGED cases. Existing V77 RESOLVE evidence guards apply
      * to each line; no Amazon inventory, ASN or procurement writes.
@@ -597,20 +652,21 @@ public class FbaPurchaseExceptionService {
         for(var row:reconciliation.overview(tenant,marketplace).lines())
             byId.put(row.inboundLineId(),row);
         Policy settings=policy(tenant,marketplace);
-        for(var choice:selected) {
-            var line=byId.get(choice.lineId().toString());
-            if(line==null)throw conflict("Selected line outside bounded review window");
-            apply(tenant,marketplace,actor,line,new Action("RESOLVE",
-                choice.expectedVersion(),choice.expectedFingerprint(),null,null,
-                description),settings);
-        }
+        UUID batchId=UUID.randomUUID();
         jdbc.update("""
             INSERT INTO fba_purchase_exception_batch
                 (id,tenant_id,seller_marketplace_id,request_key,payload_hash,
                  actor_user_id,affected_count,action_type)
             VALUES (?,?,?,?,?,?,?,'RESOLVE')
-            """,UUID.randomUUID(),tenant,marketplace,body.requestKey(),
+            """,batchId,tenant,marketplace,body.requestKey(),
             payloadHash,actor,selected.size());
+        for(var choice:selected) {
+            var line=byId.get(choice.lineId().toString());
+            if(line==null)throw conflict("Selected line outside bounded review window");
+            apply(tenant,marketplace,actor,line,new Action("RESOLVE",
+                choice.expectedVersion(),choice.expectedFingerprint(),null,null,
+                description),settings,batchId);
+        }
         return new BulkResolveReceipt(body.requestKey().toString(),selected.size());
     }
 

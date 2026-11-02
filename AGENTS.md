@@ -704,3 +704,9 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 批量 RESOLVE 的逐行预检是只读、非锁定的**瞬时快照**，不能提供授权、批准或取代 V82 事务中的全部校验。UI 预检必须绑定当前 Marketplace、选择行、版本和来源指纹；变化就不能继续提交。最终提交仍须 Owner Session、CSRF、`confirmed=true`、V65/V75 业务门槛及幂等账本。
 - 返回固定可解释的 `reasonCode`，包括来源指纹变动、乐观版本冲突、未确认、负责人缺失及独立证据复核不足。越界行统一 `OUT_OF_SCOPE`，不得泄露其他租户/站点信息。1–50 行、去重、版本+指纹校验必须由后端独立负责。
 - 最近批次活动只来源于已有 V77/V79/V82 幂等账本；没有批次与逐行审计的实体关联时**绝不能猜测**，应指向已有的逐行 History。保持不接 Amazon、PO/ASN/库存写入。见 [OPS-083](docs/operations/fba-batch-preflight-v83.md)。
+
+## V84 · Owner 局部最小权限与可验证批次审计（2026-11-02）
+
+- 异常工作台权限为 **Owner 租户/Marketplace 局部限制**，不能把此授权表当成新的全局角色或 OPERATOR_READ 提权机制。未设置时继承原 OWNER 全权限；仅权限编辑者可限制其他有效 Owner，自己不能编辑自身权限，必须在 Marketplace 行锁内重新确认 MANAGE，写入版本 CAS + 不可变授权审计。
+- VIEW / ASSIGN / REVIEW / RESOLVE / CONFIGURE / MANAGE 各端点服务端检查独立能力；UI 禁用只是便利。不得将 V80/V81 数据读取或 V82 规则修改变成受限 Owner 的绕过路径。CSRF、Session Tenant、来源指纹、独立复核不变。
+- 原 V77/V79/V82 批次账本需先于同一事务内逐行人工操作写入，新增 audit.batch_id 外键精确关联；任意失败全部回滚，旧历史批次 NULL 不能补造。新增 batchDetail 明确 lineageComplete=false，不能猜测日志关联。见 [SEC-084](docs/security/fba-exception-capabilities-v84.md)。

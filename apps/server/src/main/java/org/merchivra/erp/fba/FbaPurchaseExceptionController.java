@@ -15,28 +15,37 @@ import org.springframework.web.bind.annotation.*;
 public class FbaPurchaseExceptionController {
     private final TenantAccessService access;
     private final FbaPurchaseExceptionService service;
+    private final FbaExceptionPermissionService permissions;
+    private UUID permitted(Authentication auth,HttpServletRequest request,
+                           UUID marketplace,FbaExceptionPermissionService.Capability capability) {
+        UUID tenant=access.currentTenant(auth,request);
+        permissions.require(tenant,marketplace,access.authenticatedUser(auth),capability);
+        return tenant;
+    }
     public FbaPurchaseExceptionController(TenantAccessService access,
-                                          FbaPurchaseExceptionService service) {
+                                          FbaPurchaseExceptionService service,
+                                          FbaExceptionPermissionService permissions) {
         this.access=access;
         this.service=service;
+        this.permissions=permissions;
     }
     @GetMapping
     public ResponseEntity<FbaPurchaseExceptionService.Board> board(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-            .body(service.board(access.currentTenant(auth,request),marketplaceId));
+            .body(service.board(permitted(auth,request,marketplaceId,FbaExceptionPermissionService.Capability.VIEW),marketplaceId));
     }
     @GetMapping("/workload")
     public ResponseEntity<FbaPurchaseExceptionService.Workload> workload(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-            .body(service.workload(access.currentTenant(auth,request),marketplaceId));
+            .body(service.workload(permitted(auth,request,marketplaceId,FbaExceptionPermissionService.Capability.VIEW),marketplaceId));
     }
     @PostMapping("/bulk-assign")
     public FbaPurchaseExceptionService.BulkAssignReceipt bulkAssign(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
         @RequestBody FbaPurchaseExceptionService.BulkAssign body) {
-        return service.bulkAssign(access.currentTenant(auth,request),marketplaceId,
+        return service.bulkAssign(permitted(auth,request,marketplaceId,FbaExceptionPermissionService.Capability.ASSIGN),marketplaceId,
             access.authenticatedUser(auth),body);
     }
     /** POST because the selected row identities/versions are in the body;
@@ -47,39 +56,55 @@ public class FbaPurchaseExceptionController {
         @RequestBody FbaPurchaseExceptionService.ResolvePreviewRequest body) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
             .body(service.preflightResolve(
-                access.currentTenant(auth,request),marketplaceId,body));
+                permitted(auth,request,marketplaceId,FbaExceptionPermissionService.Capability.RESOLVE),marketplaceId,body));
     }
     @GetMapping("/batches")
     public ResponseEntity<List<FbaPurchaseExceptionService.BatchActivity>> batches(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-            .body(service.recentBatches(access.currentTenant(auth,request),marketplaceId));
+            .body(service.recentBatches(permitted(auth,request,marketplaceId,FbaExceptionPermissionService.Capability.VIEW),marketplaceId));
+    }
+    @GetMapping("/batches/{requestKey}")
+    public ResponseEntity<FbaPurchaseExceptionService.BatchDetail> batchDetail(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
+        @PathVariable UUID requestKey) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.batchDetail(permitted(auth,request,marketplaceId,
+                FbaExceptionPermissionService.Capability.VIEW),
+                marketplaceId,requestKey));
     }
     @PostMapping("/bulk-resolve")
     public FbaPurchaseExceptionService.BulkResolveReceipt bulkResolve(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
         @RequestBody FbaPurchaseExceptionService.BulkResolve body) {
-        return service.bulkResolve(access.currentTenant(auth,request),marketplaceId,
+        return service.bulkResolve(permitted(auth,request,marketplaceId,FbaExceptionPermissionService.Capability.RESOLVE),marketplaceId,
             access.authenticatedUser(auth),body);
     }
     @GetMapping("/metrics")
     public ResponseEntity<FbaPurchaseExceptionService.Metrics> metrics(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-            .body(service.metrics(access.currentTenant(auth,request),marketplaceId));
+            .body(service.metrics(permitted(auth,request,marketplaceId,FbaExceptionPermissionService.Capability.VIEW),marketplaceId));
     }
     @PostMapping("/cases/{lineId}/actions")
     public FbaPurchaseExceptionService.WorkItem act(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
         @PathVariable UUID lineId,@RequestBody FbaPurchaseExceptionService.Action body) {
-        return service.act(access.currentTenant(auth,request),marketplaceId,
+        FbaExceptionPermissionService.Capability capability=switch(body.action()) {
+            case "ASSIGN","SET_DUE" -> FbaExceptionPermissionService.Capability.ASSIGN;
+            case "RESOLVE" -> FbaExceptionPermissionService.Capability.RESOLVE;
+            case "ACKNOWLEDGE","REOPEN" -> FbaExceptionPermissionService.Capability.REVIEW;
+            default -> throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.BAD_REQUEST,"Unsupported case action");
+        };
+        return service.act(permitted(auth,request,marketplaceId,capability),marketplaceId,
             access.authenticatedUser(auth),lineId,body);
     }
     @PostMapping("/bulk-acknowledge")
     public FbaPurchaseExceptionService.BulkReceipt bulk(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
         @RequestBody FbaPurchaseExceptionService.Bulk body) {
-        return service.bulkAcknowledge(access.currentTenant(auth,request),marketplaceId,
+        return service.bulkAcknowledge(permitted(auth,request,marketplaceId,FbaExceptionPermissionService.Capability.REVIEW),marketplaceId,
             access.authenticatedUser(auth),body);
     }
     @GetMapping("/cases/{lineId}/history")
@@ -87,19 +112,19 @@ public class FbaPurchaseExceptionController {
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
         @PathVariable UUID lineId) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-            .body(service.history(access.currentTenant(auth,request),marketplaceId,lineId));
+            .body(service.history(permitted(auth,request,marketplaceId,FbaExceptionPermissionService.Capability.VIEW),marketplaceId,lineId));
     }
     @PostMapping("/policy")
     public FbaPurchaseExceptionService.Policy savePolicy(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
         @RequestBody FbaPurchaseExceptionService.SavePolicy body) {
-        return service.savePolicy(access.currentTenant(auth,request),marketplaceId,
+        return service.savePolicy(permitted(auth,request,marketplaceId,FbaExceptionPermissionService.Capability.CONFIGURE),marketplaceId,
             access.authenticatedUser(auth),body);
     }
     @GetMapping("/policy/history")
     public ResponseEntity<List<FbaPurchaseExceptionService.PolicyHistory>> policyHistory(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-            .body(service.policyHistory(access.currentTenant(auth,request),marketplaceId));
+            .body(service.policyHistory(permitted(auth,request,marketplaceId,FbaExceptionPermissionService.Capability.VIEW),marketplaceId));
     }
 }
