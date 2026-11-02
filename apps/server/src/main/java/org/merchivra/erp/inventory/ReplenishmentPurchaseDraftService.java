@@ -254,7 +254,7 @@ public class ReplenishmentPurchaseDraftService {
             utc(observation.observedAt()),observation.fulfillable(),
             policy.reorderPoint(),policy.targetStock(),policy.leadTimeDays(),
             req.expectedQuantity(),actor,orderQuantity,
-            supplierVersion,supplierRule==null?null:supplierRule.moq(),
+            supplierVersion==null?null:utc(supplierVersion),supplierRule==null?null:supplierRule.moq(),
             supplierRule==null?null:supplierRule.pack(),
             supplierRule==null?null:supplierRule.leadDays(),
             quoteBacked?"V42_RULE":"MANUAL");
