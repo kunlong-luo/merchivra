@@ -47,4 +47,28 @@ describe('replenishment-to-purchase browser contract',()=>{
   expect(JSON.parse(String(post?.options?.body))).toEqual(payload)
   expect(post?.options?.headers).toMatchObject({'X-CSRF-TOKEN':'test-csrf-token'})
  })
+
+ it('V70 preserves null demand on missing sync coverage',async()=>{
+  vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify([{
+   sellerSku:'SKU-A',status:'INCOMPLETE_COVERAGE',sourceMode:null,
+   windowStart:'2026-10-01T00:00:00Z',windowEnd:'2026-10-29T00:00:00Z',
+   leadTimeDays:14,observedOrderCount:null,incompleteOrderCount:null,
+   observedUnits7d:null,observedUnits28d:null,
+   observedDailyUnits28d:null,illustrativeLeadTimeUnits:null
+  }]),{status:200})))
+  const {getReplenishmentDemandSignals}=await import('./replenishment')
+  const v=await getReplenishmentDemandSignals(marketplace)
+  expect(v[0].observedUnits28d).toBeNull()
+  expect(v[0].illustrativeLeadTimeUnits).toBeNull()
+ })
+ it('V70 rejects fake zero if source coverage is incomplete',async()=>{
+  const {demandSignalSchema}=await import('./replenishment')
+  const base={sellerSku:'SKU-A',status:'INCOMPLETE_COVERAGE',sourceMode:'MOCK',
+   windowStart:'2026-10-01T00:00:00Z',windowEnd:'2026-10-29T00:00:00Z',
+   leadTimeDays:14,observedOrderCount:null,incompleteOrderCount:null,
+   observedUnits7d:null,observedUnits28d:null,
+   observedDailyUnits28d:null,illustrativeLeadTimeUnits:null}
+  expect(demandSignalSchema.safeParse({...base,observedUnits28d:-1}).success).toBe(false)
+  expect(demandSignalSchema.safeParse({...base,status:'PREDICTED_ARRIVAL'}).success).toBe(false)
+ })
 })
