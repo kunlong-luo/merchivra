@@ -428,7 +428,7 @@ public class OperationsAutomationService {
         int matched=0;
         List<UUID> marketplaces=jdbc.queryForList("""
             SELECT DISTINCT seller_marketplace_id FROM fba_purchase_exception_case
-            WHERE tenant_id=? ORDER BY seller_marketplace_id LIMIT 100
+            WHERE tenant_id=? ORDER BY seller_marketplace_id
             """,UUID.class,tenant);
         for(UUID marketplace:marketplaces) {
             var board=fbaExceptions.board(tenant,marketplace);
