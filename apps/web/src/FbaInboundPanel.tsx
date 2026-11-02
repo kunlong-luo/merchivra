@@ -3,6 +3,7 @@ import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchCoreListings} from './lib/core'
 import FbaPurchaseLinkPanel from './FbaPurchaseLinkPanel'
 import FbaPurchaseReconciliationPanel from './FbaPurchaseReconciliationPanel'
+import FbaPurchaseExceptionPanel from './FbaPurchaseExceptionPanel'
 import {addShipment,getShipments,getShipment,getTransit,dispatchShipment,addReceipt,
  beginReview,resolveVariance,closeReview,type InboundOrigin} from './lib/fba-inbound'
 
@@ -107,6 +108,8 @@ export default function FbaInboundPanel({tenantId,marketplaceId}:{
    <button type="button" className="refresh-button" onClick={refresh}>刷新货件</button>
   </div>
   <FbaPurchaseReconciliationPanel tenantId={tenantId} marketplaceId={marketplaceId}
+    onOpenShipment={id=>{setSelectedId(id);setFailure('');setNotice('')}}/>
+  <FbaPurchaseExceptionPanel tenantId={tenantId} marketplaceId={marketplaceId}
     onOpenShipment={id=>{setSelectedId(id);setFailure('');setNotice('')}}/>
   <section className="core-tools" aria-label="SKU 在途预估">
    <h3>在途预估（不计入可售）</h3>
