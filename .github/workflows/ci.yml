@@ -179,7 +179,8 @@ jobs:
           python3 scripts/smoke_ops_v67.py
           python3 scripts/smoke_ops_v69.py
           python3 scripts/smoke_replenishment_v70.py
-          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc \"SELECT COUNT(*) FROM flyway_schema_history WHERE version='67' AND success\")" = '1'
+          v70_migration=$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='67' AND success")
+          test "$v70_migration" = "1"
           MERCHIVRA_V68_DISPOSABLE_ONLY=true python3 scripts/smoke_http_security_v68.py
           MERCHIVRA_V68_DISPOSABLE_ONLY=true bash scripts/smoke_pg_restore_v68.sh
           echo "PostgreSQL 18 / Flyway / actual finance + FBA OpenAPI and local mock chain verified"
