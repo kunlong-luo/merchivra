@@ -11,11 +11,20 @@ import {coreStatusLabel,filterLoadedRows,formatSourceTime,sourceLabel} from './l
 import {fetchCoreMarketplaces,fetchCoreListings,fetchCoreOrders,fetchCoreOrderItems,fetchCoreInventory} from './lib/core'
 
 type Section='listings'|'orders'|'inventory'
-export default function CoreWorkspace({tenantId,isOwner=true}:{tenantId:string;isOwner?:boolean}){
+export default function CoreWorkspace({tenantId,isOwner=true,focusException}:{
+ tenantId:string;isOwner?:boolean;
+ focusException?:{marketplaceId:string;lineId:string}|null
+}){
  const [marketplaceId,setMarketplaceId]=useState(''),[section,setSection]=useState<Section>('listings'),[search,setSearch]=useState('')
  const [selectedOrderId,setSelectedOrderId]=useState('')
  const marketplaces=useQuery({queryKey:['core','marketplaces',tenantId],queryFn:fetchCoreMarketplaces,staleTime:30000,retry:1})
  useEffect(()=>{if(!marketplaces.data?.some(m=>m.id===marketplaceId))setMarketplaceId(marketplaces.data?.[0]?.id??'')},[marketplaces.data,marketplaceId])
+ useEffect(()=>{
+  if(!isOwner||!focusException||!marketplaces.data)return
+  if(!marketplaces.data.some(m=>m.id===focusException.marketplaceId))return
+  setMarketplaceId(focusException.marketplaceId)
+  setSection('inventory');setSearch('');setSelectedOrderId('')
+ },[focusException?.marketplaceId,focusException?.lineId,isOwner,marketplaces.data])
  const listings=useQuery({queryKey:['core',tenantId,'listings',marketplaceId],queryFn:()=>fetchCoreListings(marketplaceId),enabled:!!marketplaceId&&section==='listings',staleTime:30000,retry:1})
  const orders=useQuery({queryKey:['core',tenantId,'orders',marketplaceId],queryFn:()=>fetchCoreOrders(marketplaceId),enabled:!!marketplaceId&&section==='orders',staleTime:30000,retry:1})
  const detail=useQuery({queryKey:['core',tenantId,'order-items',marketplaceId,selectedOrderId],
@@ -39,6 +48,9 @@ export default function CoreWorkspace({tenantId,isOwner=true}:{tenantId:string;i
   </section>
  return <div className="core-workspace">
  <div className="core-intro"><strong>已认证租户 · PostgreSQL 结构化数据</strong><p>读取当前会话租户的核心业务事实。模拟记录明确标注 MOCK；未知库存不等于零。</p></div>
+ {focusException&&marketplaces.data&&
+  !marketplaces.data.some(m=>m.id===focusException.marketplaceId)&&
+  <p role="alert" className="setup-error">目标异常不在当前会话可访问的 Marketplace，无法跳转。</p>}
  {marketplaces.isPending?<div className="state-panel">正在加载可访问的 Marketplace…</div>:
  marketplaces.isError?<div className="state-panel error-panel" role="alert"><h2>Marketplace 读取失败</h2><p>{marketplaces.error instanceof Error?marketplaces.error.message:'请检查登录会话'}</p><button className="refresh-button" onClick={()=>void marketplaces.refetch()}>重试</button></div>:
  !marketplaces.data?.length?<div className="core-onboarding"><div className="state-panel core-empty"><h2>当前租户尚未配置 Marketplace</h2><p>本地配置不等于 Amazon 正式授权。</p><button className="refresh-button" onClick={()=>void marketplaces.refetch()}>重新检查站点</button></div>{isOwner&&<SellerSetup tenantId={tenantId}/>}</div>:
@@ -90,7 +102,9 @@ export default function CoreWorkspace({tenantId,isOwner=true}:{tenantId:string;i
    <CatalogSyncPanel key={'fba-'+active.id} tenantId={tenantId}
     marketplaceId={active.id} stream="FBA"/>}
  {isOwner&&section==='inventory'&&<FbaInboundPanel key={'fba-inbound-'+marketplaceId}
-    tenantId={tenantId} marketplaceId={marketplaceId}/>}
+    tenantId={tenantId} marketplaceId={marketplaceId}
+    focusExceptionLine={focusException?.marketplaceId===marketplaceId?
+      focusException.lineId:undefined}/>}
  {isOwner&&section==='inventory'&&<ReplenishmentWorkspace tenantId={tenantId}
     marketplaceId={marketplaceId}/>}
  {isOwner&&section==='listings'&&<SkuCatalogManager tenantId={tenantId}
