@@ -4,6 +4,7 @@ import {fetchSkus} from './lib/catalog'
 import WarehouseAlertsPanel from './WarehouseAlertsPanel'
 import SupplierPurchasePlanningPanel from './SupplierPurchasePlanningPanel'
 import SupplierAsnPanel from './SupplierAsnPanel'
+import PurchaseDeliveryPanel from './PurchaseDeliveryPanel'
 import PurchaseQualityPanel from './PurchaseQualityPanel'
 import ReceiptBatchPanel from './ReceiptBatchPanel'
 import ReceiptLotLocationPanel from './ReceiptLotLocationPanel'
@@ -194,6 +195,9 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
    <form onSubmit={create}><button type="submit" className="primary-button"
      disabled={!supplierId||!draft.length||created.isPending}>保存采购单草稿</button></form>
   </section>
+  <PurchaseDeliveryPanel tenantId={tenantId} onOpenOrder={orderId=>{
+   setSelectedId(orderId);setReceiveAsnId('')
+  }}/>
   <section className="panel full-panel" aria-label="已审批待收货">
    <div className="panel-heading"><div><h2>已审批待收货</h2>
     <p>仅统计 APPROVED / RECEIVING 采购单的剩余数量，不代表供应商已发货或真实在途。</p></div></div>
