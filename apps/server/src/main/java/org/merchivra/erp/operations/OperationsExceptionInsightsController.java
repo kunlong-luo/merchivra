@@ -17,12 +17,22 @@ import org.springframework.web.bind.annotation.RestController;
 public class OperationsExceptionInsightsController {
     private final TenantAccessService access;
     private final OperationsExceptionInsightsService service;
+    private final OperationsExceptionHistoryService history;
 
     public OperationsExceptionInsightsController(TenantAccessService access,
-                                                  OperationsExceptionInsightsService service) {
+                                                  OperationsExceptionInsightsService service,
+                                                  OperationsExceptionHistoryService history) {
         this.access=access;
         this.service=service;
+        this.history=history;
     }
+    @GetMapping("/marketplaces/{marketplaceId}/history")
+    public ResponseEntity<OperationsExceptionHistoryService.History> history(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(history.history(access.currentTenant(auth,request),marketplaceId));
+    }
+
     @GetMapping("/marketplaces/{marketplaceId}")
     public ResponseEntity<OperationsExceptionInsightsService.Insights> insights(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId) {
