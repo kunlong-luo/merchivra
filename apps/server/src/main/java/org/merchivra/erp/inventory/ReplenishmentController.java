@@ -16,10 +16,12 @@ public class ReplenishmentController {
     private final ReplenishmentService service;
     private final ReplenishmentSupplierQuoteService quotes;
     private final ReplenishmentDemandService demand;
+    private final ReplenishmentPriorityService priority;
     public ReplenishmentController(TenantAccessService access,ReplenishmentService service,
                                    ReplenishmentDemandService demand,
-                                   ReplenishmentSupplierQuoteService quotes){
-        this.access=access;this.service=service;this.demand=demand;this.quotes=quotes;
+                                   ReplenishmentSupplierQuoteService quotes,
+                                   ReplenishmentPriorityService priority){
+        this.access=access;this.service=service;this.demand=demand;this.quotes=quotes;this.priority=priority;
     }
     public record SetPolicy(String sellerSku,int reorderPoint,int targetStock,int leadTimeDays) {}
     @GetMapping("/policies")
@@ -53,6 +55,13 @@ public class ReplenishmentController {
     public List<ReplenishmentSupplierQuoteService.Quote> supplierQuotes(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId) {
         return quotes.quotes(access.currentTenant(auth,request),marketplaceId);
+    }
+
+    /** V74: evidence-qualified advisory only. Never deducts local POs from FBA. */
+    @GetMapping("/priorities")
+    public List<ReplenishmentPriorityService.Priority> priorities(Authentication auth,
+        HttpServletRequest request,@PathVariable UUID marketplaceId) {
+        return priority.priorities(access.currentTenant(auth,request),marketplaceId);
     }
 
     @GetMapping("/suggestions")
