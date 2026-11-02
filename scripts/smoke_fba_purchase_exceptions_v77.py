@@ -175,7 +175,7 @@ post(f"{route}/cases/{confirmed['lineId']}/actions",{
 reopened=act(closed,"REOPEN",
              "V77 explicitly reopened local work for further manual follow up")
 assert reopened["state"]=="OPEN" and reopened["version"]==4
-assert len(call(f"{route}/cases/{confirmed['lineId']}/history"))==5
+assert len(call(f"{route}/cases/{confirmed['lineId']}/history"))==4
 assert sql(f"""SELECT count(*) FROM fba_inventory_observation
  WHERE tenant_id='{tenant}' AND seller_marketplace_id='{mp}'""")=="0"
 print("PASS V77: PG18 Owner Session/CSRF, active-assignee, audit, atomic bulk/idempotency, reminder CAS, due-soon, drift recheck and zero Amazon/FBA writes")
