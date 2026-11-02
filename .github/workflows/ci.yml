@@ -184,6 +184,7 @@ jobs:
           python3 scripts/smoke_supplier_performance_v73.py
           python3 scripts/smoke_replenishment_priority_v74.py
           python3 scripts/smoke_fba_purchase_links_v75.py
+          python3 scripts/smoke_fba_purchase_reconciliation_v76.py
           v75_migration=$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='73' AND success")
           test "$v75_migration" = "1"
           v74_migration=$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='71' AND success")
