@@ -69,6 +69,27 @@ const server = createServer(async (req, res) => {
       windowAfter:null,windowBefore:null,lastSafeWatermark:null,
       nextAttemptAt:null,lastFailureCode:null
     })
+  if (url.pathname === '/api/v1/purchasing/delivery/overview')
+    return respond(res,{
+      asOfDateUtc:'2026-11-02',
+      totals:{lineCount:1,pendingQuantity:18,reportedUnreceivedQuantity:0,
+        awaitingQcReleaseQuantity:0,warningLines:1,overdueLines:0,
+        unresolvedVarianceLines:0},
+      lines:[{
+        orderId:'11111111-1111-4111-8111-111111111111',orderNumber:'PO-V72-MOCK',
+        orderStatus:'APPROVED',supplierId:'22222222-2222-4222-8222-222222222222',
+        supplierName:'V72 Synthetic Supplier',currency:'USD',
+        lineId:'33333333-3333-4333-8333-333333333333',
+        productSkuId:'44444444-4444-4444-8444-444444444444',
+        internalSku:'TEST-SKU-100',orderedQuantity:18,receivedQuantity:0,
+        remainingQuantity:18,draftAsnQuantity:0,shippedAsnQuantity:0,
+        reportedUnreceivedQuantity:0,unlinkedReceiptQuantity:0,
+        awaitingQcReleaseQuantity:0,releasedQcAcceptedQuantity:0,qcUnknownQuantity:0,
+        unresolvedVarianceCount:0,earliestReportedEta:null,latestReportedEta:null,
+        replenishmentSellerSku:null,replenishmentPricingSource:null,
+        deliveryState:'NO_ASN_RECORDED'
+      }]
+    })
   if (url.pathname === '/api/v1/replenishment/marketplaces/' + market + '/supplier-quotes')
     return respond(res, [])
   if (url.pathname === '/api/v1/replenishment/marketplaces/' + market + '/demand-signals')
