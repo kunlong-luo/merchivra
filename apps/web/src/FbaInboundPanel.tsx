@@ -2,6 +2,7 @@ import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchCoreListings} from './lib/core'
 import FbaPurchaseLinkPanel from './FbaPurchaseLinkPanel'
+import FbaPurchaseReconciliationPanel from './FbaPurchaseReconciliationPanel'
 import {addShipment,getShipments,getShipment,getTransit,dispatchShipment,addReceipt,
  beginReview,resolveVariance,closeReview,type InboundOrigin} from './lib/fba-inbound'
 
@@ -105,6 +106,8 @@ export default function FbaInboundPanel({tenantId,marketplaceId}:{
    <p>仅本地计划与 MOCK / 手工未核验报告；不会调用 Amazon、修改 FBA 可售库存或确认平台实际收货。</p></div>
    <button type="button" className="refresh-button" onClick={refresh}>刷新货件</button>
   </div>
+  <FbaPurchaseReconciliationPanel tenantId={tenantId} marketplaceId={marketplaceId}
+    onOpenShipment={id=>{setSelectedId(id);setFailure('');setNotice('')}}/>
   <section className="core-tools" aria-label="SKU 在途预估">
    <h3>在途预估（不计入可售）</h3>
    <p className="setup-hint">仅统计运输中/记录入仓中的货件。已进入复核或对账完成的短少量不继续算在途。按数据来源分开列示。</p>
