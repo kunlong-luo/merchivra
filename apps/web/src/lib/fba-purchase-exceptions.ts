@@ -142,3 +142,16 @@ export const batchActivitySchema=z.object({
 })
 export const getExceptionBatchActivities=(marketplace:string)=>
  get(root(marketplace)+'/batches',z.array(batchActivitySchema).max(50))
+
+/** V84: exact FK-linked per-batch audited rows; older batches are incomplete. */
+export const batchDetailSchema=z.object({
+ batch:batchActivitySchema,lineageComplete:z.boolean(),
+ linkedCount:z.number().int().nonnegative().max(50),
+ linkedActions:z.array(z.object({
+  lineId:uuid,shipmentReference:z.string(),sellerSku:z.string(),
+  action:z.enum(['ACKNOWLEDGE','ASSIGN','RESOLVE']),
+  actorId:uuid,newState:state,occurredAt:iso
+ })).max(50)
+})
+export const getExceptionBatchDetail=(marketplace:string,requestKey:string)=>
+ get(root(marketplace)+'/batches/'+encodeURIComponent(requestKey),batchDetailSchema)
