@@ -395,7 +395,7 @@ async function main() {
       await screenshot(send,'v74-replenishment-risk-360.png')
       try {
       await waitFor(send,
-        "document.querySelector('[aria-label=\"货件历史表\"] tbody tr button')",
+        "Boolean(document.querySelector('[aria-label=\"货件历史表\"] tbody tr button'))",
         'V75 synthetic local shipment list')
       } catch (error) {
         console.error('V75 browser fixture diagnostic:',
