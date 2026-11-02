@@ -3,7 +3,8 @@ import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchCoreListings} from './lib/core'
 import {getReplenishmentSuggestions,saveReplenishmentPolicy,removeReplenishmentPolicy,
  getReplenishmentPurchaseDrafts,createReplenishmentPurchaseDraft,getReplenishmentDemandSignals,
- type ReplenishmentDemandSignal,type ReplenishmentAdvice}
+ getReplenishmentSupplierQuotes,
+ type ReplenishmentDemandSignal,type ReplenishmentAdvice,type ReplenishmentSupplierQuote}
  from './lib/replenishment'
 import {fetchSuppliers} from './lib/purchasing'
 
@@ -28,6 +29,7 @@ export default function ReplenishmentWorkspace({tenantId,marketplaceId}:{
  const [message,setMessage]=useState(''),[failure,setFailure]=useState('')
  const [selected,setSelected]=useState<ReplenishmentAdvice|null>(null)
  const [supplierId,setSupplierId]=useState('')
+ const [quoteSnapshot,setQuoteSnapshot]=useState<ReplenishmentSupplierQuote|null>(null)
  const [currency,setCurrency]=useState('USD'),[unitCost,setUnitCost]=useState('')
  const [requestKey,setRequestKey]=useState(()=>crypto.randomUUID())
  const listings=useQuery({queryKey:['replenishment','listings',tenantId,marketplaceId],
@@ -36,12 +38,16 @@ export default function ReplenishmentWorkspace({tenantId,marketplaceId}:{
   queryFn:()=>getReplenishmentSuggestions(marketplaceId),retry:false})
  const demand=useQuery({queryKey:['replenishment','demand',tenantId,marketplaceId],
   queryFn:()=>getReplenishmentDemandSignals(marketplaceId),retry:false})
+ const quotes=useQuery({queryKey:['replenishment','quotes',tenantId,marketplaceId],
+  queryFn:()=>getReplenishmentSupplierQuotes(marketplaceId),
+  enabled:selected!==null,retry:false})
  const suppliers=useQuery({queryKey:['purchasing',tenantId,'suppliers'],
   queryFn:fetchSuppliers,enabled:selected!==null,retry:false})
  const drafts=useQuery({queryKey:['replenishment','draft-history',tenantId,marketplaceId],
   queryFn:()=>getReplenishmentPurchaseDrafts(marketplaceId),retry:false})
  const refresh=()=>{void client.invalidateQueries({queryKey:['replenishment','suggestions',tenantId,marketplaceId]});
-  void client.invalidateQueries({queryKey:['replenishment','demand',tenantId,marketplaceId]})}
+  void client.invalidateQueries({queryKey:['replenishment','demand',tenantId,marketplaceId]});
+  void client.invalidateQueries({queryKey:['replenishment','quotes',tenantId,marketplaceId]})}
  const saved=useMutation({mutationFn:()=>saveReplenishmentPolicy(marketplaceId,sellerSku,
   reorder,target,lead),onSuccess:()=>{setMessage('补货策略已保存');setFailure('');refresh()},
   onError:(e:Error)=>setFailure(e.message)})
@@ -52,15 +58,25 @@ export default function ReplenishmentWorkspace({tenantId,marketplaceId}:{
   mutationFn:()=>{
    if(!selected?.observationId||selected.suggestedQuantity===null)
     throw Error('请先选择可计算的补货建议')
+   if(quoteSnapshot&&(quoteSnapshot.status!=='READY'||quoteSnapshot.orderQuantity===null||
+    quoteSnapshot.sellerSku!==selected.policy.sellerSku||
+    quoteSnapshot.observationId!==selected.observationId||
+    quoteSnapshot.policyUpdatedAt!==selected.policy.updatedAt||
+    quoteSnapshot.baseSuggestedQuantity!==selected.suggestedQuantity))
+    throw Error('供应商报价快照不再匹配当前补货建议，请刷新后重新选择')
    return createReplenishmentPurchaseDraft(marketplaceId,{
-    requestKey,sellerSku:selected.policy.sellerSku,supplierId,currency,unitCost,
+    requestKey,sellerSku:selected.policy.sellerSku,
+    supplierId:quoteSnapshot?.supplierId??supplierId,
+    currency:quoteSnapshot?.currency??currency,unitCost:quoteSnapshot?.unitCost??unitCost,
     expectedPolicyUpdatedAt:selected.policy.updatedAt,
-    expectedObservationId:selected.observationId,expectedQuantity:selected.suggestedQuantity
+    expectedObservationId:selected.observationId,expectedQuantity:selected.suggestedQuantity,
+    ...(quoteSnapshot?{expectedSupplierRuleUpdatedAt:quoteSnapshot.supplierRuleUpdatedAt,
+     expectedOrderQuantity:quoteSnapshot.orderQuantity!}:{})
    })
   },
   onSuccess:d=>{
    setMessage('已创建本地采购单 '+d.order.orderNumber+'（DRAFT），请到采购页面提交并由另一名 Owner 审批')
-   setFailure('');setSelected(null);setUnitCost('');setRequestKey(crypto.randomUUID())
+   setFailure('');setSelected(null);setQuoteSnapshot(null);setUnitCost('');setRequestKey(crypto.randomUUID())
    void client.invalidateQueries({queryKey:['replenishment','draft-history',tenantId,marketplaceId]})
    void client.invalidateQueries({queryKey:['purchasing',tenantId]})
    refresh()
@@ -70,7 +86,7 @@ export default function ReplenishmentWorkspace({tenantId,marketplaceId}:{
  function submit(e:FormEvent){e.preventDefault();if(sellerSku)saved.mutate()}
  function createDraft(e:FormEvent){e.preventDefault();if(selected)purchaseDraft.mutate()}
  function selectDraft(s:ReplenishmentAdvice){
-  setSelected(s);setRequestKey(crypto.randomUUID());setUnitCost('');setFailure('')
+  setSelected(s);setQuoteSnapshot(null);setSupplierId('');setRequestKey(crypto.randomUUID());setUnitCost('');setFailure('')
  }
  return <section className="panel full-panel" aria-label="SKU 补货建议">
    <div className="panel-heading"><div><h2>SKU 补货策略与建议</h2>
@@ -153,28 +169,60 @@ export default function ReplenishmentWorkspace({tenantId,marketplaceId}:{
       {selected.fulfillable??'未知'} · 建议订购：{selected.suggestedQuantity??'不可计算'} 件。
       系统将在保存时重新校验策略版本、最新观测和内部 SKU 映射。
       Mock 数据也只能生成本地草稿，不代表真实 Amazon 入仓或资金支出。</p>
+    <div className="ops-rule-note">
+     <label htmlFor="repl-rule-quote">优先采用已配置的 V42 供应商报价规则（自动按 MOQ/箱规取整，仍需人工确认）</label>
+     <select id="repl-rule-quote" value={quoteSnapshot?.supplierId??''}
+      onChange={e=>{
+       const chosen=quotes.data?.find(q=>q.sellerSku===selected.policy.sellerSku&&
+        q.supplierId===e.target.value&&q.status==='READY')??null
+       setQuoteSnapshot(chosen);setSupplierId(chosen?.supplierId??'')
+       setCurrency(chosen?.currency??'USD');setUnitCost(chosen?.unitCost??'')
+       setRequestKey(crypto.randomUUID());setFailure('')
+      }}>
+      <option value="">人工输入模式（不自动应用 MOQ/箱规）</option>
+      {(quotes.data??[]).filter(q=>q.sellerSku===selected.policy.sellerSku)
+       .map(q=><option key={q.supplierId} value={q.supplierId}
+        disabled={q.status!=='READY'}>
+        {q.supplierName} · {q.currency} {q.unitCost} ·
+        {q.status==='READY'?'建议采购 '+q.orderQuantity+' 件':'规则不可用：'+q.status}
+       </option>)}
+     </select>
+     {quotes.isPending&&<p className="panel-caption">正在读取供应商规则…</p>}
+     {quotes.isError&&<p role="alert" className="setup-error">读取供应商规则失败：
+      {String(quotes.error)}。可改用人工单价，且不代表符合 MOQ/箱规。</p>}
+     {quoteSnapshot&&<p className="panel-caption" role="status">
+      基础补货 {quoteSnapshot.baseSuggestedQuantity} 件 → MOQ {quoteSnapshot.minimumOrderQuantity} /
+      箱规 {quoteSnapshot.packMultiple} 的实际采购 {quoteSnapshot.orderQuantity} 件；
+      供应商提前期 {quoteSnapshot.supplierLeadTimeDays} 天（非承诺送达日）；
+      原币金额 {quoteSnapshot.currency} {quoteSnapshot.estimatedTotal}，不做汇率转换。
+     </p>}
+    </div>
     <form className="team-invite-form" onSubmit={createDraft}>
      <label htmlFor="repl-supplier">供应商（须先在采购与供应商页面建立）</label>
-     <select id="repl-supplier" value={supplierId} onChange={e=>{
+     <select id="repl-supplier" value={quoteSnapshot?.supplierId??supplierId}
+      disabled={quoteSnapshot!==null} onChange={e=>{
        setSupplierId(e.target.value);setRequestKey(crypto.randomUUID())}}>
       <option value="">选择已有供应商</option>
       {(suppliers.data??[]).filter(x=>x.status==='ACTIVE').map(x=>
        <option value={x.id} key={x.id}>{x.code} · {x.name}</option>)}
      </select>
      <label htmlFor="repl-currency">采购币种（不会自动换汇）</label>
-     <select id="repl-currency" value={currency} onChange={e=>{
+     <select id="repl-currency" value={quoteSnapshot?.currency??currency}
+      disabled={quoteSnapshot!==null} onChange={e=>{
        setCurrency(e.target.value);setRequestKey(crypto.randomUUID())}}>
       {['USD','EUR','GBP','JPY','CNY','CAD','AUD'].map(x=>
        <option value={x} key={x}>{x}</option>)}
      </select>
      <label htmlFor="repl-cost">单位采购价格（{currency}，人工确认）</label>
-     <input id="repl-cost" inputMode="decimal" value={unitCost}
+     <input id="repl-cost" inputMode="decimal" value={quoteSnapshot?.unitCost??unitCost}
+      readOnly={quoteSnapshot!==null}
       pattern="[0-9]{1,14}(\\.[0-9]{1,6})?" required
       onChange={e=>{setUnitCost(e.target.value);setRequestKey(crypto.randomUUID())}}/>
      <button type="submit" className="primary-button"
-      disabled={!supplierId||!/^[0-9]{1,14}(\\.[0-9]{1,6})?$/.test(unitCost)
+      disabled={!(quoteSnapshot?.supplierId??supplierId)||
+       !/^[0-9]{1,14}(\\.[0-9]{1,6})?$/.test(quoteSnapshot?.unitCost??unitCost)
         ||purchaseDraft.isPending}>确认生成 DRAFT（不提交审批）</button>
-     <button type="button" className="text-button" onClick={()=>setSelected(null)}>
+     <button type="button" className="text-button" onClick={()=>{setSelected(null);setQuoteSnapshot(null)}}>
       取消</button>
     </form>
     {suppliers.isError&&<p className="setup-error" role="alert">{String(suppliers.error)}</p>}
@@ -187,12 +235,12 @@ export default function ReplenishmentWorkspace({tenantId,marketplaceId}:{
      !drafts.data?.length?<p className="empty-state">还没有由补货建议生成的采购草稿。</p>:
      <div className="table-scroll" role="region" tabIndex={0} aria-label="补货草稿来源表">
       <table><thead><tr><th scope="col">采购单号</th><th scope="col">Seller SKU</th>
-       <th scope="col">观测 / 采购</th><th scope="col">人工单价</th>
+       <th scope="col">观测 / 基础 / 实购</th><th scope="col">来源单价</th>
        <th scope="col">当前状态</th></tr></thead><tbody>
        {drafts.data.map(d=><tr key={d.purchaseOrderId}>
         <td>{d.orderNumber}</td><td>{d.sellerSku}</td>
-        <td>{d.fulfillable} / {d.suggestedQuantity}</td>
-        <td>{d.currency} {d.unitCost}</td><td>{d.status}</td>
+        <td>{d.fulfillable} / {d.suggestedQuantity} / {d.orderedQuantity}</td>
+        <td>{d.currency} {d.unitCost} · {d.pricingSource==='V42_RULE'?'V42 供应商规则':'人工输入'}</td><td>{d.status}</td>
        </tr>)}
       </tbody></table>
      </div>}
