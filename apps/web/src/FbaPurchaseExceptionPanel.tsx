@@ -2,7 +2,7 @@ import {useEffect,useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {
  getExceptionBoard,postExceptionAction,bulkAcknowledge,getExceptionHistory,
- saveReminderPolicy,getReminderPolicyHistory,
+ saveReminderPolicy,getReminderPolicyHistory,getExceptionMetrics,
  type ExceptionAction,type ExceptionItem
 } from './lib/fba-purchase-exceptions'
 
@@ -22,6 +22,8 @@ export default function FbaPurchaseExceptionPanel({
  const prefix=['fba-inbound',tenantId,marketplaceId]
  const query=useQuery({queryKey:[...prefix,'workbench-v77'],
   queryFn:()=>getExceptionBoard(marketplaceId),retry:false})
+ const metrics=useQuery({queryKey:[...prefix,'metrics-v78'],
+  queryFn:()=>getExceptionMetrics(marketplaceId),retry:false})
  const [filter,setFilter]=useState<'ACTIONABLE'|'ALL'|'OVERDUE'|'RESOLVED'>('ACTIONABLE')
  const [chosen,setChosen]=useState<string[]>([])
  const [selectedId,setSelectedId]=useState('')
@@ -136,6 +138,17 @@ export default function FbaPurchaseExceptionPanel({
      本页 {data.items.length} 行 · 已超期 {attention} · 临近到期 {soon} · 来源变化 {changed} ·
      最近 {data.shipmentScope} 张本地货件
     </p>
+    <div className="ops-summary" role="status" aria-label="V78 本地处理单 SLA">
+     {metrics.isPending?'读取已登记处理单时效…':
+      metrics.isError?'SLA 统计读取失败，不能将缺失视为零':
+      metrics.data?<span>V78 已登记处理单 {metrics.data.total} · 待处理 {metrics.data.open} ·
+       已确认 {metrics.data.acknowledged} · 本地完成 {metrics.data.resolved} ·
+       当前超期 {metrics.data.overdue} ·
+       平均完成耗时 {metrics.data.meanResolutionHours===null?'样本不足':
+         metrics.data.meanResolutionHours+' 小时'}</span>:null}
+    </div>
+    <p className="panel-caption">SLA 统计覆盖本店铺全部已登记的本地处理单（不限于本页 100 货件/500 行），
+     按最后一次人工完成事件计算，不代表 Amazon 入仓 SLA。巡检可将证据变化、超期同步进统一运营待办。</p>
     {data.truncated&&<p className="setup-error" role="alert">
      已触及 500 行读取上限，本页处理与汇总不代表全部历史。</p>}
     <label htmlFor="v77-filter">工作台筛选</label>
