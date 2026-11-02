@@ -251,7 +251,7 @@ public class FbaPurchaseExceptionService {
         }
     }
     private static String state(String name) {
-        if(!List.of("ASSIGN","ACKNOWLEDGE","RESOLVE","REOPEN","SET_DUE").contains(name))
+        if(name==null || !List.of("ASSIGN","ACKNOWLEDGE","RESOLVE","REOPEN","SET_DUE").contains(name))
             throw bad("Unsupported local exception action");
         return name;
     }
@@ -275,7 +275,8 @@ public class FbaPurchaseExceptionService {
         if(stale&&!List.of("ACKNOWLEDGE","REOPEN").contains(operation))
             throw conflict("Changed evidence must be acknowledged again first");
         if(old!=null && "RESOLVED".equals(old.state())
-           && !List.of("REOPEN","ACKNOWLEDGE").contains(operation))
+           && !("REOPEN".equals(operation)
+             || ("ACKNOWLEDGE".equals(operation) && stale)))
             throw conflict("Reopen a resolved local case before editing");
         String next=old==null?"OPEN":old.state();
         UUID assignee=old==null?null:old.assignee();
