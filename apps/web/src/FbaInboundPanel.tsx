@@ -1,6 +1,7 @@
 import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchCoreListings} from './lib/core'
+import FbaPurchaseLinkPanel from './FbaPurchaseLinkPanel'
 import {addShipment,getShipments,getShipment,getTransit,dispatchShipment,addReceipt,
  beginReview,resolveVariance,closeReview,type InboundOrigin} from './lib/fba-inbound'
 
@@ -182,6 +183,8 @@ export default function FbaInboundPanel({tenantId,marketplaceId}:{
        <td>{l.decision==='ACCEPT_VARIANCE'?'已独立接受差异':l.delta===0?'无差异':'待复核'}</td>
        <td>{l.reviewNote??'—'}</td>
       </tr>)}</tbody></table></div>
+     <FbaPurchaseLinkPanel key={data.shipment.id} tenantId={tenantId}
+       marketplaceId={marketplaceId} shipment={data.shipment} lines={data.lines}/>
      <div className="sandbox-actions">
       {data.shipment.state==='DRAFT'&&<button type="button" className="primary-button"
        disabled={transition.isPending} onClick={()=>transition.mutate('dispatch')}>标记本地发运</button>}
