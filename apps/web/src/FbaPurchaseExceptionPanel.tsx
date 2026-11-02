@@ -1,11 +1,13 @@
 import {useEffect,useRef,useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import ExceptionNoteTemplatePicker from './ExceptionNoteTemplatePicker'
+import FbaExceptionPermissionPanel from './FbaExceptionPermissionPanel'
+import {getMyExceptionGrants,type ExceptionGrants} from './lib/exception-capabilities-v84'
 import {
  getExceptionBoard,postExceptionAction,bulkAcknowledge,getExceptionHistory,
  saveReminderPolicy,getReminderPolicyHistory,getExceptionMetrics,
  bulkAssignCases,getOwnerWorkload,bulkResolveCases,
- preflightBulkResolve,getExceptionBatchActivities,
+ preflightBulkResolve,getExceptionBatchActivities,getExceptionBatchDetail,
  type ExceptionAction,type ExceptionItem
 } from './lib/fba-purchase-exceptions'
 
@@ -35,6 +37,9 @@ export default function FbaPurchaseExceptionPanel({
   focusLineId?:string}){
  const client=useQueryClient()
  const prefix=['fba-inbound',tenantId,marketplaceId]
+ const grants=useQuery({queryKey:[...prefix,'grants-v84'],
+  queryFn:()=>getMyExceptionGrants(marketplaceId),retry:false})
+ const allowed=(action:keyof ExceptionGrants)=>grants.data?.grants[action]===true
  const query=useQuery({queryKey:[...prefix,'workbench-v77'],
   queryFn:()=>getExceptionBoard(marketplaceId),retry:false})
  const metrics=useQuery({queryKey:[...prefix,'metrics-v78'],
@@ -61,6 +66,7 @@ export default function FbaPurchaseExceptionPanel({
   snapshot:string;result:Awaited<ReturnType<typeof preflightBulkResolve>>
  }|null>(null)
  const [showBatches,setShowBatches]=useState(false)
+ const [selectedBatch,setSelectedBatch]=useState('')
  const [openHistory,setOpenHistory]=useState(false)
  const [openPolicyHistory,setOpenPolicyHistory]=useState(false)
  const [enabled,setEnabled]=useState(true)
@@ -170,6 +176,11 @@ export default function FbaPurchaseExceptionPanel({
    setError('预检未成功：'+err.message)
   }
  })
+ const batchDetail=useQuery({
+  queryKey:[...prefix,'batch-detail-v84',selectedBatch],
+  queryFn:()=>getExceptionBatchDetail(marketplaceId,selectedBatch),
+  enabled:showBatches&&!!selectedBatch,retry:false
+ })
  const batchActivities=useQuery({
   queryKey:[...prefix,'batch-activities-v83'],
   queryFn:()=>getExceptionBatchActivities(marketplaceId),
@@ -214,7 +225,12 @@ export default function FbaPurchaseExceptionPanel({
   enabled:openPolicyHistory,retry:false
  })
  const noteValid=(text:string)=>text.trim().length>=10&&text.trim().length<=300
- const canSingle=!!selected&&!single.isPending&&noteValid(note)&&
+ const permissionForAction:Record<ExceptionAction,keyof ExceptionGrants>={
+  ASSIGN:'assign',SET_DUE:'assign',ACKNOWLEDGE:'review',
+  REOPEN:'review',RESOLVE:'resolve'
+ }
+ const canSingle=allowed(permissionForAction[operation])&&!!selected&&
+  !single.isPending&&noteValid(note)&&
   (operation!=='ASSIGN'||!!assignee)&&
   (operation!=='SET_DUE'||!!deadline&&!Number.isNaN(new Date(deadline).getTime()))
  function submitAction(e:FormEvent){e.preventDefault();if(canSingle)single.mutate()}
@@ -232,6 +248,7 @@ export default function FbaPurchaseExceptionPanel({
   {query.isPending?<p className="empty-state">读取人工处理记录…</p>:
    query.isError?<p className="setup-error" role="alert">{String(query.error)}</p>:
    !data?<p className="empty-state">暂无可展示的本地异常。</p>:<>
+    <FbaExceptionPermissionPanel tenantId={tenantId} marketplaceId={marketplaceId}/>
     <p className="ops-summary" role="status">
      本页 {data.items.length} 行 · 已超期 {attention} · 临近到期 {soon} · 来源变化 {changed} ·
      最近 {data.shipmentScope} 张本地货件
@@ -322,7 +339,8 @@ export default function FbaPurchaseExceptionPanel({
       maxLength={300} rows={2}
       onChange={e=>{setAssignNote(e.target.value);setAssignKey(crypto.randomUUID())}}/>
      <button type="submit" className="primary-button"
-      disabled={!selectedRows.length||!assignOwner||!noteValid(assignNote)||assignBatch.isPending}>
+      disabled={!allowed('assign')||!selectedRows.length||!assignOwner||
+        !noteValid(assignNote)||assignBatch.isPending}>
       为所选 {selectedRows.length} 行批量分派</button>
     </form>
     <form className="team-invite-form" onSubmit={e=>{
@@ -338,7 +356,7 @@ export default function FbaPurchaseExceptionPanel({
      <textarea id="v77-bulk-note" value={bulkNote} maxLength={300} minLength={10}
       onChange={e=>{setBulkNote(e.target.value);setBulkKey(crypto.randomUUID())}} rows={2}/>
      <button type="submit" className="primary-button"
-      disabled={!selectedRows.length||!noteValid(bulkNote)||bulk.isPending}>
+      disabled={!allowed('review')||!selectedRows.length||!noteValid(bulkNote)||bulk.isPending}>
       确认所选 {selectedRows.length} 行</button>
     </form>
     <form className="team-invite-form" onSubmit={e=>{
@@ -353,7 +371,7 @@ export default function FbaPurchaseExceptionPanel({
       <p className="setup-hint">本次选择 {selectedRows.length} 行
        · {allResolvable?'本页基本状态满足要求，仍须服务端预检':'包含未确认、未分派或来源已变化的行，不能完成'}</p>
       <button type="button" className="refresh-button" disabled={!selectedRows.length||
-       preflight.isPending||resolveBatch.isPending} onClick={()=>{
+       preflight.isPending||resolveBatch.isPending||!allowed('resolve')} onClick={()=>{
         setResolveConfirmed(false)
         preflight.mutate({snapshot:currentSnapshot,lines:selections})
        }}>{preflight.isPending?'正在预检…':'预检所选处理单（不写入）'}</button>
@@ -385,11 +403,11 @@ export default function FbaPurchaseExceptionPanel({
       <label htmlFor="v82-resolve-confirm">
        <input id="v82-resolve-confirm" type="checkbox" checked={resolveConfirmed}
         onChange={e=>setResolveConfirmed(e.target.checked)}
-        disabled={!verifiedPreview?.allEligible}/>
+        disabled={!verifiedPreview?.allEligible||!allowed('resolve')}/>
        我已逐条核实所选处理单来源、负责人及独立复核要求，明确同意仅执行本地 RESOLVE
       </label>
       <button type="submit" className="primary-button"
-       disabled={!allResolvable||!verifiedPreview?.allEligible||
+       disabled={!allowed('resolve')||!allResolvable||!verifiedPreview?.allEligible||
         !noteValid(resolveNote)||!resolveConfirmed||resolveBatch.isPending}>
        人工确认完成所选 {selectedRows.length} 行（原子提交）</button>
      </form>
@@ -410,9 +428,40 @@ export default function FbaPurchaseExceptionPanel({
          <tbody>{batchActivities.data.map(batch=><tr key={batch.requestKey}>
           <td>{batch.actionType}</td><td>{batch.affectedCount}</td>
           <td className="small-cell">{batch.actorId}</td>
-          <td className="small-cell">{batch.requestKey}</td>
+          <td className="small-cell"><button type="button" className="text-button"
+          onClick={()=>setSelectedBatch(batch.requestKey)}
+          aria-pressed={selectedBatch===batch.requestKey}>
+          {batch.requestKey}</button></td>
           <td>{timeText(batch.createdAt)}</td>
          </tr>)}</tbody></table></div>}
+      {selectedBatch&&<section className="core-tools" aria-label="V84 批次具体操作行审计">
+       <h4>批次 {selectedBatch} · 实际逐行审计</h4>
+       {batchDetail.isPending?<p>核对批次外键审计…</p>:
+        batchDetail.isError?<p className="setup-error" role="alert">
+         批次审计不可用：{String(batchDetail.error)}</p>:
+        batchDetail.data&&<>
+         <p className="setup-hint">明确关联 {batchDetail.data.linkedCount} /
+          {batchDetail.data.batch.affectedCount} 行。
+          {batchDetail.data.lineageComplete?'审计外键关联完整':
+          '历史批次无足够外键关联：不可推断具体行，请在逐行历史核查'}。</p>
+         {batchDetail.data.linkedActions.length>0&&
+          <div className="table-scroll" role="region" tabIndex={0}
+           aria-label="与当前批次真实关联的审计行">
+           <table><thead><tr>{['货件 / SKU','动作','结果状态','源处理单']
+            .map(h=><th scope="col" key={h}>{h}</th>)}</tr></thead>
+            <tbody>{batchDetail.data.linkedActions.map(line=><tr key={line.lineId}>
+             <td>{line.shipmentReference} · {line.sellerSku}</td>
+             <td>{line.action}</td><td>{line.newState}</td>
+             <td>{data.items.some(row=>row.lineId===line.lineId)?
+              <button type="button" className="text-button"
+               onClick={()=>{
+                const found=data.items.find(row=>row.lineId===line.lineId)
+                if(found)pick(found)
+               }}>查看本地逐行历史</button>:'超出当前货件窗口，请在源处理单核查'}</td>
+            </tr>)}</tbody></table>
+          </div>}
+        </>}
+      </section>}
      </details>
      {selected&&<form className="team-invite-form" onSubmit={submitAction}>
      <h4>处理：{selected.shipmentReference} · {selected.sellerSku}</h4>
