@@ -96,8 +96,20 @@ call(read+"/priority-rules",client=staff)
 call(w+"/bulk-resolve/preflight","POST",{"lines":[]},403,client=staff)
 call(w+"/bulk-assign","POST",{},403,client=staff)
 call(w+"/bulk-acknowledge","POST",{},403,client=staff)
-call(w+"/policy","POST",{},403,client=staff)
-call(read+"/priority-rules/NEEDS_OWNER","POST",{},403,client=staff)
+current_policy=call(w,client=admin)["policy"]
+call(w+"/policy","POST",{
+ "enabled":current_policy["enabled"],
+ "leadHours":current_policy["leadHours"],
+ "defaultDueHours":current_policy["defaultDueHours"],
+ "expectedVersion":current_policy["version"],
+ "note":"V84 limited Owner cannot change workflow reminder settings"
+},403,client=staff)
+current_rule=next(x for x in call(read+"/priority-rules",client=admin)
+ if x["reasonCode"]=="NEEDS_OWNER")
+call(read+"/priority-rules/NEEDS_OWNER","POST",{
+ "priority":current_rule["priority"],"expectedVersion":current_rule["version"],
+ "note":"V84 limited Owner cannot update exception priority policy"
+},403,client=staff)
 call(p+"/owners",expected=403,client=staff)
 assert len(call(p+"/audit"))==1
 # Enable only REVIEW, leave assignment, completion and config denied. Existing
