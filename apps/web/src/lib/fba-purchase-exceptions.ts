@@ -74,3 +74,12 @@ export const saveReminderPolicy=(marketplace:string,body:SavePolicy)=>
  post(root(marketplace)+'/policy',body,policy)
 export const getReminderPolicyHistory=(marketplace:string)=>
  get(root(marketplace)+'/policy/history',z.array(policyAudit).max(100))
+
+/** V78: persisted human case SLAs, not Amazon delivery or customer promises. */
+export const caseMetricsSchema=z.object({
+ total:positive,open:positive,acknowledged:positive,resolved:positive,
+ overdue:positive,meanResolutionHours:z.number().nonnegative().nullable()
+})
+export type ExceptionCaseMetrics=z.infer<typeof caseMetricsSchema>
+export const getExceptionMetrics=(marketplace:string)=>
+ get(root(marketplace)+'/metrics',caseMetricsSchema)
