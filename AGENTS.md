@@ -9,6 +9,7 @@
 - 按维护者现行指示：**直接在 `main` 开发、逐步提交并验证 CI**；不再创建长寿命分支或 Draft PR，除非维护者更改要求。更新相关文档与 GitHub Issue，报告确切提交/检查结果。
 - Amazon SP-API 接入**优先使用官方 Java SDK `software.amazon.spapi:spapi-sdk:1.13.0` 与官方 OpenAPI 模型**；已有 `SpApiOfficialSdkFactory` / `SpApiOfficialModules` 和保守 Core Read Adapter。未来新增模块不应优先手写无类型的 URL 接口，须按操作审查 DTO/角色/速率/权限。见 [INT-004](docs/integrations/sp-api-code-integration.md)。
 - 优先使用经过广泛验证的官方 Starter/成熟库；不要重复实现基础设施，不因新潮就加入 Kafka、微服务、重型前端框架或与业务无关的依赖。
+- **V73 供应商证据纪律**：仅用完整关联收货 ASN 与收货时已登记的人工 ETA、实际完成的 QC 样本；不足各 3 个样本分数必须 NULL，不把未知当失败。审批 7 天后无完整 ASN / 未申报发货可手动催办，SHIPPED ETA 异常继续由 V43 负责，不允许自动联系供应商或自动采购。见 [PO-073](docs/purchasing/supplier-performance-v73.md)。
 - **V72 本地交付证据纪律**：已审批 PO 的剩余数量与已发 ASN 未关联收货分开；无 ASN 不猜 ETA，ASN DRAFT 不是发货，人工 SHIPPED 不是承运商证明。V45 差异、V46 QC 放行仍为独立事实，继续用 V43 ASN 告警队列而不再造另一套。见 [PO-072](docs/purchasing/purchase-delivery-v72.md)。
 - **V71 供应商报价纪律**：FBA 补货与 MOQ/箱规复用 V22/V37/V38/V42；人类选择报价并生成 DRAFT 时，在同一事务内重新核对 OBSERVED 观测、ACTIVE 映射、供应商规则版本/原币单价/数量，审计原始建议和取整实购。交期只读，不可猜 Amazon 到仓时间，不可自动批准。见 [INV-071](docs/inventory/replenishment-supplier-quotes-v71.md)。
 - **V70 补货证据纪律**：观察到的 7/28 天订单行件数不是预测/净销量；每个 SKU 需要完整 28 天成功同步窗口、已提交分页、全部订单项已观测、来源一致和 ACTIVE SKU 映射。缺失则 NULL，不伪造零销量；样本仅参考，不默认转换为采购 DRAFT；V37/V38/V42 原链不修改。见 [INV-070](docs/inventory/observed-demand-v70.md)。
