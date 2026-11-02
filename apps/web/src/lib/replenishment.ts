@@ -37,12 +37,16 @@ export const removeReplenishmentPolicy=(marketplace:string,sellerSku:string)=>
 
 const draftOrigin=z.object({purchaseOrderId:z.string().uuid(),orderNumber:z.string(),
  status:z.string(),sellerSku:z.string(),productSkuId:z.string().uuid(),
- fulfillable:z.number().int(),suggestedQuantity:z.number().int(),currency:z.string(),
+ fulfillable:z.number().int(),suggestedQuantity:z.number().int(),orderedQuantity:z.number().int(),
+ pricingSource:z.enum(['MANUAL','V42_RULE']),supplierRuleUpdatedAt:z.string().nullable(),
+ minimumOrderQuantity:z.number().int().nullable(),packMultiple:z.number().int().nullable(),
+ supplierLeadTimeDays:z.number().int().nullable(),currency:z.string(),
  unitCost:z.string(),observedAt:z.string(),createdAt:z.string()})
 export type ReplenishmentDraftOrigin=z.infer<typeof draftOrigin>
 export type ReplenishmentDraftRequest={
  requestKey:string;sellerSku:string;supplierId:string;currency:string;unitCost:string;
- expectedPolicyUpdatedAt:string;expectedObservationId:string;expectedQuantity:number
+ expectedPolicyUpdatedAt:string;expectedObservationId:string;expectedQuantity:number;
+ expectedSupplierRuleUpdatedAt?:string;expectedOrderQuantity?:number
 }
 export const getReplenishmentPurchaseDrafts=(marketplace:string)=>
  api(marketplace,'/purchase-drafts',z.array(draftOrigin))
@@ -67,3 +71,21 @@ export const demandSignalSchema=z.object({
 export type ReplenishmentDemandSignal=z.infer<typeof demandSignalSchema>
 export const getReplenishmentDemandSignals=(marketplace:string)=>
  api(marketplace,'/demand-signals',z.array(demandSignalSchema).max(500))
+
+
+/** V71 V42 supplier terms for a current FBA observed ReplenishmentPolicy. */
+export const supplierQuoteSchema=z.object({
+ sellerSku:z.string(),productSkuId:z.string().uuid(),supplierId:z.string().uuid(),
+ supplierName:z.string(),supplierRuleUpdatedAt:z.string(),
+ observationId:z.string().uuid().nullable(),policyUpdatedAt:z.string().nullable(),
+ baseSuggestedQuantity:z.number().int().nonnegative(),
+ minimumOrderQuantity:z.number().int().positive(),packMultiple:z.number().int().positive(),
+ supplierLeadTimeDays:z.number().int().nonnegative().max(365),
+ currency:z.string().regex(/^[A-Z]{3}$/),unitCost:z.string(),
+ status:z.enum(['READY','NO_POLICY','NO_OBSERVATION','STALE_OBSERVATION',
+  'INCOMPLETE_OBSERVATION','HEALTHY','REORDER','LIMIT_EXCEEDED']),
+ orderQuantity:z.number().int().positive().nullable(),estimatedTotal:z.string().nullable()
+})
+export type ReplenishmentSupplierQuote=z.infer<typeof supplierQuoteSchema>
+export const getReplenishmentSupplierQuotes=(marketplace:string)=>
+ api(marketplace,'/supplier-quotes',z.array(supplierQuoteSchema).max(500))
