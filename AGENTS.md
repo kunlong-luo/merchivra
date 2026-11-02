@@ -686,3 +686,9 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - P0 来源变更/人工逾期，P1 独立身份审查/本地差异复核/临期/HIGH，P2 尚未指派或 WARNING，P3 常规；属于固定的可解释处理建议，绝不宣称平台风险预测或 Amazon SLA。历史已 RESOLVED 但来源变更必须重新关注。
 - 优先级仅基于 V76 最近 100 货件/500 行、最多显示 30 条；必须展示截断信息。进度/负载来自全部持久化处理单，不能混淆口径；无人可分派返回空建议，不自动分派、ACKNOWLEDGE 或 RESOLVE。
 - Ops 分类反映最近一次扫描，不在 GET 中暗中运行任务。读服务不得更改 PO、ASN、FBA 入仓、库存、财务和 Amazon Seller 数据。详见 [OPS-080](docs/operations/exception-insights-v80.md)。
+
+## V81 · 异常审计趋势与复发真实性纪律（2026-11-02）
+
+- 直接复用 V77 不可变审计日志，按 UTC 30 个自然日（包含今天）严格区别“新建处理单”“RESOLVE/REOPEN 动作次数”“受重开影响的不同处理单数”和“人工动作留下的来源指纹更新”；未发生人工审计的实时来源变化不算历史复发。
+- 按 `actor_user_id` 展示人工动作，不把当前 assignee 或批量分配者冒充实际执行人。平均首次完成时长只算窗口内首次 RESOLVE 相对本地 case.created_at 的时间，无样本为 NULL；不得将它宣传为员工绩效排名、Amazon SLA 或库存入仓证明。
+- 从当前 Session 校验 tenant/marketplace，GET 不执行巡检、外部通知或写操作。最多 100 名操作人、20 条复发记录，明确截断；日期零填充只针对确实成功读取的审计。详见 [OPS-081](docs/operations/exception-history-v81.md)。
