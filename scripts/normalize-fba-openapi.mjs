@@ -25,6 +25,12 @@ result.paths=selected
 result.servers=[{url:''}]
 result.security=[{sessionCookie:[]}]
 result.components??={}
+// Freeze V65 generated model surface: V75 separate purchase-link DTOs live on
+// distinct endpoints and reuse the existing secure Orval fetch mutator.
+const modelNames=new Set(['Create','Detail','Line','LineInput',
+  'Receipt','ReceiptEvent','Resolve','Shipment','TransitRow'])
+result.components.schemas=Object.fromEntries(Object.entries(result.components.schemas??{})
+  .filter(([name])=>modelNames.has(name)))
 result.components.securitySchemes={
  sessionCookie:{type:'apiKey',in:'cookie',name:'JSESSIONID'},
  csrfHeader:{type:'apiKey',in:'header',name:'X-CSRF-TOKEN'}
