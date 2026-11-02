@@ -2,6 +2,7 @@ package org.merchivra.erp.operations;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.UUID;
+import org.merchivra.erp.fba.FbaExceptionPermissionService;
 import java.util.List;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,21 +23,30 @@ public class OperationsExceptionInsightsController {
     private final OperationsExceptionInsightsService service;
     private final OperationsExceptionHistoryService history;
     private final OperationsExceptionPriorityService priorities;
+    private final FbaExceptionPermissionService permissions;
+    private UUID permitted(Authentication auth,HttpServletRequest request,UUID marketplace,
+                           FbaExceptionPermissionService.Capability grant) {
+        UUID tenant=access.currentTenant(auth,request);
+        permissions.require(tenant,marketplace,access.authenticatedUser(auth),grant);
+        return tenant;
+    }
 
     public OperationsExceptionInsightsController(TenantAccessService access,
                                                   OperationsExceptionInsightsService service,
                                                   OperationsExceptionHistoryService history,
-                                                  OperationsExceptionPriorityService priorities) {
+                                                  OperationsExceptionPriorityService priorities,
+                                                  FbaExceptionPermissionService permissions) {
         this.access=access;
         this.service=service;
         this.history=history;
         this.priorities=priorities;
+        this.permissions=permissions;
     }
     @GetMapping("/marketplaces/{marketplaceId}/priority-rules")
     public ResponseEntity<List<OperationsExceptionPriorityService.Rule>> rules(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
-            .body(priorities.rules(access.currentTenant(auth,request),marketplaceId));
+            .body(priorities.rules(permitted(auth,request,marketplaceId,FbaExceptionPermissionService.Capability.VIEW),marketplaceId));
     }
     @PostMapping("/marketplaces/{marketplaceId}/priority-rules/{reasonCode}")
     public OperationsExceptionPriorityService.Rule savePriority(
