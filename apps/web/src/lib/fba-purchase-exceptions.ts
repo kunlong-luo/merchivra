@@ -103,3 +103,12 @@ export const bulkAssignCases=(marketplace:string,requestKey:string,
  assigneeId:string,lines:BulkSelection[],note:string)=>
  post(root(marketplace)+'/bulk-assign',{requestKey,assigneeId,lines,note},
   bulkAssignReceiptSchema)
+
+/** V82: deliberately explicit human acknowledgement, never auto-close. */
+export const bulkResolveReceiptSchema=z.object({
+ requestKey:uuid,resolvedCount:z.number().int().min(1).max(50)
+})
+export const bulkResolveCases=(marketplace:string,requestKey:string,
+ lines:BulkSelection[],note:string,confirmed:boolean)=>
+ post(root(marketplace)+'/bulk-resolve',{requestKey,confirmed,lines,note},
+  bulkResolveReceiptSchema)
