@@ -10,7 +10,8 @@ const expected=[
 ]
 const methods=['get','post','put','patch','delete']
 const selected=Object.fromEntries(Object.entries(raw.paths??{})
- .filter(([p])=>p.startsWith('/api/v1/fba/marketplaces/')&&p.includes('/shipments')))
+ .filter(([p])=>p.startsWith('/api/v1/fba/marketplaces/')&&p.includes('/shipments')
+   && !p.includes('/purchase-links')))
 const actual=Object.values(selected).flatMap(operations=>
  Object.entries(operations).filter(([method])=>methods.includes(method))
   .map(([,operation])=>operation.operationId))
