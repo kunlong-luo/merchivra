@@ -64,6 +64,15 @@ public class FbaPurchaseExceptionController {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
             .body(service.recentBatches(permitted(auth,request,marketplaceId,FbaExceptionPermissionService.Capability.VIEW),marketplaceId));
     }
+    @GetMapping("/batches/{requestKey}")
+    public ResponseEntity<FbaPurchaseExceptionService.BatchDetail> batchDetail(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
+        @PathVariable UUID requestKey) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.batchDetail(permitted(auth,request,marketplaceId,
+                FbaExceptionPermissionService.Capability.VIEW),
+                marketplaceId,requestKey));
+    }
     @PostMapping("/bulk-resolve")
     public FbaPurchaseExceptionService.BulkResolveReceipt bulkResolve(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
