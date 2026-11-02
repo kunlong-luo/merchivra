@@ -77,8 +77,11 @@ public class FbaExceptionPermissionService {
     }
     public void require(UUID tenant,UUID marketplace,UUID actor,Capability capability) {
         requireSite(tenant,marketplace);
-        if(!isActiveOwner(tenant,actor) || !read(tenant,marketplace,actor).allowed(capability))
-            throw denied();
+        // VIEW is the parent gate of every exception mutation. Otherwise an
+        // Owner could act on a guessed ID even after losing evidence visibility.
+        if(!isActiveOwner(tenant,actor))throw denied();
+        Grants grants=read(tenant,marketplace,actor);
+        if(!grants.view() || !grants.allowed(capability))throw denied();
     }
     @Transactional(readOnly=true)
     public Profile mine(UUID tenant,UUID marketplace,UUID actor) {

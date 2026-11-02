@@ -186,7 +186,16 @@ public class OperationsAutomationService {
 
 
     @Transactional(readOnly = true)
-    public List<Finding> findings(UUID tenant, String filter) {
+    public List<Finding> findings(UUID tenant,String filter) {
+        return findings(tenant,filter,null);
+    }
+
+    /** V85: exclude FBA exception findings from explicitly VIEW-denied
+     * Marketplace profiles BEFORE LIMIT 100; preserve non-FBA Ops findings.
+     * A null actor is reserved for legacy internal calls, never HTTP.
+     */
+    @Transactional(readOnly = true)
+    public List<Finding> findings(UUID tenant, String filter,UUID actor) {
         if (!"ACTIVE".equals(filter) && !"ALL".equals(filter) && !"ACTIONABLE".equals(filter)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "filter must be ACTIVE, ACTIONABLE or ALL");
         }
@@ -197,11 +206,19 @@ public class OperationsAutomationService {
             WHERE tenant_id = ?
               AND (? = 'ALL' OR state IN ('OPEN','ACKNOWLEDGED'))
               AND (? <> 'ACTIONABLE' OR snoozed_until IS NULL OR snoozed_until <= now())
+              AND (?::uuid IS NULL OR NOT (
+                  rule_code IN ('FBA_PO_EVIDENCE_CHANGED','FBA_PO_EXCEPTION_OVERDUE')
+                  AND EXISTS (
+                      SELECT 1 FROM fba_exception_owner_permission p
+                      WHERE p.tenant_id=ops_finding.tenant_id
+                        AND p.seller_marketplace_id=ops_finding.seller_marketplace_id
+                        AND p.owner_user_id=?::uuid AND NOT p.can_view
+                  )))
             ORDER BY CASE state WHEN 'OPEN' THEN 0 WHEN 'ACKNOWLEDGED' THEN 1
                                 WHEN 'DONE' THEN 2 ELSE 3 END,
                      changed_at DESC, id DESC
             LIMIT 100
-            """, OperationsAutomationService::mapFinding, tenant, filter, filter);
+            """, OperationsAutomationService::mapFinding, tenant, filter, filter, actor,actor);
     }
 
     @Transactional(readOnly = true)
