@@ -130,7 +130,7 @@ class OperationsAutomationServiceTest {
         service.findings(tenant, "ACTIVE");
         service.summary(tenant);
         verify(jdbc).query(contains("WHERE tenant_id = ?"), any(RowMapper.class),
-            eq(tenant), eq("ACTIVE"), eq("ACTIVE"));
+            eq(tenant), eq("ACTIVE"), eq("ACTIVE"),isNull(),isNull());
         verify(jdbc).queryForObject(contains("ops_finding WHERE tenant_id = ?"),
             any(RowMapper.class), eq(tenant));
     }
