@@ -321,6 +321,22 @@ async function main() {
         'V69 Marketplace rule settings')
       await layout(send,width,'operations-360')
       await screenshot(send,'operations-360.png')
+      // V72: real React purchasing panel must preserve missing carrier ETA
+      // instead of fabricating an arrival. This is a synthetic API fixture.
+      await evaluate(send,
+        "(() => {const b=[...document.querySelectorAll('.nav-link')]" +
+        ".find(x=>x.textContent.includes('采购与供应商'));" +
+        "if(!b)throw Error('Missing purchasing navigation');b.click();})()")
+      await waitFor(send,
+        "[...document.querySelectorAll('[aria-label=\"采购单交付追踪表\"] tbody tr')]" +
+        ".some(x=>x.textContent.includes('PO-V72-MOCK'))",
+        'V72 supplier delivery board')
+      assert.equal(await evaluate(send,
+        "document.querySelector('[aria-label=\"采购单交付追踪表\"] tbody tr')" +
+        "?.textContent?.includes('已审批但没有有效供应商 ASN')"),
+        true,'Missing ASN must not be reported as a shipped or late delivery')
+      await layout(send,width,'supplier-delivery-360')
+      await screenshot(send,'v72-local-supplier-delivery-360.png')
       // V15 Owner-only management surface must render independent reviewers,
       // never an invitation token in the list response.
       await evaluate(send,
