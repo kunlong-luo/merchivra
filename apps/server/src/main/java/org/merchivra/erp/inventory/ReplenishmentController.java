@@ -14,8 +14,10 @@ import org.springframework.web.bind.annotation.*;
 public class ReplenishmentController {
     private final TenantAccessService access;
     private final ReplenishmentService service;
-    public ReplenishmentController(TenantAccessService access,ReplenishmentService service){
-        this.access=access;this.service=service;
+    private final ReplenishmentDemandService demand;
+    public ReplenishmentController(TenantAccessService access,ReplenishmentService service,
+                                   ReplenishmentDemandService demand){
+        this.access=access;this.service=service;this.demand=demand;
     }
     public record SetPolicy(String sellerSku,int reorderPoint,int targetStock,int leadTimeDays) {}
     @GetMapping("/policies")
@@ -37,6 +39,13 @@ public class ReplenishmentController {
         service.remove(access.currentTenant(auth,request),
             access.authenticatedUser(auth),marketplaceId,sellerSku);
     }
+    /** Explicit observed-quantity read: never modifies PO, purchasing or Amazon. */
+    @GetMapping("/demand-signals")
+    public List<ReplenishmentDemandService.Signal> demandSignals(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId){
+        return demand.signals(access.currentTenant(auth,request),marketplaceId);
+    }
+
     @GetMapping("/suggestions")
     public List<ReplenishmentService.Advice> advice(Authentication auth,HttpServletRequest request,
         @PathVariable UUID marketplaceId){
