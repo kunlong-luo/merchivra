@@ -57,6 +57,9 @@ public class FbaPurchaseExceptionService {
                              List<Selection> lines,String note) {}
     public record BulkAssignReceipt(String requestKey,String assigneeId,
                                     int assignedCount) {}
+    public record BulkResolve(UUID requestKey,boolean confirmed,List<Selection> lines,
+                              String note) {}
+    public record BulkResolveReceipt(String requestKey,int resolvedCount) {}
     public record OwnerLoad(String userId,String displayName,long open,
                             long acknowledged,long overdue) {}
     public record Workload(long totalCases,long unassigned,long inactiveAssignee,
@@ -467,6 +470,63 @@ public class FbaPurchaseExceptionService {
         return new BulkAssignReceipt(body.requestKey().toString(),
             body.assigneeId().toString(),selected.size());
     }
+    /** V82: confirmed human-only, all-or-nothing resolution of 1..50 already
+     * assigned + ACKNOWLEDGED cases. Existing V77 RESOLVE evidence guards apply
+     * to each line; no Amazon inventory, ASN or procurement writes.
+     */
+    @Transactional
+    public BulkResolveReceipt bulkResolve(UUID tenant,UUID marketplace,UUID actor,
+                                         BulkResolve body) {
+        if(body==null || !body.confirmed() || body.requestKey()==null
+           ||body.lines()==null ||body.lines().isEmpty() ||body.lines().size()>50)
+            throw bad("Human confirmation and 1..50 selected cases are required");
+        String description=note(body.note());
+        List<Selection> selected=new ArrayList<>(body.lines());
+        if(selected.stream().anyMatch(x->x==null||x.lineId()==null
+           ||x.expectedVersion()<0||x.expectedFingerprint()==null
+           ||!x.expectedFingerprint().matches("[0-9a-f]{64}")))
+            throw bad("Invalid bulk resolve selection");
+        selected.sort(Comparator.comparing(x->x.lineId().toString()));
+        if(new HashSet<>(selected.stream().map(Selection::lineId).toList()).size()
+           !=selected.size())throw bad("Duplicate line in bulk resolution");
+        String payloadHash=hash(actor+"|RESOLVE|"+description+"|"+selected);
+        lockMarketplace(tenant,marketplace);
+        var prior=jdbc.query("""
+            SELECT payload_hash,actor_user_id,action_type,affected_count
+            FROM fba_purchase_exception_batch
+            WHERE tenant_id=? AND seller_marketplace_id=? AND request_key=?
+            FOR UPDATE
+            """,(r,i)->new Object[]{r.getString(1),r.getObject(2,UUID.class),
+                  r.getString(3),r.getInt(4)},tenant,marketplace,body.requestKey());
+        if(!prior.isEmpty()) {
+            Object[] previous=prior.getFirst();
+            if(!payloadHash.equals(previous[0])||!actor.equals(previous[1])
+               ||!"RESOLVE".equals(previous[2]))
+                throw conflict("Batch request key already belongs to another action/payload");
+            return new BulkResolveReceipt(body.requestKey().toString(),(Integer)previous[3]);
+        }
+        for(var choice:selected)scopedLine(tenant,marketplace,choice.lineId(),true);
+        Map<String,FbaPurchaseReconciliationService.Line> byId=new HashMap<>();
+        for(var row:reconciliation.overview(tenant,marketplace).lines())
+            byId.put(row.inboundLineId(),row);
+        Policy settings=policy(tenant,marketplace);
+        for(var choice:selected) {
+            var line=byId.get(choice.lineId().toString());
+            if(line==null)throw conflict("Selected line outside bounded review window");
+            apply(tenant,marketplace,actor,line,new Action("RESOLVE",
+                choice.expectedVersion(),choice.expectedFingerprint(),null,null,
+                description),settings);
+        }
+        jdbc.update("""
+            INSERT INTO fba_purchase_exception_batch
+                (id,tenant_id,seller_marketplace_id,request_key,payload_hash,
+                 actor_user_id,affected_count,action_type)
+            VALUES (?,?,?,?,?,?,?,'RESOLVE')
+            """,UUID.randomUUID(),tenant,marketplace,body.requestKey(),
+            payloadHash,actor,selected.size());
+        return new BulkResolveReceipt(body.requestKey().toString(),selected.size());
+    }
+
     /** V79: all persisted cases in this marketplace, not the 500-line review
      * window. Inactive/removed assignees are counted separately, not discarded.
      */
