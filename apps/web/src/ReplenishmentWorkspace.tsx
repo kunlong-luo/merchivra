@@ -7,6 +7,8 @@ import {getReplenishmentSuggestions,saveReplenishmentPolicy,removeReplenishmentP
  type ReplenishmentDemandSignal,type ReplenishmentAdvice,type ReplenishmentSupplierQuote}
  from './lib/replenishment'
 import {fetchSuppliers} from './lib/purchasing'
+import ReplenishmentPriorityPanel from './ReplenishmentPriorityPanel'
+import {getReplenishmentPriorities} from './lib/replenishment-priorities'
 
 const labels:Record<string,string>={
  NO_OBSERVATION:'无库存观测，不能计算',STALE_OBSERVATION:'库存观测超 48 小时或时间异常',
@@ -47,7 +49,8 @@ export default function ReplenishmentWorkspace({tenantId,marketplaceId}:{
   queryFn:()=>getReplenishmentPurchaseDrafts(marketplaceId),retry:false})
  const refresh=()=>{void client.invalidateQueries({queryKey:['replenishment','suggestions',tenantId,marketplaceId]});
   void client.invalidateQueries({queryKey:['replenishment','demand',tenantId,marketplaceId]});
-  void client.invalidateQueries({queryKey:['replenishment','quotes',tenantId,marketplaceId]})}
+  void client.invalidateQueries({queryKey:['replenishment','quotes',tenantId,marketplaceId]});
+  void client.invalidateQueries({queryKey:['replenishment','priorities',tenantId,marketplaceId]})}
  const saved=useMutation({mutationFn:()=>saveReplenishmentPolicy(marketplaceId,sellerSku,
   reorder,target,lead),onSuccess:()=>{setMessage('补货策略已保存');setFailure('');refresh()},
   onError:(e:Error)=>setFailure(e.message)})
@@ -84,7 +87,22 @@ export default function ReplenishmentWorkspace({tenantId,marketplaceId}:{
   onError:(e:Error)=>setFailure(e.message)
  })
  function submit(e:FormEvent){e.preventDefault();if(sellerSku)saved.mutate()}
- function createDraft(e:FormEvent){e.preventDefault();if(selected)purchaseDraft.mutate()}
+ async function createDraft(e:FormEvent){
+  e.preventDefault()
+  if(!selected)return
+  try {
+   const p=(await getReplenishmentPriorities(marketplaceId))
+    .find(row=>row.sellerSku===selected.policy.sellerSku)
+   if(p?.existingLocalOrderNeedsReview&&
+    !window.confirm('该 SKU 已有 '+p.localPendingOrderCount+
+     ' 张本地进行中采购单，已审批未收 '+p.localApprovedUnreceivedUnits+
+     ' 件。它们不等于 Amazon 在途。确认仍创建另一张人工 DRAFT？'))return
+   purchaseDraft.mutate()
+  } catch(error) {
+   setFailure('未能重新核对本地采购占用，已阻止新增草稿：'+
+    (error instanceof Error?error.message:'请刷新重试'))
+  }
+ }
  function selectDraft(s:ReplenishmentAdvice){
   setSelected(s);setQuoteSnapshot(null);setSupplierId('');setRequestKey(crypto.randomUUID());setUnitCost('');setFailure('')
  }
@@ -140,6 +158,7 @@ export default function ReplenishmentWorkspace({tenantId,marketplaceId}:{
        </div></td></tr>)}
      </tbody></table>
     </div>}
+   <ReplenishmentPriorityPanel tenantId={tenantId} marketplaceId={marketplaceId}/>
    <section className="core-tools" aria-label="近 28 天订单销量观测参考">
     <h3>7 / 28 天订单数量与提前期需求参考 · 仅分析</h3>
     <p className="setup-hint">只统计当前站点、已映射 Seller SKU 的最新订单项（下单件数，不是净销量）。需最近 28 天完整的已提交订单同步窗口、全量已观测订单行和一致来源才能计算；窗口终点固定比当前时间早 30 分钟。Mock 来源仅演示，不用于采购审批、在途预测或 Amazon 写操作。</p>
