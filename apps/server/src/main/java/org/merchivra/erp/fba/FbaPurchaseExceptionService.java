@@ -441,6 +441,39 @@ public class FbaPurchaseExceptionService {
             description);
         return new Policy(input.enabled(),input.leadHours(),input.defaultDueHours(),version);
     }
+    /** V78: SLA statistics include ALL persisted local workflow cases,
+     * including cases outside the bounded V76 review. Not an Amazon SLA.
+     * Resolution duration uses the most recent RESOLVE audit, not update time.
+     */
+    public record Metrics(long total,long open,long acknowledged,long resolved,
+                          long overdue,Double meanResolutionHours) {}
+    @Transactional(readOnly=true)
+    public Metrics metrics(UUID tenant,UUID marketplace) {
+        requireMarketplace(tenant,marketplace);
+        return jdbc.queryForObject("""
+            SELECT count(*) AS total,
+              count(*) FILTER (WHERE c.state='OPEN') AS open_count,
+              count(*) FILTER (WHERE c.state='ACKNOWLEDGED') AS ack_count,
+              count(*) FILTER (WHERE c.state='RESOLVED') AS resolved_count,
+              count(*) FILTER (WHERE c.state<>'RESOLVED' AND c.due_at<now()) AS overdue_count,
+              round(avg(extract(epoch FROM (resolved_at.occurred_at-c.created_at))
+                   /3600) FILTER (WHERE c.state='RESOLVED'),1) AS avg_hours
+            FROM fba_purchase_exception_case c
+            LEFT JOIN LATERAL (
+              SELECT a.occurred_at FROM fba_purchase_exception_audit a
+              WHERE a.tenant_id=c.tenant_id AND a.case_id=c.id
+                AND a.action='RESOLVE'
+              ORDER BY a.occurred_at DESC,a.id DESC LIMIT 1
+            ) resolved_at ON TRUE
+            WHERE c.tenant_id=? AND c.seller_marketplace_id=?
+            """,(r,i)->{
+                java.math.BigDecimal hours=r.getBigDecimal("avg_hours");
+                return new Metrics(r.getLong("total"),r.getLong("open_count"),
+                    r.getLong("ack_count"),r.getLong("resolved_count"),
+                    r.getLong("overdue_count"),hours==null?null:hours.doubleValue());
+            },tenant,marketplace);
+    }
+
     @Transactional(readOnly=true)
     public List<History> history(UUID tenant,UUID marketplace,UUID line) {
         scopedLine(tenant,marketplace,line,false);
