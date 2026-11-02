@@ -26,6 +26,19 @@ public class FbaPurchaseExceptionController {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
             .body(service.board(access.currentTenant(auth,request),marketplaceId));
     }
+    @GetMapping("/workload")
+    public ResponseEntity<FbaPurchaseExceptionService.Workload> workload(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(service.workload(access.currentTenant(auth,request),marketplaceId));
+    }
+    @PostMapping("/bulk-assign")
+    public FbaPurchaseExceptionService.BulkAssignReceipt bulkAssign(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
+        @RequestBody FbaPurchaseExceptionService.BulkAssign body) {
+        return service.bulkAssign(access.currentTenant(auth,request),marketplaceId,
+            access.authenticatedUser(auth),body);
+    }
     @GetMapping("/metrics")
     public ResponseEntity<FbaPurchaseExceptionService.Metrics> metrics(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId) {
