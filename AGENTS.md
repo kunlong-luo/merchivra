@@ -710,3 +710,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 异常工作台权限为 **Owner 租户/Marketplace 局部限制**，不能把此授权表当成新的全局角色或 OPERATOR_READ 提权机制。未设置时继承原 OWNER 全权限；仅权限编辑者可限制其他有效 Owner，自己不能编辑自身权限，必须在 Marketplace 行锁内重新确认 MANAGE，写入版本 CAS + 不可变授权审计。
 - VIEW / ASSIGN / REVIEW / RESOLVE / CONFIGURE / MANAGE 各端点服务端检查独立能力；UI 禁用只是便利。不得将 V80/V81 数据读取或 V82 规则修改变成受限 Owner 的绕过路径。CSRF、Session Tenant、来源指纹、独立复核不变。
 - 原 V77/V79/V82 批次账本需先于同一事务内逐行人工操作写入，新增 audit.batch_id 外键精确关联；任意失败全部回滚，旧历史批次 NULL 不能补造。新增 batchDetail 明确 lineageComplete=false，不能猜测日志关联。见 [SEC-084](docs/security/fba-exception-capabilities-v84.md)。
+
+## V85 · Operations 中采购/FBA 人工异常的跨模块权限边界（2026-11-02）
+
+- V78 Ops 中的 `FBA_PO_EVIDENCE_CHANGED` / `FBA_PO_EXCEPTION_OVERDUE` 是 V77 人工来源异常的投影：VIEW 禁止读取、ASSIGN 禁止认领、REVIEW 禁止暂缓/重开、RESOLVE 禁止 DONE、CONFIGURE 禁止修改对应 Ops 规则；其他 Ops 业务类别不得错误继承这组局部权限。
+- 不可绕过 `TenantAccessService`、活跃 Owner 成员资格及 Session/CSRF。**任何人工异常操作必须同时具有 VIEW**，撤销 VIEW 后即使残存 REVIEW/RESOLVE 等布尔位也不可凭猜到的行 ID 盲操作。
+- Ops `/findings` 必须在 SQL `LIMIT 100` 前排除用户无 VIEW 的站点 FBA_PO 异常，`/summary` 从全量持久化数据按同一 ACL 聚合；规则和审计读取同样不能泄露两类来源。全租户手动 `/scan` 只要任一站点明确拒绝 VIEW 或 CONFIGURE 则全部拒绝，不能静默部分扫描；系统定时扫描仍独立运行。
+- V76 原采购/FBA 差异证据 `/purchase-reconciliation` 亦需 VIEW。Ops DONE 不是原本地 case RESOLVED，更不是 Amazon 入仓认证。详见 [SEC-085](docs/security/fba-ops-cross-module-v85.md)。
