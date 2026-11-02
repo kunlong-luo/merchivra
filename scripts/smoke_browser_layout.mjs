@@ -69,6 +69,30 @@ const server = createServer(async (req, res) => {
       windowAfter:null,windowBefore:null,lastSafeWatermark:null,
       nextAttemptAt:null,lastFailureCode:null
     })
+  if (url.pathname === '/api/v1/fba/marketplaces/' + market + '/purchase-reconciliation')
+    return respond(res,{
+      truncated:false,shipmentScope:1,
+      totals:{examinedLines:1,high:0,warning:1,informational:0,
+        pendingIdentity:1,unlinked:0,localVariance:0},
+      lines:[{
+        shipmentId:'abcd1111-1111-4111-8111-111111111111',
+        shipmentReference:'V75-LOCAL-FBA',shipmentState:'DRAFT',
+        shipmentOrigin:'MOCK',
+        inboundLineId:'abcd2222-2222-4222-8222-222222222222',
+        sellerSku:'TEST-SKU-100',plannedQuantity:12,locallyReportedQuantity:0,
+        localVarianceDecision:null,
+        linkId:'abcd3333-3333-4333-8333-333333333333',
+        linkState:'PROPOSED',
+        proofReference:'V75 synthetic proof is NOT Amazon evidence',
+        purchaseOrderId:'abcd4444-4444-4444-8444-444444444444',
+        purchaseOrderNumber:'PO-V75-LOCAL',purchaseOrderState:'APPROVED',
+        purchaseOrderedQuantity:20,purchaseLocalReceivedQuantity:4,
+        asnId:null,asnState:null,asnReportedQuantity:null,
+        asnLocalReceivedQuantity:null,
+        findingCode:'PENDING_IDENTITY_REVIEW',severity:'WARNING',
+        recommendedAction:'SECOND_OWNER_REVIEW'
+      }],amazonVerified:false,fbaStockCredited:false
+    })
   if (url.pathname === '/api/v1/fba/marketplaces/' + market + '/shipments')
     return respond(res,[{
       id:'abcd1111-1111-4111-8111-111111111111',reference:'V75-LOCAL-FBA',
@@ -393,6 +417,20 @@ async function main() {
         "?.textContent?.includes('已有 1 张进行中采购单')"),
         true, 'existing local PO must display manual dedupe review')
       await screenshot(send,'v74-replenishment-risk-360.png')
+      await waitFor(send,
+        "document.querySelector('[aria-label=\"V76 采购与 FBA 本地货件差异核对表\"] tbody tr')" +
+        "?.textContent?.includes('PO-V75-LOCAL')",
+        'V76 bounded reconciliation board')
+      assert.equal(await evaluate(send,
+        "document.querySelector('[aria-label=\"V76 采购 ASN FBA 本地证据差异工作台\"]')" +
+        "?.textContent?.includes('第二 Owner')"),
+        true,'Pending V75 proof must be visible as a V76 human-review finding')
+      assert.equal(await evaluate(send,
+        "document.querySelector('[aria-label=\"V76 采购 ASN FBA 本地证据差异工作台\"]')" +
+        "?.textContent?.includes('不代表 Amazon 平台签收')"),
+        true,'Local reconciliation must not imply official Amazon receipt')
+      await screenshot(send,'v76-reconciliation-board-360.png')
+
       try {
       await waitFor(send,
         "Boolean(document.querySelector('[aria-label=\"货件历史表\"] tbody tr button'))",
