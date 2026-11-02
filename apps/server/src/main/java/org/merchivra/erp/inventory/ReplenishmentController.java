@@ -14,10 +14,12 @@ import org.springframework.web.bind.annotation.*;
 public class ReplenishmentController {
     private final TenantAccessService access;
     private final ReplenishmentService service;
+    private final ReplenishmentSupplierQuoteService quotes;
     private final ReplenishmentDemandService demand;
     public ReplenishmentController(TenantAccessService access,ReplenishmentService service,
-                                   ReplenishmentDemandService demand){
-        this.access=access;this.service=service;this.demand=demand;
+                                   ReplenishmentDemandService demand,
+                                   ReplenishmentSupplierQuoteService quotes){
+        this.access=access;this.service=service;this.demand=demand;this.quotes=quotes;
     }
     public record SetPolicy(String sellerSku,int reorderPoint,int targetStock,int leadTimeDays) {}
     @GetMapping("/policies")
@@ -44,6 +46,13 @@ public class ReplenishmentController {
     public List<ReplenishmentDemandService.Signal> demandSignals(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId){
         return demand.signals(access.currentTenant(auth,request),marketplaceId);
+    }
+
+    /** V71: Supplier SKU terms + validated OBSERVED stock, never creates a PO. */
+    @GetMapping("/supplier-quotes")
+    public List<ReplenishmentSupplierQuoteService.Quote> supplierQuotes(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId) {
+        return quotes.quotes(access.currentTenant(auth,request),marketplaceId);
     }
 
     @GetMapping("/suggestions")

@@ -72,7 +72,7 @@ public class SupplierPurchasePlanService {
            || days<0 || days>365 || currency==null || !currency.matches("[A-Z]{3}"))
             throw bad("Invalid supplier MOQ, pack multiple, lead time or currency");
     }
-    static long orderQuantity(long suggested,int moq,int pack) {
+    public static long orderQuantity(long suggested,int moq,int pack) {
         if(suggested<1 || moq<1 || pack<1)
             throw bad("Invalid local purchasing quantity");
         long base=Math.max(suggested,moq);
