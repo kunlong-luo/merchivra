@@ -33,3 +33,8 @@ V37 `erp_replenishment_purchase_draft_source` 保留审计所需的政策参数�
 ## V38 · 相同观测禁止重复采购草稿
 
 新增数据库唯一索引 `(tenant_id,seller_marketplace_id,seller_sku,observation_id)`，不同 `requestKey` 不能用同一条库存观测重复建立采购草稿；即使原草稿后续取消，仍需新的 FBA 观测、人工复核后才能再次生成。服务端在锁保护下提前返回 409，底层唯一索引提供并发兜底。不把已有采购单数量当作在途 FBA 数量。
+
+
+## V70 · 原始订单行观察，不改变采购授权边界
+
+只读的 `demand-signals` 支持按 Seller SKU 汇总来源合格的 7/28 天下单件数、有限的比例示意；订单同步窗口不完整、订单行缺失/来源混杂、SKU 未经 ACTIVE 映射则不计算。观察值不代替供应商/资金/库存审批，更不能直接进入 V37 采购草稿数量。详见 [INV-070](observed-demand-v70.md)。

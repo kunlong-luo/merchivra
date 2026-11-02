@@ -9,6 +9,7 @@
 - 按维护者现行指示：**直接在 `main` 开发、逐步提交并验证 CI**；不再创建长寿命分支或 Draft PR，除非维护者更改要求。更新相关文档与 GitHub Issue，报告确切提交/检查结果。
 - Amazon SP-API 接入**优先使用官方 Java SDK `software.amazon.spapi:spapi-sdk:1.13.0` 与官方 OpenAPI 模型**；已有 `SpApiOfficialSdkFactory` / `SpApiOfficialModules` 和保守 Core Read Adapter。未来新增模块不应优先手写无类型的 URL 接口，须按操作审查 DTO/角色/速率/权限。见 [INT-004](docs/integrations/sp-api-code-integration.md)。
 - 优先使用经过广泛验证的官方 Starter/成熟库；不要重复实现基础设施，不因新潮就加入 Kafka、微服务、重型前端框架或与业务无关的依赖。
+- **V70 补货证据纪律**：观察到的 7/28 天订单行件数不是预测/净销量；每个 SKU 需要完整 28 天成功同步窗口、已提交分页、全部订单项已观测、来源一致和 ACTIVE SKU 映射。缺失则 NULL，不伪造零销量；样本仅参考，不默认转换为采购 DRAFT；V37/V38/V42 原链不修改。见 [INV-070](docs/inventory/observed-demand-v70.md)。
 - **V69 规则配置纪律**：站点级异常必须复用 V10/V67 ops_finding；规则禁用只影响下一次扫描，不能删除业务来源；使用租户锁 + optimistic version + 追加审计，源 UNKNOWN 不是 0。站内提示不等于外部消息通知。见 [OPS-009](docs/operations/ops-rules-v69.md)。
 - **V68 安全/容灾纪律**：备份/恢复测试只在受保护的本机一次性 PG18 Mock 数据中执行，严禁在生产/真实 Seller 数据库运行 CI 的恢复脚本；优先官方 pg_dump/pg_restore、Spring Security Test、Flyway 和 Compose，结果需与生产正式演练区分。见 [V68 手册](docs/testing/release-readiness-v68.md)。
 - **V67 复用策略**：复用 V10 ops_finding、Spring Scheduling / tenant 行锁、Spring JDBC、Zod + Orval/TanStack Query；新 Controller 的 DTO 优先采用 Boot-managed Hibernate Validator。避免与现有运营队列并行再造通知/审批基础设施。候选及引入门槛见 [V67 复用审查](docs/architecture/reuse-audit-v67.md)。
