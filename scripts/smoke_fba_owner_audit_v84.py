@@ -60,7 +60,18 @@ own=call(p+"/me")
 assert own["ownerId"]==owner["userId"] and all(own["grants"].values())
 previous=call(w+"/batches")
 assert previous and previous[0]["requestKey"]
-legacy=call(w+"/batches/"+previous[0]["requestKey"])
+# These V77-V83 fixture operations happen AFTER Flyway V78, so they are
+# correctly linked already. Construct one old-format ledger entry without a
+# batch_id-linked audit to explicitly exercise legacy compatibility.
+recent=call(w+"/batches/"+previous[0]["requestKey"])
+assert recent["lineageComplete"] and recent["linkedCount"]==recent["batch"]["affectedCount"]
+legacy_key=str(uuid4())
+sql(f"""INSERT INTO fba_purchase_exception_batch(
+ id,tenant_id,seller_marketplace_id,request_key,payload_hash,
+ actor_user_id,affected_count)
+ VALUES('{uuid4()}','{tenant}','{mp}','{legacy_key}',
+ '{'0'*64}','{owner['userId']}',1)""")
+legacy=call(w+"/batches/"+legacy_key)
 assert not legacy["lineageComplete"] and legacy["linkedCount"]==0
 assert legacy["linkedActions"]==[]
 call(w+"/batches/"+str(uuid4()),expected=404)
