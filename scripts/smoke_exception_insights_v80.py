@@ -74,8 +74,13 @@ priorities={x["shipmentReference"]:x for x in report["recommendations"]}
 overdue=priorities["V76-UNLINKED-DRAFT"]
 assert overdue["priority"]=="P0" and overdue["reasonCode"]=="PAST_DUE",overdue
 pending=priorities["V76-IDENTITY-PENDING"]
-assert pending["reasonCode"]=="INDEPENDENT_IDENTITY_REVIEW",pending
-assert pending["priority"]=="P1"
+assert pending["findingCode"]=="PENDING_IDENTITY_REVIEW",pending
+if pending["reminder"]=="RECHECK":
+    # V77's stored fingerprint predates the latest local evidence: drift P0
+    # outranks the independent-identity P1 gate, without removing that gate.
+    assert pending["priority"]=="P0" and pending["reasonCode"]=="SOURCE_CHANGED",pending
+else:
+    assert pending["priority"]=="P1" and pending["reasonCode"]=="INDEPENDENT_IDENTITY_REVIEW",pending
 owner_ids={x["userId"] for x in report["workload"]["owners"]}
 assert len(owner_ids)>=2
 for recommendation in report["recommendations"]:
