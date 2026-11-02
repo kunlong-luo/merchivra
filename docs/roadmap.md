@@ -12,6 +12,10 @@
 | M3 | 财务/成本/利润 | 费用、成本与估算报表 | 可对账、可追踪 |
 | M4 | Beta | 安全、运维、发布 | P0 验收通过、运行手册完成 |
 
+## 2026-11-02 · V71 FBA 补货与供应商 MOQ/箱规报价衔接（当前）
+- 复用 V22 ReplenishmentPolicy、V42 SupplierSkuRule.orderQuantity、V37/V38 人工采购 DRAFT；ACTIVE SKU 映射和可信 OBSERVED 库存才允许供应商 MOQ/箱规报价候选。原币金额和供应商人工交期不代表承诺到仓。
+- Owner 选择报价后，服务端复核 FBA 观测/策略/供应商版本及取整采购量；Flyway V68 快照基础件数、实购件数、币种单价、MOQ/箱规与报价版本。新代码 PG18+HTTP CI 模拟验收，真实 Amazon Seller/Ads 仍关闭。详见 [INV-071](inventory/replenishment-supplier-quotes-v71.md)。
+
 ## 2026-11-02 · V70 订单观测速度与补货数据质量门禁（当前）
 - 基于现有 Orders v2026 的订单项和订单同步检查点，提供按 Marketplace/Seller SKU 最近 7/28 天下单件数及提前期比例参考；未完成同步、缺订单行、混合来源、未映射 SKU 一律不可计算，严格区分零订单与未知。
 - Flyway V67 只增加历史窗口/当前订单项索引；原 V22 策略、V37/V38 人工采购 DRAFT 与 V42 供应商规则不改写、不自动下单。React 直接在现有补货工作台展示来源质量和样本，不增加平行系统。见 [INV-070](inventory/observed-demand-v70.md)。

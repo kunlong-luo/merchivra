@@ -38,3 +38,8 @@ V37 `erp_replenishment_purchase_draft_source` 保留审计所需的政策参数�
 ## V70 · 原始订单行观察，不改变采购授权边界
 
 只读的 `demand-signals` 支持按 Seller SKU 汇总来源合格的 7/28 天下单件数、有限的比例示意；订单同步窗口不完整、订单行缺失/来源混杂、SKU 未经 ACTIVE 映射则不计算。观察值不代替供应商/资金/库存审批，更不能直接进入 V37 采购草稿数量。详见 [INV-070](observed-demand-v70.md)。
+
+
+## V71 · V42 供应商 MOQ/箱规报价扩展
+
+在原 V22 可信库存补货建议上提供只读 supplier-quotes，基于 ACTIVE SKU Mapping 和 V42 Supplier SKU Rule 显示 MOQ、packMultiple、人工采购交期、原币单价/总额；用户须人工选择一个报价再确认创建原 V37 DRAFT。后端重验 V42 版本/币种单价/实际取整量，Flyway V68 快照证据，原 V37 手工采购和独立双 Owner 审批保持。详细业务边界见 [INV-071](replenishment-supplier-quotes-v71.md)。
