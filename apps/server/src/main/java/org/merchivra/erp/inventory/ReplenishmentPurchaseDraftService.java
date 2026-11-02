@@ -9,6 +9,7 @@ import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.purchasing.PurchasingService;
+import org.merchivra.erp.purchasing.SupplierPurchasePlanService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -38,18 +39,31 @@ public class ReplenishmentPurchaseDraftService {
 
     public record Request(UUID requestKey,String sellerSku,UUID supplierId,String currency,
                           String unitCost,String expectedPolicyUpdatedAt,
-                          UUID expectedObservationId,int expectedQuantity) {}
+                          UUID expectedObservationId,int expectedQuantity,
+                          String expectedSupplierRuleUpdatedAt,Integer expectedOrderQuantity) {
+        /** Compatible original V37 manual-price request; no supplier quote proof. */
+        public Request(UUID key,String sku,UUID supplier,String currency,String unitCost,
+                       String policyUpdatedAt,UUID observation,int expectedQuantity) {
+            this(key,sku,supplier,currency,unitCost,policyUpdatedAt,
+                observation,expectedQuantity,null,null);
+        }
+    }
     public record Origin(String purchaseOrderId,String orderNumber,String status,
                          String sellerSku,String productSkuId,int fulfillable,
-                         int suggestedQuantity,String currency,String unitCost,
-                         String observedAt,String createdAt) {}
+                         int suggestedQuantity,int orderedQuantity,String currency,String unitCost,
+                         String pricingSource,String supplierRuleUpdatedAt,
+                         Integer minimumOrderQuantity,Integer packMultiple,
+                         Integer supplierLeadTimeDays,String observedAt,String createdAt) {}
 
     private record Policy(int reorderPoint,int targetStock,int leadTimeDays,Instant updatedAt) {}
     private record Observation(UUID id,String quality,Integer fulfillable,
                                Integer reserved,Instant observedAt) {}
     private record Saved(UUID orderId,UUID marketplaceId,String sellerSku,UUID supplierId,
                          String currency,BigDecimal unitCost,Instant policyUpdatedAt,
-                         UUID observationId,int suggestedQuantity,UUID createdBy) {}
+                         UUID observationId,int suggestedQuantity,int orderedQuantity,
+                         Instant supplierRuleUpdatedAt,UUID createdBy) {}
+    private record SupplierRule(Instant updatedAt,int moq,int pack,int leadDays,
+                                String currency,BigDecimal unitCost) {}
 
     private static ResponseStatusException invalid() {
         return new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid purchase draft request");
@@ -73,7 +87,11 @@ public class ReplenishmentPurchaseDraftService {
            || req.sellerSku().isBlank() || req.sellerSku().length()>200
            || req.sellerSku().chars().anyMatch(Character::isISOControl)
            || req.currency()==null || !req.currency().matches("[A-Z]{3}")
-           || req.expectedQuantity()<1 || req.expectedQuantity()>1_000_000)
+           || req.expectedQuantity()<1 || req.expectedQuantity()>1_000_000
+           || (req.expectedSupplierRuleUpdatedAt()==null)!=(req.expectedOrderQuantity()==null)
+           || (req.expectedOrderQuantity()!=null &&
+              (req.expectedOrderQuantity()<req.expectedQuantity()
+               || req.expectedOrderQuantity()>1_000_000)))
             throw invalid();
     }
     private static Instant asInstant(java.sql.ResultSet rs,String column)
@@ -90,6 +108,10 @@ public class ReplenishmentPurchaseDraftService {
         validate(req);
         Instant expectedPolicy=requiredInstant(req.expectedPolicyUpdatedAt());
         BigDecimal unitCost=requiredCost(req.unitCost());
+        boolean quoteBacked=req.expectedSupplierRuleUpdatedAt()!=null;
+        Instant supplierVersion=quoteBacked?
+            requiredInstant(req.expectedSupplierRuleUpdatedAt()):null;
+        int orderQuantity=quoteBacked?req.expectedOrderQuantity():req.expectedQuantity();
 
         // Serialize idempotency-key checks across concurrent requests of the same tenant.
         List<UUID> active=jdbc.queryForList("""
@@ -100,7 +122,7 @@ public class ReplenishmentPurchaseDraftService {
         List<Saved> existing=jdbc.query("""
             SELECT purchase_order_id,seller_marketplace_id,seller_sku,supplier_id,
                 currency_code,unit_cost,policy_updated_at,observation_id,
-                suggested_quantity,created_by
+                suggested_quantity,ordered_quantity,supplier_rule_updated_at,created_by
             FROM erp_replenishment_purchase_draft_source
             WHERE tenant_id=? AND request_key=?
             """,(rs,i)->new Saved(
@@ -110,7 +132,9 @@ public class ReplenishmentPurchaseDraftService {
                 rs.getString("currency_code").trim(),rs.getBigDecimal("unit_cost"),
                 asInstant(rs,"policy_updated_at"),
                 rs.getObject("observation_id",UUID.class),
-                rs.getInt("suggested_quantity"),rs.getObject("created_by",UUID.class)),
+                rs.getInt("suggested_quantity"),rs.getInt("ordered_quantity"),
+                asInstant(rs,"supplier_rule_updated_at"),
+                rs.getObject("created_by",UUID.class)),
             tenant,req.requestKey());
         if(!existing.isEmpty()) {
             Saved old=existing.getFirst();
@@ -122,6 +146,8 @@ public class ReplenishmentPurchaseDraftService {
                || !old.policyUpdatedAt().equals(expectedPolicy)
                || !old.observationId().equals(req.expectedObservationId())
                || old.suggestedQuantity()!=req.expectedQuantity()
+               || old.orderedQuantity()!=orderQuantity
+               || !java.util.Objects.equals(old.supplierRuleUpdatedAt(),supplierVersion)
                || !old.createdBy().equals(actor))throw new ResponseStatusException(
                    HttpStatus.CONFLICT,"Request key already used for a different draft");
             return purchasing.detail(tenant,old.orderId());
@@ -185,31 +211,64 @@ public class ReplenishmentPurchaseDraftService {
            || decision.suggestedQuantity()!=req.expectedQuantity()
            || observation.observedAt()==null)throw stale();
 
+        SupplierRule supplierRule=null;
+        if(quoteBacked) {
+            List<SupplierRule> actual=jdbc.query("""
+                SELECT r.updated_at,r.minimum_order_quantity,r.pack_multiple,
+                    r.lead_time_days,r.currency_code,r.unit_cost
+                FROM erp_supplier_sku_rule r JOIN erp_supplier sup
+                  ON sup.tenant_id=r.tenant_id AND sup.id=r.supplier_id
+                  AND sup.status='ACTIVE'
+                WHERE r.tenant_id=? AND r.supplier_id=? AND r.product_sku_id=?
+                FOR SHARE OF r,sup
+                """,(rs,i)->new SupplierRule(asInstant(rs,"updated_at"),
+                    rs.getInt("minimum_order_quantity"),rs.getInt("pack_multiple"),
+                    rs.getInt("lead_time_days"),rs.getString("currency_code").trim(),
+                    rs.getBigDecimal("unit_cost")),tenant,req.supplierId(),mapped.getFirst());
+            if(actual.size()!=1)throw stale();
+            supplierRule=actual.getFirst();
+            if(!supplierRule.updatedAt().equals(supplierVersion)
+               || !supplierRule.currency().equals(req.currency())
+               || supplierRule.unitCost().compareTo(unitCost)!=0
+               || SupplierPurchasePlanService.orderQuantity(req.expectedQuantity(),
+                    supplierRule.moq(),supplierRule.pack())!=orderQuantity)
+                throw stale();
+        }
+
         PurchasingService.Detail draft=purchasing.create(tenant,actor,req.supplierId(),
             req.currency(),"本地 FBA 补货建议草稿；需另行审批，不代表 Amazon 入仓",
             List.of(new PurchasingService.RequestedLine(mapped.getFirst(),
-                req.expectedQuantity(),unitCost.toPlainString())));
+                orderQuantity,unitCost.toPlainString())));
         jdbc.update("""
             INSERT INTO erp_replenishment_purchase_draft_source
               (tenant_id,request_key,purchase_order_id,seller_marketplace_id,seller_sku,
                product_sku_id,supplier_id,currency_code,unit_cost,policy_updated_at,
                observation_id,observed_at,fulfillable,reorder_point,target_stock,
-               lead_time_days,suggested_quantity,created_by)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+               lead_time_days,suggested_quantity,created_by,ordered_quantity,
+               supplier_rule_updated_at,minimum_order_quantity,pack_multiple,
+               supplier_lead_time_days,supplier_pricing_source)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             """,tenant,req.requestKey(),UUID.fromString(draft.order().id()),
             marketplace,req.sellerSku(),mapped.getFirst(),req.supplierId(),
             req.currency(),unitCost,utc(policy.updatedAt()),observation.id(),
             utc(observation.observedAt()),observation.fulfillable(),
             policy.reorderPoint(),policy.targetStock(),policy.leadTimeDays(),
-            req.expectedQuantity(),actor);
+            req.expectedQuantity(),actor,orderQuantity,
+            supplierVersion,supplierRule==null?null:supplierRule.moq(),
+            supplierRule==null?null:supplierRule.pack(),
+            supplierRule==null?null:supplierRule.leadDays(),
+            quoteBacked?"V42_RULE":"MANUAL");
         return draft;
     }
 
     public List<Origin> history(UUID tenant,UUID marketplace) {
         return jdbc.query("""
             SELECT d.purchase_order_id,o.order_number,o.status,d.seller_sku,
-                d.product_sku_id,d.fulfillable,d.suggested_quantity,
-                d.currency_code,d.unit_cost,d.observed_at,d.created_at
+                d.product_sku_id,d.fulfillable,d.suggested_quantity,d.ordered_quantity,
+                d.currency_code,d.unit_cost,d.supplier_pricing_source,
+                d.supplier_rule_updated_at,d.minimum_order_quantity,
+                d.pack_multiple,d.supplier_lead_time_days,
+                d.observed_at,d.created_at
             FROM erp_replenishment_purchase_draft_source d
             JOIN erp_purchase_order o ON o.tenant_id=d.tenant_id
                 AND o.id=d.purchase_order_id
@@ -219,7 +278,14 @@ public class ReplenishmentPurchaseDraftService {
                 rs.getString("order_number"),rs.getString("status"),rs.getString("seller_sku"),
                 rs.getObject("product_sku_id",UUID.class).toString(),
                 rs.getInt("fulfillable"),rs.getInt("suggested_quantity"),
-                rs.getString("currency_code").trim(),rs.getBigDecimal("unit_cost").toPlainString(),
+                rs.getInt("ordered_quantity"),rs.getString("currency_code").trim(),
+                rs.getBigDecimal("unit_cost").toPlainString(),
+                rs.getString("supplier_pricing_source"),
+                asInstant(rs,"supplier_rule_updated_at")==null?null:
+                    asInstant(rs,"supplier_rule_updated_at").toString(),
+                rs.getObject("minimum_order_quantity",Integer.class),
+                rs.getObject("pack_multiple",Integer.class),
+                rs.getObject("supplier_lead_time_days",Integer.class),
                 asInstant(rs,"observed_at").toString(),asInstant(rs,"created_at").toString()),
             tenant,marketplace);
     }
