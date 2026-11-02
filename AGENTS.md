@@ -665,3 +665,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - Orval 8.44.0 已实际从 npm registry 安装、锁定并生成 apps/web/src/generated/finance-profits.ts 和 models/Query Hooks。V61/V64 请求已调用生成方法。GET 生成 Query、POST 生成 Mutation，不手写重复 fetch、DTO 和 Hooks。
 - 安全 mutator 采用 /api/v1/、same-origin Session、写请求 CSRF、no-store、统一错误、{data,status,headers}；财务 Zod 仍守住金额 NULL、审核和未验证状态。
 - CI npm run api:check 检测生成漂移含未跟踪文件，PG18 实际导出与提交契约逐字节对比；一次性可写 main 的初始化工作流已移除。后续接口按模块渐进迁移，见 docs/architecture/mature-tool-first-api-client-2026-11-01.md。
+
+## V78 · 采购/FBA 异常进入现有运营工作台（2026-11-02）
+
+- 复用 V10/V67/V69 `ops_finding`、站点级规则开关及审计、租户锁和可选 Spring Scheduler，不另造异常队列、通知引擎或表。
+- V77 证据指纹变化映射为 `FBA_PO_EVIDENCE_CHANGED`，人工处理期限已过映射为 `FBA_PO_EXCEPTION_OVERDUE`；只读判定，不能自动 RESOLVE / 修改 PO、ASN、入仓、库存，也不能把 Ops DONE 当作人工已复核。
+- 规则可按站点独立暂停，默认定时巡检关闭。仅观察最多 100 张货件/500 行的证据视窗，旧窗口外的待办不能被假清除；截断时保留既有信号。
+- V78 `/workbench/metrics` 是全部**已持久化人工处理单**的本地时效，缺失 RESOLVED 样本时均值为 NULL，绝不是 Amazon SLA/平台验收。详见 [INV-078](docs/inventory/fba-purchase-ops-escalation-v78.md)。

@@ -57,7 +57,7 @@ mp1,mp2=new_site("PRIMARY"),new_site("OTHER")
 path=lambda mp:"/api/v1/operations/marketplaces/"+mp+"/rules"
 all_rules=lambda mp:{r["ruleCode"]:r for r in call(path(mp))}
 one,two=all_rules(mp1),all_rules(mp2)
-assert len(one)==6 and len(two)==6
+assert len(one)==8 and len(two)==8  # V78 extends the same rule registry
 assert all(r["enabled"] and r["version"]==0 for r in one.values())
 assert one["LOW_STOCK"]["lowStockThreshold"]==3
 assert one["REFUND_REVIEW"]["lowStockThreshold"] is None

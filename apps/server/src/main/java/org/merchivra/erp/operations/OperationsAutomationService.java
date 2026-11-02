@@ -3,6 +3,10 @@ package org.merchivra.erp.operations;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import org.merchivra.erp.fba.FbaPurchaseExceptionService;
+import org.springframework.beans.factory.annotation.Autowired;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
@@ -21,14 +25,22 @@ import org.springframework.web.server.ResponseStatusException;
 public class OperationsAutomationService {
     private final JdbcTemplate jdbc;
     private final int lowStockThreshold;
+    private final FbaPurchaseExceptionService fbaExceptions;
 
+    // Kept for isolated legacy unit tests; production constructor is Spring-injected.
+    public OperationsAutomationService(JdbcTemplate jdbc,int threshold) {
+        this(jdbc,threshold,null);
+    }
+    @Autowired
     public OperationsAutomationService(JdbcTemplate jdbc,
-        @Value("${merchivra.operations.low-stock-threshold:3}") int lowStockThreshold) {
+        @Value("${merchivra.operations.low-stock-threshold:3}") int lowStockThreshold,
+        FbaPurchaseExceptionService fbaExceptions) {
         if (lowStockThreshold < 0 || lowStockThreshold > 10000) {
             throw new IllegalArgumentException("Low stock threshold must be 0..10000");
         }
         this.jdbc = jdbc;
         this.lowStockThreshold = lowStockThreshold;
+        this.fbaExceptions = fbaExceptions;
     }
 
     public record Finding(String id, String marketplaceId, String ruleCode, String sourceKey,
@@ -47,7 +59,8 @@ public class OperationsAutomationService {
     private record StoredRule(boolean enabled,Integer threshold,long version) {}
     private static final List<String> RULES=List.of(
         "UNMAPPED_LISTING","INVENTORY_UNKNOWN","LOW_STOCK",
-        "REFUND_REVIEW","FBA_INBOUND_REVIEW","ADS_REPORT_REVIEW");
+        "REFUND_REVIEW","FBA_INBOUND_REVIEW","ADS_REPORT_REVIEW",
+        "FBA_PO_EVIDENCE_CHANGED","FBA_PO_EXCEPTION_OVERDUE");
     public record RuleSetting(String ruleCode,boolean enabled,Integer lowStockThreshold,
                               long version,String updatedAt) {}
     public record SaveRule(@jakarta.validation.constraints.NotNull Boolean enabled,
@@ -76,7 +89,8 @@ public class OperationsAutomationService {
         return jdbc.query("""
             WITH codes(rule_code) AS (VALUES
              ('UNMAPPED_LISTING'),('INVENTORY_UNKNOWN'),('LOW_STOCK'),
-             ('REFUND_REVIEW'),('FBA_INBOUND_REVIEW'),('ADS_REPORT_REVIEW'))
+             ('REFUND_REVIEW'),('FBA_INBOUND_REVIEW'),('ADS_REPORT_REVIEW'),
+             ('FBA_PO_EVIDENCE_CHANGED'),('FBA_PO_EXCEPTION_OVERDUE'))
             SELECT codes.rule_code, COALESCE(r.enabled,TRUE) AS enabled,
               CASE WHEN codes.rule_code='LOW_STOCK'
                    THEN COALESCE(r.low_stock_threshold,?)
@@ -226,6 +240,7 @@ public class OperationsAutomationService {
         matched += jdbc.update(REFUNDS_SQL, scanId, tenant);
         matched += jdbc.update(FBA_REVIEW_SQL, scanId, tenant);
         matched += jdbc.update(ADS_REVIEW_SQL, scanId, tenant);
+        if(fbaExceptions!=null)matched += scanFbaSignals(tenant,scanId);
 
         // Only rows absent from a COMPLETE scan are cleared. DONE stays
         // suppressed until condition disappears, at which point CLEARED.
@@ -404,6 +419,80 @@ public class OperationsAutomationService {
             AND config.seller_marketplace_id=r.seller_marketplace_id
             AND config.rule_code='ADS_REPORT_REVIEW' AND NOT config.enabled)
         """ + UPSERT;
+
+    /** V78: the existing V10 inbox consumes V77's bounded evidence projection.
+     * Nothing touches PO, ASN, inventory or Amazon, and no alternate inbox exists.
+     * Unobserved historical cases are retained rather than spuriously cleared.
+     */
+    private int scanFbaSignals(UUID tenant,UUID scanId) {
+        int matched=0;
+        List<UUID> marketplaces=jdbc.queryForList("""
+            SELECT DISTINCT seller_marketplace_id FROM fba_purchase_exception_case
+            WHERE tenant_id=? ORDER BY seller_marketplace_id
+            """,UUID.class,tenant);
+        for(UUID marketplace:marketplaces) {
+            var board=fbaExceptions.board(tenant,marketplace);
+            List<String> ids=board.items().stream().map(
+                FbaPurchaseExceptionService.WorkItem::lineId).toList();
+            // Preserve queue entries for cases outside the bounded 100 shipment /
+            // 500 line evidence view, even if the view is truncated today.
+            String excluded=ids.isEmpty()?"":" AND source_key NOT IN ("+
+                String.join(",",Collections.nCopies(ids.size(),"?"))+")";
+            List<Object> keepArgs=new ArrayList<>(List.of(scanId,tenant,marketplace));
+            keepArgs.addAll(ids);
+            jdbc.update("""
+                UPDATE ops_finding SET last_scan_id=?
+                WHERE tenant_id=? AND seller_marketplace_id=?
+                AND rule_code IN ('FBA_PO_EVIDENCE_CHANGED','FBA_PO_EXCEPTION_OVERDUE')
+                """+excluded,keepArgs.toArray());
+            if(board.truncated()) {
+                jdbc.update("""
+                    UPDATE ops_finding SET last_scan_id=?
+                    WHERE tenant_id=? AND seller_marketplace_id=?
+                      AND rule_code IN ('FBA_PO_EVIDENCE_CHANGED','FBA_PO_EXCEPTION_OVERDUE')
+                    """,scanId,tenant,marketplace);
+                continue; // partial source evidence cannot safely clear prior signals
+            }
+            List<String> changed=board.items().stream().filter(
+                FbaPurchaseExceptionService.WorkItem::stale).map(
+                FbaPurchaseExceptionService.WorkItem::lineId).toList();
+            List<String> overdue=board.policy().enabled()?board.items().stream()
+                .filter(x->"OVERDUE".equals(x.reminder())).map(
+                FbaPurchaseExceptionService.WorkItem::lineId).toList():List.of();
+            matched+=upsertFbaSignals(tenant,marketplace,scanId,changed,
+                "FBA_PO_EVIDENCE_CHANGED","采购/FBA 本地证据变化待重新确认","WARNING");
+            matched+=upsertFbaSignals(tenant,marketplace,scanId,overdue,
+                "FBA_PO_EXCEPTION_OVERDUE","采购/FBA 人工处理期限已超期","CRITICAL");
+        }
+        return matched;
+    }
+    private int upsertFbaSignals(UUID tenant,UUID marketplace,UUID scanId,
+                                  List<String> lines,String rule,String title,String severity) {
+        if(lines.isEmpty())return 0;
+        String marks=String.join(",",Collections.nCopies(lines.size(),"?"));
+        String sql="""
+            INSERT INTO ops_finding
+             (id,tenant_id,seller_marketplace_id,rule_code,source_key,title,
+              severity,data_origin,last_scan_id)
+            SELECT gen_random_uuid(),c.tenant_id,c.seller_marketplace_id,?,
+              c.inbound_line_id::text,?,?,
+              CASE WHEN s.evidence_origin='MOCK' THEN 'MOCK'
+                   ELSE 'UNVERIFIED' END,?
+            FROM fba_purchase_exception_case c
+            JOIN fba_inbound_shipment s ON s.tenant_id=c.tenant_id AND s.id=c.shipment_id
+            WHERE c.tenant_id=? AND c.seller_marketplace_id=?
+              AND c.inbound_line_id IN ("""+marks+"""
+            )
+              AND NOT EXISTS (SELECT 1 FROM ops_rule_setting config
+                WHERE config.tenant_id=c.tenant_id
+                  AND config.seller_marketplace_id=c.seller_marketplace_id
+                  AND config.rule_code=? AND NOT config.enabled)
+            """+UPSERT;
+        List<Object> args=new ArrayList<>(List.of(rule,title,severity,scanId,tenant,marketplace));
+        for(String line:lines)args.add(UUID.fromString(line));
+        args.add(rule);
+        return jdbc.update(sql,args.toArray());
+    }
 
     private LockRow lockFinding(UUID tenant,UUID id) {
         var values=jdbc.query("""

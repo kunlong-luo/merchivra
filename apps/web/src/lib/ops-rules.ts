@@ -19,7 +19,7 @@ export const opsRuleAuditSchema=z.object({
 })
 export type OpsRule=z.infer<typeof opsRuleSchema>
 export async function fetchOperationRules(marketplaceId:string){
-  return z.array(opsRuleSchema).length(6).parse((await listOperationRules(marketplaceId)).data)
+  return z.array(opsRuleSchema).length(8).parse((await listOperationRules(marketplaceId)).data)
 }
 export async function putOperationRule(marketplaceId:string,rule:OpsRule,
   enabled:boolean,threshold:number|null){

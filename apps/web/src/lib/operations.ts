@@ -8,7 +8,8 @@ import {
 export const findingSchema=z.object({
  id:z.string().uuid(),marketplaceId:z.string().uuid(),
  ruleCode:z.enum(['UNMAPPED_LISTING','INVENTORY_UNKNOWN','LOW_STOCK',
-  'REFUND_REVIEW','FBA_INBOUND_REVIEW','ADS_REPORT_REVIEW']),
+  'REFUND_REVIEW','FBA_INBOUND_REVIEW','ADS_REPORT_REVIEW',
+  'FBA_PO_EVIDENCE_CHANGED','FBA_PO_EXCEPTION_OVERDUE']),
  sourceKey:z.string(),title:z.string(),
  severity:z.enum(['INFO','WARNING','CRITICAL']),
  state:z.enum(['OPEN','ACKNOWLEDGED','DONE','CLEARED']),
@@ -48,7 +49,9 @@ export const ruleNames:Record<Finding['ruleCode'],string>={
  LOW_STOCK:'FBA 可售库存偏低',
  REFUND_REVIEW:'退款订单待核对',
  FBA_INBOUND_REVIEW:'本地 FBA 货件入仓待复核',
- ADS_REPORT_REVIEW:'离线 Ads 日报待独立审核'
+ ADS_REPORT_REVIEW:'离线 Ads 日报待独立审核',
+ FBA_PO_EVIDENCE_CHANGED:'采购/FBA 证据变化，待重新确认',
+ FBA_PO_EXCEPTION_OVERDUE:'采购/FBA 本地处理已超期'
 }
 export const stateNames:Record<Finding['state'],string>={
  OPEN:'待处理',ACKNOWLEDGED:'处理中',DONE:'已处理',CLEARED:'条件已消失'

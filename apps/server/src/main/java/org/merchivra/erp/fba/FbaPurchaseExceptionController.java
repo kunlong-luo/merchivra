@@ -26,6 +26,12 @@ public class FbaPurchaseExceptionController {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
             .body(service.board(access.currentTenant(auth,request),marketplaceId));
     }
+    @GetMapping("/metrics")
+    public ResponseEntity<FbaPurchaseExceptionService.Metrics> metrics(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(service.metrics(access.currentTenant(auth,request),marketplaceId));
+    }
     @PostMapping("/cases/{lineId}/actions")
     public FbaPurchaseExceptionService.WorkItem act(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
