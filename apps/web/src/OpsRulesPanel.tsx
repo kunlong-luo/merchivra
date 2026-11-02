@@ -55,7 +55,7 @@ export default function OpsRulesPanel({tenantId}:{tenantId:string}){
   staleTime:30000})
  return <section className="panel" aria-label="按站点配置运营异常规则">
   <div className="panel-heading"><div><h2>站点级异常规则</h2>
-   <p>按 Marketplace 控制六类提醒和 FBA 低库存阈值；禁用仅影响下一次巡检产生的待办，不修改业务数据。</p>
+   <p>按 Marketplace 控制八类提醒（含采购/FBA 超期与来源变更），以及 FBA 低库存阈值；禁用仅影响下一次巡检产生的待办，不修改业务数据。</p>
   </div><span className="status-chip chip-muted">仅本地建议规则</span></div>
   {marketplaces.isError?<div role="alert" className="setup-error">
    读取站点失败：{marketplaces.error instanceof Error?marketplaces.error.message:'未知错误'}</div>:
