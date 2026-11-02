@@ -72,6 +72,12 @@ public class FbaPurchaseExceptionService {
         List<ResolvePreviewLine> lines) {}
     public record BatchActivity(String requestKey,String actionType,
         String actorId,int affectedCount,String createdAt) {}
+    public record BatchLinkedAction(String lineId,String shipmentReference,
+        String sellerSku,String action,String actorId,String newState,
+        String occurredAt) {}
+    public record BatchDetail(BatchActivity batch,boolean lineageComplete,
+        int linkedCount,List<BatchLinkedAction> linkedActions) {}
+
 
     public record OwnerLoad(String userId,String displayName,long open,
                             long acknowledged,long overdue) {}
@@ -562,6 +568,48 @@ public class FbaPurchaseExceptionService {
                 id(r.getObject("actor_user_id",UUID.class)),r.getInt("affected_count"),
                 date(r.getObject("created_at",OffsetDateTime.class))),
             tenant,marketplace);
+    }
+
+    /** V84: explicit FK lineage for batches created on/after V84.
+     * Earlier batches predate the FK; absence is NOT proof of no audited action.
+     */
+    @Transactional(readOnly=true)
+    public BatchDetail batchDetail(UUID tenant,UUID marketplace,UUID requestKey) {
+        requireMarketplace(tenant,marketplace);
+        var found=jdbc.query("""
+            SELECT id,request_key,action_type,actor_user_id,affected_count,created_at
+            FROM fba_purchase_exception_batch
+            WHERE tenant_id=? AND seller_marketplace_id=? AND request_key=?
+            """,(r,i)->new Object[]{
+                r.getObject("id",UUID.class),
+                new BatchActivity(id(r.getObject("request_key",UUID.class)),
+                    r.getString("action_type"),id(r.getObject("actor_user_id",UUID.class)),
+                    r.getInt("affected_count"),
+                    date(r.getObject("created_at",OffsetDateTime.class)))
+            },tenant,marketplace,requestKey);
+        if(found.isEmpty())throw missing();
+        Object[] data=found.getFirst();
+        List<BatchLinkedAction> actions=jdbc.query("""
+            SELECT c.inbound_line_id,s.reference,l.seller_sku,
+                   a.action,a.actor_user_id,a.new_state,a.occurred_at
+            FROM fba_purchase_exception_audit a
+            JOIN fba_purchase_exception_case c ON c.tenant_id=a.tenant_id
+              AND c.id=a.case_id AND c.seller_marketplace_id=?
+            JOIN fba_inbound_shipment s ON s.tenant_id=c.tenant_id
+              AND s.id=c.shipment_id AND s.seller_marketplace_id=?
+            JOIN fba_inbound_line l ON l.tenant_id=c.tenant_id
+              AND l.shipment_id=c.shipment_id AND l.id=c.inbound_line_id
+            WHERE a.tenant_id=? AND a.batch_id=?
+            ORDER BY a.occurred_at,a.id
+            """,(r,i)->new BatchLinkedAction(
+                id(r.getObject("inbound_line_id",UUID.class)),r.getString("reference"),
+                r.getString("seller_sku"),r.getString("action"),
+                id(r.getObject("actor_user_id",UUID.class)),r.getString("new_state"),
+                date(r.getObject("occurred_at",OffsetDateTime.class))),
+            marketplace,marketplace,tenant,(UUID)data[0]);
+        BatchActivity batch=(BatchActivity)data[1];
+        return new BatchDetail(batch,actions.size()==batch.affectedCount(),
+            actions.size(),actions);
     }
 
     /** V82: confirmed human-only, all-or-nothing resolution of 1..50 already
