@@ -48,9 +48,11 @@ public class FbaPurchaseReconciliationService {
           proof.id AS link_id,proof.state AS link_state,proof.proof_reference,
           po.id AS po_id,po.order_number,po.status AS po_state,
           po_line.ordered_quantity AS po_quantity,
-          COALESCE(local_receipt.quantity,0)::bigint AS po_received,
+          CASE WHEN po_line.id IS NULL THEN NULL
+            ELSE COALESCE(local_receipt.quantity,0)::bigint END AS po_received,
           a.id AS asn_id,a.status AS asn_state,a.quantity AS asn_quantity,
-          COALESCE(asn_receipt.quantity,0)::bigint AS asn_received
+          CASE WHEN a.id IS NULL THEN NULL
+            ELSE COALESCE(asn_receipt.quantity,0)::bigint END AS asn_received
         FROM recent_shipment recent
         JOIN fba_inbound_shipment s ON s.id=recent.id AND s.tenant_id=?
           AND s.seller_marketplace_id=?
