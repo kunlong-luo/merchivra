@@ -323,15 +323,17 @@ public class FbaPurchaseLinkService {
         Line inbound=line(tenant,marketplace,(UUID)current[0],(UUID)current[1],true);
         if(!"DRAFT".equals(inbound.state()))
             throw conflict("Shipment already dispatched; local proof is immutable");
-        String state=(String)current[4];
+        // Re-read the proof AFTER acquiring the parent shipment lock.
+        // Another Owner may have confirmed/revoked while this call waited.
+        var locked=jdbc.query("""
+            SELECT state FROM fba_inbound_purchase_link
+            WHERE tenant_id=? AND id=? FOR UPDATE
+            """,(r,i)->r.getString(1),tenant,id);
+        if(locked.size()!=1)throw missing();
+        String state=locked.getFirst();
         if(action.equals(state))return get(tenant,marketplace,id);
         if(!"PROPOSED".equals(state))
             throw conflict("Only a pending local identity proposal may transition");
-        // Lock the proof AFTER the parent shipment lock, same order as propose.
-        jdbc.queryForList("""
-            SELECT id FROM fba_inbound_purchase_link
-            WHERE tenant_id=? AND id=? AND state='PROPOSED' FOR UPDATE
-            """,UUID.class,tenant,id);
         if("CONFIRMED".equals(action)){
             if(actor.equals(current[2]))
                 throw conflict("Two different Owner identities must propose and confirm a link");
