@@ -698,3 +698,9 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - V82 只允许对 V80 的九种固定原因**提高或保持**建议优先级；来源变化/超期 P0、独立身份或差异复核/临期/HIGH P1 的安全下限不可降级。所有设置必须以租户/Marketplace/版本锁定并追加审计，不能复用 V69 Ops 扫描规则开关绕过 V77 处理门槛。
 - 说明模板只能填入人工可编辑理由，**不能虚构独立复核完成、Amazon 签收或 FBA 库存入账**。每次提交必须有实际人工核对和长度 10–300 的可审计理由。
 - 批量 RESOLVE 必须使用 V77 既有 `apply(RESOLVE)`、`fba_purchase_exception_batch` 幂等账本和审计，HTTP 需要 Owner Session、CSRF、显式 `confirmed=true`、1–50 条含 CAS 版本与指纹的完整选择；一行失败整批回滚。不能凭 UI 勾选绕过 V65/V75 独立审核条件。详见 [OPS-082](docs/operations/exception-guidance-v82.md)。
+
+## V83 · 本地批量处理前置预检与诊断纪律（2026-11-02）
+
+- 批量 RESOLVE 的逐行预检是只读、非锁定的**瞬时快照**，不能提供授权、批准或取代 V82 事务中的全部校验。UI 预检必须绑定当前 Marketplace、选择行、版本和来源指纹；变化就不能继续提交。最终提交仍须 Owner Session、CSRF、`confirmed=true`、V65/V75 业务门槛及幂等账本。
+- 返回固定可解释的 `reasonCode`，包括来源指纹变动、乐观版本冲突、未确认、负责人缺失及独立证据复核不足。越界行统一 `OUT_OF_SCOPE`，不得泄露其他租户/站点信息。1–50 行、去重、版本+指纹校验必须由后端独立负责。
+- 最近批次活动只来源于已有 V77/V79/V82 幂等账本；没有批次与逐行审计的实体关联时**绝不能猜测**，应指向已有的逐行 History。保持不接 Amazon、PO/ASN/库存写入。见 [OPS-083](docs/operations/fba-batch-preflight-v83.md)。
