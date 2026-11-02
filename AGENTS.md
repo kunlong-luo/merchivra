@@ -692,3 +692,9 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 直接复用 V77 不可变审计日志，按 UTC 30 个自然日（包含今天）严格区别“新建处理单”“RESOLVE/REOPEN 动作次数”“受重开影响的不同处理单数”和“人工动作留下的来源指纹更新”；未发生人工审计的实时来源变化不算历史复发。
 - 按 `actor_user_id` 展示人工动作，不把当前 assignee 或批量分配者冒充实际执行人。平均首次完成时长只算窗口内首次 RESOLVE 相对本地 case.created_at 的时间，无样本为 NULL；不得将它宣传为员工绩效排名、Amazon SLA 或库存入仓证明。
 - 从当前 Session 校验 tenant/marketplace，GET 不执行巡检、外部通知或写操作。最多 100 名操作人、20 条复发记录，明确截断；日期零填充只针对确实成功读取的审计。详见 [OPS-081](docs/operations/exception-history-v81.md)。
+
+## V82 · 优先级配置、说明模板与人工确认批量完成（2026-11-02）
+
+- V82 只允许对 V80 的九种固定原因**提高或保持**建议优先级；来源变化/超期 P0、独立身份或差异复核/临期/HIGH P1 的安全下限不可降级。所有设置必须以租户/Marketplace/版本锁定并追加审计，不能复用 V69 Ops 扫描规则开关绕过 V77 处理门槛。
+- 说明模板只能填入人工可编辑理由，**不能虚构独立复核完成、Amazon 签收或 FBA 库存入账**。每次提交必须有实际人工核对和长度 10–300 的可审计理由。
+- 批量 RESOLVE 必须使用 V77 既有 `apply(RESOLVE)`、`fba_purchase_exception_batch` 幂等账本和审计，HTTP 需要 Owner Session、CSRF、显式 `confirmed=true`、1–50 条含 CAS 版本与指纹的完整选择；一行失败整批回滚。不能凭 UI 勾选绕过 V65/V75 独立审核条件。详见 [OPS-082](docs/operations/exception-guidance-v82.md)。

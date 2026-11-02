@@ -1,9 +1,10 @@
 import {useEffect,useRef,useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
+import ExceptionNoteTemplatePicker from './ExceptionNoteTemplatePicker'
 import {
  getExceptionBoard,postExceptionAction,bulkAcknowledge,getExceptionHistory,
  saveReminderPolicy,getReminderPolicyHistory,getExceptionMetrics,
- bulkAssignCases,getOwnerWorkload,
+ bulkAssignCases,getOwnerWorkload,bulkResolveCases,
  type ExceptionAction,type ExceptionItem
 } from './lib/fba-purchase-exceptions'
 
@@ -41,6 +42,9 @@ export default function FbaPurchaseExceptionPanel({
  const [assignOwner,setAssignOwner]=useState('')
  const [assignNote,setAssignNote]=useState('')
  const [assignKey,setAssignKey]=useState(()=>crypto.randomUUID())
+ const [resolveNote,setResolveNote]=useState('')
+ const [resolveKey,setResolveKey]=useState(()=>crypto.randomUUID())
+ const [resolveConfirmed,setResolveConfirmed]=useState(false)
  const [openHistory,setOpenHistory]=useState(false)
  const [openPolicyHistory,setOpenPolicyHistory]=useState(false)
  const [enabled,setEnabled]=useState(true)
@@ -52,6 +56,8 @@ export default function FbaPurchaseExceptionPanel({
  const data=query.data
  const selected=data?.items.find(row=>row.lineId===selectedId)
  const selectedRows=(data?.items??[]).filter(row=>chosen.includes(row.lineId))
+ const allResolvable=selectedRows.length>0&&selectedRows.every(
+  row=>row.state==='ACKNOWLEDGED'&&!row.stale&&!!row.assigneeId)
  const rows=(data?.items??[]).filter(row=>
   filter==='ALL'||filter==='ACTIONABLE'&&(row.stale||row.state!=='RESOLVED')||
   filter==='OVERDUE'&&['OVERDUE','DUE_SOON','RECHECK'].includes(row.reminder)||
@@ -88,6 +94,7 @@ export default function FbaPurchaseExceptionPanel({
   setChosen(old=>old.includes(id)?old.filter(x=>x!==id):
    old.length<50?[...old,id]:old)
   setBulkKey(crypto.randomUUID());setAssignKey(crypto.randomUUID())
+  setResolveKey(crypto.randomUUID());setResolveConfirmed(false)
  }
  const single=useMutation({
   mutationFn:()=>{
@@ -126,6 +133,18 @@ export default function FbaPurchaseExceptionPanel({
    refresh();void client.invalidateQueries({queryKey:['operations',tenantId]})
   },
   onError:(err:Error)=>{setNotice('');setError(err.message)}
+ })
+ const resolveBatch=useMutation({
+  mutationFn:()=>bulkResolveCases(marketplaceId,resolveKey,
+   selectedRows.map(x=>({lineId:x.lineId,expectedVersion:x.version,
+    expectedFingerprint:x.fingerprint})),resolveNote.trim(),resolveConfirmed),
+  onSuccess:receipt=>{
+   setNotice('已人工确认并批量完成 '+receipt.resolvedCount+' 条本地处理单；未向 Amazon 写入')
+   setError('');setChosen([]);setResolveNote('');setResolveKey(crypto.randomUUID())
+   setResolveConfirmed(false);refresh()
+   void client.invalidateQueries({queryKey:['operations',tenantId]})
+  },
+  onError:(err:Error)=>{setNotice('');setError(err.message);setResolveConfirmed(false)}
  })
  const policyMutation=useMutation({
   mutationFn:()=>{
@@ -251,7 +270,10 @@ export default function FbaPurchaseExceptionPanel({
       {data.assignees.map(person=><option key={person.userId}
        value={person.userId}>{person.displayName}</option>)}
      </select>
-     <label htmlFor="v79-assign-note">分派依据（10–300 字）</label>
+     <ExceptionNoteTemplatePicker label="V82 分派理由模板" onApply={value=>{
+       setAssignNote(value);setAssignKey(crypto.randomUUID())
+      }}/>
+      <label htmlFor="v79-assign-note">分派依据（10–300 字）</label>
      <textarea id="v79-assign-note" value={assignNote} minLength={10}
       maxLength={300} rows={2}
       onChange={e=>{setAssignNote(e.target.value);setAssignKey(crypto.randomUUID())}}/>
@@ -265,14 +287,47 @@ export default function FbaPurchaseExceptionPanel({
      <h4>批量确认已知悉（1–50 行，同一事务）</h4>
      <p className="setup-hint">已选择 {selectedRows.length} 行。每次批量操作使用幂等键；
       如出现并发修改或来源变化，整批回滚并要求刷新。</p>
-     <label htmlFor="v77-bulk-note">批量确认依据（10–300 字）</label>
+     <ExceptionNoteTemplatePicker label="V82 批量确认理由模板" onApply={value=>{
+       setBulkNote(value);setBulkKey(crypto.randomUUID())
+      }}/>
+      <label htmlFor="v77-bulk-note">批量确认依据（10–300 字）</label>
      <textarea id="v77-bulk-note" value={bulkNote} maxLength={300} minLength={10}
       onChange={e=>{setBulkNote(e.target.value);setBulkKey(crypto.randomUUID())}} rows={2}/>
      <button type="submit" className="primary-button"
       disabled={!selectedRows.length||!noteValid(bulkNote)||bulk.isPending}>
       确认所选 {selectedRows.length} 行</button>
     </form>
-    {selected&&<form className="team-invite-form" onSubmit={submitAction}>
+    <form className="team-invite-form" onSubmit={e=>{
+      e.preventDefault()
+      if(allResolvable&&noteValid(resolveNote)&&resolveConfirmed)resolveBatch.mutate()
+     }}>
+      <h4>V82 · 经人工确认后批量完成本地处理单</h4>
+      <p className="setup-hint">仅允许选择已确认、已分派且来源未变化的处理单，
+       最多 50 行；原有身份审核和差异复核条件仍由后端逐行检查。
+       有一行不符合要求或版本变化则整批回滚，不会修改 Amazon 资料。</p>
+      <p className="setup-hint">本次选择 {selectedRows.length} 行
+       · {allResolvable?'已满足基本状态条件，仍须逐行核对证据':'包含未确认、未分派或来源已变化的行，不能完成'}</p>
+      <ExceptionNoteTemplatePicker label="V82 批量完成理由模板" onApply={value=>{
+       setResolveNote(value);setResolveKey(crypto.randomUUID());setResolveConfirmed(false)
+      }}/>
+      <label htmlFor="v82-resolve-note">本地完成依据（10–300 字）</label>
+      <textarea id="v82-resolve-note" value={resolveNote} rows={3}
+       minLength={10} maxLength={300}
+       onChange={e=>{
+        setResolveNote(e.target.value);setResolveKey(crypto.randomUUID())
+        setResolveConfirmed(false)
+       }}/>
+      <label htmlFor="v82-resolve-confirm">
+       <input id="v82-resolve-confirm" type="checkbox" checked={resolveConfirmed}
+        onChange={e=>setResolveConfirmed(e.target.checked)}/>
+       我已逐条核实所选处理单来源、负责人及独立复核要求，明确同意仅执行本地 RESOLVE
+      </label>
+      <button type="submit" className="primary-button"
+       disabled={!allResolvable||!noteValid(resolveNote)||!resolveConfirmed||
+        resolveBatch.isPending}>
+       人工确认完成所选 {selectedRows.length} 行（原子提交）</button>
+     </form>
+     {selected&&<form className="team-invite-form" onSubmit={submitAction}>
      <h4>处理：{selected.shipmentReference} · {selected.sellerSku}</h4>
      <p className="setup-hint">当前状态：{statuses[selected.state]} ·
       版本 {selected.version} · {selected.stale?'来源已发生变化，须重新确认':
@@ -297,7 +352,8 @@ export default function FbaPurchaseExceptionPanel({
       <input id="v77-due" required type="datetime-local"
        value={deadline} onChange={e=>setDeadline(e.target.value)}/>
      </>}
-     <label htmlFor="v77-note">操作理由 / 处理依据（10–300 字）</label>
+     <ExceptionNoteTemplatePicker label="V82 单条处理理由模板" onApply={setNote}/>
+      <label htmlFor="v77-note">操作理由 / 处理依据（10–300 字）</label>
      <textarea id="v77-note" required minLength={10} maxLength={300}
       rows={3} value={note} onChange={e=>setNote(e.target.value)}/>
      <button type="submit" className="primary-button" disabled={!canSingle}>

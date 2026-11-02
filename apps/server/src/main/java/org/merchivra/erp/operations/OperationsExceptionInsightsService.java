@@ -19,11 +19,14 @@ public class OperationsExceptionInsightsService {
     private static final int TOP_LIMIT=30;
     private final JdbcTemplate jdbc;
     private final FbaPurchaseExceptionService exceptions;
+    private final OperationsExceptionPriorityService priorities;
 
     public OperationsExceptionInsightsService(JdbcTemplate jdbc,
-                                               FbaPurchaseExceptionService exceptions) {
+                                               FbaPurchaseExceptionService exceptions,
+                                               OperationsExceptionPriorityService priorities) {
         this.jdbc=jdbc;
         this.exceptions=exceptions;
+        this.priorities=priorities;
     }
     public record Category(String ruleCode,long open,long acknowledged,
                            long done,long cleared) {}
@@ -86,6 +89,10 @@ public class OperationsExceptionInsightsService {
                 r.getLong("done_count"),r.getLong("cleared_count")),
             tenant,marketplace);
 
+        var overrides=priorities.rules(tenant,marketplace).stream()
+            .collect(java.util.stream.Collectors.toMap(
+                OperationsExceptionPriorityService.Rule::reasonCode,
+                OperationsExceptionPriorityService.Rule::priority));
         // Advice for unassigned work is deterministic and advisory only. No
         // out-of-tenant assignee, no fabricated capacity or auto-dispatch.
         String lightest=workload.owners().stream()
@@ -102,7 +109,8 @@ public class OperationsExceptionInsightsService {
                     item.shipmentReference(),item.sellerSku(),item.findingCode(),
                     item.severity(),item.state(),item.reminder(),item.assigneeId(),
                     item.assigneeId()==null?lightest:null,item.dueAt(),
-                    decision.priority(),decision.code(),decision.nextStep());
+                    overrides.getOrDefault(decision.code(),decision.priority()),
+                    decision.code(),decision.nextStep());
             }).sorted(Comparator
                 .comparing(Recommendation::priority)
                 .thenComparing(x->Objects.toString(x.dueAt(),"9999"))
