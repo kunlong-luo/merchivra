@@ -48,7 +48,7 @@ api="/api/v1/replenishment/marketplaces/"
 foreign=str(uuid4())
 call(api+foreign+"/priorities",expected=401)
 csrf=call("/api/v1/auth/csrf")["token"]
-post("/api/v1/auth/login",{"username":os.environ["MERCHIVRA_BOOTSTRAP_USERNAME"],
+call("/api/v1/auth/login","POST",{"username":os.environ["MERCHIVRA_BOOTSTRAP_USERNAME"],
  "password":os.environ["MERCHIVRA_BOOTSTRAP_PASSWORD"]},form=True)
 csrf=call("/api/v1/auth/csrf")["token"]
 me=call("/api/v1/auth/me");tenant=me["activeTenantId"]
