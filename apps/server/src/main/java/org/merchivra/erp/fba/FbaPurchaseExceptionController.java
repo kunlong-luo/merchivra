@@ -39,6 +39,13 @@ public class FbaPurchaseExceptionController {
         return service.bulkAssign(access.currentTenant(auth,request),marketplaceId,
             access.authenticatedUser(auth),body);
     }
+    @PostMapping("/bulk-resolve")
+    public FbaPurchaseExceptionService.BulkResolveReceipt bulkResolve(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId,
+        @RequestBody FbaPurchaseExceptionService.BulkResolve body) {
+        return service.bulkResolve(access.currentTenant(auth,request),marketplaceId,
+            access.authenticatedUser(auth),body);
+    }
     @GetMapping("/metrics")
     public ResponseEntity<FbaPurchaseExceptionService.Metrics> metrics(
         Authentication auth,HttpServletRequest request,@PathVariable UUID marketplaceId) {
