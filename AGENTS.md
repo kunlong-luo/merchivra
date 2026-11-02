@@ -672,3 +672,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - V77 证据指纹变化映射为 `FBA_PO_EVIDENCE_CHANGED`，人工处理期限已过映射为 `FBA_PO_EXCEPTION_OVERDUE`；只读判定，不能自动 RESOLVE / 修改 PO、ASN、入仓、库存，也不能把 Ops DONE 当作人工已复核。
 - 规则可按站点独立暂停，默认定时巡检关闭。仅观察最多 100 张货件/500 行的证据视窗，旧窗口外的待办不能被假清除；截断时保留既有信号。
 - V78 `/workbench/metrics` 是全部**已持久化人工处理单**的本地时效，缺失 RESOLVED 样本时均值为 NULL，绝不是 Amazon SLA/平台验收。详见 [INV-078](docs/inventory/fba-purchase-ops-escalation-v78.md)。
+
+## V79 · 本地异常 Owner 分派与源记录跳转（2026-11-02）
+
+- 仅扩展 V77 `fba_purchase_exception_batch` 原子批次账本（Flyway V76），不新建消息队列或自动化购买。批量分派最多 50 行，同一事务校验有效 Owner、来源指纹、CAS 版本及所属 Marketplace，逐行保留 `ASSIGN` 审计；跨动作/负载变更复用 requestKey 均不得混淆。
+- 不以 ASSIGN 代替人工 ACKNOWLEDGE，也不以 V78 Ops DONE 代替源单 RESOLVE；批量操作不改动 PO、ASN、入仓或 FBA 库存。已处理的案件不允许直接重分派。
+- Owner 负载汇总全部持久化的本地处理单，列出未分派以及离职/失效负责人案件，不以 V76 限量窗口代表所有业务事实；不把员工分派时长冒充 Amazon 平台 SLA。
+- Ops→FBA 跨模块焦点只利用已有 V78 租户级任务源键，须在当前 Session 允许的 Marketplace 中选择对应本地记录；超出源窗口要明示。详见 [INV-079](docs/inventory/fba-purchase-assignment-v79.md)。
