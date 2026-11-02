@@ -165,6 +165,17 @@ post(f"{route}/cases/{confirmed['lineId']}/actions",{
 updated=act(drift,"ACKNOWLEDGE","V77 acknowledged new supplier status evidence")
 assert not updated["stale"] and updated["version"]==2
 assert updated["state"]=="ACKNOWLEDGED"
+closed=act(updated,"RESOLVE",
+           "V77 reviewed supplier drift and documented local disposition")
+assert closed["state"]=="RESOLVED" and closed["version"]==3
+post(f"{route}/cases/{confirmed['lineId']}/actions",{
+ "action":"ACKNOWLEDGE","expectedVersion":closed["version"],
+ "expectedFingerprint":closed["fingerprint"],
+ "note":"V77 resolved local case cannot silently reopen"},409)
+reopened=act(closed,"REOPEN",
+             "V77 explicitly reopened local work for further manual follow up")
+assert reopened["state"]=="OPEN" and reopened["version"]==4
+assert len(call(f"{route}/cases/{confirmed['lineId']}/history"))==5
 assert sql(f"""SELECT count(*) FROM fba_inventory_observation
  WHERE tenant_id='{tenant}' AND seller_marketplace_id='{mp}'""")=="0"
 print("PASS V77: PG18 Owner Session/CSRF, active-assignee, audit, atomic bulk/idempotency, reminder CAS, due-soon, drift recheck and zero Amazon/FBA writes")
