@@ -87,7 +87,7 @@ public class OperationsFbaExceptionBoundary {
     public void manualScan(UUID tenant,UUID actor) {
         List<UUID> restricted=jdbc.queryForList("""
             SELECT seller_marketplace_id FROM fba_exception_owner_permission
-            WHERE tenant_id=? AND owner_user_id=? AND NOT can_configure
+            WHERE tenant_id=? AND owner_user_id=? AND (NOT can_configure OR NOT can_view)
             """,UUID.class,tenant,actor);
         if(!restricted.isEmpty())
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
