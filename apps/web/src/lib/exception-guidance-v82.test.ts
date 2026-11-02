@@ -41,10 +41,10 @@ describe('V82 advisory priority policy and confirmed manual batches',()=>{
   vi.stubGlobal('fetch',vi.fn(async(url:string,options?:RequestInit)=>{
    requests.push({url:String(url),options})
    if(String(url).endsWith('/auth/csrf'))
-    return new Response(JSON.stringify({token:'v82-local-csrf-token-long',headerName:'X-CSRF-TOKEN'}))
+    return new Response(JSON.stringify({token:'v82-local-csrf-token-long',headerName:'X-CSRF-TOKEN'}),{headers:{'Content-Type':'application/json'}})
    if(String(url).endsWith('/bulk-resolve'))
-    return new Response(JSON.stringify({requestKey:key,resolvedCount:1}))
-   return new Response(JSON.stringify({...rules[6],priority:'P1',version:1,customized:true}))
+    return new Response(JSON.stringify({requestKey:key,resolvedCount:1}),{headers:{'Content-Type':'application/json'}})
+   return new Response(JSON.stringify({...rules[6],priority:'P1',version:1,customized:true}),{headers:{'Content-Type':'application/json'}})
   }))
   await savePriorityRule(mp,'NEEDS_OWNER',{
    priority:'P1',expectedVersion:0,note:'V82 local scheduling review priority update'})
