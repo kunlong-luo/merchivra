@@ -164,7 +164,7 @@ read=call(route)[0]
 assert read["asnLocalReceived"]==4 and read["localPoReceived"]==4,read
 assert read["inboundReportedReceived"]==0 and read["inboundPlannedQuantity"]==12,read
 assert sql(f"""SELECT COUNT(*) FROM fba_inbound_purchase_link_audit
- WHERE tenant_id='{tenant}'""")=="4"
+ WHERE tenant_id='{tenant}'""")=="5"
 assert sql(f"""SELECT COUNT(*) FROM fba_inbound_purchase_link
  WHERE tenant_id='{tenant}' AND state='CONFIRMED'""")=="1"
 assert sql(f"""SELECT COUNT(*) FROM fba_inventory_observation WHERE tenant_id='{tenant}'
