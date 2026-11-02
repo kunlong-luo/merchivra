@@ -12,6 +12,10 @@
 | M3 | 财务/成本/利润 | 费用、成本与估算报表 | 可对账、可追踪 |
 | M4 | Beta | 安全、运维、发布 | P0 验收通过、运行手册完成 |
 
+## 2026-11-02 · V72 采购交付与异常证据看板（当前）
+- 只读聚合 V20 已审批 PO/实际收货、V43 供应商 ASN 和已有 ETA 到期待办、V45 未结差异、V46 质检放行证据、V37/V71 补货草稿来源。没有 ASN/只有 DRAFT ASN 不代表发货或逾期；已收货不代表 QC 放行/FBA。
+- Owner 在既有采购页按行查看剩余量、申报未收量、ETA 区间、QC 和差异，能打开既有 ASN/PO。Flyway V69 只建采购状态索引；PG18 双 Owner Mock 验证。见 [PO-072](purchasing/purchase-delivery-v72.md)。
+
 ## 2026-11-02 · V71 FBA 补货与供应商 MOQ/箱规报价衔接（当前）
 - 复用 V22 ReplenishmentPolicy、V42 SupplierSkuRule.orderQuantity、V37/V38 人工采购 DRAFT；ACTIVE SKU 映射和可信 OBSERVED 库存才允许供应商 MOQ/箱规报价候选。原币金额和供应商人工交期不代表承诺到仓。
 - Owner 选择报价后，服务端复核 FBA 观测/策略/供应商版本及取整采购量；Flyway V68 快照基础件数、实购件数、币种单价、MOQ/箱规与报价版本。新代码 PG18+HTTP CI 模拟验收，真实 Amazon Seller/Ads 仍关闭。详见 [INV-071](inventory/replenishment-supplier-quotes-v71.md)。
