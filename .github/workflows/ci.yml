@@ -185,6 +185,8 @@ jobs:
           python3 scripts/smoke_replenishment_priority_v74.py
           v74_migration=$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='71' AND success")
           test "$v74_migration" = "1"
+          v74_origin_migration=$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='72' AND success")
+          test "$v74_origin_migration" = "1"
           v73_migration=$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='70' AND success")
           test "$v73_migration" = "1"
           v72_migration=$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='69' AND success")
