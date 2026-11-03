@@ -21,6 +21,33 @@ export const coreListingSchema = z.object({
   dataOrigin: z.enum(['MOCK','UNVERIFIED','LIVE'])
 })
 
+/** V87: original Mapping status and latest mapping history version remain distinct.
+ * The internalSku/activeMappingVersion are nullable when no ACTIVE link exists.
+ */
+export const coreListingPageItemSchema=coreListingSchema.extend({
+ activeMappingVersion:z.number().int().positive().nullable(),
+ latestMappingVersion:z.number().int().positive().nullable()
+})
+export const coreListingPageSchema=z.object({
+ items:z.array(coreListingPageItemSchema).max(100),
+ nextCursor:z.string().min(1).max(1024).nullable(),
+ hasMore:z.boolean(),
+ pageSize:z.number().int().min(1).max(100),
+ field:z.enum(['SELLER_SKU','ASIN']),
+ searchPrefix:z.string().max(80),
+ mappingStatus:z.enum(['ALL','UNMAPPED','SUGGESTED','VERIFIED','ACTIVE',
+  'CONFLICT','SUPERSEDED'])
+}).superRefine((page,ctx)=>{
+ if(page.hasMore&&!page.nextCursor)ctx.addIssue({
+  code:'custom',message:'Missing cursor for additional Listing pages'
+ })
+ if(!page.hasMore&&page.nextCursor)ctx.addIssue({
+  code:'custom',message:'Unexpected Listing cursor on final page'
+ })
+})
+export type CoreListingPage=z.infer<typeof coreListingPageSchema>
+export type CoreListingPageItem=z.infer<typeof coreListingPageItemSchema>
+
 export const coreOrderSchema = z.object({
   id: z.string().uuid(),
   externalOrderId: z.string(),
@@ -98,6 +125,21 @@ export function fetchCoreListings(marketplaceId: string) {
     `/api/v1/seller-marketplaces/${encodeURIComponent(marketplaceId)}/listings?limit=50`,
     z.array(coreListingSchema)
   )
+}
+/** V87: all persisted listings by Seller SKU/ASIN literal prefix + mapping state. */
+export function fetchCoreListingsPage(marketplaceId:string,
+ field:'SELLER_SKU'|'ASIN'='SELLER_SKU',searchPrefix='',
+ mappingStatus:CoreListingPage['mappingStatus']='ALL',
+ cursor:string|null=null,pageSize=50) {
+ const params=new URLSearchParams({
+  limit:String(pageSize),field,status:mappingStatus
+ })
+ if(searchPrefix.trim())params.set('search',searchPrefix.trim())
+ if(cursor)params.set('cursor',cursor)
+ return getCoreList(
+  `/api/v1/seller-marketplaces/${encodeURIComponent(marketplaceId)}/listings/page?${params}`,
+  coreListingPageSchema
+ )
 }
 export function fetchCoreOrders(marketplaceId: string) {
   return getCoreList(
