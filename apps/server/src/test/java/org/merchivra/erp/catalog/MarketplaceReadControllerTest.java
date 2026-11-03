@@ -100,6 +100,60 @@ class MarketplaceReadControllerTest {
     }
 
     @Test
+    void v87ListingPageEnforcesTypedFiltersBeforeDatabaseReads() {
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->controller.listingPage(auth,request,marketplaceId,
+                101,"SELLER_SKU","","ALL",null)).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->controller.listingPage(auth,request,marketplaceId,
+                50,"PRICE","","ALL",null)).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->controller.listingPage(auth,request,marketplaceId,
+                50,"SELLER_SKU","","APPROVED",null)).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->controller.listingPage(auth,request,marketplaceId,
+                50,"ASIN","X".repeat(81),"ALL",null)).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->controller.listingPage(auth,request,marketplaceId,
+                50,"ASIN","X"+(char)10+"Y","ALL",null)).getStatusCode());
+        verifyNoInteractions(jdbc,tenants);
+    }
+
+    @Test
+    void v87ListingPageReadsOnlySessionMarketplaceAndEscapesWildcardPrefix() {
+        allow();
+        var response=controller.listingPage(auth,request,marketplaceId,
+            50,"SELLER_SKU","V87_!%","CONFLICT",null);
+        assertNotNull(response.getBody());
+        assertEquals("v87_!%",response.getBody().searchPrefix());
+        assertEquals("CONFLICT",response.getBody().mappingStatus());
+        assertFalse(response.getBody().hasMore());
+        assertNull(response.getBody().nextCursor());
+        assertTrue(response.getBody().items().isEmpty());
+        verify(jdbc).query(contains("lower(l.seller_sku) LIKE"),
+            any(RowMapper.class),eq(tenantId),eq(marketplaceId),
+            eq("v87!_!!!%%"),eq("CONFLICT"),eq("CONFLICT"),
+            eq(false),isNull(),isNull(),eq(51));
+    }
+
+    @Test
+    void v87AsinPageIsIndependentFromSellerSkuAndChecksCursorScope() {
+        allow();
+        var page=controller.listingPage(auth,request,marketplaceId,
+            25,"ASIN","b0v87","ALL",null).getBody();
+        assertNotNull(page);
+        assertEquals("ASIN",page.field());
+        verify(jdbc).query(contains("lower(l.asin) LIKE"),
+            any(RowMapper.class),eq(tenantId),eq(marketplaceId),
+            eq("b0v87%"),eq("ALL"),eq("ALL"),
+            eq(false),isNull(),isNull(),eq(26));
+        var invalid=assertThrows(ResponseStatusException.class,
+            ()->controller.listingPage(auth,request,marketplaceId,
+                25,"ASIN","b0v87","ALL","invalid*"));
+        assertEquals(HttpStatus.BAD_REQUEST,invalid.getStatusCode());
+    }
+
+    @Test
     void cannotRequestUnboundedPages() {
         ResponseStatusException error = assertThrows(ResponseStatusException.class,
             () -> controller.inventory(auth, request, marketplaceId, 10000));
