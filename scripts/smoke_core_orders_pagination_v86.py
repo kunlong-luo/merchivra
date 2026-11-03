@@ -100,7 +100,7 @@ call(f"/api/v1/seller-marketplaces/{foreign}/orders/page?"+urlencode({
 # Cursor through NULL timestamp rows with no duplicates/missing records.
 nulls=[]
 cursor=None
-for i in range(4):
+for i in range(6):
     path=base+"?"+urlencode({
      "limit":"1","search":"V86-PAGED-06",
      **({"cursor":cursor} if cursor else {})})
@@ -108,7 +108,8 @@ for i in range(4):
     nulls.extend(response["items"])
     cursor=response["nextCursor"]
     if not cursor:break
-assert len(nulls)==4 and len({x["id"] for x in nulls})==4
+assert len(nulls)==5 and len({x["id"] for x in nulls})==5
+assert sum(x["sourceUpdatedAt"] is None for x in nulls)==3
 # Search filter is a literal prefix, never a SQL wildcard.
 literal=call(base+"?search=V86%25LITERAL")
 assert len(literal["items"])==1 and literal["items"][0]["externalOrderId"]=="V86%LITERAL"
