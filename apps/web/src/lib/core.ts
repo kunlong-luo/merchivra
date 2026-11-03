@@ -33,6 +33,21 @@ export const coreOrderSchema = z.object({
   dataOrigin: z.enum(['MOCK','UNVERIFIED','LIVE'])
 })
 
+export const coreOrderPageSchema = z.object({
+  items:z.array(coreOrderSchema).max(100),
+  nextCursor:z.string().min(1).max(512).nullable(),
+  hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100),
+  searchPrefix:z.string().max(80)
+}).superRefine((page,ctx)=>{
+  if(page.hasMore && !page.nextCursor)ctx.addIssue({
+    code:'custom',message:'Missing next cursor for additional orders'
+  })
+  if(!page.hasMore && page.nextCursor)ctx.addIssue({
+    code:'custom',message:'Unexpected cursor on last order page'
+  })
+})
+export type CoreOrderPage=z.infer<typeof coreOrderPageSchema>
+
 export const coreOrderItemSchema = z.object({
   id: z.string().uuid(),
   externalItemId: z.string(),
@@ -89,6 +104,17 @@ export function fetchCoreOrders(marketplaceId: string) {
     `/api/v1/seller-marketplaces/${encodeURIComponent(marketplaceId)}/orders?limit=50`,
     z.array(coreOrderSchema)
   )
+}
+/** V86 server-side prefix search and keyset traversal, never browser tenant ID. */
+export function fetchCoreOrdersPage(marketplaceId:string,
+ searchPrefix:string='',cursor:string|null=null,pageSize=50) {
+ const query=new URLSearchParams({limit:String(pageSize)})
+ if(searchPrefix.trim())query.set('search',searchPrefix.trim())
+ if(cursor)query.set('cursor',cursor)
+ return getCoreList(
+  `/api/v1/seller-marketplaces/${encodeURIComponent(marketplaceId)}/orders/page?${query}`,
+  coreOrderPageSchema
+ )
 }
 export function fetchCoreOrderItems(marketplaceId:string,orderId:string) {
   return getCoreList(
