@@ -30,7 +30,7 @@ export const coreListingPageItemSchema=coreListingSchema.extend({
 })
 export const coreListingPageSchema=z.object({
  items:z.array(coreListingPageItemSchema).max(100),
- nextCursor:z.string().min(1).max(1024).nullable(),
+ nextCursor:z.string().min(1).max(4096).nullable(),
  hasMore:z.boolean(),
  pageSize:z.number().int().min(1).max(100),
  field:z.enum(['SELLER_SKU','ASIN']),
