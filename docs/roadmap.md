@@ -1,5 +1,14 @@
 # PLAN-001 · 文档先行与分阶段交付路线
 
+> **最新开发阶段：V88（2026-11-03）**。V87 的 Listing Seller SKU/ASIN 全库检索、映射版本与只读员工分页 CI 4 项通过并已合并。V88 解决核心 FBA 库存页原来只读取 50 个 SKU 的缺口，增加 PostgreSQL 全量最新观测检索、来源/质量后过滤和 keyset 分页。详见 [FBA-088](inventory/fba-inventory-observation-pages-v88.md)。Mock 测试不能当作 Amazon 实时库存验收，CI 最终状态以本 PR 为准。
+
+### 核心功能近阶段优先级（覆盖早期过时状态）
+
+1. **V88 当前 P0**：全量 FBA 库存每 Seller SKU 最新观测、UNKNOWN/OBSERVED 0/STALE 溯源与服务端分页、跨源版本筛选。
+2. **V89 P0**：跨模块经营视图的来源可信度与安全导出入口，复用 V64 原有整期财务快照和 CSV，不重复造财务系统。
+3. **其后**：核心模块全链路一致性和生产前验收包、真正 Seller/Ads SP-API/API 角色与限流/撤销/分页验证（**真实授权最后由用户本地完成**）。
+
+
 > **最新开发阶段：V87（2026-11-03）**。V86 P0 代码审计和订单服务端游标检索已 CI 四项通过并合并 main；V87 继续补齐原 P0 Listing 仅展示前 50 条的业务缺口，增加 Seller SKU/ASIN 字面量前缀与映射状态筛选、有效/历史版本分离和完整服务端游标分页。详情：[CAT-087](catalog/listing-search-pagination-v87.md)。**代码交付、Mock CI、真实 Seller 授权和生产批准严格分开**；V87 的 CI 状态须以 GitHub Actions 为准。
 
 ### 当前下一步核心优先级
