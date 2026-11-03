@@ -724,3 +724,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 订单的全量读取必须使用 Owner/OPERATOR_READ 在服务端解析的 tenant/Marketplace；V86 新 `GET /api/v1/seller-marketplaces/{marketplaceId}/orders/page` 限制单页 1–100 行，按来源时间 NULLS LAST 和 UUID 排序，游标与站点+搜索前缀绑定；仅作位置提示，不作权限、全局快照或财务导出凭证。搜索输入限制长度、字符以及 SQL 通配符字面量转义；保留旧 `/orders?limit=...` 响应兼容。
 - React 核心订单页的服务器搜索、上一页/下一页不能暗示完整 Live 库存或 Amazon 已验证，切换站点、前缀时要清理旧游标和明细；`NOT_OBSERVED` 订单项和财务 `NOT_OBSERVED` 不得等同业务金额零。
 - 下一阶段优先补 Listing 和 FBA 的服务端全库分页，其后整合可解释 Dashboard，避免继续重复开发异常规则或引入新队列。真实 Amazon OAuth/SP-API 依照用户约定，核心功能完成后再由用户在本地手工授权联调。
+
+## V87 · Listing 全库检索、版本化映射与有效作用域纪律（2026-11-03）
+
+- 核心 Listing 页不是唯一 50 行：必须使用有界的 `/listings/page`，服务器校验 Session tenant、被授权 Marketplace、枚举字段（SELLER_SKU/ASIN）、映射状态、前缀长度和游标关联。保留旧 `/listings?limit=` 兼容，不要把其他表的临时过滤视为全库搜索。
+- `listing_sku_mapping` 是映射版本唯一事实：`activeMappingVersion` 与 `internalSku` 只在 ACTIVE/valid_to NULL 时返回；`latestMappingVersion` 可包含已经撤销或有冲突的历史版本。即使是 CONFLICT 行也必须保留 Listing 来源，不能猜测已映射 SKU。
+- Seller SKU/ASIN 前缀在 SQL 绑定参数中按字面量转义（包含 %, _, !），最多 100 条一页，(seller_sku,id) keyset 游标；不能接受客户端 tenantId、不允许把游标当授权或冻结快照。复杂 SKU 的原字节必须安全编码，跨站点/字段/状态/搜索复用游标返回 400。
+- React 搜索提交与筛选页游标绑定、页面切换重置待操作 Mapping 选择、人工映射成功必须失效 `listings-v87` Query 缓存。分页不是财务完整集，真实 Amazon/Ads 仍保持关闭，待最后本地测试。详见 [CAT-087](docs/catalog/listing-search-pagination-v87.md)。
