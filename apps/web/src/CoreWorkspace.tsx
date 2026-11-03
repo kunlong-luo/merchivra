@@ -46,6 +46,9 @@ export default function CoreWorkspace({tenantId,isOwner=true,focusException}:{
   if(!marketplaces.data.some(m=>m.id===focusException.marketplaceId))return
   setMarketplaceId(focusException.marketplaceId)
   setSection('inventory');setSearch('');setSelectedOrderId('')
+  setInventorySearch('');setInventoryQualityDraft('ALL');setInventoryQuality('ALL')
+  setInventoryOriginDraft('ALL');setInventoryOrigin('ALL')
+  setInventoryCursors([null])
  },[focusException?.marketplaceId,focusException?.lineId,isOwner,marketplaces.data])
  const listings=useQuery({
   queryKey:['core',tenantId,'listings-v87',marketplaceId,listingField,
