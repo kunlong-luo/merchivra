@@ -47,7 +47,7 @@ class ReadOnlyStaffGuardFilterTest {
     @Test void scopedStaffCanReadExactOrderAndListingPageRoutesOnly() throws Exception {
         Authentication a=staff();
         String marketplace=UUID.randomUUID().toString();
-        for(String leaf:List.of("orders/page","listings/page")) {
+        for(String leaf:List.of("orders/page","listings/page","inventory/fba/page")) {
             var request=req("GET","/api/v1/seller-marketplaces/"+marketplace+"/"+leaf);
             var response=new MockHttpServletResponse();
             guard.doFilter(request,response,chain);
@@ -61,7 +61,8 @@ class ReadOnlyStaffGuardFilterTest {
         Authentication actor=staff();
         String marketplace=UUID.randomUUID().toString();
         for(String target:List.of("orders/page","listings/page",
-                                 "listings/page/history","orders/page/export")) {
+                                 "inventory/fba/page","listings/page/history",
+                                 "orders/page/export","inventory/fba/page/export")) {
             var request=req(target.endsWith("/page")?"POST":"GET",
                 "/api/v1/seller-marketplaces/"+marketplace+"/"+target);
             var response=new MockHttpServletResponse();
