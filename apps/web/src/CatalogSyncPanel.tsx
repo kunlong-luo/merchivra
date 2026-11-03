@@ -18,8 +18,11 @@ export default function CatalogSyncPanel({tenantId,marketplaceId,stream}:{
  const refresh=()=>{void client.invalidateQueries({queryKey:key});
   void client.invalidateQueries({queryKey:['core',tenantId,stream==='LISTINGS'?'listings':'inventory',marketplaceId]});
   if(stream==='LISTINGS')void client.invalidateQueries({queryKey:['core',tenantId,'listings-v87',marketplaceId]});
-  if(stream==='FBA')void client.invalidateQueries({
-   queryKey:['replenishment','suggestions',tenantId,marketplaceId]})}
+  if(stream==='FBA'){
+   void client.invalidateQueries({queryKey:['core',tenantId,'inventory-v88',marketplaceId]})
+   void client.invalidateQueries({
+    queryKey:['replenishment','suggestions',tenantId,marketplaceId]})
+  }}
  const start=useMutation({mutationFn:()=>catalogStart(marketplaceId,stream),
   onSuccess:()=>{setFailure('');setMessage('已建立新一代来源扫描；尚未读取任何页');refresh()},
   onError:(e:Error)=>setFailure(e.message)})

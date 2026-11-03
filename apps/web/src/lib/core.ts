@@ -95,6 +95,27 @@ export const coreInventorySchema = z.object({
   dataOrigin: z.enum(['MOCK','UNVERIFIED','LIVE'])
 })
 
+/** V88: one latest persisted source observation per Seller SKU.
+ * Never infer zero from null, infer LIVE from MOCK, or hide STALE.
+ */
+export const coreInventoryPageSchema=z.object({
+ items:z.array(coreInventorySchema).max(100),
+ nextCursor:z.string().min(1).max(4096).nullable(),
+ hasMore:z.boolean(),
+ pageSize:z.number().int().min(1).max(100),
+ searchPrefix:z.string().max(80),
+ quality:z.enum(['ALL','OBSERVED','PARTIAL','UNKNOWN','STALE']),
+ origin:z.enum(['ALL','MOCK','UNVERIFIED','LIVE'])
+}).superRefine((page,ctx)=>{
+ if(page.hasMore&&!page.nextCursor)ctx.addIssue({
+  code:'custom',message:'Missing cursor for additional FBA inventory observations'
+ })
+ if(!page.hasMore&&page.nextCursor)ctx.addIssue({
+  code:'custom',message:'Unexpected cursor on last FBA inventory page'
+ })
+})
+export type CoreInventoryPage=z.infer<typeof coreInventoryPageSchema>
+
 export type CoreMarketplace = z.infer<typeof marketplaceSchema>
 export type CoreListing = z.infer<typeof coreListingSchema>
 export type CoreOrder = z.infer<typeof coreOrderSchema>
@@ -163,6 +184,19 @@ export function fetchCoreOrderItems(marketplaceId:string,orderId:string) {
     `/api/v1/seller-marketplaces/${encodeURIComponent(marketplaceId)}/orders/${encodeURIComponent(orderId)}/items`,
     z.array(coreOrderItemSchema)
   )
+}
+/** V88: searches all stored FBA SKU latest observations, never a browser slice. */
+export function fetchCoreInventoryPage(marketplaceId:string,
+ searchPrefix='',quality:CoreInventoryPage['quality']='ALL',
+ origin:CoreInventoryPage['origin']='ALL',cursor:string|null=null,
+ pageSize=50) {
+ const params=new URLSearchParams({limit:String(pageSize),quality,origin})
+ if(searchPrefix.trim())params.set('search',searchPrefix.trim())
+ if(cursor)params.set('cursor',cursor)
+ return getCoreList(
+  `/api/v1/seller-marketplaces/${encodeURIComponent(marketplaceId)}/inventory/fba/page?${params}`,
+  coreInventoryPageSchema
+ )
 }
 export function fetchCoreInventory(marketplaceId: string) {
   return getCoreList(

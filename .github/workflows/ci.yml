@@ -196,6 +196,8 @@ jobs:
           python3 scripts/smoke_fba_ops_capability_v85.py
           python3 scripts/smoke_core_orders_pagination_v86.py
           python3 scripts/smoke_core_listings_pagination_v87.py
+          python3 scripts/smoke_core_fba_inventory_page_v88.py
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='80' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='79' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='78' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='77' AND success")" = "1"
