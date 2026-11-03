@@ -48,6 +48,17 @@ public class MarketplaceReadController {
                               String mappingStatus, String internalSku,
                               String sourceUpdatedAt, String dataOrigin) {}
 
+    /** V87: latest mapping *version* is informational; a non-ACTIVE listing
+     * must never borrow the SKU identity from a superseded mapping. */
+    public record ListingPageItem(String id,String sellerSku,String asin,String fnsku,
+                                  String mappingStatus,String internalSku,
+                                  Integer activeMappingVersion,Integer latestMappingVersion,
+                                  String sourceUpdatedAt,String dataOrigin) {}
+    public record ListingPage(List<ListingPageItem> items,String nextCursor,
+                              boolean hasMore,int pageSize,String field,
+                              String searchPrefix,String mappingStatus) {}
+    private record ListingCursor(String sellerSku,UUID id) {}
+
     public record OrderView(String id, String externalOrderId, String fulfillmentStatus,
                             String refundStatus, String financialStatus,
                             long itemCount, String sourceUpdatedAt, String dataOrigin,
@@ -118,6 +129,123 @@ public class MarketplaceReadController {
                 rs.getString("internal_sku"), instant(rs, "source_updated_at"),
                 rs.getString("data_origin")),
             tenant, marketplaceId, safeLimit);
+    }
+
+
+    /**
+     * V87 / FR-CAT-02/03: bounded, server-side Listing prefix search and
+     * deterministic keyset pagination. The caller's Session still supplies
+     * tenant/actor on EVERY page, and a cursor is not an authorization token.
+     */
+    @GetMapping("/{marketplaceId}/listings/page")
+    public org.springframework.http.ResponseEntity<ListingPage> listingPage(
+        Authentication authentication,HttpServletRequest request,
+        @PathVariable UUID marketplaceId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(defaultValue="SELLER_SKU") String field,
+        @RequestParam(defaultValue="") String search,
+        @RequestParam(defaultValue="ALL") String status,
+        @RequestParam(required=false) String cursor) {
+        int size=limit(limit);
+        String mode=listingSearchField(field);
+        String filter=listingMappingStatus(status);
+        String prefix=normalizedOrderPrefix(search);
+        UUID tenant=authorizedMarketplace(authentication,request,marketplaceId);
+        ListingCursor after=parseListingCursor(cursor,marketplaceId,mode,prefix,filter);
+        // Exclamation-mark LIKE escaping avoids treating %, _ or ! as wildcards.
+        String pattern=prefix.replace("!","!!").replace("%","!%")
+            .replace("_","!_")+"%";
+        // Only this closed enum chooses the SQL column. No client SQL fragments.
+        String column=mode.equals("ASIN")?"l.asin":"l.seller_sku";
+        String sql="""
+            SELECT l.id,l.seller_sku,l.asin,l.fnsku,l.mapping_status,
+                   active.internal_sku,active.mapping_version AS active_version,
+                   (SELECT MAX(mm.mapping_version) FROM listing_sku_mapping mm
+                    WHERE mm.tenant_id=l.tenant_id AND mm.listing_id=l.id)
+                     AS latest_version,
+                   l.source_updated_at,l.data_origin
+            FROM marketplace_listing l
+            LEFT JOIN LATERAL (
+              SELECT p.internal_sku,m.mapping_version
+              FROM listing_sku_mapping m
+              LEFT JOIN product_sku p
+                ON p.tenant_id=m.tenant_id AND p.id=m.product_sku_id
+              WHERE m.tenant_id=l.tenant_id AND m.listing_id=l.id
+                AND m.status='ACTIVE' AND m.valid_to IS NULL
+              ORDER BY m.mapping_version DESC LIMIT 1
+            ) active ON TRUE
+            WHERE l.tenant_id=? AND l.seller_marketplace_id=?
+              AND lower(%s) LIKE ? ESCAPE '!'
+              AND (?='ALL' OR l.mapping_status=?)
+              AND (?::boolean=false OR (l.seller_sku,l.id)>(?::text,?::uuid))
+            ORDER BY l.seller_sku,l.id
+            LIMIT ?
+            """.formatted(column);
+        List<ListingPageItem> fetched=jdbc.query(sql,(rs,i)->new ListingPageItem(
+            uuid(rs,"id"),rs.getString("seller_sku"),rs.getString("asin"),
+            rs.getString("fnsku"),rs.getString("mapping_status"),
+            rs.getString("internal_sku"),
+            (Integer)rs.getObject("active_version"),
+            (Integer)rs.getObject("latest_version"),
+            instant(rs,"source_updated_at"),rs.getString("data_origin")),
+            tenant,marketplaceId,pattern,filter,filter,after!=null,
+            after==null?null:after.sellerSku(),
+            after==null?null:after.id(),size+1);
+        boolean hasMore=fetched.size()>size;
+        List<ListingPageItem> items=hasMore?
+            new ArrayList<>(fetched.subList(0,size)):fetched;
+        String next=hasMore?listingCursor(marketplaceId,mode,prefix,filter,
+            items.getLast()):null;
+        return org.springframework.http.ResponseEntity.ok()
+            .cacheControl(org.springframework.http.CacheControl.noStore())
+            .body(new ListingPage(List.copyOf(items),next,hasMore,size,
+                mode,prefix,filter));
+    }
+
+    private static String listingSearchField(String field) {
+        if("SELLER_SKU".equals(field)||"ASIN".equals(field))return field;
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+            "Listing search field must be SELLER_SKU or ASIN");
+    }
+    private static String listingMappingStatus(String status) {
+        if(java.util.Set.of("ALL","UNMAPPED","SUGGESTED","VERIFIED","ACTIVE",
+            "CONFLICT","SUPERSEDED").contains(status))return status;
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+            "Unsupported Listing mapping status");
+    }
+    private static String listingCursor(UUID marketplace,String field,
+                                         String prefix,String status,
+                                         ListingPageItem last) {
+        String encodedSku=Base64.getUrlEncoder().withoutPadding().encodeToString(
+            last.sellerSku().getBytes(StandardCharsets.UTF_8));
+        String raw=marketplace+"\\n"+field+"\\n"+prefix+"\\n"+status+
+            "\\n"+encodedSku+"\\n"+last.id();
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(
+            raw.getBytes(StandardCharsets.UTF_8));
+    }
+    private static ListingCursor parseListingCursor(String cursor,UUID marketplace,
+                                                      String field,String prefix,
+                                                      String status) {
+        if(cursor==null||cursor.isBlank())return null;
+        if(cursor.length()>1024)throw new ResponseStatusException(
+            HttpStatus.BAD_REQUEST,"Invalid Listing cursor");
+        try {
+            String raw=new String(Base64.getUrlDecoder().decode(cursor),
+                StandardCharsets.UTF_8);
+            String[] parts=raw.split("\\n",-1);
+            if(parts.length!=6||!marketplace.toString().equals(parts[0])
+                ||!field.equals(parts[1])||!prefix.equals(parts[2])
+                ||!status.equals(parts[3]))throw new IllegalArgumentException();
+            String sellerSku=new String(Base64.getUrlDecoder().decode(parts[4]),
+                StandardCharsets.UTF_8);
+            UUID id=UUID.fromString(parts[5]);
+            if(sellerSku.isEmpty()||sellerSku.length()>200)
+                throw new IllegalArgumentException();
+            return new ListingCursor(sellerSku,id);
+        } catch(IllegalArgumentException ex) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Invalid or mismatched Listing cursor");
+        }
     }
 
     @GetMapping("/{marketplaceId}/orders")
