@@ -15,7 +15,8 @@ export default function SkuCatalogManager({tenantId,marketplaceId,listings}:{
  const [message,setMessage]=useState(''),[error,setError]=useState('')
  const skus=useQuery({queryKey:['catalog',tenantId],queryFn:()=>fetchSkus(),retry:false,staleTime:30000})
  const refresh=()=>{void client.invalidateQueries({queryKey:['catalog',tenantId]})
-   void client.invalidateQueries({queryKey:['core',tenantId,'listings',marketplaceId]})}
+   void client.invalidateQueries({queryKey:['core',tenantId,'listings',marketplaceId]})
+    void client.invalidateQueries({queryKey:['core',tenantId,'listings-v87',marketplaceId]})}
  const created=useMutation({mutationFn:()=>createSku(code,name),onSuccess:()=>{
    setMessage('内部 SKU 已创建');setError('');setCode('');setName('');refresh()
  },onError:(e:Error)=>setError(e.message)})
