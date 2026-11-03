@@ -71,7 +71,7 @@ class MarketplaceReadControllerTest {
         assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
             ()->controller.orderPage(auth,request,marketplaceId,50,"a".repeat(81),null)).getStatusCode());
         assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
-            ()->controller.orderPage(auth,request,marketplaceId,50,"V86\\nPAGED",null)).getStatusCode());
+            ()->controller.orderPage(auth,request,marketplaceId,50,"V86"+(char)10+"PAGED",null)).getStatusCode());
         verifyNoInteractions(jdbc,tenants);
     }
 
