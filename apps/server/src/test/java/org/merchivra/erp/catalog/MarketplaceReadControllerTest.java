@@ -154,6 +154,39 @@ class MarketplaceReadControllerTest {
     }
 
     @Test
+    void v87CursorUsesRealSeparatorsAndRoundtripsMultilineSellerSku() throws Exception {
+        var source=new MarketplaceReadController.ListingPageItem(
+            UUID.randomUUID().toString(),"V87-NL"+(char)10+"A",null,null,
+            "UNMAPPED",null,null,null,null,"MOCK");
+        var encoder=MarketplaceReadController.class.getDeclaredMethod(
+            "listingCursor",UUID.class,String.class,String.class,String.class,
+            MarketplaceReadController.ListingPageItem.class);
+        encoder.setAccessible(true);
+        String cursor=(String)encoder.invoke(null,marketplaceId,"SELLER_SKU",
+            "v87","ALL",source);
+        String raw=new String(java.util.Base64.getUrlDecoder().decode(cursor),
+            java.nio.charset.StandardCharsets.UTF_8);
+        String[] parts=raw.split("\\n",-1);
+        assertEquals(6,parts.length,"Cursor must use real LF delimiters");
+        assertEquals(marketplaceId.toString(),parts[0]);
+        assertEquals("SELLER_SKU",parts[1]);
+        assertEquals("v87",parts[2]);
+        assertEquals("ALL",parts[3]);
+        assertEquals(source.sellerSku(),new String(
+            java.util.Base64.getUrlDecoder().decode(parts[4]),
+            java.nio.charset.StandardCharsets.UTF_8));
+        var parser=MarketplaceReadController.class.getDeclaredMethod(
+            "parseListingCursor",String.class,UUID.class,
+            String.class,String.class,String.class);
+        parser.setAccessible(true);
+        assertNotNull(parser.invoke(null,cursor,marketplaceId,"SELLER_SKU",
+            "v87","ALL"));
+        var thrown=assertThrows(java.lang.reflect.InvocationTargetException.class,
+            ()->parser.invoke(null,cursor,marketplaceId,"ASIN","v87","ALL"));
+        assertInstanceOf(ResponseStatusException.class,thrown.getCause());
+    }
+
+    @Test
     void cannotRequestUnboundedPages() {
         ResponseStatusException error = assertThrows(ResponseStatusException.class,
             () -> controller.inventory(auth, request, marketplaceId, 10000));
