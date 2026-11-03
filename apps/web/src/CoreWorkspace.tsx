@@ -8,7 +8,7 @@ import ReplenishmentWorkspace from './ReplenishmentWorkspace'
 import FbaInboundPanel from './FbaInboundPanel'
 import CatalogSyncPanel from './CatalogSyncPanel'
 import {coreStatusLabel,filterLoadedRows,formatSourceTime,sourceLabel} from './lib/core-view'
-import {fetchCoreMarketplaces,fetchCoreListings,fetchCoreOrdersPage,fetchCoreOrderItems,fetchCoreInventory} from './lib/core'
+import {fetchCoreMarketplaces,fetchCoreListingsPage,fetchCoreOrdersPage,fetchCoreOrderItems,fetchCoreInventory} from './lib/core'
 
 type Section='listings'|'orders'|'inventory'
 export default function CoreWorkspace({tenantId,isOwner=true,focusException}:{
@@ -17,6 +17,15 @@ export default function CoreWorkspace({tenantId,isOwner=true,focusException}:{
 }){
  const [marketplaceId,setMarketplaceId]=useState(''),[section,setSection]=useState<Section>('listings'),[search,setSearch]=useState('')
  const [selectedOrderId,setSelectedOrderId]=useState('')
+ const [listingSearchDraft,setListingSearchDraft]=useState('')
+ const [listingFieldDraft,setListingFieldDraft]=useState<'SELLER_SKU'|'ASIN'>('SELLER_SKU')
+ const [listingStatusDraft,setListingStatusDraft]=useState<
+  'ALL'|'UNMAPPED'|'SUGGESTED'|'VERIFIED'|'ACTIVE'|'CONFLICT'|'SUPERSEDED'>('ALL')
+ const [listingSearch,setListingSearch]=useState('')
+ const [listingField,setListingField]=useState<'SELLER_SKU'|'ASIN'>('SELLER_SKU')
+ const [listingStatus,setListingStatus]=useState<typeof listingStatusDraft>('ALL')
+ const [listingCursors,setListingCursors]=useState<Array<string|null>>([null])
+ const listingCursor=listingCursors.at(-1)??null
  const [orderSearchDraft,setOrderSearchDraft]=useState('')
  const [orderSearch,setOrderSearch]=useState('')
  const [orderCursors,setOrderCursors]=useState<Array<string|null>>([null])
@@ -29,7 +38,13 @@ export default function CoreWorkspace({tenantId,isOwner=true,focusException}:{
   setMarketplaceId(focusException.marketplaceId)
   setSection('inventory');setSearch('');setSelectedOrderId('')
  },[focusException?.marketplaceId,focusException?.lineId,isOwner,marketplaces.data])
- const listings=useQuery({queryKey:['core',tenantId,'listings',marketplaceId],queryFn:()=>fetchCoreListings(marketplaceId),enabled:!!marketplaceId&&section==='listings',staleTime:30000,retry:1})
+ const listings=useQuery({
+  queryKey:['core',tenantId,'listings-v87',marketplaceId,listingField,
+   listingStatus,listingSearch,listingCursor],
+  queryFn:()=>fetchCoreListingsPage(marketplaceId,listingField,
+   listingSearch,listingStatus,listingCursor),
+  enabled:!!marketplaceId&&section==='listings',staleTime:30000,retry:1
+ })
  const orders=useQuery({
   queryKey:['core',tenantId,'orders-v86',marketplaceId,orderSearch,orderCursor],
   queryFn:()=>fetchCoreOrdersPage(marketplaceId,orderSearch,orderCursor),
@@ -40,10 +55,25 @@ export default function CoreWorkspace({tenantId,isOwner=true,focusException}:{
   enabled:!!marketplaceId&&!!selectedOrderId&&section==='orders',staleTime:30000,retry:1})
  const inventory=useQuery({queryKey:['core',tenantId,'inventory',marketplaceId],queryFn:()=>fetchCoreInventory(marketplaceId),enabled:!!marketplaceId&&section==='inventory',staleTime:30000,retry:1})
  const active=marketplaces.data?.find(m=>m.id===marketplaceId)
- const filteredListings=useMemo(()=>filterLoadedRows(listings.data,search,r=>[r.sellerSku,r.asin,r.internalSku]),[listings.data,search])
+ const filteredListings=listings.data?.items??[]
  const filteredOrders=orders.data?.items??[]
  const filteredInventory=useMemo(()=>filterLoadedRows(inventory.data,search,r=>[r.sellerSku]),[inventory.data,search])
  function changeSection(id:Section){setSection(id);setSearch('');setSelectedOrderId('')}
+ function applyListingSearch(){
+  const normalized=listingSearchDraft.trim()
+  if(normalized.length>80)return
+  setListingSearch(normalized)
+  setListingField(listingFieldDraft)
+  setListingStatus(listingStatusDraft)
+  setListingCursors([null])
+ }
+ function nextListingPage(){
+  if(!listings.data?.nextCursor)return
+  setListingCursors(current=>[...current,listings.data!.nextCursor])
+ }
+ function previousListingPage(){
+  setListingCursors(current=>current.length>1?current.slice(0,-1):current)
+ }
  function applyOrderSearch(){
   const normalized=orderSearchDraft.trim()
   if(normalized.length>80)return
@@ -99,7 +129,10 @@ export default function CoreWorkspace({tenantId,isOwner=true,focusException}:{
    <button className="refresh-button" type="submit"
     disabled={orderSearchDraft.trim().length>80}>搜索订单</button>
    {orderSearch&&<button className="text-button" type="button" onClick={()=>{
-    setOrderSearchDraft('');setOrderSearch('');setOrderCursors([null]);setSelectedOrderId('')
+    setOrderSearchDraft('');setOrderSearch('');setOrderCursors([null])
+   setListingSearchDraft('');setListingSearch('')
+   setListingFieldDraft('SELLER_SKU');setListingField('SELLER_SKU')
+   setListingStatusDraft('ALL');setListingStatus('ALL');setListingCursors([null]);setSelectedOrderId('')
    }}>清除全量搜索</button>}
   </form>:
   <label className="core-search-field" htmlFor="core-record-search">
