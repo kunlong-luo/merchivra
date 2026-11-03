@@ -227,7 +227,7 @@ public class MarketplaceReadController {
                                                       String field,String prefix,
                                                       String status) {
         if(cursor==null||cursor.isBlank())return null;
-        if(cursor.length()>1024)throw new ResponseStatusException(
+        if(cursor.length()>4096)throw new ResponseStatusException(
             HttpStatus.BAD_REQUEST,"Invalid Listing cursor");
         try {
             String raw=new String(Base64.getUrlDecoder().decode(cursor),
