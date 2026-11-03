@@ -218,8 +218,8 @@ public class MarketplaceReadController {
                                          ListingPageItem last) {
         String encodedSku=Base64.getUrlEncoder().withoutPadding().encodeToString(
             last.sellerSku().getBytes(StandardCharsets.UTF_8));
-        String raw=marketplace+"\\n"+field+"\\n"+prefix+"\\n"+status+
-            "\\n"+encodedSku+"\\n"+last.id();
+        String raw=marketplace+"\n"+field+"\n"+prefix+"\n"+status+
+            "\n"+encodedSku+"\n"+last.id();
         return Base64.getUrlEncoder().withoutPadding().encodeToString(
             raw.getBytes(StandardCharsets.UTF_8));
     }
@@ -232,7 +232,7 @@ public class MarketplaceReadController {
         try {
             String raw=new String(Base64.getUrlDecoder().decode(cursor),
                 StandardCharsets.UTF_8);
-            String[] parts=raw.split("\\n",-1);
+            String[] parts=raw.split("\n",-1);
             if(parts.length!=6||!marketplace.toString().equals(parts[0])
                 ||!field.equals(parts[1])||!prefix.equals(parts[2])
                 ||!status.equals(parts[3]))throw new IllegalArgumentException();
