@@ -5,7 +5,7 @@ import {formatSourceTime} from './lib/core-view'
 export default function OrdersSyncPanel({tenantId,marketplaceId,isLive}:{tenantId:string;marketplaceId:string;isLive:boolean}){
  const client=useQueryClient(),[message,setMessage]=useState(''),[failure,setFailure]=useState('')
  const status=useQuery({queryKey:['orders-sync',tenantId,marketplaceId],queryFn:()=>fetchOrderSync(marketplaceId),retry:false,staleTime:10000})
- const refresh=()=>{void status.refetch();void client.invalidateQueries({queryKey:['core',tenantId,'orders',marketplaceId]})}
+ const refresh=()=>{void status.refetch();void client.invalidateQueries({queryKey:['core',tenantId,'orders',marketplaceId]});void client.invalidateQueries({queryKey:['core',tenantId,'orders-v86',marketplaceId]})}
  const start=useMutation({mutationFn:()=>startOrderSync(marketplaceId),onSuccess:()=>{setMessage('已初始化同步窗口');setFailure('');refresh()},onError:(e:Error)=>{setFailure(e.message);setMessage('')}})
  const step=useMutation({mutationFn:()=>stepOrderSync(marketplaceId),onSuccess:value=>{setMessage(value.state==='SUCCEEDED'?'同步窗口已经完整提交':'已处理一页，最新检查点已保存');setFailure('');refresh()},onError:(e:Error)=>{setFailure(e.message);setMessage('')}})
  const data=status.data
