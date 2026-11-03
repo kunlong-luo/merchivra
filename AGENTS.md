@@ -731,3 +731,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - `listing_sku_mapping` 是映射版本唯一事实：`activeMappingVersion` 与 `internalSku` 只在 ACTIVE/valid_to NULL 时返回；`latestMappingVersion` 可包含已经撤销或有冲突的历史版本。即使是 CONFLICT 行也必须保留 Listing 来源，不能猜测已映射 SKU。
 - Seller SKU/ASIN 前缀在 SQL 绑定参数中按字面量转义（包含 %, _, !），最多 100 条一页，(seller_sku,id) keyset 游标；不能接受客户端 tenantId、不允许把游标当授权或冻结快照。复杂 SKU 的原字节必须安全编码，跨站点/字段/状态/搜索复用游标返回 400。
 - React 搜索提交与筛选页游标绑定、页面切换重置待操作 Mapping 选择、人工映射成功必须失效 `listings-v87` Query 缓存。分页不是财务完整集，真实 Amazon/Ads 仍保持关闭，待最后本地测试。详见 [CAT-087](docs/catalog/listing-search-pagination-v87.md)。
+
+## V88 · 最新 FBA SKU 来源与有界全库分页（2026-11-03）
+
+- 核心 FBA 观测查询必须复用原 fba_inventory_observation 的 latest 每 SKU 来源规则（observed_at DESC NULLS LAST、ingested_at DESC、id DESC），不能直接将所有观测数求和，也不能按入库时间把未知来源观测当作更新的远端库存。
+- 库存质量和来源过滤一定**位于每 SKU 最新观测选择之后**。若最新 UNKNOWN，即使历史 OBSERVED 非零或零也不可从历史“补齐”结果；若最新 UNVERIFIED，旧 MOCK/LIVE 不能替代。fulfillable/reserved NULL 原样显示未知，真实观测 0 原样显示 0，STALE 保留质量，observedAt 与 ingestedAt 不互换。
+- V88 GET /api/v1/seller-marketplaces/{marketplaceId}/inventory/fba/page 由服务端 Session tenant 和精确 Seller Account OWNER/OPERATOR_READ 授权；query 的 quality/origin 为封闭枚举，prefix 80 字符以内且 SQL 特殊字符按字面量转义。Keyset 复用 V87 多行 SKU Base64url 格式但包含类别 FBA_INVENTORY、Marketplace、质量、来源、前缀；游标不能当授权、快照或金额。
+- 保留旧 /inventory/fba?limit API，新增 Flyway V80 最近来源排序和低开销表达式前缀索引。FBA 同步成功失效 inventory-v88 TanStack Query 缓存；切站点/从 Ops 异常跳转/更换筛选时重置游标。继续不引入新缓存系统或不必要的 Redis/Elastic。
+- 模拟验收见 [FBA-088](docs/inventory/fba-inventory-observation-pages-v88.md)：PostgreSQL 18、多观测 64 SKU、50+14 keyset、后过滤、零/未知/STALE、时间优先级、Origin、Cursor 字符与权限边界。真实 Amazon OAuth/SP-API 仍保持关闭，留给用户最终本地联调。
