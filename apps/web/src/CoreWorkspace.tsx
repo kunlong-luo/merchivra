@@ -1,4 +1,4 @@
-import {useEffect,useMemo,useState} from 'react'
+import {useEffect,useState} from 'react'
 import {useQuery} from '@tanstack/react-query'
 import SellerSetup from './SellerSetup'
 import SandboxReplay from './SandboxReplay'
@@ -7,8 +7,8 @@ import SkuCatalogManager from './SkuCatalogManager'
 import ReplenishmentWorkspace from './ReplenishmentWorkspace'
 import FbaInboundPanel from './FbaInboundPanel'
 import CatalogSyncPanel from './CatalogSyncPanel'
-import {coreStatusLabel,filterLoadedRows,formatSourceTime,sourceLabel} from './lib/core-view'
-import {fetchCoreMarketplaces,fetchCoreListingsPage,fetchCoreOrdersPage,fetchCoreOrderItems,fetchCoreInventory} from './lib/core'
+import {coreStatusLabel,formatSourceTime,sourceLabel} from './lib/core-view'
+import {fetchCoreMarketplaces,fetchCoreListingsPage,fetchCoreOrdersPage,fetchCoreOrderItems,fetchCoreInventoryPage} from './lib/core'
 
 type Section='listings'|'orders'|'inventory'
 export default function CoreWorkspace({tenantId,isOwner=true,focusException}:{
@@ -17,6 +17,15 @@ export default function CoreWorkspace({tenantId,isOwner=true,focusException}:{
 }){
  const [marketplaceId,setMarketplaceId]=useState(''),[section,setSection]=useState<Section>('listings'),[search,setSearch]=useState('')
  const [selectedOrderId,setSelectedOrderId]=useState('')
+ const [inventorySearch,setInventorySearch]=useState('')
+ const [inventoryQualityDraft,setInventoryQualityDraft]=useState<
+  'ALL'|'OBSERVED'|'PARTIAL'|'UNKNOWN'|'STALE'>('ALL')
+ const [inventoryOriginDraft,setInventoryOriginDraft]=useState<
+  'ALL'|'MOCK'|'UNVERIFIED'|'LIVE'>('ALL')
+ const [inventoryQuality,setInventoryQuality]=useState<typeof inventoryQualityDraft>('ALL')
+ const [inventoryOrigin,setInventoryOrigin]=useState<typeof inventoryOriginDraft>('ALL')
+ const [inventoryCursors,setInventoryCursors]=useState<Array<string|null>>([null])
+ const inventoryCursor=inventoryCursors.at(-1)??null
  const [listingSearchDraft,setListingSearchDraft]=useState('')
  const [listingFieldDraft,setListingFieldDraft]=useState<'SELLER_SKU'|'ASIN'>('SELLER_SKU')
  const [listingStatusDraft,setListingStatusDraft]=useState<
@@ -53,12 +62,38 @@ export default function CoreWorkspace({tenantId,isOwner=true,focusException}:{
  const detail=useQuery({queryKey:['core',tenantId,'order-items',marketplaceId,selectedOrderId],
   queryFn:()=>fetchCoreOrderItems(marketplaceId,selectedOrderId),
   enabled:!!marketplaceId&&!!selectedOrderId&&section==='orders',staleTime:30000,retry:1})
- const inventory=useQuery({queryKey:['core',tenantId,'inventory',marketplaceId],queryFn:()=>fetchCoreInventory(marketplaceId),enabled:!!marketplaceId&&section==='inventory',staleTime:30000,retry:1})
+ const inventory=useQuery({
+  queryKey:['core',tenantId,'inventory-v88',marketplaceId,
+   inventorySearch,inventoryQuality,inventoryOrigin,inventoryCursor],
+  queryFn:()=>fetchCoreInventoryPage(marketplaceId,inventorySearch,
+   inventoryQuality,inventoryOrigin,inventoryCursor),
+  enabled:!!marketplaceId&&section==='inventory',staleTime:30000,retry:1
+ })
  const active=marketplaces.data?.find(m=>m.id===marketplaceId)
  const filteredListings=listings.data?.items??[]
  const filteredOrders=orders.data?.items??[]
- const filteredInventory=useMemo(()=>filterLoadedRows(inventory.data,search,r=>[r.sellerSku]),[inventory.data,search])
+ const filteredInventory=inventory.data?.items??[]
  function changeSection(id:Section){setSection(id);setSearch('');setSelectedOrderId('')}
+ function applyInventorySearch(){
+  if(search.trim().length>80)return
+  setInventorySearch(search.trim())
+  setInventoryQuality(inventoryQualityDraft)
+  setInventoryOrigin(inventoryOriginDraft)
+  setInventoryCursors([null])
+ }
+ function nextInventoryPage(){
+  if(!inventory.data?.nextCursor)return
+  setInventoryCursors(current=>[...current,inventory.data!.nextCursor])
+ }
+ function previousInventoryPage(){
+  setInventoryCursors(current=>current.length>1?current.slice(0,-1):current)
+ }
+ function resetInventorySearch(){
+  setSearch('');setInventorySearch('')
+  setInventoryQualityDraft('ALL');setInventoryQuality('ALL')
+  setInventoryOriginDraft('ALL');setInventoryOrigin('ALL')
+  setInventoryCursors([null])
+ }
  function applyListingSearch(){
   const normalized=listingSearchDraft.trim()
   if(normalized.length>80)return
@@ -112,6 +147,12 @@ export default function CoreWorkspace({tenantId,isOwner=true,focusException}:{
  <select aria-label="切换受保护 Marketplace" value={marketplaceId} onChange={e=>{
   setMarketplaceId(e.target.value);setSearch('');setSelectedOrderId('')
   setOrderSearchDraft('');setOrderSearch('');setOrderCursors([null])
+  setListingSearchDraft('');setListingSearch('')
+  setListingFieldDraft('SELLER_SKU');setListingField('SELLER_SKU')
+  setListingStatusDraft('ALL');setListingStatus('ALL');setListingCursors([null])
+  setInventorySearch('');setInventoryQualityDraft('ALL')
+  setInventoryQuality('ALL');setInventoryOriginDraft('ALL')
+  setInventoryOrigin('ALL');setInventoryCursors([null])
  }}>
  {marketplaces.data.map(m=><option key={m.id} value={m.id}>{m.marketplaceId} · {m.region} · {m.currency}</option>)}</select></label>
  <button className="refresh-button" disabled={!marketplaceId} onClick={reload}>刷新当前数据</button></div>
@@ -160,10 +201,7 @@ export default function CoreWorkspace({tenantId,isOwner=true,focusException}:{
    <button className="refresh-button" type="submit"
     disabled={orderSearchDraft.trim().length>80}>搜索订单</button>
    {orderSearch&&<button className="text-button" type="button" onClick={()=>{
-    setOrderSearchDraft('');setOrderSearch('');setOrderCursors([null])
-   setListingSearchDraft('');setListingSearch('')
-   setListingFieldDraft('SELLER_SKU');setListingField('SELLER_SKU')
-   setListingStatusDraft('ALL');setListingStatus('ALL');setListingCursors([null]);setSelectedOrderId('')
+    setOrderSearchDraft('');setOrderSearch('');setOrderCursors([null]);setSelectedOrderId('')
    }}>清除全量搜索</button>}
   </form>:
   <label className="core-search-field" htmlFor="core-record-search">
