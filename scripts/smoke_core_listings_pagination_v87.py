@@ -57,7 +57,7 @@ base=f"/api/v1/seller-marketplaces/{mp}/listings/page"
 call(f"/api/v1/seller-marketplaces/{foreign}/listings/page",expected=404)
 for invalid in ({"limit":0},{"limit":101},{"field":"COST"},{"status":"ANY"},
                 {"search":"X"*81},{"cursor":"invalid!"}):
-    get(base,**invalid) if False else call(base+"?"+urlencode(invalid),expected=400)
+    call(base+"?"+urlencode(invalid),expected=400)
 call(base+"?search=V87%0AQUERY",expected=400)
 assert sql("""SELECT count(*) FROM pg_indexes
  WHERE tablename='marketplace_listing'
