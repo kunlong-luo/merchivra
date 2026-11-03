@@ -44,6 +44,33 @@ class ReadOnlyStaffGuardFilterTest {
         verifyNoInteractions(access);
     }
 
+    @Test void scopedStaffCanReadExactOrderAndListingPageRoutesOnly() throws Exception {
+        Authentication a=staff();
+        String marketplace=UUID.randomUUID().toString();
+        for(String leaf:List.of("orders/page","listings/page")) {
+            var request=req("GET","/api/v1/seller-marketplaces/"+marketplace+"/"+leaf);
+            var response=new MockHttpServletResponse();
+            guard.doFilter(request,response,chain);
+            assertEquals(200,response.getStatus());
+            verify(chain).doFilter(request,response);
+        }
+        verifyNoInteractions(access);
+    }
+
+    @Test void staffCannotMutateOrVisitUnknownNestedPagePaths() throws Exception {
+        Authentication actor=staff();
+        String marketplace=UUID.randomUUID().toString();
+        for(String target:List.of("orders/page","listings/page",
+                                 "listings/page/history","orders/page/export")) {
+            var request=req(target.endsWith("/page")?"POST":"GET",
+                "/api/v1/seller-marketplaces/"+marketplace+"/"+target);
+            var response=new MockHttpServletResponse();
+            guard.doFilter(request,response,chain);
+            assertEquals(403,response.getStatus());
+        }
+        verifyNoInteractions(chain);
+    }
+
     @Test void staffCannotReadUnscopedOrWriteScope() throws Exception {
         Authentication a=staff();
         when(access.accessibleTenants(a)).thenReturn(List.of());

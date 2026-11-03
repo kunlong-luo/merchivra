@@ -40,7 +40,7 @@ public final class ReadOnlyStaffGuardFilter extends OncePerRequestFilter {
         // Staff can only GET tenant/scoped read facts; no POST, no unscoped APIs.
         boolean coreRead="GET".equals(request.getMethod()) &&
             (path.equals("/api/v1/seller-marketplaces") ||
-             (path.matches("^/api/v1/seller-marketplaces/[0-9a-fA-F-]{36}/(orders|listings|inventory/fba)$")
+             (path.matches("^/api/v1/seller-marketplaces/[0-9a-fA-F-]{36}/(orders|listings|orders/page|listings/page|inventory/fba)$")
               || path.matches("^/api/v1/seller-marketplaces/[0-9a-fA-F-]{36}/orders/[0-9a-fA-F-]{36}/items$")));
         if(!coreRead) {
             // Owner in another tenant cannot use that role to authorize a
