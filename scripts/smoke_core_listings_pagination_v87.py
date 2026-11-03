@@ -134,8 +134,15 @@ assert {x["sellerSku"] for x in conflicts["items"]}=={
  "V87-PAGED-002","V87-PAGED-058","V87-PAGED-064"}
 assert len(get(base,field="SELLER_SKU",search="v87-paged-",
                status="ACTIVE")["items"])==1
-assert len(get(base,field="SELLER_SKU",search="v87-paged-",
-               status="UNMAPPED")["items"])==60
+unmapped_first=get(base,field="SELLER_SKU",search="v87-paged-",
+                   status="UNMAPPED",limit=50)
+assert len(unmapped_first["items"])==50 and unmapped_first["hasMore"]
+unmapped_last=get(base,field="SELLER_SKU",search="v87-paged-",
+                  status="UNMAPPED",limit=50,
+                  cursor=unmapped_first["nextCursor"])
+assert len(unmapped_last["items"])==10 and not unmapped_last["hasMore"]
+assert all(x["mappingStatus"]=="UNMAPPED"
+           for x in unmapped_first["items"]+unmapped_last["items"])
 # Scope and filter changes after first page invalidate the cursor.
 for changes in [
  {"field":"ASIN"},{"search":"V87-PAGED-0"},{"status":"CONFLICT"}]:
