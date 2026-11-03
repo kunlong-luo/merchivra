@@ -717,3 +717,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 不可绕过 `TenantAccessService`、活跃 Owner 成员资格及 Session/CSRF。**任何人工异常操作必须同时具有 VIEW**，撤销 VIEW 后即使残存 REVIEW/RESOLVE 等布尔位也不可凭猜到的行 ID 盲操作。
 - Ops `/findings` 必须在 SQL `LIMIT 100` 前排除用户无 VIEW 的站点 FBA_PO 异常，`/summary` 从全量持久化数据按同一 ACL 聚合；规则和审计读取同样不能泄露两类来源。全租户手动 `/scan` 只要任一站点明确拒绝 VIEW 或 CONFIGURE 则全部拒绝，不能静默部分扫描；系统定时扫描仍独立运行。
 - V76 原采购/FBA 差异证据 `/purchase-reconciliation` 亦需 VIEW。Ops DONE 不是原本地 case RESOLVED，更不是 Amazon 入仓认证。详见 [SEC-085](docs/security/fba-ops-cross-module-v85.md)。
+
+## V86 · P0 核心订单分页与真实/模拟验收区分（2026-11-03）
+
+- 产品/技术文档需求要和实际 `main` 代码、CI、模拟来源及真实外部授权四个证据层级分别标记，不能用旧 Roadmap 中“尚未实现”覆盖已存在的 V20–V85 代码，也不能把 Mock 绿色回归写成 Amazon 生产同步。见 [TEST-086](docs/testing/core-coverage-audit-v86.md)。
+- 订单的全量读取必须使用 Owner/OPERATOR_READ 在服务端解析的 tenant/Marketplace；V86 新 `GET /api/v1/seller-marketplaces/{marketplaceId}/orders/page` 限制单页 1–100 行，按来源时间 NULLS LAST 和 UUID 排序，游标与站点+搜索前缀绑定；仅作位置提示，不作权限、全局快照或财务导出凭证。搜索输入限制长度、字符以及 SQL 通配符字面量转义；保留旧 `/orders?limit=...` 响应兼容。
+- React 核心订单页的服务器搜索、上一页/下一页不能暗示完整 Live 库存或 Amazon 已验证，切换站点、前缀时要清理旧游标和明细；`NOT_OBSERVED` 订单项和财务 `NOT_OBSERVED` 不得等同业务金额零。
+- 下一阶段优先补 Listing 和 FBA 的服务端全库分页，其后整合可解释 Dashboard，避免继续重复开发异常规则或引入新队列。真实 Amazon OAuth/SP-API 依照用户约定，核心功能完成后再由用户在本地手工授权联调。
