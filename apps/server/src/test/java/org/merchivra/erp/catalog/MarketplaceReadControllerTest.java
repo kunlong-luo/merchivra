@@ -187,6 +187,79 @@ class MarketplaceReadControllerTest {
     }
 
     @Test
+    void v88InventoryPageRejectsUnboundedAndInvalidQualityOriginOrControlCharacters() {
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->controller.inventoryPage(auth,request,marketplaceId,0,"","ALL","ALL",null))
+            .getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->controller.inventoryPage(auth,request,marketplaceId,101,"","ALL","ALL",null))
+            .getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->controller.inventoryPage(auth,request,marketplaceId,50,"","SHIPPED","ALL",null))
+            .getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->controller.inventoryPage(auth,request,marketplaceId,50,"","ALL","AMAZON_APPROVED",null))
+            .getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->controller.inventoryPage(auth,request,marketplaceId,50,"x".repeat(81),"ALL","ALL",null))
+            .getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->controller.inventoryPage(auth,request,marketplaceId,50,"a"+(char)10+"b",
+                "ALL","ALL",null)).getStatusCode());
+        verifyNoInteractions(jdbc,tenants);
+    }
+
+    @Test
+    void v88FbaInventoryPageScopesTheLatestHistoryBeforeQualityFiltering() {
+        allow();
+        var page=controller.inventoryPage(auth,request,marketplaceId,50,
+            "V88%_!","UNKNOWN","MOCK",null).getBody();
+        assertNotNull(page);
+        assertEquals("v88%_!",page.searchPrefix());
+        assertEquals("UNKNOWN",page.quality());
+        assertEquals("MOCK",page.origin());
+        assertFalse(page.hasMore());
+        assertNull(page.nextCursor());
+        verify(jdbc).query(argThat((String sql)->
+            sql.contains("DISTINCT ON (seller_sku_raw)")
+            && sql.indexOf("DISTINCT ON (seller_sku_raw)")<sql.indexOf("FROM latest i")
+            && sql.contains("observed_at DESC NULLS LAST")
+            && sql.contains("AND (?='ALL' OR i.quality=?)")),
+            any(RowMapper.class),eq(tenantId),eq(marketplaceId),
+            eq("v88!%!_!!%"),eq("UNKNOWN"),eq("UNKNOWN"),
+            eq("MOCK"),eq("MOCK"),eq(false),isNull(),isNull(),eq(51));
+    }
+
+    @Test
+    void v88FbaInventoryCursorCannotCrossOriginsQualityOrMarketplace() throws Exception {
+        var encoder=MarketplaceReadController.class.getDeclaredMethod("skuCursor",
+            UUID.class,String.class,String.class,String.class,String.class,String.class);
+        encoder.setAccessible(true);
+        String sku="V88-NL"+(char)10+"S";
+        String cursor=(String)encoder.invoke(null,marketplaceId,"FBA_INVENTORY",
+            "v88","UNKNOWN|MOCK",sku,UUID.randomUUID().toString());
+        String raw=new String(java.util.Base64.getUrlDecoder().decode(cursor),
+            java.nio.charset.StandardCharsets.UTF_8);
+        assertEquals(6,raw.split("\\n",-1).length);
+        var parser=MarketplaceReadController.class.getDeclaredMethod(
+            "parseListingCursor",String.class,UUID.class,
+            String.class,String.class,String.class);
+        parser.setAccessible(true);
+        assertNotNull(parser.invoke(null,cursor,marketplaceId,"FBA_INVENTORY",
+            "v88","UNKNOWN|MOCK"));
+        for(String badFilter:List.of("UNKNOWN|LIVE","OBSERVED|MOCK")) {
+            var thrown=assertThrows(java.lang.reflect.InvocationTargetException.class,
+                ()->parser.invoke(null,cursor,marketplaceId,"FBA_INVENTORY",
+                    "v88",badFilter));
+            assertInstanceOf(ResponseStatusException.class,thrown.getCause());
+        }
+        allow();
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->controller.inventoryPage(auth,request,marketplaceId,50,"v88",
+                "UNKNOWN","MOCK","bad*cursor")).getStatusCode());
+    }
+
+    @Test
     void cannotRequestUnboundedPages() {
         ResponseStatusException error = assertThrows(ResponseStatusException.class,
             () -> controller.inventory(auth, request, marketplaceId, 10000));
