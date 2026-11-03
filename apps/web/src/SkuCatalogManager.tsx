@@ -32,7 +32,7 @@ export default function SkuCatalogManager({tenantId,marketplaceId,listings}:{
    setMessage('映射已解除，历史仍保留');setError('');refresh()
  },onError:(e:Error)=>setError(e.message)})
  function onCreate(e:FormEvent){e.preventDefault();created.mutate()}
- function onMap(e:FormEvent){e.preventDefault();if(selectedListing&&selectedSku)linked.mutate()}
+ function onMap(e:FormEvent){e.preventDefault();if(selected&&selectedSku)linked.mutate()}
  const selected=listings.find(l=>l.id===selectedListing)
  return <section className="panel full-panel" aria-label="内部 SKU 管理">
   <div className="panel-heading"><div><h2>内部 SKU 与 Listing 映射</h2>
@@ -84,7 +84,7 @@ export default function SkuCatalogManager({tenantId,marketplaceId,listings}:{
        <option value={s.id} key={s.id}>{s.internalSku} · {s.displayName}</option>)}
    </select>
    <div className="sandbox-actions">
-    <button className="primary-button" disabled={!selectedListing||!selectedSku||linked.isPending}
+    <button className="primary-button" disabled={!selected||!selectedSku||linked.isPending}
       type="submit">确认映射</button>
     <button className="text-button" type="button" disabled={!selected||
       selected.mappingStatus!=='ACTIVE'||unlinked.isPending}
