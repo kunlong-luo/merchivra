@@ -65,6 +65,41 @@ class MarketplaceReadControllerTest {
     }
 
     @Test
+    void v86PaginationCannotUseUnboundedLimitOrControlCharacters() {
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->controller.orderPage(auth,request,marketplaceId,101,"",null)).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->controller.orderPage(auth,request,marketplaceId,50,"a".repeat(81),null)).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
+            ()->controller.orderPage(auth,request,marketplaceId,50,"V86"+(char)10+"PAGED",null)).getStatusCode());
+        verifyNoInteractions(jdbc,tenants);
+    }
+
+    @Test
+    void v86CursorNeverAuthorizesOtherMarketplaceOrTamperedValues() {
+        allow();
+        var invalid=assertThrows(ResponseStatusException.class,
+            ()->controller.orderPage(auth,request,marketplaceId,50,"TEST","not-a-cursor"));
+        assertEquals(HttpStatus.BAD_REQUEST,invalid.getStatusCode());
+        verify(jdbc,never()).query(contains("source_updated_at"),any(RowMapper.class),
+            any(),any(),any(),any(),any(),any(),any());
+    }
+
+    @Test
+    void v86FirstPageKeepsMarketplaceAuthAndOmitEmptyCursor() {
+        allow();
+        var page=controller.orderPage(auth,request,marketplaceId,50,"ABC",null).getBody();
+        assertNotNull(page);
+        assertTrue(page.items().isEmpty());
+        assertFalse(page.hasMore());
+        assertNull(page.nextCursor());
+        assertEquals("abc",page.searchPrefix());
+        verify(jdbc).query(contains("external_order_id ILIKE"),any(RowMapper.class),
+            eq(tenantId),eq(marketplaceId),eq("abc%"),eq(false),
+            isNull(),isNull(),eq(51));
+    }
+
+    @Test
     void cannotRequestUnboundedPages() {
         ResponseStatusException error = assertThrows(ResponseStatusException.class,
             () -> controller.inventory(auth, request, marketplaceId, 10000));

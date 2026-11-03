@@ -4,6 +4,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.time.Instant;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.Locale;
 import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.security.TenantAccessService;
@@ -47,6 +52,10 @@ public class MarketplaceReadController {
                             String refundStatus, String financialStatus,
                             long itemCount, String sourceUpdatedAt, String dataOrigin,
                             String itemsObservation) {}
+
+    public record OrderPage(List<OrderView> items,String nextCursor,
+                            boolean hasMore,int pageSize,String searchPrefix) {}
+    private record OrderCursor(Instant updatedAt,UUID id) {}
 
     public record OrderItemView(String id,String externalItemId,String sellerSku,
                                 Integer quantity,String itemSubtotal,String currency) {}
@@ -135,6 +144,93 @@ public class MarketplaceReadController {
                 instant(rs, "source_updated_at"), rs.getString("data_origin"),
                 rs.getString("items_observation")),
             tenant, marketplaceId, safeLimit);
+    }
+
+    /**
+     * V86 / FR-ORD-02: server-side order ID prefix search + stable keyset pages.
+     * Unlike the original 50-row summary, this can traverse the full observed
+     * order table without using offset, trusting a browser tenantId, or
+     * requesting buyer/recipient PII. A cursor is only a position, never
+     * an authorization credential or a frozen global source snapshot.
+     */
+    @GetMapping("/{marketplaceId}/orders/page")
+    public org.springframework.http.ResponseEntity<OrderPage> orderPage(
+        Authentication authentication,HttpServletRequest request,
+        @PathVariable UUID marketplaceId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(defaultValue="") String search,
+        @RequestParam(required=false) String cursor) {
+        int size=limit(limit);
+        String prefix=normalizedOrderPrefix(search);
+        UUID tenant=authorizedMarketplace(authentication,request,marketplaceId);
+        OrderCursor after=parseOrderCursor(cursor,marketplaceId,prefix);
+        String pattern=prefix.replace("\\","\\\\").replace("%","\\%")
+            .replace("_","\\_")+"%";
+        List<OrderView> fetched=jdbc.query("""
+            SELECT o.id,o.external_order_id,o.fulfillment_status_raw,
+                   o.refund_status,o.financial_status,o.source_updated_at,
+                   o.data_origin,o.items_observation,
+                   (SELECT count(*) FROM order_item i
+                    WHERE i.tenant_id=o.tenant_id AND i.sales_order_id=o.id
+                      AND i.is_current=true) AS item_count
+            FROM sales_order o
+            WHERE o.tenant_id=? AND o.seller_marketplace_id=?
+              AND o.external_order_id ILIKE ? ESCAPE '\\'
+              AND (?::boolean=false OR
+                (COALESCE(o.source_updated_at,'-infinity'::timestamptz),o.id)
+                  < (COALESCE(?::timestamptz,'-infinity'::timestamptz),?::uuid))
+            ORDER BY o.source_updated_at DESC NULLS LAST,o.id DESC
+            LIMIT ?
+            """,(rs,row)->new OrderView(
+                uuid(rs,"id"),rs.getString("external_order_id"),
+                rs.getString("fulfillment_status_raw"),rs.getString("refund_status"),
+                rs.getString("financial_status"),rs.getLong("item_count"),
+                instant(rs,"source_updated_at"),rs.getString("data_origin"),
+                rs.getString("items_observation")),
+            tenant,marketplaceId,pattern,after!=null,
+            after==null||after.updatedAt()==null?null:after.updatedAt().toString(),
+            after==null?null:after.id(),size+1);
+        boolean hasMore=fetched.size()>size;
+        List<OrderView> items=hasMore?new ArrayList<>(fetched.subList(0,size)):fetched;
+        String next=hasMore?orderCursor(marketplaceId,prefix,items.getLast()):null;
+        return org.springframework.http.ResponseEntity.ok()
+            .cacheControl(org.springframework.http.CacheControl.noStore())
+            .body(new OrderPage(List.copyOf(items),next,hasMore,size,prefix));
+    }
+
+    private static String normalizedOrderPrefix(String input) {
+        String prefix=input==null?"":input.strip().toLowerCase(Locale.ROOT);
+        if(prefix.length()>80||prefix.codePoints().anyMatch(Character::isISOControl))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Order search prefix must be <=80 printable characters");
+        return prefix;
+    }
+
+    private static String orderCursor(UUID marketplace,String prefix,OrderView last) {
+        String raw=marketplace+"\n"+prefix+"\n"+
+            (last.sourceUpdatedAt()==null?"":last.sourceUpdatedAt())+"\n"+last.id();
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(
+            raw.getBytes(StandardCharsets.UTF_8));
+    }
+    private static OrderCursor parseOrderCursor(String input,UUID marketplace,String prefix) {
+        if(input==null||input.isBlank())return null;
+        if(input.length()>512)throw new ResponseStatusException(
+            HttpStatus.BAD_REQUEST,"Invalid order cursor");
+        try {
+            String raw=new String(Base64.getUrlDecoder().decode(input),
+                StandardCharsets.UTF_8);
+            String[] parts=raw.split("\n",-1);
+            if(parts.length!=4||!marketplace.toString().equals(parts[0])
+                ||!prefix.equals(parts[1]))throw new IllegalArgumentException();
+            UUID row=UUID.fromString(parts[3]);
+            Instant stamp=parts[2].isEmpty()?null:Instant.parse(parts[2]);
+            if(stamp!=null&&!stamp.toString().equals(parts[2]))
+                throw new IllegalArgumentException();
+            return new OrderCursor(stamp,row);
+        } catch(IllegalArgumentException error) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Invalid or mismatched order cursor");
+        }
     }
 
     /** No buyer/recipient PII. Same explicit Marketplace access as order listing. */
