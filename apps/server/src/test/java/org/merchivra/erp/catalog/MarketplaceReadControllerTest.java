@@ -224,7 +224,7 @@ class MarketplaceReadControllerTest {
             sql.contains("DISTINCT ON (seller_sku_raw)")
             && sql.indexOf("DISTINCT ON (seller_sku_raw)")<sql.indexOf("FROM latest i")
             && sql.contains("observed_at DESC NULLS LAST")
-            && sql.contains("AND (?='ALL' OR i.quality=?)")),
+            && sql.contains("WHERE (?='ALL' OR i.quality=?)")),
             any(RowMapper.class),eq(tenantId),eq(marketplaceId),
             eq("v88!%!_!!%"),eq("UNKNOWN"),eq("UNKNOWN"),
             eq("MOCK"),eq("MOCK"),eq(false),isNull(),isNull(),eq(51));
