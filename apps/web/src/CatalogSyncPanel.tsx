@@ -17,6 +17,7 @@ export default function CatalogSyncPanel({tenantId,marketplaceId,stream}:{
   retry:false,staleTime:15000})
  const refresh=()=>{void client.invalidateQueries({queryKey:key});
   void client.invalidateQueries({queryKey:['core',tenantId,stream==='LISTINGS'?'listings':'inventory',marketplaceId]});
+  if(stream==='LISTINGS')void client.invalidateQueries({queryKey:['core',tenantId,'listings-v87',marketplaceId]});
   if(stream==='FBA')void client.invalidateQueries({
    queryKey:['replenishment','suggestions',tenantId,marketplaceId]})}
  const start=useMutation({mutationFn:()=>catalogStart(marketplaceId,stream),
