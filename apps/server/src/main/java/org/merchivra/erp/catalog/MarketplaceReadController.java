@@ -74,6 +74,10 @@ public class MarketplaceReadController {
     public record InventoryView(String id, String sellerSku, String quality,
                                 Integer fulfillable, Integer reserved,
                                 String observedAt, String ingestedAt, String dataOrigin) {}
+    public record InventoryPage(List<InventoryView> items,String nextCursor,
+                                boolean hasMore,int pageSize,String searchPrefix,
+                                String quality,String origin) {}
+
 
     @GetMapping
     public List<MarketplaceView> marketplaces(Authentication authentication, HttpServletRequest request) {
@@ -216,10 +220,15 @@ public class MarketplaceReadController {
     private static String listingCursor(UUID marketplace,String field,
                                          String prefix,String status,
                                          ListingPageItem last) {
+        return skuCursor(marketplace,field,prefix,status,last.sellerSku(),last.id());
+    }
+    /** V88: reuse V87's newline-safe, filter-bound SKU keyset cursor format. */
+    private static String skuCursor(UUID marketplace,String kind,String prefix,
+                                    String filters,String sellerSku,String id) {
         String encodedSku=Base64.getUrlEncoder().withoutPadding().encodeToString(
-            last.sellerSku().getBytes(StandardCharsets.UTF_8));
-        String raw=marketplace+"\n"+field+"\n"+prefix+"\n"+status+
-            "\n"+encodedSku+"\n"+last.id();
+            sellerSku.getBytes(StandardCharsets.UTF_8));
+        String raw=marketplace+"\n"+kind+"\n"+prefix+"\n"+filters+
+            "\n"+encodedSku+"\n"+id;
         return Base64.getUrlEncoder().withoutPadding().encodeToString(
             raw.getBytes(StandardCharsets.UTF_8));
     }
@@ -417,6 +426,83 @@ public class MarketplaceReadController {
                 nullableInteger(rs, "reserved"), instant(rs, "observed_at"),
                 instant(rs, "ingested_at"), rs.getString("data_origin")),
             tenant, marketplaceId, safeLimit);
+    }
+
+    /**
+     * V88 / FR-INV-01/02: all latest-per-SKU FBA source observations, searched
+     * and filtered on PostgreSQL before paging. Quality/origin are applied to
+     * the latest observation only, never to older history before DISTINCT ON.
+     * An OBSERVED zero stays zero; a missing quantity stays null, never zero.
+     */
+    @GetMapping("/{marketplaceId}/inventory/fba/page")
+    public org.springframework.http.ResponseEntity<InventoryPage> inventoryPage(
+        Authentication authentication,HttpServletRequest request,
+        @PathVariable UUID marketplaceId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(defaultValue="") String search,
+        @RequestParam(defaultValue="ALL") String quality,
+        @RequestParam(defaultValue="ALL") String origin,
+        @RequestParam(required=false) String cursor) {
+        int size=limit(limit);
+        String prefix=normalizedOrderPrefix(search);
+        String checkedQuality=inventoryQuality(quality);
+        String checkedOrigin=inventoryOrigin(origin);
+        UUID tenant=authorizedMarketplace(authentication,request,marketplaceId);
+        // Distinct kinds prevent accidental cross-reuse of a V87 Listing cursor.
+        String filterKey=checkedQuality+"|"+checkedOrigin;
+        ListingCursor after=parseListingCursor(cursor,marketplaceId,
+            "FBA_INVENTORY",prefix,filterKey);
+        String pattern=prefix.replace("!","!!").replace("%","!%")
+            .replace("_","!_")+"%";
+        List<InventoryView> fetched=jdbc.query("""
+            WITH latest AS (
+              SELECT DISTINCT ON (seller_sku_raw)
+                id,seller_sku_raw,quality,fulfillable,reserved,
+                observed_at,ingested_at,data_origin
+              FROM fba_inventory_observation
+              WHERE tenant_id=? AND seller_marketplace_id=?
+                AND lower(seller_sku_raw) LIKE ? ESCAPE '!'
+              ORDER BY seller_sku_raw,observed_at DESC NULLS LAST,
+                       ingested_at DESC,id DESC
+            )
+            SELECT i.id,i.seller_sku_raw,i.quality,i.fulfillable,i.reserved,
+                   i.observed_at,i.ingested_at,i.data_origin
+            FROM latest i
+            WHERE (?='ALL' OR i.quality=?)
+              AND (?='ALL' OR i.data_origin=?)
+              AND (?::boolean=false OR (i.seller_sku_raw,i.id)>(?::text,?::uuid))
+            ORDER BY i.seller_sku_raw,i.id
+            LIMIT ?
+            """,(rs,row)->new InventoryView(uuid(rs,"id"),
+                rs.getString("seller_sku_raw"),rs.getString("quality"),
+                nullableInteger(rs,"fulfillable"),nullableInteger(rs,"reserved"),
+                instant(rs,"observed_at"),instant(rs,"ingested_at"),
+                rs.getString("data_origin")),
+            tenant,marketplaceId,pattern,
+            checkedQuality,checkedQuality,checkedOrigin,checkedOrigin,
+            after!=null,after==null?null:after.sellerSku(),
+            after==null?null:after.id(),size+1);
+        boolean hasMore=fetched.size()>size;
+        List<InventoryView> items=hasMore?
+            new ArrayList<>(fetched.subList(0,size)):fetched;
+        String next=hasMore?skuCursor(marketplaceId,"FBA_INVENTORY",
+            prefix,filterKey,items.getLast().sellerSku(),items.getLast().id()):null;
+        return org.springframework.http.ResponseEntity.ok()
+            .cacheControl(org.springframework.http.CacheControl.noStore())
+            .body(new InventoryPage(List.copyOf(items),next,hasMore,size,
+                prefix,checkedQuality,checkedOrigin));
+    }
+    private static String inventoryQuality(String quality) {
+        if(java.util.Set.of("ALL","OBSERVED","PARTIAL","UNKNOWN","STALE")
+            .contains(quality))return quality;
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+            "Unsupported inventory quality");
+    }
+    private static String inventoryOrigin(String origin) {
+        if(java.util.Set.of("ALL","MOCK","UNVERIFIED","LIVE")
+            .contains(origin))return origin;
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+            "Unsupported inventory data origin");
     }
 
     private UUID authorizedMarketplace(Authentication auth, HttpServletRequest request, UUID marketplaceId) {
