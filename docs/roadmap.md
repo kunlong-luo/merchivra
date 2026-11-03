@@ -1,5 +1,15 @@
 # PLAN-001 · 文档先行与分阶段交付路线
 
+> **最新开发阶段：V87（2026-11-03）**。V86 P0 代码审计和订单服务端游标检索已 CI 四项通过并合并 main；V87 继续补齐原 P0 Listing 仅展示前 50 条的业务缺口，增加 Seller SKU/ASIN 字面量前缀与映射状态筛选、有效/历史版本分离和完整服务端游标分页。详情：[CAT-087](catalog/listing-search-pagination-v87.md)。**代码交付、Mock CI、真实 Seller 授权和生产批准严格分开**；V87 的 CI 状态须以 GitHub Actions 为准。
+
+### 当前下一步核心优先级
+
+1. **V87 当前**：真实存储 Listing 全库搜索、映射证据保持、分页、UI/PG18 假数据回归；旧 Listing API 不破坏。
+2. **V88 P0**：FBA 最新可信库存观测全库分页，明确 UNKNOWN / ZERO / STALE 和来源时间。
+3. **V89 P0**：经营总览的可解释数据质量和导出入口，复用已存在 V64 来源贡献、CSV，而不是再造财务总账。
+4. **最后由 Owner 本地联调**：真实 Seller/Ads OAuth 与批准角色、Orders/Catalog/FBA/Finances 只读 API，撤销、429、分页、地区及银行结算，G1/G2/G3 签署和生产门禁。
+
+
 > **最新代码阶段：V86（2026-11-03）**。V85 四项离线 CI 已通过并合并；本页 V74 及更早的“当前”均为历史记录，不再是最新进度。V86 [P0 核心闭环审计](testing/core-coverage-audit-v86.md) 从真实代码核对原 P0/P1 FR 完成度，并实际增加全量订单号前缀搜索与 keyset 服务端分页。不能把 Mock CI、真实 Seller 授权、生产发布视为同一状态；V86 CI 结果以 GitHub Actions 为准。
 
 ## 当前核心功能后续顺序（覆盖以下历史版本计划）
