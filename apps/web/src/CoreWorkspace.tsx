@@ -204,19 +204,39 @@ export default function CoreWorkspace({tenantId,isOwner=true,focusException}:{
     setOrderSearchDraft('');setOrderSearch('');setOrderCursors([null]);setSelectedOrderId('')
    }}>清除全量搜索</button>}
   </form>:
-  <label className="core-search-field" htmlFor="core-record-search">
-   <span>筛选本页记录</span>
-   <input id="core-record-search" type="search" value={search}
-    onChange={e=>setSearch(e.target.value)}
-    placeholder="搜索已加载 SKU、ASIN" autoComplete="off"
-    aria-describedby="core-search-scope"/>
-  </label>}
+  <form className="core-search-field" onSubmit={e=>{
+   e.preventDefault();applyInventorySearch()
+  }}>
+   <label htmlFor="core-inventory-quality">最新观测质量</label>
+   <select id="core-inventory-quality" value={inventoryQualityDraft}
+    onChange={e=>setInventoryQualityDraft(e.target.value as typeof inventoryQualityDraft)}>
+    {(['ALL','OBSERVED','PARTIAL','UNKNOWN','STALE'] as const).map(q=>
+     <option key={q} value={q}>{q==='ALL'?'全部质量':coreStatusLabel(q)}</option>)}
+   </select>
+   <label htmlFor="core-inventory-origin">数据来源</label>
+   <select id="core-inventory-origin" value={inventoryOriginDraft}
+    onChange={e=>setInventoryOriginDraft(e.target.value as typeof inventoryOriginDraft)}>
+    {(['ALL','MOCK','UNVERIFIED','LIVE'] as const).map(o=>
+     <option key={o} value={o}>{o==='ALL'?'所有来源':
+      sourceLabel(o)}</option>)}
+   </select>
+   <label htmlFor="core-inventory-search">
+    在当前 Marketplace 检索全部已入库 FBA Seller SKU（前缀匹配）
+   </label>
+   <input id="core-inventory-search" type="search" maxLength={80}
+    value={search} onChange={e=>setSearch(e.target.value)}
+    placeholder="例如 SKU-" autoComplete="off"/>
+   <button className="refresh-button" type="submit">检索 FBA 库存</button>
+   {(inventorySearch||inventoryQuality!=='ALL'||inventoryOrigin!=='ALL')&&
+    <button className="text-button" type="button"
+     onClick={resetInventorySearch}>清除全库筛选</button>}
+  </form>}
  <p className="core-search-scope" id="core-search-scope">
   {section==='listings'?
    `Listing 从服务端按 Seller SKU、UUID 稳定翻页；当前第 ${listingCursors.length} 页，每页最多 50 条。Seller SKU、ASIN 前缀和映射状态过滤当前站点全部已入库 Listing。翻页不是冻结快照。`:
    section==='orders'?
    `订单从服务端按来源更新时间降序、UUID 稳定翻页；当前第 ${orderCursors.length} 页，每页最多 50 条，前缀搜索范围为当前 Marketplace 全部已入库订单。翻页不是冻结的来源快照。`:
-   'FBA 库存目前仅筛选已读取的最多 50 条记录，不搜索其他页。'}
+   `FBA 库存服务端按 Seller SKU 升序稳定翻页；当前第 ${inventoryCursors.length} 页，每页最多 50 个 SKU。质量/来源筛选仅作用于每 SKU 的最新观测，不能让旧数据冒充最新库存；来源时间未知不等于库存为零。翻页不是冻结快照。`}
   <span className="core-scroll-instruction">表格可左右滑动，键盘可使用方向键。</span>
  </p></div>
  {section==='listings'&&panel('Listing（核心业务表）',
@@ -281,9 +301,36 @@ export default function CoreWorkspace({tenantId,isOwner=true,focusException}:{
          <td>{i.itemSubtotal===null?'未取得':`${i.currency} ${i.itemSubtotal}`}</td></tr>)}
        </tbody></table></div>}
  </section>}
- {section==='inventory'&&panel('最新 FBA 观测（核心业务表）','每个 Seller SKU 显示最新观测，未知不等于零',filteredInventory.length,inventory.data?.length??0,inventory.isPending,inventory.error,'当前站点尚无 FBA 库存观测。',
- <div className="table-scroll core-data-scroll" role="region" tabIndex={0} aria-label="可水平滚动的 FBA 库存表格"><table><thead><tr>{['Seller SKU','可售','预留','质量','来源','观测时间'].map(h=><th key={h}>{h}</th>)}</tr></thead><tbody>{filteredInventory.map(i=><tr key={i.id}><td className="strong-cell">{i.sellerSku}</td><td>{i.fulfillable===null?'未知':i.fulfillable}</td><td>{i.reserved===null?'未知':i.reserved}</td><td>{coreStatusLabel(i.quality)}</td><td>{status(i.dataOrigin)}</td><td>{formatSourceTime(i.observedAt)}</td></tr>)}</tbody></table></div>,()=>void inventory.refetch())}
- <div className="note-panel"><span className="note-mark">i</span><div><strong>数据完整性提醒</strong><p>Listing 和订单均已支持服务端搜索与分页；FBA 库存仍只读取本页 50 条。未知库存不能当零，Mock 不代表 Amazon 真实业务。</p></div></div>
+ {section==='inventory'&&panel('最新 FBA 观测（核心业务表）',
+  '每 SKU 最新来源证据，UNKNOWN/已观测为零/STALE 严格分开',
+  filteredInventory.length,inventory.data?.items.length??0,
+  inventory.isPending,inventory.error,
+  '当前站点在此质量/来源/前缀条件下没有最新 FBA 观测。',
+  <div className="table-scroll core-data-scroll" role="region" tabIndex={0}
+   aria-label="可水平滚动的 FBA 库存表格"><table>
+   <thead><tr>{['Seller SKU','可售','预留','质量','来源',
+    '来源观测时间','ERP 入库时间'].map(h=><th key={h} scope="col">{h}</th>)}
+   </tr></thead><tbody>{filteredInventory.map(i=><tr key={i.id}>
+    <td className="strong-cell">{i.sellerSku}</td>
+    <td>{i.fulfillable===null?'未知':i.fulfillable}</td>
+    <td>{i.reserved===null?'未知':i.reserved}</td>
+    <td><span className={`status-chip ${i.quality==='OBSERVED'?
+     'chip-green':'chip-amber'}`}>{coreStatusLabel(i.quality)}</span></td>
+    <td>{status(i.dataOrigin)}</td>
+    <td>{formatSourceTime(i.observedAt)}</td>
+    <td>{formatSourceTime(i.ingestedAt)}</td>
+   </tr>)}</tbody></table></div>,()=>void inventory.refetch())}
+ {section==='inventory'&&!inventory.isPending&&!inventory.isError&&
+  <div className="ops-toolbar" role="group" aria-label="FBA 库存服务端分页">
+   <button type="button" className="refresh-button"
+    onClick={previousInventoryPage} disabled={inventoryCursors.length===1}>
+    上一页</button>
+   <span role="status">第 {inventoryCursors.length} 页 · 当前 {filteredInventory.length} 个 SKU
+    {inventory.data?.hasMore?' · 后面还有记录':' · 已到最后一页'}</span>
+   <button type="button" className="refresh-button" onClick={nextInventoryPage}
+    disabled={!inventory.data?.hasMore||!inventory.data?.nextCursor}>下一页</button>
+  </div>}
+ <div className="note-panel"><span className="note-mark">i</span><div><strong>数据完整性提醒</strong><p>Listing、订单、FBA 库存均支持服务端全库前缀搜索与游标分页。FBA 质量筛选只针对最新来源观测，不会拿旧已观测库存填补 UNKNOWN。来源观测时间可能为空，已观测 0 不等于未知；Mock 不代表 Amazon 真实业务。</p></div></div>
  {isOwner&&active?.connectionStatus==='CONNECTED'&&section==='listings'&&
    <CatalogSyncPanel key={'catalog-'+active.id} tenantId={tenantId}
     marketplaceId={active.id} stream="LISTINGS"/>}
