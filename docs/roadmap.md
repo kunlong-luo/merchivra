@@ -1,5 +1,14 @@
 # PLAN-001 · 文档先行与分阶段交付路线
 
+> **最新实现阶段：V89（2026-11-04）**。V86–V88 已完成订单、Listing、FBA 库存的 PostgreSQL 全量检索/分页及模拟验收。V89 把原独立 Mock Gateway「经营总览」替换成 Owner 当前会话租户的来源质量概览，引用原 V64 已持久化原币贡献、复用安全 CSV 导出，避免跨币种相加/伪造净利润。详情：[DASH-089](analytics/business-source-quality-v89.md)。V89 的最终 CI 结果以 PR 工作流为准；**Mock 数据 ≠ Amazon 真实来源验收 ≠ 生产发布许可**。
+
+### 当前阶段核心优先级
+
+1. **V89 当前 P0**：全部站点逐币种 Listing/订单/FBA 质量数据、有效来源分布与 Owner-only 数据质量 CSV；已有 V64 原币报告作为唯一财务引用。
+2. **V90 候选 P0**：跨模块核心闭环演练与数据质量验收包（采购 PO/收货、FBA、订单、退款、财务/Ads、自动化安全动作），优先补缺漏的业务操作流程而非重复实现已有规则。
+3. **最终真实接入验收**：由用户在本地逐项授权 Seller/Ads OAuth/SP-API，测试权限/分页/429/撤销/币种、银行/会计口径、G1/G2/G3 签署与生产安全门禁，继续不由 CI 代办真实 Amazon 授权。
+
+
 > **最新开发阶段：V88（2026-11-03）**。V87 的 Listing Seller SKU/ASIN 全库检索、映射版本与只读员工分页 CI 4 项通过并已合并。V88 解决核心 FBA 库存页原来只读取 50 个 SKU 的缺口，增加 PostgreSQL 全量最新观测检索、来源/质量后过滤和 keyset 分页。详见 [FBA-088](inventory/fba-inventory-observation-pages-v88.md)。Mock 测试不能当作 Amazon 实时库存验收，CI 最终状态以本 PR 为准。
 
 ### 核心功能近阶段优先级（覆盖早期过时状态）
