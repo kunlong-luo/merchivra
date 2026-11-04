@@ -1,4 +1,5 @@
 import {z} from 'zod'
+import {merchivraFetch} from './merchivra-mutator'
 import {listFbaInboundShipments,listFbaInboundTransit,getFbaInboundShipment,
  createFbaInboundShipment,dispatchFbaInboundShipment,recordFbaInboundReceipt,
  startFbaInboundReview,resolveFbaInboundVariance,finalizeFbaInboundReconciliation}
@@ -33,6 +34,34 @@ const transit=z.object({
  reportedReceived:nonnegative,estimatedInTransit:nonnegative,
  amazonVerified:z.literal(false)
 })
+/** V92: local history pages are source observations, never Amazon shipments. */
+export const inboundShipmentPageSchema=z.object({
+ items:z.array(shipment).max(100),
+ nextCursor:z.string().min(1).max(4096).nullable(),
+ hasMore:z.boolean(),
+ pageSize:z.number().int().min(1).max(100),
+ searchPrefix:z.string().max(80),
+ state:z.enum(['ALL','DRAFT','IN_TRANSIT','RECEIVING','REVIEWING','RECONCILED'])
+}).superRefine((p,ctx)=>{
+ if(p.hasMore&&!p.nextCursor)ctx.addIssue({code:'custom',message:'缺少下一页游标'})
+ if(!p.hasMore&&p.nextCursor)ctx.addIssue({code:'custom',message:'末页不应返回游标'})
+})
+export type InboundShipmentPage=z.infer<typeof inboundShipmentPageSchema>
+export type InboundHistoryState=InboundShipmentPage['state']
+/** Secure Orval Fetch transport; V92 Spring OpenAPI operation is normalized
+ * alongside the V65 existing shipment operations.
+ */
+export async function getShipmentsPage(
+ mp:string,search='',state:InboundHistoryState='ALL',cursor:string|null=null,
+ limit=50):Promise<InboundShipmentPage>{
+ const params=new URLSearchParams({limit:String(limit),state})
+ if(search.trim())params.set('search',search.trim())
+ if(cursor)params.set('cursor',cursor)
+ const response=await merchivraFetch<{data:unknown,status:number}>(
+  '/api/v1/fba/marketplaces/'+encodeURIComponent(mp)+
+  '/shipments/page?'+params)
+ return inboundShipmentPageSchema.parse(response.data)
+}
 export type InboundDetail=z.infer<typeof inboundDetail>
 export type InboundShipment=z.infer<typeof shipment>
 export type InboundLine=z.infer<typeof line>
