@@ -3,15 +3,17 @@
  * Do not edit manually.
  * Merchivra verified local FBA inbound API
  * Owner Session; MOCK/MANUAL_UNVERIFIED evidence only. No Amazon writes.
- * OpenAPI spec version: 65.1.0
+ * OpenAPI spec version: 92.0.0
  */
 
 export * from './create.ts';
 export * from './detail.ts';
 export * from './line.ts';
 export * from './lineInput.ts';
+export * from './listFbaInboundShipmentPageParams.ts';
 export * from './receipt.ts';
 export * from './receiptEvent.ts';
 export * from './resolve.ts';
 export * from './shipment.ts';
+export * from './shipmentPage.ts';
 export * from './transitRow.ts';

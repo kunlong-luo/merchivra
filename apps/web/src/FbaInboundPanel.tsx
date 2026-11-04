@@ -4,8 +4,8 @@ import CoreMarketplacePicker from './CoreMarketplacePicker'
 import FbaPurchaseLinkPanel from './FbaPurchaseLinkPanel'
 import FbaPurchaseReconciliationPanel from './FbaPurchaseReconciliationPanel'
 import FbaPurchaseExceptionPanel from './FbaPurchaseExceptionPanel'
-import {addShipment,getShipments,getShipment,getTransit,dispatchShipment,addReceipt,
- beginReview,resolveVariance,closeReview,type InboundOrigin} from './lib/fba-inbound'
+import {addShipment,getShipmentsPage,getShipment,getTransit,dispatchShipment,addReceipt,
+ beginReview,resolveVariance,closeReview,type InboundOrigin,type InboundHistoryState} from './lib/fba-inbound'
 
 type DraftLine={rowId:string;sellerSku:string;quantity:number}
 const states:Record<string,string>={
@@ -22,6 +22,12 @@ export default function FbaInboundPanel({tenantId,marketplaceId,focusExceptionLi
  const client=useQueryClient()
  const key=['fba-inbound',tenantId,marketplaceId]
  const [selectedId,setSelectedId]=useState('')
+ const [historySearchDraft,setHistorySearchDraft]=useState('')
+ const [historySearch,setHistorySearch]=useState('')
+ const [historyStateDraft,setHistoryStateDraft]=useState<InboundHistoryState>('ALL')
+ const [historyState,setHistoryState]=useState<InboundHistoryState>('ALL')
+ const [historyCursors,setHistoryCursors]=useState<(string|null)[]>([null])
+ const historyCursor=historyCursors.at(-1)??null
  const [reference,setReference]=useState('')
  const [origin,setOrigin]=useState<InboundOrigin>('MOCK')
  const [lines,setLines]=useState<DraftLine[]>(()=>[initialLine()])
@@ -31,7 +37,11 @@ export default function FbaInboundPanel({tenantId,marketplaceId,focusExceptionLi
  const [receiptKey,setReceiptKey]=useState(()=>crypto.randomUUID())
  const [reviewSku,setReviewSku]=useState(''),[reviewNote,setReviewNote]=useState('')
  const [notice,setNotice]=useState(''),[failure,setFailure]=useState('')
- const shipments=useQuery({queryKey:[...key,'shipments'],queryFn:()=>getShipments(marketplaceId),retry:false})
+ const shipments=useQuery({
+  queryKey:[...key,'shipments-v92',historySearch,historyState,historyCursor],
+  queryFn:()=>getShipmentsPage(marketplaceId,historySearch,
+   historyState,historyCursor,50),retry:false,staleTime:15000
+ })
  const transit=useQuery({queryKey:[...key,'transit'],queryFn:()=>getTransit(marketplaceId),retry:false})
  const detail=useQuery({queryKey:[...key,'shipment',selectedId],
   queryFn:()=>getShipment(marketplaceId,selectedId),enabled:!!selectedId,retry:false})
@@ -160,19 +170,66 @@ export default function FbaInboundPanel({tenantId,marketplaceId,focusExceptionLi
    </form>
   </details>
   <section className="core-tools" aria-label="本地货件列表">
-   <h3>近期货件（最多 100 个）</h3>
-   {shipments.isPending?<p className="empty-state">读取货件…</p>:
+   <h3>全部本地 FBA 货件历史 · 服务端每页最多 50 个</h3>
+   <div className="core-search-field">
+    <label htmlFor="fba-history-search">货件编号前缀（当前 Marketplace 完整历史）</label>
+    <input id="fba-history-search" type="search" value={historySearchDraft}
+     maxLength={80} autoComplete="off" placeholder="例如 LOCAL-FBA-"
+     onChange={e=>setHistorySearchDraft(e.target.value)}
+     onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault()
+      setHistorySearch(historySearchDraft.trim());setHistoryState(historyStateDraft)
+      setHistoryCursors([null]);setSelectedId('')}}}/>
+    <label htmlFor="fba-history-state">本地货件状态</label>
+    <select id="fba-history-state" value={historyStateDraft}
+     onChange={e=>setHistoryStateDraft(e.target.value as InboundHistoryState)}>
+     <option value="ALL">全部状态</option>
+     {Object.entries(states).map(([k,v])=><option value={k} key={k}>{v}</option>)}
+    </select>
+    <button type="button" className="refresh-button" disabled={shipments.isFetching}
+     onClick={()=>{
+      setHistorySearch(historySearchDraft.trim());setHistoryState(historyStateDraft)
+      setHistoryCursors([null]);setSelectedId('')
+     }}>检索货件历史</button>
+    {(historySearch||historyState!=='ALL')&&<button type="button"
+     className="text-button" onClick={()=>{
+      setHistorySearch('');setHistorySearchDraft('')
+      setHistoryState('ALL');setHistoryStateDraft('ALL')
+      setHistoryCursors([null]);setSelectedId('')
+     }}>清除筛选</button>}
+   </div>
+   {shipments.isPending?<p className="empty-state" role="status">读取货件历史…</p>:
     shipments.isError?<p className="setup-error" role="alert">{String(shipments.error)}</p>:
-    !shipments.data?.length?<p className="empty-state">尚未建立本地货件。</p>:
+    !shipments.data?.items.length?<p className="empty-state">
+     当前站点在此货件编号/状态筛选下无记录。</p>:
     <div className="table-scroll" role="region" tabIndex={0} aria-label="货件历史表">
      <table><thead><tr>{['货件编号','状态','来源','创建时间','查看'].map(h=><th key={h} scope="col">{h}</th>)}</tr></thead>
-     <tbody>{shipments.data.map(s=><tr key={s.id}>
+     <tbody>{shipments.data.items.map(s=><tr key={s.id}>
       <td>{s.reference}</td><td>{states[s.state]??s.state}</td>
       <td>{sources[s.origin]}</td><td>{s.createdAt}</td>
       <td><button type="button" className="text-button" aria-pressed={s.id===selectedId}
        onClick={()=>{setSelectedId(s.id);setReceiptSku('');setReviewSku('');setFailure('');setNotice('')}}>
        {s.id===selectedId?'当前查看':'查看与处理'}</button></td>
      </tr>)}</tbody></table></div>}
+   {!shipments.isPending&&!shipments.isError&&
+    <div className="ops-toolbar" role="group" aria-label="本地 FBA 货件历史分页">
+     <button type="button" className="refresh-button"
+      disabled={historyCursors.length===1||shipments.isFetching}
+      onClick={()=>{
+       setHistoryCursors(v=>v.length>1?v.slice(0,-1):v);setSelectedId('')
+      }}>上一页</button>
+     <span role="status">第 {historyCursors.length} 页 ·
+      {shipments.data?.items.length??0} 个本地货件 ·
+      {shipments.data?.hasMore?'后续仍有记录':'已到最后一页'}</span>
+     <button type="button" className="refresh-button"
+      disabled={!shipments.data?.hasMore||!shipments.data.nextCursor||shipments.isFetching}
+      onClick={()=>{
+       const next=shipments.data?.nextCursor
+       if(next){setHistoryCursors(v=>[...v,next]);setSelectedId('')}
+      }}>下一页</button>
+    </div>}
+   <p className="setup-hint">货件按本地创建时间降序稳定分页。
+    这是可变的本地历史，不是 Amazon 货件查询或冻结财务证据；
+    切换筛选/翻页后必须重新选择货件再执行入仓和差异复核。</p>
   </section>
   {selectedId&&<section className="core-tools" aria-label="选定货件明细与操作">
    <h3>货件明细与入仓对账</h3>

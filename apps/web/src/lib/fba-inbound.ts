@@ -1,5 +1,5 @@
 import {z} from 'zod'
-import {listFbaInboundShipments,listFbaInboundTransit,getFbaInboundShipment,
+import {listFbaInboundShipments,listFbaInboundShipmentPage,listFbaInboundTransit,getFbaInboundShipment,
  createFbaInboundShipment,dispatchFbaInboundShipment,recordFbaInboundReceipt,
  startFbaInboundReview,resolveFbaInboundVariance,finalizeFbaInboundReconciliation}
  from '../generated/fba-inbound'
@@ -33,6 +33,31 @@ const transit=z.object({
  reportedReceived:nonnegative,estimatedInTransit:nonnegative,
  amazonVerified:z.literal(false)
 })
+/** V92: local history pages are source observations, never Amazon shipments. */
+export const inboundShipmentPageSchema=z.object({
+ items:z.array(shipment).max(100),
+ nextCursor:z.string().min(1).max(4096).nullable(),
+ hasMore:z.boolean(),
+ pageSize:z.number().int().min(1).max(100),
+ searchPrefix:z.string().max(80),
+ state:z.enum(['ALL','DRAFT','IN_TRANSIT','RECEIVING','REVIEWING','RECONCILED'])
+}).superRefine((p,ctx)=>{
+ if(p.hasMore&&!p.nextCursor)ctx.addIssue({code:'custom',message:'缺少下一页游标'})
+ if(!p.hasMore&&p.nextCursor)ctx.addIssue({code:'custom',message:'末页不应返回游标'})
+})
+export type InboundShipmentPage=z.infer<typeof inboundShipmentPageSchema>
+export type InboundHistoryState=InboundShipmentPage['state']
+/** Spring-owned OpenAPI + Orval-generated endpoint, with Zod runtime checks. */
+export async function getShipmentsPage(
+ mp:string,search='',state:InboundHistoryState='ALL',cursor:string|null=null,
+ limit=50):Promise<InboundShipmentPage>{
+ const response=await listFbaInboundShipmentPage(mp,{
+  limit,state,
+  ...(search.trim()?{search:search.trim()}:{}),
+  ...(cursor?{cursor}:{})
+ })
+ return inboundShipmentPageSchema.parse(response.data)
+}
 export type InboundDetail=z.infer<typeof inboundDetail>
 export type InboundShipment=z.infer<typeof shipment>
 export type InboundLine=z.infer<typeof line>

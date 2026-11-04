@@ -1,12 +1,18 @@
 package org.merchivra.erp.fba;
 
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Base64;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.Comparator;
+import java.util.Locale;
 import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.List;
@@ -37,6 +43,12 @@ public class FbaInboundService {
     public record Shipment(String id,String reference,String origin,String state,
                            String createdAt,String dispatchedAt,String reviewStartedAt,
                            String reconciledAt){}
+    /** V92: bounded, unfiltered-completeness-aware local history; not Amazon data. */
+    public record ShipmentPage(List<Shipment> items,String nextCursor,
+                               boolean hasMore,int pageSize,String searchPrefix,
+                               String state) {}
+    private record PagePosition(OffsetDateTime createdAt,UUID id) {}
+
     public record Line(String id,String sellerSku,int plannedQuantity,int reportedReceived,
                        Integer estimatedInTransit,int delta,String decision,String reviewedBy,
                        String reviewNote,String reviewedAt){}
@@ -136,6 +148,69 @@ public class FbaInboundService {
             ORDER BY created_at DESC,id DESC LIMIT 100
             """,FbaInboundService::mapShipment,tenant,marketplace);
     }
+    /** The V63 list remains intact; V92 explicitly exposes all local history. */
+    public ShipmentPage page(UUID tenant,UUID marketplace,int limit,
+                             String search,String state,String cursor) {
+        if(limit<1||limit>100)throw bad("Shipment page limit must be 1..100");
+        String prefix=search==null?"":search.strip().toLowerCase(Locale.ROOT);
+        if(prefix.length()>80||prefix.chars().anyMatch(Character::isISOControl))
+            throw bad("Invalid local shipment reference search");
+        String checkedState=state==null?"ALL":state;
+        if(!Set.of("ALL","DRAFT","IN_TRANSIT","RECEIVING","REVIEWING","RECONCILED")
+            .contains(checkedState))throw bad("Invalid local shipment state");
+        // Cursor holds only a pointer. Every request rechecks Owner's tenant/site.
+        requireMarketplace(tenant,marketplace);
+        PagePosition after=parsePageCursor(cursor,marketplace,prefix,checkedState);
+        String pattern=prefix.replace("!","!!").replace("%","!%")
+            .replace("_","!_")+"%";
+        List<Shipment> fetched=jdbc.query("""
+            SELECT s.id,s.reference,s.evidence_origin,s.state,s.created_at,
+                   s.dispatched_at,s.review_started_at,s.reconciled_at
+            FROM fba_inbound_shipment s
+            WHERE s.tenant_id=? AND s.seller_marketplace_id=?
+              AND lower(s.reference) LIKE ? ESCAPE '!'
+              AND (?='ALL' OR s.state=?)
+              AND (?::boolean=false OR (s.created_at,s.id)<
+                   (?::timestamptz,?::uuid))
+            ORDER BY s.created_at DESC,s.id DESC LIMIT ?
+            """,FbaInboundService::mapShipment,tenant,marketplace,pattern,
+            checkedState,checkedState,after!=null,
+            after==null?null:after.createdAt(),
+            after==null?null:after.id(),limit+1);
+        boolean more=fetched.size()>limit;
+        List<Shipment> items=more?new ArrayList<>(fetched.subList(0,limit)):fetched;
+        String next=more?pageCursor(marketplace,prefix,checkedState,items.getLast()):null;
+        return new ShipmentPage(List.copyOf(items),next,more,limit,prefix,checkedState);
+    }
+
+    /** Bound to immutable Marketplace, search, state and (created_at,id) keyset. */
+    private static String pageCursor(UUID marketplace,String prefix,String state,
+                                     Shipment last) {
+        String raw=marketplace+"\n"+prefix+"\n"+state+"\n"+
+            last.createdAt()+"\n"+last.id();
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(
+            raw.getBytes(StandardCharsets.UTF_8));
+    }
+    private static PagePosition parsePageCursor(String cursor,UUID marketplace,
+                                                String prefix,String state) {
+        if(cursor==null||cursor.isBlank())return null;
+        if(cursor.length()>4096||!cursor.matches("[A-Za-z0-9_-]+"))
+            throw bad("Invalid local shipment cursor");
+        try {
+            String raw=new String(Base64.getUrlDecoder().decode(cursor),
+                StandardCharsets.UTF_8);
+            String[] parts=raw.split("\n",-1);
+            if(parts.length!=5||!marketplace.toString().equals(parts[0])||
+                !prefix.equals(parts[1])||!state.equals(parts[2]))
+                throw bad("Local shipment cursor does not match filters");
+            Instant time=Instant.parse(parts[3]);
+            UUID id=UUID.fromString(parts[4]);
+            return new PagePosition(OffsetDateTime.ofInstant(time,ZoneOffset.UTC),id);
+        }catch(IllegalArgumentException ex) {
+            throw bad("Invalid local shipment cursor");
+        }
+    }
+
     /**
      * Advisory in-transit, grouped BY SKU AND origin. This is not Amazon inbound
      * and MUST NOT be added to FBA available quantity or warehouse on-hand.

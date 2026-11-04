@@ -4,7 +4,7 @@ const [source,destination]=process.argv.slice(2)
 if(!source||!destination)throw new Error('Usage: node normalize-fba-openapi.mjs input.json output.json')
 const raw=JSON.parse(fs.readFileSync(source,'utf8'))
 const expected=[
- 'listFbaInboundShipments','listFbaInboundTransit','getFbaInboundShipment','createFbaInboundShipment',
+ 'listFbaInboundShipments','listFbaInboundShipmentPage','listFbaInboundTransit','getFbaInboundShipment','createFbaInboundShipment',
  'dispatchFbaInboundShipment','recordFbaInboundReceipt','startFbaInboundReview',
  'resolveFbaInboundVariance','finalizeFbaInboundReconciliation'
 ]
@@ -19,7 +19,7 @@ for(const name of expected)
  if(actual.filter(x=>x===name).length!==1)throw Error('Missing/duplicate live FBA operation: '+name)
 if(actual.length!==expected.length)throw Error('Unexpected FBA operations: '+actual.join(','))
 const result=structuredClone(raw)
-result.info={title:'Merchivra verified local FBA inbound API',version:'65.1.0',
+result.info={title:'Merchivra verified local FBA inbound API',version:'92.0.0',
  description:'Owner Session; MOCK/MANUAL_UNVERIFIED evidence only. No Amazon writes.'}
 result.paths=selected
 result.servers=[{url:''}]
@@ -28,7 +28,7 @@ result.components??={}
 // Freeze V65 generated model surface: V75 separate purchase-link DTOs live on
 // distinct endpoints and reuse the existing secure Orval fetch mutator.
 const modelNames=new Set(['Create','Detail','Line','LineInput',
-  'Receipt','ReceiptEvent','Resolve','Shipment','TransitRow'])
+  'Receipt','ReceiptEvent','Resolve','Shipment','ShipmentPage','TransitRow'])
 result.components.schemas=Object.fromEntries(Object.entries(result.components.schemas??{})
   .filter(([name])=>modelNames.has(name)))
 result.components.securitySchemes={
@@ -50,4 +50,4 @@ function sort(x){
 }
 fs.mkdirSync(destination.slice(0,destination.lastIndexOf('/'))||'.',{recursive:true})
 fs.writeFileSync(destination,JSON.stringify(sort(result),null,2)+'\n')
-console.log('Verified '+actual.length+' LIVE FBA shipment operations')
+console.log('Verified '+actual.length+' actual local FBA shipment operations')

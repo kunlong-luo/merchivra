@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Merchivra verified local FBA inbound API
  * Owner Session; MOCK/MANUAL_UNVERIFIED evidence only. No Amazon writes.
- * OpenAPI spec version: 65.1.0
+ * OpenAPI spec version: 92.0.0
  */
 import {
   useMutation,
@@ -27,9 +27,11 @@ import type {
 import type {
   Create,
   Detail,
+  ListFbaInboundShipmentPageParams,
   Receipt,
   Resolve,
   Shipment,
+  ShipmentPage,
   TransitRow
 } from './fba-models';
 
@@ -906,6 +908,128 @@ export function useListFbaInboundTransit<TData = Awaited<ReturnType<typeof listF
  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
 
   const queryOptions = getListFbaInboundTransitQueryOptions(marketplaceId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type listFbaInboundShipmentPageResponse200 = {
+  data: ShipmentPage
+  status: 200
+}
+
+export type listFbaInboundShipmentPageResponseSuccess = (listFbaInboundShipmentPageResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listFbaInboundShipmentPageResponse = (listFbaInboundShipmentPageResponseSuccess)
+
+export const getListFbaInboundShipmentPageUrl = (marketplaceId: string,
+    params?: ListFbaInboundShipmentPageParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/fba/marketplaces/${marketplaceId}/shipments/page?${stringifiedParams}` : `/api/v1/fba/marketplaces/${marketplaceId}/shipments/page`
+}
+
+export const listFbaInboundShipmentPage = async (marketplaceId: string,
+    params?: ListFbaInboundShipmentPageParams, options?: Parameters<typeof merchivraFetch>[1]): Promise<listFbaInboundShipmentPageResponse> => {
+
+  return merchivraFetch<listFbaInboundShipmentPageResponse>(getListFbaInboundShipmentPageUrl(marketplaceId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFbaInboundShipmentPageQueryKey = (marketplaceId: string,
+    params?: ListFbaInboundShipmentPageParams,) => {
+    return [
+    `/api/v1/fba/marketplaces/${marketplaceId}/shipments/page`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListFbaInboundShipmentPageQueryOptions = <TData = Awaited<ReturnType<typeof listFbaInboundShipmentPage>>, TError = ErrorType<unknown>>(marketplaceId: string,
+    params?: ListFbaInboundShipmentPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaInboundShipmentPage>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFbaInboundShipmentPageQueryKey(marketplaceId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFbaInboundShipmentPage>>> = ({ signal }) => listFbaInboundShipmentPage(marketplaceId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: marketplaceId !== null && marketplaceId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFbaInboundShipmentPage>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListFbaInboundShipmentPageQueryResult = NonNullable<Awaited<ReturnType<typeof listFbaInboundShipmentPage>>>
+export type ListFbaInboundShipmentPageQueryError = ErrorType<unknown>
+
+
+export function useListFbaInboundShipmentPage<TData = Awaited<ReturnType<typeof listFbaInboundShipmentPage>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    params: undefined |  ListFbaInboundShipmentPageParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaInboundShipmentPage>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFbaInboundShipmentPage>>,
+          TError,
+          Awaited<ReturnType<typeof listFbaInboundShipmentPage>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFbaInboundShipmentPage<TData = Awaited<ReturnType<typeof listFbaInboundShipmentPage>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    params?: ListFbaInboundShipmentPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaInboundShipmentPage>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFbaInboundShipmentPage>>,
+          TError,
+          Awaited<ReturnType<typeof listFbaInboundShipmentPage>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFbaInboundShipmentPage<TData = Awaited<ReturnType<typeof listFbaInboundShipmentPage>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    params?: ListFbaInboundShipmentPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaInboundShipmentPage>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListFbaInboundShipmentPage<TData = Awaited<ReturnType<typeof listFbaInboundShipmentPage>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    params?: ListFbaInboundShipmentPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaInboundShipmentPage>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListFbaInboundShipmentPageQueryOptions(marketplaceId,params,options)
 
   const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
 

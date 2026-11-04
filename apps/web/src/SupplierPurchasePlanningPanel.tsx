@@ -1,6 +1,7 @@
 import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {Sku} from './lib/catalog'
+import InternalSkuPicker from './InternalSkuPicker'
 import type {Supplier} from './lib/purchasing'
 import {
  fetchSupplierSkuRules,setSupplierSkuRule,removeSupplierSkuRule,
@@ -23,6 +24,7 @@ export default function SupplierPurchasePlanningPanel({tenantId,warehouseId,skus
 }){
  const client=useQueryClient()
  const [supplierId,setSupplierId]=useState(''),[skuId,setSkuId]=useState('')
+ const [editingRuleSku,setEditingRuleSku]=useState('')
  const [moq,setMoq]=useState(1),[pack,setPack]=useState(1)
  const [lead,setLead]=useState(14),[currency,setCurrency]=useState('USD')
  const [unitCost,setUnitCost]=useState('')
@@ -37,7 +39,7 @@ export default function SupplierPurchasePlanningPanel({tenantId,warehouseId,skus
  const refresh=()=>void client.invalidateQueries({queryKey:root})
  const save=useMutation({mutationFn:()=>setSupplierSkuRule(
   supplierId,skuId,moq,pack,lead,currency,unitCost),
-  onSuccess:()=>{setMessage('供应商 SKU 采购规则已更新');setFailure('');refresh()},
+  onSuccess:()=>{setMessage('供应商 SKU 采购规则已更新');setFailure('');setEditingRuleSku('');setSkuId('');refresh()},
   onError:(error:Error)=>setFailure(error.message)})
  const remove=useMutation({mutationFn:({s,k}:{s:string;k:string})=>removeSupplierSkuRule(s,k),
   onSuccess:()=>{setMessage('供应商 SKU 规则已移除');setFailure('');refresh()},
@@ -54,6 +56,7 @@ export default function SupplierPurchasePlanningPanel({tenantId,warehouseId,skus
   onError:(error:Error)=>setFailure(error.message)
  })
  const validTerms=!!supplierId&&!!skuId&&
+  (!editingRuleSku||editingRuleSku===skuId)&&
   Number.isInteger(moq)&&moq>=1&&moq<=1_000_000&&
   Number.isInteger(pack)&&pack>=1&&pack<=1_000_000&&
   Number.isInteger(lead)&&lead>=0&&lead<=365&&
@@ -74,7 +77,6 @@ export default function SupplierPurchasePlanningPanel({tenantId,warehouseId,skus
    expectedPolicyUpdatedAt:a.policyUpdatedAt,expectedRuleUpdatedAt:a.ruleUpdatedAt,
    expectedOnHand:a.onHandQuantity,expectedOrderQuantity:a.orderQuantity})
  }
- const activeSkus=skus.filter(s=>s.status==='ACTIVE')
  const activeSuppliers=suppliers.filter(s=>s.status==='ACTIVE')
  return <section className="panel full-panel" aria-label="供应商规则与本地采购计划">
   <div className="panel-heading"><div><h2>供应商采购规则与采购计划</h2>
@@ -88,11 +90,15 @@ export default function SupplierPurchasePlanningPanel({tenantId,warehouseId,skus
     <option value="">选择供应商</option>
     {activeSuppliers.map(s=><option key={s.id} value={s.id}>{s.code} · {s.name}</option>)}
    </select>
-   <label htmlFor="supplier-rule-sku">内部 SKU</label>
-   <select id="supplier-rule-sku" value={skuId} onChange={e=>setSkuId(e.target.value)}
-    required><option value="">选择 SKU</option>
-    {activeSkus.map(s=><option key={s.id} value={s.id}>{s.internalSku}</option>)}
-   </select>
+   <InternalSkuPicker tenantId={tenantId} id="supplier-rule-sku"
+    label="采购规则内部 SKU（全库 ACTIVE 商品）" value={skuId}
+    onChange={setSkuId}/>
+   {editingRuleSku&&<p className="setup-hint" role="status">
+    正在编辑已有规则。请通过服务端搜索重新选择相同 SKU
+    （原记录 UUID：{editingRuleSku}）。切换成其他 SKU 不会覆盖此条规则。
+    <button type="button" className="text-button"
+     onClick={()=>{setEditingRuleSku('');setSkuId('')}}>退出编辑</button>
+   </p>}
    <label htmlFor="supplier-rule-moq">最小起订量 MOQ（件）</label>
    <input id="supplier-rule-moq" type="number" min={1} max={1000000} step={1}
     value={moq} onChange={e=>setMoq(Number(e.target.value))}/>
@@ -115,6 +121,7 @@ export default function SupplierPurchasePlanningPanel({tenantId,warehouseId,skus
    <button type="submit" className="primary-button" disabled={!validTerms||save.isPending}>
     保存供应商采购规则</button>
   </form>
+  <p className="setup-hint">供应商规则表当前 API 最多返回 500 条；这里的行数不能当作本租户规则总数。该历史清单分页将独立完善。</p>
   {rules.isPending?<p className="empty-state">加载供应商规则…</p>:
    rules.isError?<p className="setup-error" role="alert">{String(rules.error)}</p>:
    !rules.data?.length?<p className="empty-state">尚未建立供应商 / SKU 采购规则。</p>:
@@ -129,7 +136,7 @@ export default function SupplierPurchasePlanningPanel({tenantId,warehouseId,skus
       <td>{r.leadTimeDays} 天（估算）</td><td>{r.currency} {r.unitCost}</td>
       <td><div className="sandbox-actions">
        <button className="refresh-button" type="button" onClick={()=>{
-        setSupplierId(r.supplierId);setSkuId(r.productSkuId);
+        setSupplierId(r.supplierId);setSkuId('');setEditingRuleSku(r.productSkuId);
         setMoq(r.minimumOrderQuantity);setPack(r.packMultiple);
         setLead(r.leadTimeDays);setCurrency(r.currency);setUnitCost(r.unitCost)}}>编辑</button>
        <button className="text-button" type="button" disabled={remove.isPending}
