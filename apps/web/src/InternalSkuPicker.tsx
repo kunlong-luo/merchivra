@@ -1,4 +1,4 @@
-import {useState} from 'react'
+import {useEffect,useState} from 'react'
 import {useQuery} from '@tanstack/react-query'
 import {fetchSkusPage,type Sku} from './lib/catalog'
 
@@ -20,6 +20,9 @@ export default function InternalSkuPicker({tenantId,id,label,value,onChange,
  const rows=page.data??[]
  const available=rows.filter(s=>!activeOnly||s.status==='ACTIVE')
  const valid=available.some(s=>s.id===value)
+ useEffect(()=>{
+  if(value&&(page.isError||(page.isSuccess&&!valid)))onChange('')
+ },[value,page.isError,page.isSuccess,valid,onChange])
  function submitSearch(){
   if(draft.trim().length>200)return
   setPrefix(draft.trim());setAfters(['']);onChange('')
