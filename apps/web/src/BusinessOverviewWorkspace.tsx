@@ -39,7 +39,7 @@ export default function BusinessOverviewWorkspace({tenantId,onOpenFinance}:{
     <button type="button" className="refresh-button"
      onClick={()=>void data.refetch()}>重新读取</button>
    </section>:
-   data.data?< >
+   data.data?<>
     <p role="status" className="panel-caption">
      本次查询时间 {formatSourceTime(data.data.capturedAt)} ·
      当前可访问的 Owner 租户共 {list.length} 个 Marketplace；
