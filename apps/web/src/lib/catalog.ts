@@ -22,6 +22,17 @@ async function call<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown
 }
 export const fetchSkus=(after='')=>call(base+'/skus?limit=100'+
   (after?'&after='+encodeURIComponent(after):''),z.array(sku))
+/** V91: existing Owner-only ProductCatalogController prefix + keyset.
+ * A full page has a *possible* next page (API caps at 100).
+ * No new backend or unrestricted in-memory SKU catalog download.
+ */
+export const fetchSkusPage=(prefix='',after='',limit=100)=>{
+ const query=new URLSearchParams({limit:String(limit)})
+ if(prefix.trim())query.set('prefix',prefix.trim())
+ if(after)query.set('after',after)
+ return call(base+'/skus?'+query,z.array(sku).max(100))
+}
+
 export const createSku=(internalSku:string,displayName:string)=>
   call(base+'/skus',sku,'POST',{internalSku,displayName})
 export const updateSku=(id:string,displayName:string,status:'ACTIVE'|'ARCHIVED')=>
