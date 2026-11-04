@@ -1,6 +1,7 @@
 import {useEffect,useState} from 'react'
 import {useQuery} from '@tanstack/react-query'
 import {fetchSkusPage,type Sku} from './lib/catalog'
+import {visibleInternalSkus,validInternalSkuChoice,nextInternalSkuAfter} from './lib/internal-sku-page-v91'
 
 /** Owner-only SKU master-data selector. Reuses /catalog/skus?prefix&after&limit.
  * Explicitly typed selection; only a row in the loaded current page is accepted.
@@ -18,8 +19,8 @@ export default function InternalSkuPicker({tenantId,id,label,value,onChange,
   staleTime:15000,retry:false
  })
  const rows=page.data??[]
- const available=rows.filter(s=>!activeOnly||s.status==='ACTIVE')
- const valid=available.some(s=>s.id===value)
+ const available=visibleInternalSkus(rows,activeOnly)
+ const valid=validInternalSkuChoice(rows,value,activeOnly)
  useEffect(()=>{
   if(value&&(page.isError||(page.isSuccess&&!valid)))onChange('')
  },[value,page.isError,page.isSuccess,valid,onChange])
@@ -28,8 +29,8 @@ export default function InternalSkuPicker({tenantId,id,label,value,onChange,
   setPrefix(draft.trim());setAfters(['']);onChange('')
  }
  function move(next:boolean){
-  if(next&&rows.length!==100)return
-  setAfters(prev=>next?[...prev,rows.at(-1)!.internalSku]:
+  if(next&&!nextInternalSkuAfter(rows))return
+  setAfters(prev=>next?[...prev,nextInternalSkuAfter(rows)!]:
    prev.length>1?prev.slice(0,-1):prev)
   onChange('')
  }
@@ -73,10 +74,10 @@ export default function InternalSkuPicker({tenantId,id,label,value,onChange,
     <span role="status">第 {afters.length} 页 · {rows.length} 条
      {activeOnly?'（已归档不可选）':''}</span>
     <button type="button" className="refresh-button"
-     disabled={rows.length!==100||page.isFetching}
+     disabled={!nextInternalSkuAfter(rows)||page.isFetching}
      onClick={()=>move(true)}>检查下一页</button>
    </div>}
-  <p className="setup-hint">每页最多 100 条。满页仅表示**可能**还有下一页，
+  <p className="setup-hint">每页最多 100 条。满页仅表示可能还有下一页，
    不能把当前页的数量当作本租户全部 SKU 数。
    搜索/翻页会取消之前的操作选择；服务端写入时仍验证 SKU 状态和租户范围。</p>
  </div>
