@@ -1,6 +1,6 @@
 import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
-import {fetchCoreListings} from './lib/core'
+import CoreMarketplacePicker from './CoreMarketplacePicker'
 import {getReplenishmentSuggestions,saveReplenishmentPolicy,removeReplenishmentPolicy,
  getReplenishmentPurchaseDrafts,createReplenishmentPurchaseDraft,getReplenishmentDemandSignals,
  getReplenishmentSupplierQuotes,
@@ -26,7 +26,8 @@ export default function ReplenishmentWorkspace({tenantId,marketplaceId}:{
  tenantId:string;marketplaceId:string
 }){
  const client=useQueryClient()
- const [sellerSku,setSellerSku]=useState(''),[reorder,setReorder]=useState(3)
+ const [sellerSku,setSellerSku]=useState(''),[verifiedSku,setVerifiedSku]=useState('')
+ const [reorder,setReorder]=useState(3)
  const [target,setTarget]=useState(20),[lead,setLead]=useState(14)
  const [message,setMessage]=useState(''),[failure,setFailure]=useState('')
  const [selected,setSelected]=useState<ReplenishmentAdvice|null>(null)
@@ -34,8 +35,6 @@ export default function ReplenishmentWorkspace({tenantId,marketplaceId}:{
  const [quoteSnapshot,setQuoteSnapshot]=useState<ReplenishmentSupplierQuote|null>(null)
  const [currency,setCurrency]=useState('USD'),[unitCost,setUnitCost]=useState('')
  const [requestKey,setRequestKey]=useState(()=>crypto.randomUUID())
- const listings=useQuery({queryKey:['replenishment','listings',tenantId,marketplaceId],
-  queryFn:()=>fetchCoreListings(marketplaceId),retry:false})
  const suggestions=useQuery({queryKey:['replenishment','suggestions',tenantId,marketplaceId],
   queryFn:()=>getReplenishmentSuggestions(marketplaceId),retry:false})
  const demand=useQuery({queryKey:['replenishment','demand',tenantId,marketplaceId],
@@ -86,7 +85,7 @@ export default function ReplenishmentWorkspace({tenantId,marketplaceId}:{
   },
   onError:(e:Error)=>setFailure(e.message)
  })
- function submit(e:FormEvent){e.preventDefault();if(sellerSku)saved.mutate()}
+ function submit(e:FormEvent){e.preventDefault();if(sellerSku&&verifiedSku===sellerSku)saved.mutate()}
  async function createDraft(e:FormEvent){
   e.preventDefault()
   if(!selected)return
@@ -112,11 +111,10 @@ export default function ReplenishmentWorkspace({tenantId,marketplaceId}:{
     <button type="button" className="refresh-button" onClick={refresh}>刷新建议</button>
    </div>
    <form className="team-invite-form" onSubmit={submit}>
-    <label htmlFor="repl-sku">Seller SKU（当前站点 Listing）</label>
-    <select id="repl-sku" value={sellerSku} onChange={e=>setSellerSku(e.target.value)}>
-      <option value="">选择 Listing</option>
-      {(listings.data??[]).map(l=><option value={l.sellerSku} key={l.id}>{l.sellerSku}</option>)}
-    </select>
+    <CoreMarketplacePicker key={marketplaceId} tenantId={tenantId}
+     marketplaceId={marketplaceId} kind="LISTING" id="repl-sku"
+     label="选择当前站点 Listing（全部 Seller SKU）" value={sellerSku}
+     onChange={value=>{setSellerSku(value);setVerifiedSku(value)}}/>
     <label htmlFor="repl-point">触发阈值（可售件数）</label>
     <input id="repl-point" type="number" min={0} max={10000000} value={reorder}
       onChange={e=>setReorder(Number(e.target.value))}/>
@@ -126,13 +124,14 @@ export default function ReplenishmentWorkspace({tenantId,marketplaceId}:{
     <label htmlFor="repl-lead">预计采购提前期（天，仅作策略记录）</label>
     <input id="repl-lead" type="number" min={1} max={365} value={lead}
       onChange={e=>setLead(Number(e.target.value))}/>
-    <button type="submit" className="primary-button" disabled={!sellerSku||
+    <button type="submit" className="primary-button" disabled={!sellerSku||verifiedSku!==sellerSku||
       !Number.isInteger(reorder)||!Number.isInteger(target)||!Number.isInteger(lead)||
       reorder<0||target<=reorder||target>10000000||lead<1||lead>365||saved.isPending}>
       保存 SKU 策略</button>
    </form>
-   {listings.data?.length===50&&<p className="setup-hint">
-    选择框只包含首 50 条已读取 Listing；更多 SKU 的策略可通过 API 设置。</p>}
+   {sellerSku&&verifiedSku!==sellerSku&&<p className="setup-hint" role="status">
+    此 SKU 来自已有补货策略，请通过上方服务端搜索重新选择并核对；
+    在确认之前禁止保存新的策略版本。</p>}
    {suggestions.isPending?<p className="empty-state">正在读取补货建议…</p>:
     suggestions.isError?<p className="setup-error" role="alert">{String(suggestions.error)}</p>:
     !suggestions.data?.length?<p className="empty-state">尚未配置此站点的 SKU 补货策略。</p>:
@@ -146,7 +145,8 @@ export default function ReplenishmentWorkspace({tenantId,marketplaceId}:{
        <td>{labels[s.state]??s.state}</td><td>{s.suggestedQuantity===null?'不可计算':s.suggestedQuantity}</td>
        <td><div className="sandbox-actions">
          <button type="button" className="refresh-button" onClick={()=>{
-           setSellerSku(s.policy.sellerSku);setReorder(s.policy.reorderPoint);
+           setSellerSku(s.policy.sellerSku);setVerifiedSku('');
+           setReorder(s.policy.reorderPoint);
            setTarget(s.policy.targetStock);setLead(s.policy.leadTimeDays)}}>编辑</button>
          {s.state==='REORDER'&&s.observationId&&s.suggestedQuantity!==null&&
           s.suggestedQuantity>0&&s.suggestedQuantity<=1000000&&

@@ -344,7 +344,7 @@ export default function CoreWorkspace({tenantId,isOwner=true,focusException}:{
     tenantId={tenantId} marketplaceId={marketplaceId}
     focusExceptionLine={focusException?.marketplaceId===marketplaceId?
       focusException.lineId:undefined}/>}
- {isOwner&&section==='inventory'&&<ReplenishmentWorkspace tenantId={tenantId}
+ {isOwner&&section==='inventory'&&<ReplenishmentWorkspace key={marketplaceId} tenantId={tenantId}
     marketplaceId={marketplaceId}/>}
  {isOwner&&section==='listings'&&
     <SkuCatalogManager
