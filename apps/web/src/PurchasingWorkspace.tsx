@@ -1,6 +1,7 @@
 import {useEffect,useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchSkus} from './lib/catalog'
+import InternalSkuPicker from './InternalSkuPicker'
 import WarehouseAlertsPanel from './WarehouseAlertsPanel'
 import SupplierPurchasePlanningPanel from './SupplierPurchasePlanningPanel'
 import SupplierAsnPanel from './SupplierAsnPanel'
@@ -39,6 +40,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  const [warehouseId,setWarehouseId]=useState(''),[stockWarehouseId,setStockWarehouseId]=useState('')
  const [operationType,setOperationType]=useState<StockOperationRequest['type']>('OUTBOUND')
  const [operationSku,setOperationSku]=useState('')
+ const [verifiedSkuLabels,setVerifiedSkuLabels]=useState<Record<string,string>>({})
  const [operationDestination,setOperationDestination]=useState('')
  const [operationQuantity,setOperationQuantity]=useState(1)
  const [operationReason,setOperationReason]=useState('')
@@ -98,7 +100,8 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
     &&operationQuantity!==currentOnHand):
    (operationQuantity>=1&&operationQuantity<=1000000&&operationQuantity<=currentOnHand))
  const operationReady=!!stockWarehouseId&&!!operationSku&&!!stock.data&&
-  activeSkus.some(s=>s.id===operationSku)&&
+  // V91: SKU is verified by the scoped server-paged picker, not the first 100 rows.
+  
   activeWarehouses.some(w=>w.id===stockWarehouseId)&&
   (operationType!=='TRANSFER'||activeWarehouses.some(w=>w.id===operationDestination
     &&w.id!==stockWarehouseId))&&quantityValid&&
@@ -165,12 +168,12 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
     <label htmlFor="purchase-notes">备注（不填敏感数据）</label>
     <input id="purchase-notes" value={notes} onChange={e=>setNotes(e.target.value)}
       maxLength={300}/>
-    <label htmlFor="purchase-sku">添加内部 SKU 行</label>
-    <select id="purchase-sku" value={sku} onChange={e=>setSku(e.target.value)}>
-     <option value="">选择 SKU</option>
-     {activeSkus.filter(s=>!draft.some(d=>d.productSkuId===s.id)).map(s=>
-       <option key={s.id} value={s.id}>{s.internalSku}</option>)}
-    </select>
+    <InternalSkuPicker tenantId={tenantId} id="purchase-sku"
+     label="添加采购内部 SKU 行（全库选择）" value={sku}
+     onChange={(id,item)=>{
+      setSku(id)
+      if(item)setVerifiedSkuLabels(prev=>({...prev,[item.id]:item.internalSku}))
+     }}/>
     <label htmlFor="purchase-quantity">订购数量</label>
     <input id="purchase-quantity" type="number" min={1} max={1000000} value={qty}
       onChange={e=>setQty(Number(e.target.value))}/>
@@ -187,7 +190,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
     <table><thead><tr><th scope="col">SKU</th><th scope="col">数量</th>
      <th scope="col">原币单价</th><th scope="col">操作</th></tr></thead>
      <tbody>{draft.map(l=><tr key={l.productSkuId}>
-      <td>{activeSkus.find(s=>s.id===l.productSkuId)?.internalSku??l.productSkuId}</td>
+      <td>{verifiedSkuLabels[l.productSkuId]??activeSkus.find(s=>s.id===l.productSkuId)?.internalSku??l.productSkuId}</td>
       <td>{l.quantity}</td><td>{currency} {l.unitCost}</td>
       <td><button className="text-button" type="button"
        onClick={()=>setDraft(v=>v.filter(x=>x.productSkuId!==l.productSkuId))}>移除</button></td>
@@ -326,12 +329,9 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
       <option value="TRANSFER">仓间调拨（两仓同步记账）</option>
       <option value="COUNT">盘点差异（输入实盘数量）</option>
      </select>
-     <label htmlFor="stock-op-sku">内部 SKU</label>
-     <select id="stock-op-sku" value={operationSku}
-      onChange={e=>{setOperationSku(e.target.value);setOperationKey(crypto.randomUUID())}}>
-      <option value="">选择内部 SKU</option>
-      {activeSkus.map(s=><option key={s.id} value={s.id}>{s.internalSku}</option>)}
-     </select>
+     <InternalSkuPicker tenantId={tenantId} id="stock-op-sku"
+      label="本地库存操作内部 SKU（全库选择）" value={operationSku}
+      onChange={id=>{setOperationSku(id);setOperationKey(crypto.randomUUID())}}/>
      <p className="setup-hint">当前本地台账余额：{operationSku?currentOnHand:'请先选择 SKU'}。
       操作时服务端重新验证余额，变化则要求刷新。</p>
      {operationType==='TRANSFER'&&<>
