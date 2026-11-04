@@ -1,5 +1,14 @@
 # PLAN-001 · 文档先行与分阶段交付路线
 
+> **最新开发阶段：V91（2026-11-04）**。V90 已合并首 50 条补货/财务业务操作选择器问题；V91 继续修复 FBA 草稿 SKU 仍限前 50 条和内部 SKU/映射/成本/采购仍限前 100 条的业务入口。直接复用 V86/V87 全库 Listing/订单检索、既有 Owner-only `/catalog/skus?prefix&after`、V65 本地货件、V20 采购与历史成本服务，不新增 DB 表/缓存或依赖。独立验收用 V87 第 64 条 Listing 与 V91 第 130 个内部 SKU 演练映射、原币成本、FBA 本地 DRAFT 和采购 DRAFT。详见 [CORE-091](testing/fba-catalog-purchase-selection-v91.md)。最终 CI 以本 PR GitHub Actions 为准；Mock 测试不能替代 Amazon SP-API 真实联调。
+
+### 当前实际进度与后续重点
+
+1. **V91 当前 P0**：本地 FBA 货件多行 Listing 完整检索；内部 SKU 列表分页、映射、成本、采购和本地库存选择全库可用，并持续保留每次写入的服务端 Owner/租户与业务审批门禁。
+2. **V92 P0**：仍依赖局部内部 SKU 集合的供应商采购计划、货位/批次和完整 FBA 货件历史等实际业务入口，按真实后端容量与审计模型逐一补齐，不重复造库存/财务系统。
+3. **最终真实 Seller/Ads 联调**：所有核心功能完成后由用户本地启用 OAuth/SP-API，验证地区/角色/429/撤销/分页和银行来源、G1/G2/G3 审批，绝不把 Mock 演练当生产授权或自动批准。
+
+
 > **最新阶段：V90（2026-11-04）**。V89 已基于全表真实 PostgreSQL 来源质量和 V64 原币贡献完成 Owner 经营总览；V90 审计发现跨模块业务入口仍存在首 50 行限制：补货策略 SKU 选择、财务订单关联及订单成本分析。复用 V86/V87 已成熟的 Session/Marketplace Keyset、React Query 和 Zod，补齐完整服务器检索并通过 V90 64 条 Mock HTTP 联调，不重复建设商品/财务系统。详见 [CORE-090](testing/cross-module-business-entrypoints-v90.md)。真实 Seller/Ads Amazon 授权仍留给用户在全部核心功能完成后本地执行。
 
 ### V90 及以后优先级
