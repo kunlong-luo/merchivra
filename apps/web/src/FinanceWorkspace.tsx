@@ -13,7 +13,8 @@ import PeriodProfitReportPanel from './PeriodProfitReportPanel'
 import ItemAllocationPanel from './ItemAllocationPanel'
 import FinanceExceptionQueuePanel from './FinanceExceptionQueuePanel'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
-import {fetchCoreMarketplaces,fetchCoreOrders} from './lib/core'
+import {fetchCoreMarketplaces} from './lib/core'
+import CoreMarketplacePicker from './CoreMarketplacePicker'
 import {createManualFinanceEvent,fetchFinanceBuckets,fetchFinanceEvents,
  reviewFinanceEvent,fetchFinanceBreakdowns,type FinanceEvent} from './lib/finance'
 
@@ -48,8 +49,6 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
  const breakdowns=useQuery({queryKey:['finance','breakdowns',tenantId,currentId,selectedEvent],
   queryFn:()=>fetchFinanceBreakdowns(currentId,selectedEvent),
   enabled:!!currentId&&!!selectedEvent,retry:false})
- const orders=useQuery({queryKey:['finance','order-options',tenantId,currentId],
-  queryFn:()=>fetchCoreOrders(currentId),enabled:!!currentId,retry:false})
  useEffect(()=>{setCursor(undefined);setSelectedEvent('');setSelectedOrder('');setSelectedCostOrder('')},[currentId])
  const refresh=()=>{
   void client.invalidateQueries({queryKey:['finance','events',tenantId,currentId]})
@@ -65,13 +64,14 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
  const reviewed=useMutation({mutationFn:(orderId:string|null)=>
   reviewFinanceEvent(selectedEvent,currentId,orderId),onSuccess:r=>{
   setMessage(r.state==='MATCHED'?'已人工关联所选订单；不改变原始金额':'已标记为待分配/未匹配')
+  setSelectedOrder('')
   setFailure('');refresh()
  },onError:(e:Error)=>setFailure(e.message)})
  function submit(e:FormEvent){e.preventDefault();if(currentId&&postedAt)manual.mutate()}
  const current:FinanceEvent|undefined=events.data?.find(e=>e.id===selectedEvent)
  const last=events.data?.at(-1)
  const next=()=>{
-  if(last){setCursor({beforeAt:last.postedAt,beforeId:last.id});setSelectedEvent('')}
+  if(last){setCursor({beforeAt:last.postedAt,beforeId:last.id});setSelectedEvent('');setSelectedOrder('')}
  }
  const isValid=/^-?[0-9]{1,14}(\.[0-9]{1,6})?$/.test(amount)
  return <div className="core-workspace">
@@ -165,7 +165,7 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
        <td>{displayCategory(e.category)}</td><td>{e.currency} {e.amount}</td>
        <td>{showTime(e.postedAt)}</td><td>{e.reviewStatus}</td>
        <td><button type="button" className="text-button"
-        onClick={()=>{setSelectedEvent(e.id);setSelectedOrder(e.reviewedOrderId??'')}}>
+        onClick={()=>{setSelectedEvent(e.id);setSelectedOrder('')}}>
         关联审核</button></td></tr>)}</tbody></table>
     </div>}
    <div className="sandbox-actions">
@@ -178,14 +178,10 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
     <div className="panel-heading"><div><h2>订单历史成本覆盖率</h2>
      <p>选择同一 Marketplace 的来源订单，检查每个订单项是否找到业务日对应的内部 SKU 成本；
       成本仅供核对，不直接产生利润。</p></div></div>
-    <label className="shop-filter" htmlFor="fin-cogs-order">
-     <span>选择来源订单</span><select id="fin-cogs-order" value={selectedCostOrder}
-      onChange={e=>setSelectedCostOrder(e.target.value)}>
-       <option value="">暂不选择</option>
-       {(orders.data??[]).map(o=><option key={o.id} value={o.id}>
-        {o.externalOrderId} · {o.dataOrigin}</option>)}
-     </select>
-    </label>
+    <CoreMarketplacePicker key={currentId+'-cost'} tenantId={tenantId}
+     marketplaceId={currentId} kind="ORDER" id="fin-cogs-order"
+     label="选择成本核对来源订单" value={selectedCostOrder}
+     onChange={setSelectedCostOrder}/>
     {selectedCostOrder&&<OrderCostReadinessPanel key={selectedCostOrder}
       tenantId={tenantId} marketplaceId={currentId} orderId={selectedCostOrder}/>}
     {selectedCostOrder&&<OrderContributionPanel key={selectedCostOrder}
@@ -194,13 +190,14 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
    {current&&<div className="core-tools">
     <strong>当前事件：{current.eventKey}</strong>
     <p className="setup-hint">来源状态：{displayOrigin(current.dataOrigin)}。必须人工核对事件和订单是否真实相关。</p>
-    <label htmlFor="fin-match-order">匹配同站点订单（仅当前读取的前 50 条）</label>
-    <select id="fin-match-order" value={selectedOrder}
-      onChange={e=>setSelectedOrder(e.target.value)}>
-     <option value="">暂不关联</option>
-     {(orders.data??[]).map(o=><option key={o.id} value={o.id}>
-      {o.externalOrderId} · {o.dataOrigin}</option>)}
-    </select>
+    <CoreMarketplacePicker key={currentId+'-match-'+selectedEvent}
+     tenantId={tenantId} marketplaceId={currentId} kind="ORDER"
+     id="fin-match-order" label="人工关联同站点订单" value={selectedOrder}
+     onChange={setSelectedOrder}/>
+    <p className="setup-hint">当前事件历史匹配订单：
+     {current.reviewedOrderId??'尚未确认'}。
+     重新确认关联必须从服务端当前检索页明确选择，不能盲用历史记录 UUID。
+    </p>
     <h3>官方交易原始拆分（来源层级，不参与金额汇总）</h3>
     {current.dataOrigin!=='LIVE'?<p className="setup-hint">
       人工未核验财务记录没有 Amazon 原始 breakdown。</p>:
