@@ -747,3 +747,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - V64 持久来源贡献报告仍是**唯一**可显示的原币财务贡献来源：仅最新报告 SUCCEEDED 且有 ELIGIBLE 行时用历史已持久化 contribution；最新 READY/RETRY/PAUSED 时贡献必须 NULL，不可以回退之前成功报表的金额冒充当前结果。金融/银行/会计完整性固定 false，不能称净利润或全局同点快照。
 - `/api/v1/business-overview/export.csv` 是**当前数据质量清单**；必须复用 `ProfitReportCsv.encode` 的 CSV 公式注入防护和 no-store。真正已冻结的订单/SKU CSV 仍调用 V64 的 Orval `getExportProfitReportCsvUrl`，不可重新计算/拼接财务结果。
 - V89 HTTP PG18 测试在双币种站点验证完整计数、Owner-only 401/403、只读员工仅可查看自己的 Seller Account，模拟 V64 SUCCEEDED → 新任务 READY 金额回空、公式注入防护与无 Amazon 写入。详见 [DASH-089](docs/analytics/business-source-quality-v89.md)。正式真实 Seller/Ads 授权等全部核心功能收尾后由用户在本地联调。
+
+## V90 · 跨模块实际选择器必须支持服务端全库检索（2026-11-04）
+
+- 不要把 V86/V87 已实现的服务端分页停留在核心浏览页：任何**会触发业务动作**的 SKU/订单选择器（补货策略、采购、财务人工关联、成本/贡献审核等）都必须核查是否仍使用旧 `fetchCoreListings/Orders` 首 50 行。统一使用 `CoreMarketplacePicker`，复用既有 V86/V87 bounded Keyset API、Zod 类型及 TanStack Query，不建立第二套商品索引。
+- 全库服务端检索只支持前缀并绑定当前 Session Marketplace。变更前缀/页面/店铺/审核对象后必须清理之前选择；不能将其他页旧 UUID 或 SKU 不经重新核对用于当前人工业务写入。已存策略点击编辑时应要求重新从服务器当前页选中对应 SKU，不把历史“来源行”自动视为已核对可操作目标。
+- 异步请求失败、空查询、尚未加载必须分开呈现；不能把前 50 条当全库，也不能用 `getCoreOrderItems` 或 demo 快照推断所有订单。手动 Finance 匹配仍使用原 Owner-only `FinanceEventService.review` 同站点数据库校验，人工来源不能自动升级 LIVE、银行确认或 V64 利润。
+- 补货策略仍然只是人工建议和本地 DRAFT 的起点，必须保留 V71/V74 策略版本、FBA 观测、报价与双人审批门禁，不得自动创建已批准 PO、将本地仓储写成 Amazon FBA 或开启 SP-API。跨 Marketplace 切换需重置相关状态。
+- V90 用 64 条 Listing/订单的 PG18 实际 HTTP 回归确认第 64 条从浏览页进入 V70 本地补货策略与 V21 财务人工审核（不同站点订单 404），同时确认无自动 PO/FBA 改写；详见 [CORE-090](docs/testing/cross-module-business-entrypoints-v90.md)。
