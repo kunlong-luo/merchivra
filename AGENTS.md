@@ -762,3 +762,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 本租户 `product_sku` 查询必须复用 Owner-only `/api/v1/catalog/skus?prefix&after&limit=100`；`after` 仅接受真实最后一行 internalSku，满 100 只能表示后续**可能**还有记录，不可宣称已完成全库查询或把 SKU UUID 当游标。新的 `InternalSkuPicker` 是映射、历史成本、采购、本地仓库操作的统一 UI 入口，ACTIVE 才允许执行正向写入；归档记录须重新按主数据 API 恢复。请求失败/翻页/搜索/目标消失必须取消旧选择。
 - SKU 成本不能默认选择第一页首商品；库存操作仍需服务端 UUID + 本地 `expectedOnHand` + Reason、PO 仍需 DRAFT→提交→异人审批及收货/质检的真实仓储边界。共享选择器只是修复第 100 条以上商品无法在 UI 被操作，不授权自动财务、入仓、下单或 Amazon 写入。
 - 别忘了 `SupplierPurchasePlanningPanel` 和 `ReleasedLotStockPanel` 仍依赖旧部分 SKU 列表，`fba_inbound_shipment` 最近 100 条也不是完整历史；属于 V92 继续实查的问题，不可伪称 V91 已消除所有 ERP 记录容量限制。验收见 [CORE-091](docs/testing/fba-catalog-purchase-selection-v91.md)。
+
+## V92 · 本地 FBA 货件历史/供应商规则的全量检索（2026-11-04）
+
+- 原 V65 `GET /fba/marketplaces/{mp}/shipments` 固定 100 行只是兼容接口，绝不能作为 FBA 历史全量或人工可处理货件的集合。操作入口使用 V92 `GET /fba/marketplaces/{mp}/shipments/page`，依原 `fba_inbound_shipment` `created_at DESC,id DESC` 做 1..100 页 keyset；仅当前 Session Owner tenant/Marketplace 的本地记录；前缀/状态变更重设游标、选择及错误状态，游标不是授权或快照。货件只属于 Mock/手工未核验，不能记为 Amazon 入仓或库存。
+- V92 接口源头必须为实际 Spring MVC OpenAPI，`normalize-fba-openapi.mjs` 维护完整操作集并检查，Orval 既有传输 `merchivraFetch` 管理同源 Cookie、CSRF 和 no-store；不得增加第二套 Bearer 授权客户端。只增 Flyway V81 本地历史索引，不复制业务表。
+- 供应商规则界面必须通过 V91 `InternalSkuPicker` 而不是最初的 `fetchSkus()` 前 100 条识别任意 ACTIVE 商品；编辑规则时当前服务端已核验 SKU UUID 必须等于旧规则 SKU UUID，以防无意新建/覆盖其他 SKU；后端 Owner + ACTIVE 供应商/商品 + MOQ/包装倍数、原币继续原样校验。不因人工规则更新自动生成采购、财务金额、仓储流水或 Amazon API。
+- 供应商规则历史 `LIMIT 500`、计划/建议容量以及部分库位/批次查询尚待真实审计；任何局部页面都不能标“全量库存”或总流水。完整 V92 PostgreSQL18 HTTP 验收见 [CORE-092](docs/testing/fba-shipment-history-supplier-rules-v92.md)。Seller/Ads 授权继续保持关闭，最终由用户本地验证。
