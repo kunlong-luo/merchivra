@@ -755,3 +755,10 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - 异步请求失败、空查询、尚未加载必须分开呈现；不能把前 50 条当全库，也不能用 `getCoreOrderItems` 或 demo 快照推断所有订单。手动 Finance 匹配仍使用原 Owner-only `FinanceEventService.review` 同站点数据库校验，人工来源不能自动升级 LIVE、银行确认或 V64 利润。
 - 补货策略仍然只是人工建议和本地 DRAFT 的起点，必须保留 V71/V74 策略版本、FBA 观测、报价与双人审批门禁，不得自动创建已批准 PO、将本地仓储写成 Amazon FBA 或开启 SP-API。跨 Marketplace 切换需重置相关状态。
 - V90 用 64 条 Listing/订单的 PG18 实际 HTTP 回归确认第 64 条从浏览页进入 V70 本地补货策略与 V21 财务人工审核（不同站点订单 404），同时确认无自动 PO/FBA 改写；详见 [CORE-090](docs/testing/cross-module-business-entrypoints-v90.md)。
+
+## V91 · FBA 货件与内部 SKU 写入入口的全量作用域（2026-11-04）
+
+- 不要因为核心 Seller Listing 已经有 V87 分页，就误认为所有页面能选择第 51+ 个 SKU。V91 的 FbaInboundPanel 每条拟建本地货件行必须使用 V90 复用选择器，通过当前 Session Marketplace 的 V87 全库前缀分页选择；更换搜索/页码要清空旧值，创建时保留原 FbaInboundService 1..100 行、Listing 同站点、SKU 唯一和数量校验。此处只能生成本地 DRAFT，不代表 Amazon 在途/入仓/可售。
+- 本租户 `product_sku` 查询必须复用 Owner-only `/api/v1/catalog/skus?prefix&after&limit=100`；`after` 仅接受真实最后一行 internalSku，满 100 只能表示后续**可能**还有记录，不可宣称已完成全库查询或把 SKU UUID 当游标。新的 `InternalSkuPicker` 是映射、历史成本、采购、本地仓库操作的统一 UI 入口，ACTIVE 才允许执行正向写入；归档记录须重新按主数据 API 恢复。请求失败/翻页/搜索/目标消失必须取消旧选择。
+- SKU 成本不能默认选择第一页首商品；库存操作仍需服务端 UUID + 本地 `expectedOnHand` + Reason、PO 仍需 DRAFT→提交→异人审批及收货/质检的真实仓储边界。共享选择器只是修复第 100 条以上商品无法在 UI 被操作，不授权自动财务、入仓、下单或 Amazon 写入。
+- 别忘了 `SupplierPurchasePlanningPanel` 和 `ReleasedLotStockPanel` 仍依赖旧部分 SKU 列表，`fba_inbound_shipment` 最近 100 条也不是完整历史；属于 V92 继续实查的问题，不可伪称 V91 已消除所有 ERP 记录容量限制。验收见 [CORE-091](docs/testing/fba-catalog-purchase-selection-v91.md)。
