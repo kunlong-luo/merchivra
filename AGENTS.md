@@ -739,3 +739,11 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - V88 GET /api/v1/seller-marketplaces/{marketplaceId}/inventory/fba/page 由服务端 Session tenant 和精确 Seller Account OWNER/OPERATOR_READ 授权；query 的 quality/origin 为封闭枚举，prefix 80 字符以内且 SQL 特殊字符按字面量转义。Keyset 复用 V87 多行 SKU Base64url 格式但包含类别 FBA_INVENTORY、Marketplace、质量、来源、前缀；游标不能当授权、快照或金额。
 - 保留旧 /inventory/fba?limit API，新增 Flyway V80 最近来源排序和低开销表达式前缀索引。FBA 同步成功失效 inventory-v88 TanStack Query 缓存；切站点/从 Ops 异常跳转/更换筛选时重置游标。继续不引入新缓存系统或不必要的 Redis/Elastic。
 - 模拟验收见 [FBA-088](docs/inventory/fba-inventory-observation-pages-v88.md)：PostgreSQL 18、多观测 64 SKU、50+14 keyset、后过滤、零/未知/STALE、时间优先级、Origin、Cursor 字符与权限边界。真实 Amazon OAuth/SP-API 仍保持关闭，留给用户最终本地联调。
+
+## V89 · 经营总览采用真实 PostgreSQL 来源、不可伪造净利润（2026-11-04）
+
+- Owner 左侧「经营总览」必须使用 `/api/v1/business-overview`，不再用 Demo Gateway 的预估销售数据冒充经营指标；该全租户 API 严格使用 Session 当前 Owner tenant，不能扩大 `OPERATOR_READ` 到全租户财务摘要。超过 100 个站点直接明确失败而不能静默截断。
+- 逐 Marketplace 展示原始币种、Listing/Orders 全表来源分布、FBA **每 SKU 最新观测**的质量/来源计数；FBA 必须按 `observed_at DESC NULLS LAST,ingested_at DESC,id DESC` 先去重再计数。只计算实际已观测为零的 SKU 计数，不把 UNKNOWN 或 STALE 当零，不对多币种、不可信来源的金额求和。
+- V64 持久来源贡献报告仍是**唯一**可显示的原币财务贡献来源：仅最新报告 SUCCEEDED 且有 ELIGIBLE 行时用历史已持久化 contribution；最新 READY/RETRY/PAUSED 时贡献必须 NULL，不可以回退之前成功报表的金额冒充当前结果。金融/银行/会计完整性固定 false，不能称净利润或全局同点快照。
+- `/api/v1/business-overview/export.csv` 是**当前数据质量清单**；必须复用 `ProfitReportCsv.encode` 的 CSV 公式注入防护和 no-store。真正已冻结的订单/SKU CSV 仍调用 V64 的 Orval `getExportProfitReportCsvUrl`，不可重新计算/拼接财务结果。
+- V89 HTTP PG18 测试在双币种站点验证完整计数、Owner-only 401/403、只读员工仅可查看自己的 Seller Account，模拟 V64 SUCCEEDED → 新任务 READY 金额回空、公式注入防护与无 Amazon 写入。详见 [DASH-089](docs/analytics/business-source-quality-v89.md)。正式真实 Seller/Ads 授权等全部核心功能收尾后由用户在本地联调。
