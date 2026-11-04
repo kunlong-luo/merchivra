@@ -1,4 +1,4 @@
-import {useState} from 'react'
+import {useEffect,useState} from 'react'
 import {useQuery} from '@tanstack/react-query'
 import {fetchCoreListingsPage,fetchCoreOrdersPage} from './lib/core'
 import {listingChoices,orderChoices,onCurrentPickerPage,
@@ -25,6 +25,9 @@ export default function CoreMarketplacePicker({tenantId,marketplaceId,kind,id,
  })
  const choices=page.data?.choices??[]
  const verified=onCurrentPickerPage(page.data,value)
+ useEffect(()=>{
+  if(value&&(page.isError||(page.isSuccess&&!verified)))onChange('')
+ },[value,page.isError,page.isSuccess,verified,onChange])
  function applySearch(){
   if(draft.trim().length>80)return
   setPrefix(draft.trim());setCursors([null]);onChange('')
