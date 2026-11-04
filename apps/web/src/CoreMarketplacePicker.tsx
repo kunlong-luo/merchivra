@@ -1,4 +1,4 @@
-import {useState,type FormEvent} from 'react'
+import {useState} from 'react'
 import {useQuery} from '@tanstack/react-query'
 import {fetchCoreListingsPage,fetchCoreOrdersPage} from './lib/core'
 import {listingChoices,orderChoices,onCurrentPickerPage,
@@ -25,8 +25,7 @@ export default function CoreMarketplacePicker({tenantId,marketplaceId,kind,id,
  })
  const choices=page.data?.choices??[]
  const verified=onCurrentPickerPage(page.data,value)
- function applySearch(e:FormEvent){
-  e.preventDefault()
+ function applySearch(){
   if(draft.trim().length>80)return
   setPrefix(draft.trim());setCursors([null]);onChange('')
  }
@@ -37,19 +36,20 @@ export default function CoreMarketplacePicker({tenantId,marketplaceId,kind,id,
   onChange('')
  }
  return <div className="core-tools" aria-label={label+' 服务端全库选择'}>
-  <form className="core-search-field" onSubmit={applySearch}>
+  <div className="core-search-field">
    <label htmlFor={id+'-search'}>
     {kind==='LISTING'?'Seller SKU':'外部订单号'}全库前缀搜索 · 当前 Marketplace
    </label>
    <input id={id+'-search'} type="search" value={draft} maxLength={80}
     autoComplete="off" placeholder={kind==='LISTING'?'例如 SKU-':'例如 123-'}
-    onChange={e=>setDraft(e.target.value)}/>
-   <button type="submit" className="refresh-button"
+    onChange={e=>setDraft(e.target.value)}
+    onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();applySearch()}}}/>
+   <button type="button" className="refresh-button" onClick={applySearch}
     disabled={!marketplaceId||page.isFetching}>搜索</button>
    {(prefix||draft)&&<button type="button" className="text-button"
     onClick={()=>{setPrefix('');setDraft('');setCursors([null]);onChange('')}}>
     清除筛选</button>}
-  </form>
+  </div>
   <label htmlFor={id}>{label}</label>
   <select id={id} value={value}
    disabled={!marketplaceId||page.isError||page.isPending}
