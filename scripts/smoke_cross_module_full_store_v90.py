@@ -79,7 +79,7 @@ call(f"/api/v1/seller-marketplaces/{foreign}/listings/page",expected=404)
 
 # V70 configured policy is a human-local operation; it must not produce
 # a DRAFT PO, FBA source observation or platform change automatically.
-po_before=int(sql(f"""SELECT COUNT(*) FROM purchase_order WHERE tenant_id='{tenant}'"""))
+po_before=int(sql(f"""SELECT COUNT(*) FROM erp_purchase_order WHERE tenant_id='{tenant}'"""))
 fba_before=int(sql(f"""SELECT COUNT(*) FROM fba_inventory_observation WHERE
  tenant_id='{tenant}' AND seller_marketplace_id='{mp}'"""))
 policy=call(repl+"/policies","POST",{
@@ -91,7 +91,7 @@ advice=next(x for x in call(repl+"/suggestions")
 assert advice["state"] in ("NO_OBSERVATION","STALE_OBSERVATION",
                           "INCOMPLETE_OBSERVATION")
 assert advice["suggestedQuantity"] is None
-assert int(sql(f"SELECT COUNT(*) FROM purchase_order WHERE tenant_id='{tenant}'"))==po_before
+assert int(sql(f"SELECT COUNT(*) FROM erp_purchase_order WHERE tenant_id='{tenant}'"))==po_before
 assert int(sql(f"""SELECT COUNT(*) FROM fba_inventory_observation
  WHERE tenant_id='{tenant}' AND seller_marketplace_id='{mp}'"""))==fba_before
 
