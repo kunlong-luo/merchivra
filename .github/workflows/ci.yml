@@ -142,6 +142,7 @@ jobs:
           cmp apps/web/openapi/finance-profits.json /tmp/merchivra-normalized-finance-openapi.json
           curl -fsS http://127.0.0.1:8080/v3/api-docs/fba-inbound > /tmp/merchivra-live-fba-openapi.json
           node scripts/normalize-fba-openapi.mjs /tmp/merchivra-live-fba-openapi.json /tmp/merchivra-normalized-fba-openapi.json
+          diff -u apps/web/openapi/fba-inbound.json /tmp/merchivra-normalized-fba-openapi.json || true
           cmp apps/web/openapi/fba-inbound.json /tmp/merchivra-normalized-fba-openapi.json
           cp /tmp/merchivra-normalized-fba-openapi.json apps/web/openapi/fba-inbound.json
           (
@@ -200,6 +201,8 @@ jobs:
           python3 scripts/smoke_business_source_quality_v89.py
           python3 scripts/smoke_cross_module_full_store_v90.py
           python3 scripts/smoke_fba_catalog_purchasing_full_selection_v91.py
+          python3 scripts/smoke_fba_local_history_supplier_sku_v92.py
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='81' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='80' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='79' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='78' AND success")" = "1"
