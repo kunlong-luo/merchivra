@@ -1,6 +1,6 @@
 import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
-import {fetchCoreListings} from './lib/core'
+import CoreMarketplacePicker from './CoreMarketplacePicker'
 import FbaPurchaseLinkPanel from './FbaPurchaseLinkPanel'
 import FbaPurchaseReconciliationPanel from './FbaPurchaseReconciliationPanel'
 import FbaPurchaseExceptionPanel from './FbaPurchaseExceptionPanel'
@@ -31,7 +31,6 @@ export default function FbaInboundPanel({tenantId,marketplaceId,focusExceptionLi
  const [receiptKey,setReceiptKey]=useState(()=>crypto.randomUUID())
  const [reviewSku,setReviewSku]=useState(''),[reviewNote,setReviewNote]=useState('')
  const [notice,setNotice]=useState(''),[failure,setFailure]=useState('')
- const listings=useQuery({queryKey:[...key,'listings'],queryFn:()=>fetchCoreListings(marketplaceId),retry:false})
  const shipments=useQuery({queryKey:[...key,'shipments'],queryFn:()=>getShipments(marketplaceId),retry:false})
  const transit=useQuery({queryKey:[...key,'transit'],queryFn:()=>getTransit(marketplaceId),retry:false})
  const detail=useQuery({queryKey:[...key,'shipment',selectedId],
@@ -137,12 +136,12 @@ export default function FbaInboundPanel({tenantId,marketplaceId,focusExceptionLi
      <option value="MANUAL_UNVERIFIED">手工记录 · 未经平台确认</option>
     </select>
     {lines.map((l,i)=><div className="core-tools" key={l.rowId}>
-     <label htmlFor={'fba-sku-'+l.rowId}>第 {i+1} 行 Seller SKU</label>
-     <select id={'fba-sku-'+l.rowId} required value={l.sellerSku}
-      onChange={e=>updateLine(l.rowId,{sellerSku:e.target.value})}>
-      <option value="">选择当前 Marketplace 的 Listing</option>
-      {(listings.data??[]).map(x=><option key={x.id} value={x.sellerSku}>{x.sellerSku}</option>)}
-     </select>
+     <CoreMarketplacePicker key={marketplaceId+'-'+l.rowId}
+      tenantId={tenantId} marketplaceId={marketplaceId}
+      kind="LISTING" id={'fba-sku-'+l.rowId}
+      label={'第 '+(i+1)+' 行 Seller SKU（全站点检索）'}
+      value={l.sellerSku}
+      onChange={sellerSku=>updateLine(l.rowId,{sellerSku})}/>
      <label htmlFor={'fba-units-'+l.rowId}>计划发货件数</label>
      <input id={'fba-units-'+l.rowId} type="number" min={1} max={1000000} required
       value={l.quantity} onChange={e=>updateLine(l.rowId,{quantity:Number(e.target.value)})}/>
@@ -155,8 +154,9 @@ export default function FbaInboundPanel({tenantId,marketplaceId,focusExceptionLi
      <button type="submit" className="primary-button"
       disabled={create.isPending||!reference.trim()||!validLines}>建立 DRAFT 货件</button>
     </div>
-    {listings.data?.length===50&&<p className="setup-hint">下拉框仅为首 50 个 Listing；完整 SKU 可通过 API 提交。</p>}
-    {listings.isError&&<p className="setup-error" role="alert">{String(listings.error)}</p>}
+    <p className="setup-hint">V91：每一行均能检索当前 Marketplace 的全部 Listing。
+    搜索和翻页会清空该行待确认 SKU；服务端提交时会再次检查
+    Seller SKU 必须属于本租户及 Marketplace。草稿不等于已发货或已入仓。</p>
    </form>
   </details>
   <section className="core-tools" aria-label="本地货件列表">
