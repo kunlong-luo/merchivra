@@ -1,16 +1,14 @@
 import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchSkuCosts,addSkuCost} from './lib/costs'
-import type {Sku} from './lib/catalog'
+import InternalSkuPicker from './InternalSkuPicker'
 
-export default function SkuCostManager({tenantId,skus}:{
- tenantId:string;skus:Sku[]
-}){
+export default function SkuCostManager({tenantId}:{tenantId:string}){
  const client=useQueryClient()
  const [choice,setChoice]=useState(''),[amount,setAmount]=useState('')
  const [currency,setCurrency]=useState('USD'),[date,setDate]=useState('')
  const [message,setMessage]=useState(''),[failure,setFailure]=useState('')
- const id=skus.some(s=>s.id===choice)?choice:(skus[0]?.id??'')
+ const id=choice
  const history=useQuery({queryKey:['cost-history',tenantId,id],
   queryFn:()=>fetchSkuCosts(id),enabled:!!id,retry:false})
  const saved=useMutation({mutationFn:()=>addSkuCost(id,amount,currency,date),
@@ -23,10 +21,8 @@ export default function SkuCostManager({tenantId,skus}:{
    <p>按内部 SKU、原币种及生效日追加成本版本，不视为 Amazon 已入账费用或净利润。</p>
   </div></div>
   <form className="team-invite-form" onSubmit={save}>
-   <label htmlFor="sku-cost-id">内部 SKU</label>
-   <select id="sku-cost-id" value={id} onChange={e=>setChoice(e.target.value)}>
-    {skus.map(s=><option key={s.id} value={s.id}>{s.internalSku}</option>)}
-   </select>
+   <InternalSkuPicker tenantId={tenantId} id="sku-cost-id"
+    label="需要追加成本版本的内部 SKU" value={id} onChange={setChoice}/>
    <label htmlFor="sku-cost-amount">单位成本</label>
    <input id="sku-cost-amount" required value={amount} onChange={e=>setAmount(e.target.value)}
       inputMode="decimal" pattern="[0-9]{1,14}(\\.[0-9]{1,6})?"
