@@ -1,6 +1,5 @@
 import {z} from 'zod'
-import {merchivraFetch} from './merchivra-mutator'
-import {listFbaInboundShipments,listFbaInboundTransit,getFbaInboundShipment,
+import {listFbaInboundShipments,listFbaInboundShipmentPage,listFbaInboundTransit,getFbaInboundShipment,
  createFbaInboundShipment,dispatchFbaInboundShipment,recordFbaInboundReceipt,
  startFbaInboundReview,resolveFbaInboundVariance,finalizeFbaInboundReconciliation}
  from '../generated/fba-inbound'
@@ -48,18 +47,15 @@ export const inboundShipmentPageSchema=z.object({
 })
 export type InboundShipmentPage=z.infer<typeof inboundShipmentPageSchema>
 export type InboundHistoryState=InboundShipmentPage['state']
-/** Secure Orval Fetch transport; V92 Spring OpenAPI operation is normalized
- * alongside the V65 existing shipment operations.
- */
+/** Spring-owned OpenAPI + Orval-generated endpoint, with Zod runtime checks. */
 export async function getShipmentsPage(
  mp:string,search='',state:InboundHistoryState='ALL',cursor:string|null=null,
  limit=50):Promise<InboundShipmentPage>{
- const params=new URLSearchParams({limit:String(limit),state})
- if(search.trim())params.set('search',search.trim())
- if(cursor)params.set('cursor',cursor)
- const response=await merchivraFetch<{data:unknown,status:number}>(
-  '/api/v1/fba/marketplaces/'+encodeURIComponent(mp)+
-  '/shipments/page?'+params)
+ const response=await listFbaInboundShipmentPage(mp,{
+  limit,state,
+  ...(search.trim()?{search:search.trim()}:{}),
+  ...(cursor?{cursor}:{})
+ })
  return inboundShipmentPageSchema.parse(response.data)
 }
 export type InboundDetail=z.infer<typeof inboundDetail>
