@@ -121,7 +121,7 @@ event=call("/api/v1/finance/manual-events","POST",{
  "category":"PRODUCT_SALES","amount":"12.340000","currency":currency,
  "postedAt":datetime.now(timezone.utc).isoformat(),
  "externalOrderId":target["externalOrderId"],
- "sourceType":"V90_TEST_MANUAL"})
+ "sourceType":"V90_TEST_MANUAL"},expected=201)
 assert event["sourceFamily"]=="MANUAL"
 assert event["dataOrigin"]=="MANUAL_UNVERIFIED"
 assert event["reviewStatus"]=="REVIEW_REQUIRED"
