@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Merchivra verified local FBA inbound API
  * Owner Session; MOCK/MANUAL_UNVERIFIED evidence only. No Amazon writes.
- * OpenAPI spec version: 65.1.0
+ * OpenAPI spec version: 92.0.0
  */
 import type { Line } from './line.ts';
 import type { ReceiptEvent } from './receiptEvent.ts';
