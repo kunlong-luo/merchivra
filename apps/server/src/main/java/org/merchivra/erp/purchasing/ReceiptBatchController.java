@@ -31,6 +31,20 @@ public class ReceiptBatchController {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
             .body(service.forOrderPage(access.currentTenant(auth,req),orderId,limit,cursor));
     }
+    @GetMapping("/orders/{orderId}/summary")
+    public ResponseEntity<ReceiptBatchService.BatchSummary> forOrderSummary(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID orderId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(service.forOrderSummary(access.currentTenant(auth,req),orderId));
+    }
+    @GetMapping("/warehouses/{warehouseId}/page")
+    public ResponseEntity<LocalKeysetPage.Page<ReceiptBatchService.Batch>> forWarehousePage(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID warehouseId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(service.forWarehousePage(access.currentTenant(auth,req),warehouseId,limit,cursor));
+    }
     @GetMapping("/warehouses/{warehouseId}")
     public List<ReceiptBatchService.Batch> forWarehouse(Authentication auth,HttpServletRequest req,
         @PathVariable UUID warehouseId) {
@@ -47,6 +61,14 @@ public class ReceiptBatchController {
         @PathVariable UUID receiptId) {
         return service.release(access.currentTenant(auth,req),access.authenticatedUser(auth),
             receiptId);
+    }
+    @GetMapping("/{receiptId}/events/page")
+    public ResponseEntity<LocalKeysetPage.Page<ReceiptBatchService.Event>> eventsPage(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID receiptId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(service.eventsPage(access.currentTenant(auth,req),receiptId,limit,cursor));
     }
     @GetMapping("/{receiptId}/events")
     public List<ReceiptBatchService.Event> events(Authentication auth,HttpServletRequest req,
