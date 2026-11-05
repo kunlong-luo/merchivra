@@ -4,7 +4,7 @@ import type {LocalWarehouse} from './lib/purchasing'
 import {fetchReceiptBatchesPage} from './lib/receipt-batches'
 import CursorPageControls from './CursorPageControls'
 import {fetchStockBinsPage,createStockBin,fetchReceiptLotPiecesPage,
- splitReceiptLot,moveReceiptLot,fetchReceiptSupplyPressure,
+ splitReceiptLot,moveReceiptLot,fetchReceiptSupplyPressurePage,
  type SplitReceiptLot,type MoveReceiptLot} from './lib/lot-locations'
 
 export default function ReceiptLotLocationPanel({tenantId,orderId,warehouses}:{
@@ -33,14 +33,16 @@ export default function ReceiptLotLocationPanel({tenantId,orderId,warehouses}:{
  const [pieceCursors,setPieceCursors]=useState<(string|null)[]>([null])
  const binCursor=binCursors.at(-1)??null
  const pieceCursor=pieceCursors.at(-1)??null
+ const [pressureCursors,setPressureCursors]=useState<(string|null)[]>([null])
+ const pressureCursor=pressureCursors.at(-1)??null
  const batches=useQuery({queryKey:[...root,'receipt-batches-page',orderId,batchCursor],
   queryFn:()=>fetchReceiptBatchesPage(orderId,batchCursor),enabled:!!orderId,retry:false})
  const bins=useQuery({queryKey:[...root,'bins-page',warehouseId,binCursor],
   queryFn:()=>fetchStockBinsPage(warehouseId,binCursor),enabled:!!warehouseId,retry:false})
  const pieces=useQuery({queryKey:[...root,'pieces-page',receiptId,pieceCursor],
   queryFn:()=>fetchReceiptLotPiecesPage(receiptId,pieceCursor),enabled:!!receiptId,retry:false})
- const pressure=useQuery({queryKey:[...root,'pressure',warehouseId],
-  queryFn:()=>fetchReceiptSupplyPressure(warehouseId),enabled:!!warehouseId,retry:false})
+ const pressure=useQuery({queryKey:[...root,'pressure-page',warehouseId,pressureCursor],
+  queryFn:()=>fetchReceiptSupplyPressurePage(warehouseId,pressureCursor),enabled:!!warehouseId,retry:false})
  const refresh=()=>void client.invalidateQueries({queryKey:root})
  const changed=()=>setKey(crypto.randomUUID())
  const created=useMutation({mutationFn:()=>createStockBin(warehouseId,binCode,binPurpose),
@@ -86,7 +88,7 @@ export default function ReceiptLotLocationPanel({tenantId,orderId,warehouses}:{
   <label htmlFor="lot-warehouse">本地仓库</label>
   <select id="lot-warehouse" value={warehouseId}
    onChange={e=>{setWarehouseId(e.target.value);setReceiptId('');setPieceId('');
-    setTargetBin('');setBinCursors([null]);setPieceCursors([null]);changed()}}>
+    setTargetBin('');setBinCursors([null]);setPieceCursors([null]);setPressureCursors([null]);changed()}}>
    <option value="">选择一个仓库</option>
    {warehouses.filter(w=>w.status==='ACTIVE').map(w=>
     <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}
@@ -123,21 +125,26 @@ export default function ReceiptLotLocationPanel({tenantId,orderId,warehouses}:{
      disabled={created.isPending||binCode==='QC-HOLD'}>创建本地库位</button>
    </form>
    <h3>待检与补货压力（仅提醒，不自动生成采购单）</h3>
-   <p className="setup-hint">以下为最多 300 个 SKU 的局部压力视图，不是全仓库存总账。可用库存用于 V42 补货决策，待检、已检待放行及供应商申报在途均单独列示，
+   <p className="setup-hint">以下为按 SKU 分页遍历的收货压力视图，不是全仓库存总账。可用库存用于 V42 补货决策，待检、已检待放行及供应商申报在途均单独列示，
     不当作确定可售库存；ASN 在途是申报余量，不是承运商确认。</p>
    {pressure.isPending?<p className="empty-state">读取收货待检快照…</p>:
     pressure.isError?<p className="setup-error" role="alert">{String(pressure.error)}</p>:
-    !pressure.data?.length?<p className="empty-state">该仓库暂无 V46 及以后批次记录。</p>:
+    !pressure.data?.items.length?<p className="empty-state">该仓库暂无 V46 及以后批次记录。</p>:
     <div className="table-scroll" role="region" tabIndex={0}>
      <table><thead><tr><th scope="col">SKU</th><th scope="col">已可用</th>
       <th scope="col">待检实收</th><th scope="col">已检待放行</th>
       <th scope="col">供应商申报在途</th></tr></thead><tbody>
-      {pressure.data.map(p=><tr key={p.productSkuId}>
+      {pressure.data.items.map(p=><tr key={p.productSkuId}>
        <td>{p.internalSku}</td><td>{p.usableUnits}</td>
        <td>{p.pendingQcUnits}</td><td>{p.acceptedAwaitingReleaseUnits}</td>
        <td>{p.declaredAsnInTransitUnits}</td>
       </tr>)}</tbody></table>
     </div>}
+   {!!pressure.data&&<CursorPageControls label="收货 SKU 压力" page={pressureCursors.length}
+    hasMore={pressure.data.hasMore} nextCursor={pressure.data.nextCursor}
+    busy={pressure.isFetching}
+    onPrev={()=>setPressureCursors(v=>v.length>1?v.slice(0,-1):v)}
+    onNext={v=>setPressureCursors(h=>[...h,v])}/>}
   </>}
   {!!warehouseId&&!!orderId&&<>
    <h3>采购单待检批次分段</h3>
