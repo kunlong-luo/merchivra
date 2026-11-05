@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.security.TenantAccessService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,6 +26,14 @@ public class SupplierPurchasePlanController {
     @GetMapping("/supplier-rules")
     public List<SupplierPurchasePlanService.Rule> rules(Authentication auth,HttpServletRequest req) {
         return planning.rules(access.currentTenant(auth,req));
+    }
+    @GetMapping("/supplier-rules/page")
+    public ResponseEntity<LocalKeysetPage.Page<SupplierPurchasePlanService.Rule>> rulesPage(
+        Authentication auth,HttpServletRequest req,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(planning.rulesPage(access.currentTenant(auth,req),limit,cursor));
     }
     @PostMapping("/supplier-rules")
     public SupplierPurchasePlanService.Rule setRule(Authentication auth,HttpServletRequest req,
@@ -45,10 +55,26 @@ public class SupplierPurchasePlanController {
         Authentication auth,HttpServletRequest req,@PathVariable UUID warehouseId) {
         return planning.recommendations(access.currentTenant(auth,req),warehouseId);
     }
+    @GetMapping("/warehouses/{warehouseId}/recommendations/page")
+    public ResponseEntity<LocalKeysetPage.Page<SupplierPurchasePlanService.Recommendation>> recommendationsPage(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID warehouseId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(planning.recommendationsPage(access.currentTenant(auth,req),warehouseId,limit,cursor));
+    }
     @GetMapping("/warehouses/{warehouseId}/plans")
     public List<SupplierPurchasePlanService.Plan> plans(Authentication auth,
         HttpServletRequest req,@PathVariable UUID warehouseId) {
         return planning.plans(access.currentTenant(auth,req),warehouseId);
+    }
+    @GetMapping("/warehouses/{warehouseId}/plans/page")
+    public ResponseEntity<LocalKeysetPage.Page<SupplierPurchasePlanService.Plan>> plansPage(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID warehouseId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(planning.plansPage(access.currentTenant(auth,req),warehouseId,limit,cursor));
     }
     @PostMapping("/plans")
     @ResponseStatus(HttpStatus.CREATED)
