@@ -19,7 +19,7 @@ class LocalKeysetPageTest {
             n->LocalKeysetPage.encode("warehouse",""+n));
         var d=LocalKeysetPage.pack(all.subList(150,201),50,
             n->LocalKeysetPage.encode("warehouse",""+n));
-        var e=LocalKeysetPage.pack(all.subList(200),50,
+        var e=LocalKeysetPage.pack(all.subList(200,all.size()),50,
             n->LocalKeysetPage.encode("warehouse",""+n));
         assertEquals(List.of(50,50,50,50,25),
             List.of(a.items().size(),b.items().size(),c.items().size(),
