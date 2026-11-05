@@ -53,6 +53,24 @@ async function api<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown)
  return response.status===204?undefined as T:schema.parse(await response.json())
 }
 export const fetchSupplierSkuRules=()=>api(base+'/supplier-rules',z.array(rule))
+export type CursorPage<T>={items:T[];nextCursor:string|null;hasMore:boolean;pageSize:number}
+const pageOf=<T extends z.ZodTypeAny>(item:T)=>z.object({
+ items:z.array(item).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{message:'Invalid page cursor'})
+function pageUrl(path:string,cursor:string|null,limit=50){
+ const params=new URLSearchParams({limit:String(limit)})
+ if(cursor)params.set('cursor',cursor)
+ return path+'/page?'+params.toString()
+}
+export const fetchSupplierSkuRulesPage=(cursor:string|null=null)=>api(
+ pageUrl(base+'/supplier-rules',cursor),pageOf(rule))
+export const fetchLocalPurchaseRecommendationsPage=(warehouseId:string,cursor:string|null=null)=>api(
+ pageUrl(base+'/warehouses/'+encodeURIComponent(warehouseId)+'/recommendations',cursor),
+ pageOf(recommendation))
+export const fetchLocalPurchasePlansPage=(warehouseId:string,cursor:string|null=null)=>api(
+ pageUrl(base+'/warehouses/'+encodeURIComponent(warehouseId)+'/plans',cursor),pageOf(plan))
+
 export const setSupplierSkuRule=(supplierId:string,productSkuId:string,
  minimumOrderQuantity:number,packMultiple:number,leadTimeDays:number,
  currency:string,unitCost:string)=>api(base+'/supplier-rules',rule,'POST',{

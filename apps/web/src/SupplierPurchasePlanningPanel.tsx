@@ -1,11 +1,12 @@
-import {useState,type FormEvent} from 'react'
+import {useEffect,useState,type FormEvent,type Dispatch,type SetStateAction} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {Sku} from './lib/catalog'
 import InternalSkuPicker from './InternalSkuPicker'
+import CursorPageControls from './CursorPageControls'
 import type {Supplier} from './lib/purchasing'
 import {
- fetchSupplierSkuRules,setSupplierSkuRule,removeSupplierSkuRule,
- fetchLocalPurchaseRecommendations,fetchLocalPurchasePlans,
+ fetchSupplierSkuRulesPage,setSupplierSkuRule,removeSupplierSkuRule,
+ fetchLocalPurchaseRecommendationsPage,fetchLocalPurchasePlansPage,
  proposeLocalPurchasePlan,actOnLocalPurchasePlan,
  type PurchaseRecommendation,type NewPlanRequest
 } from './lib/purchase-planning'
@@ -31,22 +32,35 @@ export default function SupplierPurchasePlanningPanel({tenantId,warehouseId,skus
  const [message,setMessage]=useState(''),[failure,setFailure]=useState('')
  const [requestKeys,setRequestKeys]=useState<Record<string,string>>({})
  const root=['purchasing',tenantId]
- const rules=useQuery({queryKey:[...root,'supplier-rules'],queryFn:fetchSupplierSkuRules})
- const recommendations=useQuery({queryKey:[...root,'planning',warehouseId,'recommendations'],
-  queryFn:()=>fetchLocalPurchaseRecommendations(warehouseId),enabled:!!warehouseId})
- const plans=useQuery({queryKey:[...root,'planning',warehouseId,'plans'],
-  queryFn:()=>fetchLocalPurchasePlans(warehouseId),enabled:!!warehouseId})
+ const [ruleCursors,setRuleCursors]=useState<(string|null)[]>([null])
+ const [recommendationCursors,setRecommendationCursors]=useState<(string|null)[]>([null])
+ const [planCursors,setPlanCursors]=useState<(string|null)[]>([null])
+ const ruleCursor=ruleCursors.at(-1)??null
+ const recommendationCursor=recommendationCursors.at(-1)??null
+ const planCursor=planCursors.at(-1)??null
+ useEffect(()=>{
+  setRecommendationCursors([null]);setPlanCursors([null])
+ },[warehouseId])
+ const rules=useQuery({queryKey:[...root,'supplier-rules-page',ruleCursor],
+  queryFn:()=>fetchSupplierSkuRulesPage(ruleCursor),retry:false})
+ const recommendations=useQuery({
+  queryKey:[...root,'planning',warehouseId,'recommendations-page',recommendationCursor],
+  queryFn:()=>fetchLocalPurchaseRecommendationsPage(warehouseId,recommendationCursor),
+  enabled:!!warehouseId,retry:false})
+ const plans=useQuery({queryKey:[...root,'planning',warehouseId,'plans-page',planCursor],
+  queryFn:()=>fetchLocalPurchasePlansPage(warehouseId,planCursor),
+  enabled:!!warehouseId,retry:false})
  const refresh=()=>void client.invalidateQueries({queryKey:root})
  const save=useMutation({mutationFn:()=>setSupplierSkuRule(
   supplierId,skuId,moq,pack,lead,currency,unitCost),
-  onSuccess:()=>{setMessage('供应商 SKU 采购规则已更新');setFailure('');setEditingRuleSku('');setSkuId('');refresh()},
+  onSuccess:()=>{setMessage('供应商 SKU 采购规则已更新');setFailure('');setEditingRuleSku('');setSkuId('');setRuleCursors([null]);refresh()},
   onError:(error:Error)=>setFailure(error.message)})
  const remove=useMutation({mutationFn:({s,k}:{s:string;k:string})=>removeSupplierSkuRule(s,k),
-  onSuccess:()=>{setMessage('供应商 SKU 规则已移除');setFailure('');refresh()},
+  onSuccess:()=>{setMessage('供应商 SKU 规则已移除');setFailure('');setRuleCursors([null]);refresh()},
   onError:(error:Error)=>setFailure(error.message)})
  const propose=useMutation({mutationFn:(request:NewPlanRequest)=>proposeLocalPurchasePlan(request),
   onSuccess:p=>{setMessage('本地采购计划已保存：'+p.id.slice(0,8));
-   setFailure('');refresh()},
+   setFailure('');setPlanCursors([null]);refresh()},
   onError:(error:Error)=>setFailure(error.message)})
  const action=useMutation({
   mutationFn:({id,kind}:{id:string;kind:'convert'|'cancel'})=>actOnLocalPurchasePlan(id,kind),
@@ -55,6 +69,10 @@ export default function SupplierPurchasePlanningPanel({tenantId,warehouseId,skus
    setFailure('');refresh();if(p.purchaseOrderId)onConverted(p.purchaseOrderId)},
   onError:(error:Error)=>setFailure(error.message)
  })
+ const back=(set:Dispatch<SetStateAction<(string|null)[]>>)=>
+  set(v=>v.length>1?v.slice(0,-1):v)
+ const next=(set:Dispatch<SetStateAction<(string|null)[]>>,cursor:string)=>
+  set(v=>[...v,cursor])
  const validTerms=!!supplierId&&!!skuId&&
   (!editingRuleSku||editingRuleSku===skuId)&&
   Number.isInteger(moq)&&moq>=1&&moq<=1_000_000&&
@@ -121,15 +139,15 @@ export default function SupplierPurchasePlanningPanel({tenantId,warehouseId,skus
    <button type="submit" className="primary-button" disabled={!validTerms||save.isPending}>
     保存供应商采购规则</button>
   </form>
-  <p className="setup-hint">供应商规则表当前 API 最多返回 500 条；这里的行数不能当作本租户规则总数。该历史清单分页将独立完善。</p>
+  <p className="setup-hint">供应商规则按服务端游标逐页浏览，当前页不是全库；编辑旧规则需重新选中相同 SKU UUID。</p>
   {rules.isPending?<p className="empty-state">加载供应商规则…</p>:
    rules.isError?<p className="setup-error" role="alert">{String(rules.error)}</p>:
-   !rules.data?.length?<p className="empty-state">尚未建立供应商 / SKU 采购规则。</p>:
+   !rules.data?.items.length?<p className="empty-state">尚未建立供应商 / SKU 采购规则。</p>:
    <div className="table-scroll" role="region" tabIndex={0} aria-label="供应商采购规则">
     <table><thead><tr><th scope="col">供应商</th><th scope="col">SKU</th>
      <th scope="col">MOQ / 倍数</th><th scope="col">参考交期</th>
      <th scope="col">原币单价</th><th scope="col">操作</th></tr></thead><tbody>
-     {rules.data.map(r=><tr key={r.supplierId+':'+r.productSkuId}>
+     {rules.data.items.map(r=><tr key={r.supplierId+':'+r.productSkuId}>
       <td>{suppliers.find(s=>s.id===r.supplierId)?.name??r.supplierId}</td>
       <td>{skus.find(s=>s.id===r.productSkuId)?.internalSku??r.productSkuId}</td>
       <td>{r.minimumOrderQuantity} / {r.packMultiple}</td>
@@ -145,6 +163,9 @@ export default function SupplierPurchasePlanningPanel({tenantId,warehouseId,skus
       </div></td>
      </tr>)}</tbody></table>
    </div>}
+  {!!rules.data&&<CursorPageControls label="供应商规则" page={ruleCursors.length}
+   hasMore={rules.data.hasMore} nextCursor={rules.data.nextCursor} busy={rules.isFetching}
+   onPrev={()=>back(setRuleCursors)} onNext={v=>next(setRuleCursors,v)}/>}
   {!warehouseId?<p className="setup-hint">
     选择上方本地仓库后，才能查看该仓库的采购建议和计划。</p>:<>
    <h3>仓库补货建议 → 人工采购计划</h3>
@@ -154,14 +175,14 @@ export default function SupplierPurchasePlanningPanel({tenantId,warehouseId,skus
    {recommendations.isPending?<p className="empty-state">正在读取建议…</p>:
     recommendations.isError?<p className="setup-error" role="alert">
      {String(recommendations.error)}</p>:
-    !recommendations.data?.length?<p className="empty-state">
+    !recommendations.data?.items.length?<p className="empty-state">
      尚无可关联的仓库补货策略及供应商规则。</p>:
     <div className="table-scroll" role="region" tabIndex={0} aria-label="供应商采购建议">
      <table><thead><tr><th scope="col">SKU / 供应商</th><th scope="col">本地库存</th>
       <th scope="col">策略阈值</th><th scope="col">基础建议</th>
       <th scope="col">MOQ/倍数修正</th><th scope="col">原因</th>
       <th scope="col">操作</th></tr></thead><tbody>
-      {recommendations.data.map(a=><tr key={recommendationKey(a)}>
+      {recommendations.data.items.map(a=><tr key={recommendationKey(a)}>
        <td>{a.internalSku}<div className="secondary-cell">{a.supplierName}</div></td>
        <td>{a.onHandQuantity===null?'未知':a.onHandQuantity}</td>
        <td>{a.reorderPoint} / {a.targetStock}</td>
@@ -170,24 +191,25 @@ export default function SupplierPurchasePlanningPanel({tenantId,warehouseId,skus
         {a.currency} {a.unitCost} · 交期 {a.leadTimeDays} 天</div></td>
        <td>{states[a.state]??a.state}</td>
        <td><button type="button" className="primary-button"
-        disabled={a.state!=='LOW_STOCK'||a.orderQuantity===null||propose.isPending||
-         !!plans.data?.some(p=>p.productSkuId===a.productSkuId&&
-          p.sourceMovementId===a.sourceMovementId)}
-        onClick={()=>plan(a)}>
-        {plans.data?.some(p=>p.productSkuId===a.productSkuId&&
-          p.sourceMovementId===a.sourceMovementId)?'当前证据已有计划':'保存采购计划'}</button></td>
+        disabled={a.state!=='LOW_STOCK'||a.orderQuantity===null||propose.isPending}
+        onClick={()=>plan(a)}>保存采购计划</button></td>
       </tr>)}</tbody></table>
     </div>}
+   {!!recommendations.data&&<CursorPageControls label="采购建议"
+    page={recommendationCursors.length} hasMore={recommendations.data.hasMore}
+    nextCursor={recommendations.data.nextCursor} busy={recommendations.isFetching}
+    onPrev={()=>back(setRecommendationCursors)}
+    onNext={v=>next(setRecommendationCursors,v)}/>}
    <h3>本地采购计划清单</h3>
    {plans.isPending?<p className="empty-state">读取计划中…</p>:
     plans.isError?<p className="setup-error" role="alert">{String(plans.error)}</p>:
-    !plans.data?.length?<p className="empty-state">当前仓库暂无人工采购计划。</p>:
+    !plans.data?.items.length?<p className="empty-state">当前仓库暂无人工采购计划。</p>:
     <div className="table-scroll" role="region" tabIndex={0} aria-label="采购计划">
      <table><thead><tr><th scope="col">创建时间 / SKU</th>
       <th scope="col">采购件数</th><th scope="col">供应商</th>
       <th scope="col">估算到货日</th><th scope="col">状态</th>
       <th scope="col">操作</th></tr></thead><tbody>
-      {plans.data.map(p=><tr key={p.id}>
+      {plans.data.items.map(p=><tr key={p.id}>
        <td>{new Date(p.createdAt).toLocaleString('zh-CN')}
         <div className="secondary-cell">
          {skus.find(s=>s.id===p.productSkuId)?.internalSku??p.productSkuId}</div></td>
@@ -210,6 +232,11 @@ export default function SupplierPurchasePlanningPanel({tenantId,warehouseId,skus
        </div></td>
       </tr>)}</tbody></table>
     </div>}
+   {!!plans.data&&<CursorPageControls label="采购计划"
+    page={planCursors.length} hasMore={plans.data.hasMore}
+    nextCursor={plans.data.nextCursor} busy={plans.isFetching}
+    onPrev={()=>back(setPlanCursors)}
+    onNext={v=>next(setPlanCursors,v)}/>}
   </>}
   {message&&<p className="panel-caption" role="status">{message}</p>}
   {failure&&<p className="setup-error" role="alert">{failure}</p>}

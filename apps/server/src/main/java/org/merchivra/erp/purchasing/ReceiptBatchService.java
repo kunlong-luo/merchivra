@@ -84,6 +84,37 @@ public class ReceiptBatchService {
             """,ReceiptBatchService::mapBatch,tenant,tenant,order);
     }
     @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Batch> forOrderPage(UUID tenant,UUID order,
+                                                     int requested,String cursor) {
+        if(order==null)throw bad("Purchase order required");
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=LocalKeysetPage.decode(cursor,3);
+        if(after!=null && !order.toString().equals(after[0]))
+            throw bad("Receipt batch cursor belongs to a different purchase order");
+        var args=new java.util.ArrayList<Object>();
+        args.add(tenant);args.add(tenant);args.add(order);
+        String where="";
+        if(after!=null) {
+            try {
+                where=" AND (b.created_at,b.receipt_id) < (?,?)";
+                args.add(OffsetDateTime.ofInstant(java.time.Instant.parse(after[1]),
+                    java.time.ZoneOffset.UTC));
+                args.add(UUID.fromString(after[2]));
+            } catch(Exception e) {throw bad("Invalid receipt batch cursor");}
+        }
+        args.add(limit+1);
+        List<Batch> rows=jdbc.query(BATCH_SQL+"""
+            AND b.receipt_id IN (
+              SELECT r.id FROM erp_purchase_receipt r
+              WHERE r.tenant_id=? AND r.purchase_order_id=?
+            )
+            """+where+" ORDER BY b.created_at DESC,b.receipt_id DESC LIMIT ?",
+            ReceiptBatchService::mapBatch,args.toArray());
+        return LocalKeysetPage.pack(rows,limit,b->LocalKeysetPage.encode(
+            order.toString(),b.createdAt(),b.receiptId()));
+    }
+
+    @Transactional(readOnly=true)
     public List<Batch> forWarehouse(UUID tenant,UUID warehouse) {
         return jdbc.query(BATCH_SQL+"""
             AND b.warehouse_id=? ORDER BY b.created_at DESC,b.receipt_id DESC LIMIT 300

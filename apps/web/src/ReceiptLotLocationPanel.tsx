@@ -1,8 +1,9 @@
-import {useState,type FormEvent} from 'react'
+import {useEffect,useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
-import {fetchReceiptBatches} from './lib/receipt-batches'
-import {fetchStockBins,createStockBin,fetchReceiptLotPieces,
+import {fetchReceiptBatchesPage} from './lib/receipt-batches'
+import CursorPageControls from './CursorPageControls'
+import {fetchStockBinsPage,createStockBin,fetchReceiptLotPiecesPage,
  splitReceiptLot,moveReceiptLot,fetchReceiptSupplyPressure,
  type SplitReceiptLot,type MoveReceiptLot} from './lib/lot-locations'
 
@@ -23,31 +24,40 @@ export default function ReceiptLotLocationPanel({tenantId,orderId,warehouses}:{
  const [key,setKey]=useState(()=>crypto.randomUUID())
  const [message,setMessage]=useState(''),[failure,setFailure]=useState('')
  const root=['purchasing',tenantId]
- const batches=useQuery({queryKey:[...root,'receipt-batches',orderId],
-  queryFn:()=>fetchReceiptBatches(orderId),enabled:!!orderId,retry:false})
- const bins=useQuery({queryKey:[...root,'bins',warehouseId],
-  queryFn:()=>fetchStockBins(warehouseId),enabled:!!warehouseId,retry:false})
- const pieces=useQuery({queryKey:[...root,'pieces',receiptId],
-  queryFn:()=>fetchReceiptLotPieces(receiptId),enabled:!!receiptId,retry:false})
+ const [batchCursors,setBatchCursors]=useState<(string|null)[]>([null])
+ const batchCursor=batchCursors.at(-1)??null
+ useEffect(()=>{
+  setBatchCursors([null]);setReceiptId('');setPieceId('');setPieceCursors([null])
+ },[orderId])
+ const [binCursors,setBinCursors]=useState<(string|null)[]>([null])
+ const [pieceCursors,setPieceCursors]=useState<(string|null)[]>([null])
+ const binCursor=binCursors.at(-1)??null
+ const pieceCursor=pieceCursors.at(-1)??null
+ const batches=useQuery({queryKey:[...root,'receipt-batches-page',orderId,batchCursor],
+  queryFn:()=>fetchReceiptBatchesPage(orderId,batchCursor),enabled:!!orderId,retry:false})
+ const bins=useQuery({queryKey:[...root,'bins-page',warehouseId,binCursor],
+  queryFn:()=>fetchStockBinsPage(warehouseId,binCursor),enabled:!!warehouseId,retry:false})
+ const pieces=useQuery({queryKey:[...root,'pieces-page',receiptId,pieceCursor],
+  queryFn:()=>fetchReceiptLotPiecesPage(receiptId,pieceCursor),enabled:!!receiptId,retry:false})
  const pressure=useQuery({queryKey:[...root,'pressure',warehouseId],
   queryFn:()=>fetchReceiptSupplyPressure(warehouseId),enabled:!!warehouseId,retry:false})
  const refresh=()=>void client.invalidateQueries({queryKey:root})
  const changed=()=>setKey(crypto.randomUUID())
  const created=useMutation({mutationFn:()=>createStockBin(warehouseId,binCode,binPurpose),
   onSuccess:()=>{setMessage('本地库位已建立；仅创建货位元数据，未生成库存');
-   setFailure('');setBinCode('');refresh()},
+   setFailure('');setBinCode('');setBinCursors([null]);refresh()},
   onError:(e:Error)=>setFailure(e.message)})
  const split=useMutation({mutationFn:(body:SplitReceiptLot)=>splitReceiptLot(receiptId,body),
   onSuccess:()=>{setMessage('待检批次按数量拆分完成，库内总实收数不变');
-   setFailure('');setSplitCode('');changed();refresh()},
+   setFailure('');setSplitCode('');setPieceCursors([null]);setPieceId('');changed();refresh()},
   onError:(e:Error)=>setFailure(e.message)})
  const moved=useMutation({mutationFn:(body:MoveReceiptLot)=>moveReceiptLot(receiptId,body),
   onSuccess:()=>{setMessage('已记录待检分段位置变化；可用库存未发生任何变动');
-   setFailure('');changed();refresh()},
+   setFailure('');setPieceCursors([null]);setPieceId('');changed();refresh()},
   onError:(e:Error)=>setFailure(e.message)})
- const currentBatch=batches.data?.find(b=>b.receiptId===receiptId)
- const source=pieces.data?.find(p=>p.id===pieceId)
- const activeQcBins=bins.data?.filter(b=>b.purpose==='QC_HOLD'&&b.status==='ACTIVE')??[]
+ const currentBatch=batches.data?.items.find(b=>b.receiptId===receiptId)
+ const source=pieces.data?.items.find(p=>p.id===pieceId)
+ const activeQcBins=bins.data?.items.filter(b=>b.purpose==='QC_HOLD'&&b.status==='ACTIVE')??[]
  const target=targetBin||source?.binId||''
  const canSubmit=!!currentBatch&&currentBatch.status==='PENDING_QC'&&!!source&&
   reason.trim().length>=5&&reason.trim().length<=300&&
@@ -76,7 +86,7 @@ export default function ReceiptLotLocationPanel({tenantId,orderId,warehouses}:{
   <label htmlFor="lot-warehouse">本地仓库</label>
   <select id="lot-warehouse" value={warehouseId}
    onChange={e=>{setWarehouseId(e.target.value);setReceiptId('');setPieceId('');
-    setTargetBin('');changed()}}>
+    setTargetBin('');setBinCursors([null]);setPieceCursors([null]);changed()}}>
    <option value="">选择一个仓库</option>
    {warehouses.filter(w=>w.status==='ACTIVE').map(w=>
     <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}
@@ -87,8 +97,12 @@ export default function ReceiptLotLocationPanel({tenantId,orderId,warehouses}:{
     STORAGE 库位在此阶段仅作为库位目录，不能将未检分段移入可售区。</p>
    {bins.isPending?<p className="empty-state">读取库位…</p>:
     bins.isError?<p className="setup-error" role="alert">{String(bins.error)}</p>:
-    <p className="setup-hint">{(bins.data??[]).map(b=>
+    <p className="setup-hint">{(bins.data?.items??[]).map(b=>
      b.code+'（'+(b.purpose==='QC_HOLD'?'待检':'存放')+'）').join('、')||'暂无库位'}</p>}
+   {!!bins.data&&<CursorPageControls label="库位" page={binCursors.length}
+    hasMore={bins.data.hasMore} nextCursor={bins.data.nextCursor} busy={bins.isFetching}
+    onPrev={()=>{setBinCursors(v=>v.length>1?v.slice(0,-1):v);setTargetBin('')}}
+    onNext={v=>{setBinCursors(h=>[...h,v]);setTargetBin('')}}/>}
    <form className="team-invite-form" onSubmit={e=>{
     e.preventDefault()
     if(!/^[A-Z0-9][A-Z0-9_-]{1,63}$/.test(binCode)||created.isPending)return
@@ -109,7 +123,7 @@ export default function ReceiptLotLocationPanel({tenantId,orderId,warehouses}:{
      disabled={created.isPending||binCode==='QC-HOLD'}>创建本地库位</button>
    </form>
    <h3>待检与补货压力（仅提醒，不自动生成采购单）</h3>
-   <p className="setup-hint">可用库存用于 V42 补货决策，待检、已检待放行及供应商申报在途均单独列示，
+   <p className="setup-hint">以下为最多 300 个 SKU 的局部压力视图，不是全仓库存总账。可用库存用于 V42 补货决策，待检、已检待放行及供应商申报在途均单独列示，
     不当作确定可售库存；ASN 在途是申报余量，不是承运商确认。</p>
    {pressure.isPending?<p className="empty-state">读取收货待检快照…</p>:
     pressure.isError?<p className="setup-error" role="alert">{String(pressure.error)}</p>:
@@ -130,31 +144,40 @@ export default function ReceiptLotLocationPanel({tenantId,orderId,warehouses}:{
    <label htmlFor="lot-receipt">真实收货批次</label>
    <select id="lot-receipt" value={receiptId}
     onChange={e=>{setReceiptId(e.target.value);setPieceId('');setTargetBin('');
-     changed()}}>
-    <option value="">选择未完成质检的真实收货批次</option>
-    {(batches.data??[]).filter(b=>b.warehouseId===warehouseId&&
+     setPieceCursors([null]);changed()}}>
+    <option value="">按订单分页选择未完成质检的真实收货批次</option>
+    {(batches.data?.items??[]).filter(b=>b.warehouseId===warehouseId&&
       b.status==='PENDING_QC').map(b=><option key={b.receiptId} value={b.receiptId}>
       {b.lotCode} · {b.receivedQuantity} 件</option>)}
    </select>
+   {!!batches.data&&<CursorPageControls label="收货批次" page={batchCursors.length}
+    hasMore={batches.data.hasMore} nextCursor={batches.data.nextCursor} busy={batches.isFetching}
+    onPrev={()=>{setBatchCursors(v=>v.length>1?v.slice(0,-1):v);setReceiptId('');setPieceId('');setPieceCursors([null])}}
+    onNext={v=>{setBatchCursors(h=>[...h,v]);setReceiptId('');setPieceId('');setPieceCursors([null])}}/>}
    {!!receiptId&&<>
     {pieces.isPending?<p className="empty-state">读取分段…</p>:
      pieces.isError?<p className="setup-error" role="alert">{String(pieces.error)}</p>:
      <div className="table-scroll" role="region" tabIndex={0}>
       <table><thead><tr><th scope="col">分段编号</th><th scope="col">件数</th>
        <th scope="col">待检库位</th></tr></thead><tbody>
-       {(pieces.data??[]).map(p=><tr key={p.id}>
+       {(pieces.data?.items??[]).map(p=><tr key={p.id}>
         <td>{p.pieceCode}</td><td>{p.quantity}</td>
-        <td>{bins.data?.find(b=>b.id===p.binId)?.code??p.binId}</td>
+        <td>{bins.data?.items.find(b=>b.id===p.binId)?.code??p.binId}</td>
        </tr>)}</tbody></table>
      </div>}
-    <p className="setup-hint">分段件数合计：{pieces.data?.reduce((n,p)=>n+p.quantity,0)??'—'}；
-     原始收货数量：{currentBatch?.receivedQuantity??'—'}。</p>
+    {!!pieces.data&&<CursorPageControls label="收货分段" page={pieceCursors.length}
+     hasMore={pieces.data.hasMore} nextCursor={pieces.data.nextCursor} busy={pieces.isFetching}
+     onPrev={()=>{setPieceCursors(v=>v.length>1?v.slice(0,-1):v);setPieceId('');setTargetBin('')}}
+     onNext={v=>{setPieceCursors(h=>[...h,v]);setPieceId('');setTargetBin('')}}/>}
+    <p className="setup-hint">数据库全批次分段件数合计：{pieces.data?.totalQuantity??'—'}；
+     原始收货数量：{currentBatch?.receivedQuantity??'—'}。
+     翻页不会改变全批次合计，当前分段与库位选择仅对本页有效。</p>
     <form className="team-invite-form" onSubmit={submit}>
      <label htmlFor="lot-piece">来源分段</label>
      <select id="lot-piece" value={pieceId}
       onChange={e=>{setPieceId(e.target.value);setTargetBin('');changed()}}>
       <option value="">选择来源分段</option>
-      {(pieces.data??[]).map(p=><option key={p.id} value={p.id}>
+      {(pieces.data?.items??[]).map(p=><option key={p.id} value={p.id}>
        {p.pieceCode} · {p.quantity} 件</option>)}
      </select>
      <label htmlFor="lot-action">操作</label>

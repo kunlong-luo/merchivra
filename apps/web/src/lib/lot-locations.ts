@@ -37,6 +37,25 @@ async function api<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown)
  }
  return schema.parse(await response.json())
 }
+const cursorPageOf=<T extends z.ZodTypeAny>(item:T)=>z.object({
+ items:z.array(item).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{message:'Invalid page cursor'})
+const piecesPageSchema=z.object({
+ items:z.array(piece).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100),
+ totalQuantity:z.number().int().nonnegative()
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{message:'Invalid piece cursor'})
+function pageUrl(path:string,cursor:string|null){
+ const params=new URLSearchParams({limit:'50'})
+ if(cursor)params.set('cursor',cursor)
+ return path+'/page?'+params.toString()
+}
+export const fetchStockBinsPage=(warehouseId:string,cursor:string|null=null)=>api(
+ pageUrl(base+'/warehouses/'+encodeURIComponent(warehouseId)+'/bins',cursor),cursorPageOf(bin))
+export const fetchReceiptLotPiecesPage=(receiptId:string,cursor:string|null=null)=>api(
+ pageUrl(base+'/receipts/'+encodeURIComponent(receiptId)+'/pieces',cursor),piecesPageSchema)
+
 export const fetchStockBins=(warehouseId:string)=>api(
  base+'/warehouses/'+encodeURIComponent(warehouseId)+'/bins',z.array(bin))
 export const createStockBin=(warehouseId:string,code:string,purpose:'QC_HOLD'|'STORAGE')=>api(

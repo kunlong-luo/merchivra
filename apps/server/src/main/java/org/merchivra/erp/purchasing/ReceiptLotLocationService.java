@@ -2,6 +2,7 @@ package org.merchivra.erp.purchasing;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -22,6 +23,8 @@ public class ReceiptLotLocationService {
 
     public record Bin(String id,String warehouseId,String code,String purpose,String status) {}
     public record NewBin(String code,String purpose) {}
+    public record PiecePage(List<Piece> items,String nextCursor,boolean hasMore,
+                            int pageSize,long totalQuantity) {}
     public record Piece(String id,String receiptId,String warehouseId,String productSkuId,
                         String binId,String pieceCode,int quantity) {}
     public record Split(UUID requestKey,UUID pieceId,int quantity,String pieceCode,
@@ -86,6 +89,31 @@ public class ReceiptLotLocationService {
             ORDER BY bin_code LIMIT 200
             """,ReceiptLotLocationService::mapBin,tenant,warehouse);
     }
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Bin> binsPage(UUID tenant,UUID warehouse,
+                                             int requested,String cursor) {
+        if(warehouse==null)throw bad("Warehouse is required");
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=LocalKeysetPage.decode(cursor,2);
+        if(after!=null && !warehouse.toString().equals(after[0]))
+            throw bad("Bin cursor belongs to a different warehouse");
+        var args=new ArrayList<Object>();
+        args.add(tenant);args.add(warehouse);
+        String where="";
+        if(after!=null) {
+            where=" AND bin_code > ?";
+            args.add(after[1]);
+        }
+        args.add(limit+1);
+        List<Bin> rows=jdbc.query("""
+            SELECT id,warehouse_id,bin_code,purpose,status
+            FROM erp_local_stock_bin
+            WHERE tenant_id=? AND warehouse_id=?
+            """+where+" ORDER BY bin_code LIMIT ?",
+            ReceiptLotLocationService::mapBin,args.toArray());
+        return LocalKeysetPage.pack(rows,limit,
+            b->LocalKeysetPage.encode(warehouse.toString(),b.code()));
+    }
     @Transactional
     public Bin createBin(UUID tenant,UUID actor,UUID warehouse,NewBin body){
         if(warehouse==null || body==null
@@ -123,6 +151,34 @@ public class ReceiptLotLocationService {
         return jdbc.query(PIECE_SQL+"""
             AND receipt_id=? ORDER BY piece_code,id LIMIT 200
             """,ReceiptLotLocationService::mapPiece,tenant,receipt);
+    }
+    /** The total is calculated from all tenant-owned pieces, never the current page. */
+    @Transactional(readOnly=true)
+    public PiecePage piecesPage(UUID tenant,UUID receipt,int requested,String cursor) {
+        if(receipt==null)throw bad("Receipt is required");
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=LocalKeysetPage.decode(cursor,2);
+        if(after!=null && !receipt.toString().equals(after[0]))
+            throw bad("Piece cursor belongs to a different receipt");
+        var args=new ArrayList<Object>();
+        args.add(tenant);args.add(receipt);
+        String where="";
+        if(after!=null) {
+            where=" AND piece_code > ?";
+            args.add(after[1]);
+        }
+        args.add(limit+1);
+        List<Piece> rows=jdbc.query(PIECE_SQL+" AND receipt_id=?"+where+
+            " ORDER BY piece_code LIMIT ?",
+            ReceiptLotLocationService::mapPiece,args.toArray());
+        var page=LocalKeysetPage.pack(rows,limit,
+            p->LocalKeysetPage.encode(receipt.toString(),p.pieceCode()));
+        Long total=jdbc.queryForObject("""
+            SELECT COALESCE(SUM(quantity),0)::bigint
+            FROM erp_receipt_lot_piece WHERE tenant_id=? AND receipt_id=?
+            """,Long.class,tenant,receipt);
+        return new PiecePage(page.items(),page.nextCursor(),page.hasMore(),
+            page.pageSize(),total==null?0:total);
     }
     private Piece piece(UUID tenant,UUID id) {
         return jdbc.query(PIECE_SQL+" AND id=?",

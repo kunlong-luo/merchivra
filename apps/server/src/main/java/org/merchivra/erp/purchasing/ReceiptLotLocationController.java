@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.security.TenantAccessService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -23,6 +25,14 @@ public class ReceiptLotLocationController {
         HttpServletRequest req,@PathVariable UUID warehouseId){
         return service.bins(access.currentTenant(auth,req),warehouseId);
     }
+    @GetMapping("/warehouses/{warehouseId}/bins/page")
+    public ResponseEntity<LocalKeysetPage.Page<ReceiptLotLocationService.Bin>> binsPage(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID warehouseId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(service.binsPage(access.currentTenant(auth,req),warehouseId,limit,cursor));
+    }
     @PostMapping("/warehouses/{warehouseId}/bins")
     @ResponseStatus(HttpStatus.CREATED)
     public ReceiptLotLocationService.Bin createBin(Authentication auth,
@@ -35,6 +45,14 @@ public class ReceiptLotLocationController {
     public List<ReceiptLotLocationService.Piece> pieces(Authentication auth,
         HttpServletRequest req,@PathVariable UUID receiptId){
         return service.pieces(access.currentTenant(auth,req),receiptId);
+    }
+    @GetMapping("/receipts/{receiptId}/pieces/page")
+    public ResponseEntity<ReceiptLotLocationService.PiecePage> piecesPage(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID receiptId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(service.piecesPage(access.currentTenant(auth,req),receiptId,limit,cursor));
     }
     @PostMapping("/receipts/{receiptId}/split")
     public List<ReceiptLotLocationService.Piece> split(Authentication auth,
