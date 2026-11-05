@@ -33,6 +33,15 @@ async function api<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown)
  }
  return schema.parse(await response.json())
 }
+const batchPage=z.object({
+ items:z.array(batch).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{message:'Invalid batch page cursor'})
+export const fetchReceiptBatchesPage=(orderId:string,cursor:string|null=null)=>{
+ const params=new URLSearchParams({limit:'50'})
+ if(cursor)params.set('cursor',cursor)
+ return api(base+'/orders/'+encodeURIComponent(orderId)+'/page?'+params.toString(),batchPage)
+}
 export const fetchReceiptBatches=(orderId:string)=>api(
  base+'/orders/'+encodeURIComponent(orderId),z.array(batch))
 export const fetchWarehouseReceiptBatches=(warehouseId:string)=>api(
