@@ -42,6 +42,16 @@ async function api<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown)
  }
  return schema.parse(await response.json())
 }
+const receiptPage=z.object({
+ items:z.array(receipt).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{message:'Invalid QC receipt page cursor'})
+export const fetchQualityReceiptsPage=(orderId:string,cursor:string|null=null)=>{
+ const params=new URLSearchParams({limit:'50'})
+ if(cursor)params.set('cursor',cursor)
+ return api(base+'/orders/'+encodeURIComponent(orderId)+'/receipts/page?'+params.toString(),
+  receiptPage)
+}
 export const fetchQualityReceipts=(orderId:string)=>api(
  base+'/orders/'+encodeURIComponent(orderId)+'/receipts',z.array(receipt))
 export const inspectQualityReceipt=(receiptId:string,body:{
