@@ -2,6 +2,7 @@ import {afterEach,describe,expect,it,vi} from 'vitest'
 import {fetchReceiptBatchesPage,fetchReceiptBatchSummary,
  fetchWarehouseReceiptBatchesPage,fetchReceiptBatchEventsPage} from './receipt-batches'
 import {fetchReceiptSupplyPressurePage} from './lot-locations'
+import {fetchQualityReceiptsPage} from './purchase-quality'
 
 afterEach(()=>vi.unstubAllGlobals())
 const order='11111111-1111-4111-8111-111111111111'
@@ -58,6 +59,17 @@ describe('V93 all receipt operational entrypoints use complete keyset pages',()=
   expect(rows.items[0].usableUnits).toBe(0)
   expect(rows.items[0].pendingQcUnits).toBe(10)
   expect(calls2[0]).toContain('/pressure/page?limit=50&cursor=sku-cursor')
+ })
+ it('QC inspection shows all physical receipts after 300 without using capped batch arrays',async()=>{
+  const calls=serve(page({
+   id:receipt,orderId:order,lineId:actor,warehouseId:warehouse,productSkuId:sku,
+   receivedQuantity:10,receivedAt:'2026-11-05T12:00:00Z',
+   inspectionId:null,acceptedQuantity:0,rejectedQuantity:0,heldQuantity:0
+  }))
+  const result=await fetchQualityReceiptsPage(order,'receipt-after-300')
+  expect(result.items[0].inspectionId).toBeNull()
+  expect(result.hasMore).toBe(true)
+  expect(calls[0]).toContain('/quality/orders/'+order+'/receipts/page?limit=50&cursor=receipt-after-300')
  })
  it('rejects invalid page booleans to avoid false workbench completion',async()=>{
   serve({...page(batch),hasMore:false})
