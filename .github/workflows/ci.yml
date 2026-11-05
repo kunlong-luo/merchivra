@@ -203,6 +203,7 @@ jobs:
           python3 scripts/smoke_fba_catalog_purchasing_full_selection_v91.py
           python3 scripts/smoke_fba_local_history_supplier_sku_v92.py
           python3 scripts/smoke_paged_local_purchasing_v92.py
+          python3 scripts/smoke_receipt_operational_pages_v93.py
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='81' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='80' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='79' AND success")" = "1"

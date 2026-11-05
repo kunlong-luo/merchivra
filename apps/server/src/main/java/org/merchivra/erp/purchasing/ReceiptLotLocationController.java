@@ -68,6 +68,14 @@ public class ReceiptLotLocationController {
         return service.move(access.currentTenant(auth,req),
             access.authenticatedUser(auth),receiptId,body);
     }
+    @GetMapping("/warehouses/{warehouseId}/pressure/page")
+    public ResponseEntity<LocalKeysetPage.Page<ReceiptLotLocationService.Pressure>> pressurePage(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID warehouseId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(service.pressurePage(access.currentTenant(auth,req),warehouseId,limit,cursor));
+    }
     @GetMapping("/warehouses/{warehouseId}/pressure")
     public List<ReceiptLotLocationService.Pressure> pressure(Authentication auth,
         HttpServletRequest req,@PathVariable UUID warehouseId){

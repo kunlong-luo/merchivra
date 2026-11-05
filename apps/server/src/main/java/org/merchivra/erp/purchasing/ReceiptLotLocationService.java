@@ -314,11 +314,8 @@ public class ReceiptLotLocationService {
         return pieces(tenant,receipt);
     }
 
-    @Transactional(readOnly=true)
-    public List<Pressure> pressure(UUID tenant,UUID warehouse){
-        // Deliberately a supply-visibility view, NOT an automatic order or
-        // an instruction to count held material as available inventory.
-        return jdbc.query("""
+    /** This view aggregates only local receipt SKUs. Held units are NEVER saleable stock. */
+    private static final String PRESSURE_PREFIX = """
             SELECT b.warehouse_id,b.product_sku_id,s.internal_sku,
               COALESCE((SELECT SUM(m.quantity) FROM erp_local_stock_movement m
                 WHERE m.tenant_id=b.tenant_id AND m.warehouse_id=b.warehouse_id
@@ -343,12 +340,45 @@ public class ReceiptLotLocationService {
             LEFT JOIN erp_purchase_receipt_qc q
               ON q.tenant_id=b.tenant_id AND q.id=b.inspection_id
             WHERE b.tenant_id=? AND b.warehouse_id=?
-            GROUP BY b.tenant_id,b.warehouse_id,b.product_sku_id,s.internal_sku
-            ORDER BY s.internal_sku LIMIT 300
-            """,(rs,i)->new Pressure(rs.getObject("warehouse_id",UUID.class).toString(),
-                rs.getObject("product_sku_id",UUID.class).toString(),
-                rs.getString("internal_sku"),rs.getLong("usable_units"),
-                rs.getLong("pending_units"),rs.getLong("awaiting_units"),
-                rs.getLong("inbound_units")),tenant,warehouse);
+        """;
+    private static final String PRESSURE_GROUP =
+        " GROUP BY b.tenant_id,b.warehouse_id,b.product_sku_id,s.internal_sku";
+    private static Pressure mapPressure(ResultSet rs,int i) throws SQLException {
+        return new Pressure(rs.getObject("warehouse_id",UUID.class).toString(),
+            rs.getObject("product_sku_id",UUID.class).toString(),
+            rs.getString("internal_sku"),rs.getLong("usable_units"),
+            rs.getLong("pending_units"),rs.getLong("awaiting_units"),
+            rs.getLong("inbound_units"));
+    }
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Pressure> pressurePage(UUID tenant,UUID warehouse,
+                                                       int requested,String cursor) {
+        if(warehouse==null)throw bad("Warehouse is required");
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=LocalKeysetPage.decode(cursor,3);
+        if(after!=null && !warehouse.toString().equals(after[0]))
+            throw bad("Pressure cursor belongs to a different warehouse");
+        var args=new ArrayList<Object>();
+        args.add(tenant);args.add(warehouse);
+        String where="";
+        if(after!=null) {
+            try {
+                where=" AND (s.internal_sku,b.product_sku_id) > (?,?)";
+                args.add(after[1]);args.add(UUID.fromString(after[2]));
+            } catch(Exception e) {throw bad("Invalid pressure cursor");}
+        }
+        args.add(limit+1);
+        List<Pressure> rows=jdbc.query(PRESSURE_PREFIX+where+PRESSURE_GROUP+
+            " ORDER BY s.internal_sku,b.product_sku_id LIMIT ?",
+            ReceiptLotLocationService::mapPressure,args.toArray());
+        return LocalKeysetPage.pack(rows,limit,p->LocalKeysetPage.encode(
+            warehouse.toString(),p.internalSku(),p.productSkuId()));
+    }
+    @Transactional(readOnly=true)
+    public List<Pressure> pressure(UUID tenant,UUID warehouse){
+        // The legacy capped contract remains for compatibility only.
+        return jdbc.query(PRESSURE_PREFIX+PRESSURE_GROUP+
+            " ORDER BY s.internal_sku,b.product_sku_id LIMIT 300",
+            ReceiptLotLocationService::mapPressure,tenant,warehouse);
     }
 }

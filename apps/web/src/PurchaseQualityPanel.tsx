@@ -1,8 +1,8 @@
-import {useState,type FormEvent} from 'react'
+import {useEffect,useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
-import {fetchReceiptBatches} from './lib/receipt-batches'
-import {fetchQualityReceipts,inspectQualityReceipt,fetchQualityReturns,
+import CursorPageControls from './CursorPageControls'
+import {fetchQualityReceiptsPage,inspectQualityReceipt,fetchQualityReturns,
  createQualityReturn,actQualityReturn,fetchQualityFindings,scanQualityFindings,
  changeQualityFinding,type QualityFindingState} from './lib/purchase-quality'
 
@@ -29,10 +29,13 @@ export default function PurchaseQualityPanel({tenantId,orderId,warehouses}:{
  const [message,setMessage]=useState(''),[failure,setFailure]=useState('')
  const [editing,setEditing]=useState('')
  const root=['purchasing',tenantId]
- const batches=useQuery({queryKey:[...root,'receipt-batches',orderId],
-  queryFn:()=>fetchReceiptBatches(orderId),enabled:!!orderId,retry:false})
- const receipts=useQuery({queryKey:[...root,'quality-receipts',orderId],
-  queryFn:()=>fetchQualityReceipts(orderId),enabled:!!orderId,retry:false})
+ const [receiptCursors,setReceiptCursors]=useState<(string|null)[]>([null])
+ const receiptCursor=receiptCursors.at(-1)??null
+ useEffect(()=>{setReceiptCursors([null]);setReceiptId('');setInspectionId('')},[orderId])
+ const receipts=useQuery({queryKey:[...root,'quality-receipts-page',orderId,receiptCursor],
+  queryFn:()=>fetchQualityReceiptsPage(orderId,receiptCursor),enabled:!!orderId,retry:false})
+ const clearSelection=()=>{setReceiptId('');setInspectionId('');setRejected(0);
+  setReason('');setInspectionKey(crypto.randomUUID())}
  const returns=useQuery({queryKey:[...root,'quality-returns',inspectionId],
   queryFn:()=>fetchQualityReturns(inspectionId),enabled:!!inspectionId,retry:false})
  const findings=useQuery({queryKey:[...root,'quality-findings',filter],
@@ -43,9 +46,7 @@ export default function PurchaseQualityPanel({tenantId,orderId,warehouses}:{
    acceptedQuantity:(selected?.receivedQuantity??0)-rejected,
    rejectedQuantity:rejected,reason:reason.trim()}),
   onSuccess:r=>{setInspectionId(r.id);setMessage(
-   batches.data?.some(b=>b.receiptId===r.receiptId)
-    ?'已完成待检批次质检；合格品仍待另一 Owner 放行，不合格品留在隔离区'
-    :'历史收货已完成回溯性质检，不合格件数已从本地台账隔离');
+   '已记录本地收货质检：V46 待检批次合格品仍需另一 Owner 放行；旧版已入账收货按其原库存隔离规则处理。');
    setFailure('');setInspectionKey(crypto.randomUUID());setReceiptId('');
    setRejected(0);setReason('');refresh()},
   onError:(e:Error)=>setFailure(e.message)})
@@ -70,8 +71,8 @@ export default function PurchaseQualityPanel({tenantId,orderId,warehouses}:{
    changeQualityFinding(id,state),onMutate:v=>setEditing(v.id),
   onSuccess:()=>{setMessage('质检异常状态已更新');setFailure('');refresh()},
   onError:(e:Error)=>setFailure(e.message),onSettled:()=>setEditing('')})
- const selected=receipts.data?.find(r=>r.id===receiptId)
- const selectedInspection=receipts.data?.find(r=>r.inspectionId===inspectionId)
+ const selected=receipts.data?.items.find(r=>r.id===receiptId)
+ const selectedInspection=receipts.data?.items.find(r=>r.inspectionId===inspectionId)
  const draftAllocated=returns.data?.filter(r=>r.status==='DRAFT')
    .reduce((n,r)=>n+r.quantity,0)??0
  const unallocated=Math.max(0,(selectedInspection?.heldQuantity??0)-draftAllocated)
@@ -93,13 +94,13 @@ export default function PurchaseQualityPanel({tenantId,orderId,warehouses}:{
    <h3>实物收货与一次性质检</h3>
    {receipts.isPending?<p className="empty-state">读取真实收货记录…</p>:
     receipts.isError?<p className="setup-error" role="alert">{String(receipts.error)}</p>:
-    !receipts.data?.length?<p className="empty-state">
+    !receipts.data?.items.length?<p className="empty-state">
      当前采购单还没有实际收货，不可进行质检。</p>:
     <div className="table-scroll" role="region" tabIndex={0} aria-label="采购收货与质检结果">
      <table><thead><tr><th scope="col">收货记录 / 仓库</th>
       <th scope="col">实收件数</th><th scope="col">合格 / 不合格</th>
       <th scope="col">仍在隔离</th><th scope="col">操作</th></tr></thead><tbody>
-      {receipts.data.map(r=><tr key={r.id}>
+      {receipts.data.items.map(r=><tr key={r.id}>
        <td>{r.id.slice(0,8)}
         <div className="secondary-cell">
          {warehouses.find(w=>w.id===r.warehouseId)?.code??
@@ -118,6 +119,11 @@ export default function PurchaseQualityPanel({tenantId,orderId,warehouses}:{
        </div></td>
       </tr>)}</tbody></table>
     </div>}
+   {!!receipts.data&&<CursorPageControls label="全部实物收货质检" page={receiptCursors.length}
+    hasMore={receipts.data.hasMore} nextCursor={receipts.data.nextCursor}
+    busy={receipts.isFetching}
+    onPrev={()=>{setReceiptCursors(v=>v.length>1?v.slice(0,-1):v);clearSelection()}}
+    onNext={v=>{setReceiptCursors(h=>[...h,v]);clearSelection()}}/>}
    {!!selected&&<form className="team-invite-form" onSubmit={submitInspection}>
     <h3>质检记录：实际收货 {selected.receivedQuantity} 件</h3>
     <p className="setup-hint">仅允许对整条真实收货质检一次，合格 = 实收 − 不合格。

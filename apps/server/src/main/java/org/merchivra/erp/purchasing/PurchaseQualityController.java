@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.security.TenantAccessService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +24,14 @@ public class PurchaseQualityController {
     public List<PurchaseQualityService.Receipt> receipts(Authentication auth,
         HttpServletRequest req,@PathVariable UUID orderId) {
         return quality.receipts(access.currentTenant(auth,req),orderId);
+    }
+    @GetMapping("/orders/{orderId}/receipts/page")
+    public ResponseEntity<LocalKeysetPage.Page<PurchaseQualityService.Receipt>> receiptsPage(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID orderId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(quality.receiptsPage(access.currentTenant(auth,req),orderId,limit,cursor));
     }
     @PostMapping("/receipts/{receiptId}/inspect")
     @ResponseStatus(HttpStatus.CREATED)
