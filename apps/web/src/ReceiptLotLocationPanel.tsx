@@ -1,7 +1,7 @@
-import {useState,type FormEvent} from 'react'
+import {useEffect,useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
-import {fetchReceiptBatches} from './lib/receipt-batches'
+import {fetchReceiptBatchesPage} from './lib/receipt-batches'
 import CursorPageControls from './CursorPageControls'
 import {fetchStockBinsPage,createStockBin,fetchReceiptLotPiecesPage,
  splitReceiptLot,moveReceiptLot,fetchReceiptSupplyPressure,
@@ -24,12 +24,17 @@ export default function ReceiptLotLocationPanel({tenantId,orderId,warehouses}:{
  const [key,setKey]=useState(()=>crypto.randomUUID())
  const [message,setMessage]=useState(''),[failure,setFailure]=useState('')
  const root=['purchasing',tenantId]
+ const [batchCursors,setBatchCursors]=useState<(string|null)[]>([null])
+ const batchCursor=batchCursors.at(-1)??null
+ useEffect(()=>{
+  setBatchCursors([null]);setReceiptId('');setPieceId('');setPieceCursors([null])
+ },[orderId])
  const [binCursors,setBinCursors]=useState<(string|null)[]>([null])
  const [pieceCursors,setPieceCursors]=useState<(string|null)[]>([null])
  const binCursor=binCursors.at(-1)??null
  const pieceCursor=pieceCursors.at(-1)??null
- const batches=useQuery({queryKey:[...root,'receipt-batches',orderId],
-  queryFn:()=>fetchReceiptBatches(orderId),enabled:!!orderId,retry:false})
+ const batches=useQuery({queryKey:[...root,'receipt-batches-page',orderId,batchCursor],
+  queryFn:()=>fetchReceiptBatchesPage(orderId,batchCursor),enabled:!!orderId,retry:false})
  const bins=useQuery({queryKey:[...root,'bins-page',warehouseId,binCursor],
   queryFn:()=>fetchStockBinsPage(warehouseId,binCursor),enabled:!!warehouseId,retry:false})
  const pieces=useQuery({queryKey:[...root,'pieces-page',receiptId,pieceCursor],
@@ -50,7 +55,7 @@ export default function ReceiptLotLocationPanel({tenantId,orderId,warehouses}:{
   onSuccess:()=>{setMessage('已记录待检分段位置变化；可用库存未发生任何变动');
    setFailure('');setPieceCursors([null]);setPieceId('');changed();refresh()},
   onError:(e:Error)=>setFailure(e.message)})
- const currentBatch=batches.data?.find(b=>b.receiptId===receiptId)
+ const currentBatch=batches.data?.items.find(b=>b.receiptId===receiptId)
  const source=pieces.data?.items.find(p=>p.id===pieceId)
  const activeQcBins=bins.data?.items.filter(b=>b.purpose==='QC_HOLD'&&b.status==='ACTIVE')??[]
  const target=targetBin||source?.binId||''
@@ -140,11 +145,15 @@ export default function ReceiptLotLocationPanel({tenantId,orderId,warehouses}:{
    <select id="lot-receipt" value={receiptId}
     onChange={e=>{setReceiptId(e.target.value);setPieceId('');setTargetBin('');
      setPieceCursors([null]);changed()}}>
-    <option value="">选择未完成质检的真实收货批次（订单前 300 条）</option>
-    {(batches.data??[]).filter(b=>b.warehouseId===warehouseId&&
+    <option value="">按订单分页选择未完成质检的真实收货批次</option>
+    {(batches.data?.items??[]).filter(b=>b.warehouseId===warehouseId&&
       b.status==='PENDING_QC').map(b=><option key={b.receiptId} value={b.receiptId}>
       {b.lotCode} · {b.receivedQuantity} 件</option>)}
    </select>
+   {!!batches.data&&<CursorPageControls label="收货批次" page={batchCursors.length}
+    hasMore={batches.data.hasMore} nextCursor={batches.data.nextCursor} busy={batches.isFetching}
+    onPrev={()=>{setBatchCursors(v=>v.length>1?v.slice(0,-1):v);setReceiptId('');setPieceId('');setPieceCursors([null])}}
+    onNext={v=>{setBatchCursors(h=>[...h,v]);setReceiptId('');setPieceId('');setPieceCursors([null])}}/>}
    {!!receiptId&&<>
     {pieces.isPending?<p className="empty-state">读取分段…</p>:
      pieces.isError?<p className="setup-error" role="alert">{String(pieces.error)}</p>:
