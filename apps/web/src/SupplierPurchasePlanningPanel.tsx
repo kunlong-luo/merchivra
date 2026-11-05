@@ -1,4 +1,4 @@
-import {useEffect,useState,type FormEvent} from 'react'
+import {useEffect,useState,type FormEvent,type Dispatch,type SetStateAction} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {Sku} from './lib/catalog'
 import InternalSkuPicker from './InternalSkuPicker'
@@ -69,9 +69,9 @@ export default function SupplierPurchasePlanningPanel({tenantId,warehouseId,skus
    setFailure('');refresh();if(p.purchaseOrderId)onConverted(p.purchaseOrderId)},
   onError:(error:Error)=>setFailure(error.message)
  })
- const back=(set:React.Dispatch<React.SetStateAction<(string|null)[]>>)=>
+ const back=(set:Dispatch<SetStateAction<(string|null)[]>>)=>
   set(v=>v.length>1?v.slice(0,-1):v)
- const next=(set:React.Dispatch<React.SetStateAction<(string|null)[]>>,cursor:string)=>
+ const next=(set:Dispatch<SetStateAction<(string|null)[]>>,cursor:string)=>
   set(v=>[...v,cursor])
  const validTerms=!!supplierId&&!!skuId&&
   (!editingRuleSku||editingRuleSku===skuId)&&
