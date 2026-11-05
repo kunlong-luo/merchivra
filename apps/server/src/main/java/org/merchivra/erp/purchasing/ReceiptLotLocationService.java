@@ -342,7 +342,7 @@ public class ReceiptLotLocationService {
             WHERE b.tenant_id=? AND b.warehouse_id=?
         """;
     private static final String PRESSURE_GROUP =
-        "GROUP BY b.tenant_id,b.warehouse_id,b.product_sku_id,s.internal_sku";
+        " GROUP BY b.tenant_id,b.warehouse_id,b.product_sku_id,s.internal_sku";
     private static Pressure mapPressure(ResultSet rs,int i) throws SQLException {
         return new Pressure(rs.getObject("warehouse_id",UUID.class).toString(),
             rs.getObject("product_sku_id",UUID.class).toString(),
