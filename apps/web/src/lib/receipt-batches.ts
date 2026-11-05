@@ -19,6 +19,10 @@ const event=z.object({id:z.string().uuid(),
  note:z.string().nullable(),createdAt:z.string()})
 export type ReceiptBatch=z.infer<typeof batch>
 export type ReceiptBatchEvent=z.infer<typeof event>
+const summary=z.object({pendingReceivedUnits:z.number().int().nonnegative(),
+ awaitingReleaseAcceptedUnits:z.number().int().nonnegative(),
+ pendingBatchCount:z.number().int().nonnegative(),
+ awaitingReleaseBatchCount:z.number().int().nonnegative()})
 
 async function api<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown):Promise<T>{
  const response=await fetch(url,{method,credentials:'same-origin',cache:'no-store',
@@ -33,6 +37,10 @@ async function api<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown)
  }
  return schema.parse(await response.json())
 }
+const pageOf=<T extends z.ZodTypeAny>(schema:T)=>z.object({
+ items:z.array(schema).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{message:'Invalid page cursor'})
 const batchPage=z.object({
  items:z.array(batch).max(100),nextCursor:z.string().min(1).nullable(),
  hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
@@ -41,6 +49,13 @@ export const fetchReceiptBatchesPage=(orderId:string,cursor:string|null=null)=>{
  const params=new URLSearchParams({limit:'50'})
  if(cursor)params.set('cursor',cursor)
  return api(base+'/orders/'+encodeURIComponent(orderId)+'/page?'+params.toString(),batchPage)
+}
+export const fetchReceiptBatchSummary=(orderId:string)=>api(
+ base+'/orders/'+encodeURIComponent(orderId)+'/summary',summary)
+export const fetchWarehouseReceiptBatchesPage=(warehouseId:string,cursor:string|null=null)=>{
+ const params=new URLSearchParams({limit:'50'})
+ if(cursor)params.set('cursor',cursor)
+ return api(base+'/warehouses/'+encodeURIComponent(warehouseId)+'/page?'+params.toString(),batchPage)
 }
 export const fetchReceiptBatches=(orderId:string)=>api(
  base+'/orders/'+encodeURIComponent(orderId),z.array(batch))
@@ -54,3 +69,9 @@ export const releaseReceiptBatch=(receiptId:string)=>api(
  base+'/'+encodeURIComponent(receiptId)+'/release',batch,'POST')
 export const fetchReceiptBatchEvents=(receiptId:string)=>api(
  base+'/'+encodeURIComponent(receiptId)+'/events',z.array(event))
+
+export const fetchReceiptBatchEventsPage=(receiptId:string,cursor:string|null=null)=>{
+ const params=new URLSearchParams({limit:'50'})
+ if(cursor)params.set('cursor',cursor)
+ return api(base+'/'+encodeURIComponent(receiptId)+'/events/page?'+params.toString(),pageOf(event))
+}
