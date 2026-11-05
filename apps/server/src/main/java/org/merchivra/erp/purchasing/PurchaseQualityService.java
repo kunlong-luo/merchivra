@@ -126,6 +126,33 @@ public class PurchaseQualityService {
             ORDER BY r.received_at DESC,r.id DESC LIMIT 300
             """,PurchaseQualityService::mapReceipt,tenant,order);
     }
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Receipt> receiptsPage(UUID tenant,UUID order,
+                                                       int requested,String cursor) {
+        if(order==null)throw bad("Purchase order required");
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=LocalKeysetPage.decode(cursor,3);
+        if(after!=null && !order.toString().equals(after[0]))
+            throw bad("QC receipt cursor belongs to a different purchase order");
+        var args=new java.util.ArrayList<Object>();
+        args.add(tenant);args.add(order);
+        String where="";
+        if(after!=null) {
+            try {
+                where=" AND (r.received_at,r.id) < (?,?)";
+                args.add(OffsetDateTime.ofInstant(java.time.Instant.parse(after[1]),
+                    java.time.ZoneOffset.UTC));
+                args.add(UUID.fromString(after[2]));
+            } catch(Exception e) {throw bad("Invalid QC receipt cursor");}
+        }
+        args.add(limit+1);
+        List<Receipt> rows=jdbc.query(RECEIPT_SELECT+
+            " AND r.purchase_order_id=?"+where+
+            " ORDER BY r.received_at DESC,r.id DESC LIMIT ?",
+            PurchaseQualityService::mapReceipt,args.toArray());
+        return LocalKeysetPage.pack(rows,limit,row->LocalKeysetPage.encode(
+            order.toString(),row.receivedAt(),row.id()));
+    }
     private Receipt receipt(UUID tenant,UUID receiptId) {
         return jdbc.query(RECEIPT_SELECT+" AND r.id=?",
             PurchaseQualityService::mapReceipt,tenant,receiptId)
