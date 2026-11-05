@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -99,6 +100,41 @@ public class SupplierPurchasePlanService {
             ORDER BY r.supplier_id,r.product_sku_id LIMIT 500
             """,SupplierPurchasePlanService::mapRule,tenant);
     }
+
+    private static UUID pageUuid(String value) {
+        try{return UUID.fromString(value);}
+        catch(IllegalArgumentException e){throw bad("Invalid pagination cursor");}
+    }
+    private static OffsetDateTime pageTime(String value) {
+        try{return OffsetDateTime.ofInstant(Instant.parse(value),ZoneOffset.UTC);}
+        catch(Exception e){throw bad("Invalid pagination cursor");}
+    }
+    /** Full-store keyset pages; old capped list APIs stay source-compatible. */
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Rule> rulesPage(UUID tenant,int requested,String cursor) {
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=LocalKeysetPage.decode(cursor,3);
+        if(after!=null && !tenant.toString().equals(after[0]))
+            throw bad("Rule cursor belongs to a different tenant");
+        var args=new ArrayList<Object>();
+        args.add(tenant);
+        String where="";
+        if(after!=null) {
+            where=" AND (r.supplier_id,r.product_sku_id) > (?,?)";
+            args.add(pageUuid(after[1]));args.add(pageUuid(after[2]));
+        }
+        args.add(limit+1);
+        List<Rule> rows=jdbc.query("""
+            SELECT r.supplier_id,r.product_sku_id,r.minimum_order_quantity,
+                   r.pack_multiple,r.lead_time_days,r.currency_code,r.unit_cost,
+                   r.updated_at AS rule_updated_at
+            FROM erp_supplier_sku_rule r WHERE r.tenant_id=?
+            """+where+" ORDER BY r.supplier_id,r.product_sku_id LIMIT ?",
+            SupplierPurchasePlanService::mapRule,args.toArray());
+        return LocalKeysetPage.pack(rows,limit,
+            r->LocalKeysetPage.encode(tenant.toString(),r.supplierId(),r.productSkuId()));
+    }
+
     private void lockTenant(UUID tenant) {
         List<UUID> locked=jdbc.queryForList("""
             SELECT id FROM tenant WHERE id=? AND status='ACTIVE' FOR UPDATE
@@ -227,6 +263,30 @@ public class SupplierPurchasePlanService {
             ORDER BY s.internal_sku,sup.display_name,r.supplier_id LIMIT 500
             """,SupplierPurchasePlanService::mapRecommendation,tenant,warehouse);
     }
+
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Recommendation> recommendationsPage(
+        UUID tenant,UUID warehouse,int requested,String cursor) {
+        if(warehouse==null)throw bad("Warehouse is required");
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=LocalKeysetPage.decode(cursor,3);
+        if(after!=null && !warehouse.toString().equals(after[0]))
+            throw bad("Recommendation cursor belongs to a different warehouse");
+        var args=new ArrayList<Object>();
+        args.add(tenant);args.add(warehouse);
+        String where="";
+        if(after!=null) {
+            where=" AND (s.internal_sku,r.supplier_id) > (?,?)";
+            args.add(after[1]);args.add(pageUuid(after[2]));
+        }
+        args.add(limit+1);
+        List<Recommendation> rows=jdbc.query(SOURCE_SQL+where+
+            " ORDER BY s.internal_sku,r.supplier_id LIMIT ?",
+            SupplierPurchasePlanService::mapRecommendation,args.toArray());
+        return LocalKeysetPage.pack(rows,limit,r->LocalKeysetPage.encode(
+            warehouse.toString(),r.internalSku(),r.supplierId()));
+    }
+
     private Recommendation current(UUID tenant,UUID warehouse,UUID supplier,UUID sku) {
         return jdbc.query(SOURCE_SQL+"""
             AND p.product_sku_id=? AND r.supplier_id=?
@@ -295,6 +355,30 @@ public class SupplierPurchasePlanService {
             AND warehouse_id=? ORDER BY created_at DESC,id DESC LIMIT 100
             """,SupplierPurchasePlanService::mapPlan,tenant,warehouse);
     }
+
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Plan> plansPage(
+        UUID tenant,UUID warehouse,int requested,String cursor) {
+        if(warehouse==null)throw bad("Warehouse is required");
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=LocalKeysetPage.decode(cursor,3);
+        if(after!=null && !warehouse.toString().equals(after[0]))
+            throw bad("Plan cursor belongs to a different warehouse");
+        var args=new ArrayList<Object>();
+        args.add(tenant);args.add(warehouse);
+        String where="";
+        if(after!=null) {
+            where=" AND (created_at,id) < (?,?)";
+            args.add(pageTime(after[1]));args.add(pageUuid(after[2]));
+        }
+        args.add(limit+1);
+        List<Plan> rows=jdbc.query(PLAN_SELECT+" AND warehouse_id=?"+where+
+            " ORDER BY created_at DESC,id DESC LIMIT ?",
+            SupplierPurchasePlanService::mapPlan,args.toArray());
+        return LocalKeysetPage.pack(rows,limit,p->LocalKeysetPage.encode(
+            warehouse.toString(),p.createdAt(),p.id()));
+    }
+
     private static boolean replaySame(Plan prior,Request req) {
         return prior.warehouseId().equals(req.warehouseId().toString())
             && prior.supplierId().equals(req.supplierId().toString())
