@@ -62,7 +62,7 @@ export default function ReceiptBatchPanel({tenantId,orderId,currentUserId,wareho
     （{summary.data?.awaitingReleaseBatchCount??'—'} 批次）。
     此合计来自数据库全订单，不是当前页；已记录实收不代表可用。</p>
    {summary.isError&&<p className="setup-error" role="alert">
-    整单统计读取失败：{String(summary.error)}；请勿用当前页数量估算全单。</p>
+    整单统计读取失败：{String(summary.error)}；请勿用当前页数量估算全单。</p>}
    {batches.isPending?<p className="empty-state">正在读取本地批次…</p>:
     batches.isError?<p className="setup-error" role="alert">{String(batches.error)}</p>:
     !batches.data?.items.length?<p className="empty-state">
