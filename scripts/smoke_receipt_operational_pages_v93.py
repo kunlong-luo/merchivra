@@ -151,7 +151,6 @@ for path in [order_path, warehouse_path, pressure_path]:
     page = get(path + "/page", limit=50)
     invalid = str(uuid4())
     wrong = path.replace(po, invalid).replace(warehouse, invalid)
-    get(wrong + "/page", cursor=page["nextCursor"], limit=50) if False else None
     call(wrong + "/page?" + urlencode({
         "cursor": page["nextCursor"], "limit": 50}), expected=400)
     for params in ({"limit": 0}, {"limit": 101}, {"cursor": "bad%"},
@@ -181,6 +180,45 @@ call(f"/api/v1/purchasing/receipt-batches/{other}/events/page?" +
 call(f"/api/v1/purchasing/receipt-batches/{uuid4()}/events/page?limit=50",
      expected=404)
 
+# The inspection form was still using the original 300-row receipt list.
+# It now must reach and inspect a real V46 QC-held receipt beyond row 300.
+quality_path = f"/api/v1/purchasing/quality/orders/{po}/receipts"
+assert len(call(quality_path)) == 300
+quality_rows, quality_pages = traverse(quality_path + "/page")
+assert len(quality_rows) == 760 and quality_pages == 16
+assert len({r["id"] for r in quality_rows}) == 760
+batch_ids = {b["receiptId"] for b in order_rows}
+target = next(r for r in quality_rows[300:]
+              if r["id"] in batch_ids and r["inspectionId"] is None)
+assert quality_rows.index(target) >= 300
+assert target["warehouseId"] == warehouse
+call(f"/api/v1/purchasing/quality/orders/{uuid4()}/receipts/page?" +
+     urlencode({"limit": 50,
+                "cursor": get(quality_path + "/page", limit=50)["nextCursor"]}),
+     expected=400)
+for invalid in ({"limit": 0}, {"limit": 101}, {"cursor": "bad%"}):
+    call(quality_path + "/page?" + urlencode(invalid), expected=400)
+before_inspect_stock = sql(f"""SELECT COUNT(*) FROM erp_local_stock_movement
+ WHERE tenant_id='{tenant}'""")
+key = str(uuid4())
+body = {"requestKey": key, "acceptedQuantity": target["receivedQuantity"],
+        "rejectedQuantity": 0, "reason": "V93 disposable full-row receipt inspection"}
+inspection = call(f"/api/v1/purchasing/quality/receipts/{target['id']}/inspect",
+                  "POST", body, expected=201)
+assert inspection["receiptId"] == target["id"]
+assert inspection["acceptedQuantity"] == target["receivedQuantity"]
+assert call(f"/api/v1/purchasing/quality/receipts/{target['id']}/inspect",
+            "POST", body, expected=201)["id"] == inspection["id"]
+assert call(order_path + "/summary") == {
+    "pendingReceivedUnits": 860-target["receivedQuantity"],
+    "awaitingReleaseAcceptedUnits": target["receivedQuantity"],
+    "pendingBatchCount": 634,
+    "awaitingReleaseBatchCount": 1}
+assert sql(f"""SELECT COUNT(*) FROM erp_local_stock_movement
+ WHERE tenant_id='{tenant}'""") == before_inspect_stock
+assert sql(f"""SELECT status FROM erp_receipt_quality_batch
+ WHERE tenant_id='{tenant}' AND receipt_id='{target["id"]}'""") == "INSPECTED"
+
 stock_before = sql(f"""SELECT COUNT(*) FROM erp_local_stock_movement
  WHERE tenant_id='{tenant}'""")
 po_before = sql(f"""SELECT COUNT(*) FROM erp_purchase_order
@@ -194,4 +232,5 @@ assert sql(f"""SELECT COUNT(*) FROM erp_purchase_order
  WHERE tenant_id='{tenant}'""") == po_before
 print("PASS V93 PG18 local Mock: 635 actionable receipt batches (13 pages), "
       "full-order QC quantity=860, 316 SKU pressure rows, "
-      "225 immutable audit events, scoped cursors, no stock/PO/Amazon writes")
+      "760 inspectable receipts, 225 immutable audit events, scoped cursors, "
+      "independent Owner release still required, no stock/PO/Amazon writes")
