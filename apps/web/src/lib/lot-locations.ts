@@ -68,3 +68,6 @@ export const moveReceiptLot=(receiptId:string,body:MoveReceiptLot)=>api(
  base+'/receipts/'+encodeURIComponent(receiptId)+'/move',z.array(piece),'POST',body)
 export const fetchReceiptSupplyPressure=(warehouseId:string)=>api(
  base+'/warehouses/'+encodeURIComponent(warehouseId)+'/pressure',z.array(pressure))
+
+export const fetchReceiptSupplyPressurePage=(warehouseId:string,cursor:string|null=null)=>api(
+ pageUrl(base+'/warehouses/'+encodeURIComponent(warehouseId)+'/pressure',cursor),cursorPageOf(pressure))
