@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.security.TenantAccessService;
 import org.springframework.security.core.Authentication;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /** Only Owner session identity determines tenant and actor; writes require CSRF. */
@@ -20,6 +22,14 @@ public class ReceiptBatchController {
     public List<ReceiptBatchService.Batch> forOrder(Authentication auth,HttpServletRequest req,
         @PathVariable UUID orderId) {
         return service.forOrder(access.currentTenant(auth,req),orderId);
+    }
+    @GetMapping("/orders/{orderId}/page")
+    public ResponseEntity<LocalKeysetPage.Page<ReceiptBatchService.Batch>> forOrderPage(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID orderId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(service.forOrderPage(access.currentTenant(auth,req),orderId,limit,cursor));
     }
     @GetMapping("/warehouses/{warehouseId}")
     public List<ReceiptBatchService.Batch> forWarehouse(Authentication auth,HttpServletRequest req,
