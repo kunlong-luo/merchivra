@@ -50,6 +50,7 @@ public class OperationsController {
         return service.findings(tenant,filter,access.authenticatedUser(auth));
     }
 
+    @Operation(operationId="listOperationFindingsPage")
     @GetMapping("/findings/page")
     public ResponseEntity<LocalKeysetPage.Page<OperationsAutomationService.Finding>> findingsPage(
         Authentication auth,HttpServletRequest request,
