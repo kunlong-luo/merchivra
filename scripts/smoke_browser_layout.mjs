@@ -10,6 +10,9 @@ import { tmpdir } from 'node:os'
 import { join, resolve, extname } from 'node:path'
 
 const dist = resolve(process.argv[2] ?? 'apps/web/dist')
+// When set, run the same synthetic API + Chrome assertions against the real
+// Next App Router process instead of serving the Vite-built dist directory.
+const nextTarget=process.env.MERCHIVRA_BROWSER_NEXT_URL??null
 const output = resolve(process.argv[3] ?? 'browser-smoke-artifacts')
 const tenant = '11111111-1111-4111-8111-111111111111'
 const account = '22222222-2222-4222-8222-222222222222'
@@ -284,6 +287,28 @@ const server = createServer(async (req, res) => {
       { status:'NOT_STARTED', nextPage:0, totalPages:2, leaseEpoch:0, pages:[] })
     return respond(res, [])
   }
+  if(nextTarget){
+    // Preserve the exact synthetic mock API above while forwarding only
+    // document and Next static-resource requests to the local Next server.
+    // Never proxy these test fixtures to a remote host/production API.
+    if(!/^http:\/\/127\.0\.0\.1:\d+$/.test(nextTarget))
+      throw Error('Next smoke upstream must be local loopback')
+    try {
+      const upstream=await fetch(nextTarget+url.pathname+url.search,{
+        headers:{Accept:req.headers.accept??'*/*'}
+      })
+      const bytes=Buffer.from(await upstream.arrayBuffer())
+      res.writeHead(upstream.status,{
+        'Content-Type':upstream.headers.get('content-type')??'text/plain',
+        'Cache-Control':upstream.headers.get('cache-control')??'no-store'
+      })
+      res.end(bytes)
+    } catch(error) {
+      console.error('Next fixture proxy failed',String(error))
+      res.writeHead(502).end('Next preview unavailable')
+    }
+    return
+  }
   const local = resolve(dist, '.' + decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname))
   if (!local.startsWith(dist + '/')) return res.writeHead(403).end()
   try {
@@ -376,10 +401,10 @@ async function select(send, name) {
   assert.equal(cols[0], cols[1], name+' header/data columns')
 }
 async function main() {
-  assert.ok(existsSync(join(dist,'index.html')), 'Build Vue first')
+  if(!nextTarget)assert.ok(existsSync(join(dist,'index.html')), 'Build the Vite baseline first')
   await mkdir(output,{recursive:true})
   await new Promise(ok => server.listen(0,'127.0.0.1',ok))
-  const url = 'http://127.0.0.1:' + server.address().port + '/'
+  const url = 'http://127.0.0.1:' + server.address().port + (nextTarget?'/core':'/')
   profile = await mkdtemp(join(tmpdir(),'merchivra-chrome-'))
   chrome = spawn(process.env.CHROME_BIN || 'google-chrome', [
     '--headless=new','--no-sandbox','--disable-dev-shm-usage',
