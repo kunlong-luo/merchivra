@@ -803,3 +803,18 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - This does NOT replace production HTTPS/forwarded-header, OAuth logging,
   browser pixel/interaction, operator-permission or rollback checks.
   Retain the Vite fallback and synthetic-only GitHub Pages deployment.
+
+## V103 Next UI component rule (2026-11-07)
+
+- The A+B sidebar/header/dense-table ERP layout stays. Replace hand-rolled
+  **complex interaction** (modal drawers, menus, dialogs, tabs with keyboard
+  behavior) with stable Base UI primitives and familiar Lucide React icons;
+  prefer native HTML controls for ordinary inputs, links and buttons.
+- New Next-only shell: `src/components/NextWorkbenchNavigation.tsx`.
+  Preserve semantic deep links, owner visibility and Base UI focus/Escape.
+  Spring backend still owns role and tenant authorization.
+- Keep Next-only A+B CSS in `app/design-system.css`. Never bulk replace the
+  Vite fallback or add Tailwind merely to reproduce existing legacy CSS.
+- Avoid reimplementing data-table internals. Evaluate TanStack Table for
+  modules that actually need advanced sorting/column management; preserve
+  backend cursor pagination, Source trust and UNKNOWN-versus-zero semantics.
