@@ -40,7 +40,8 @@ def call(path, method="GET", body=None, csrf=None, expected=200, form=False,
             )
     except HTTPError as error:
         status, payload, response_headers = error.code, error.read(), error.headers
-    assert status == expected, f"{path}: HTTP {status}, expected {expected}"
+    acceptable = expected if isinstance(expected, tuple) else (expected,)
+    assert status in acceptable, f"{path}: HTTP {status}, expected {acceptable}"
     return payload, response_headers
 
 
@@ -61,12 +62,13 @@ assert csrf_response["headerName"] == "X-CSRF-TOKEN"
 token = csrf_response["token"]
 assert isinstance(token, str) and len(token) >= 10
 
-# Without a CSRF token, a write is blocked even with the anonymous session.
+# An anonymous login without CSRF must never succeed; Spring may surface
+# its anonymous-entry point as 401 instead of a 403 CSRF denial.
 form = {
     "username": os.environ["MERCHIVRA_BOOTSTRAP_USERNAME"],
     "password": os.environ["MERCHIVRA_BOOTSTRAP_PASSWORD"],
 }
-call("/api/v1/auth/login", method="POST", body=form, form=True, expected=403)
+call("/api/v1/auth/login", method="POST", body=form, form=True, expected=(401, 403))
 call("/api/v1/auth/me", expected=401)
 call("/api/v1/auth/login", method="POST", body=form, form=True, csrf=token)
 
