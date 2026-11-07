@@ -294,8 +294,17 @@ const server = createServer(async (req, res) => {
     if(!/^http:\/\/127\.0\.0\.1:\d+$/.test(nextTarget))
       throw Error('Next smoke upstream must be local loopback')
     try {
+      const forwarded=new Headers()
+      // Next Router's RSC/Flight navigation depends on these request headers.
+      // Forward only router protocol fields to disposable local Next; never
+      // forward browser cookies, Authorization or other sensitive headers.
+      for(const name of ['accept','rsc','next-router-state-tree',
+        'next-router-prefetch','next-url','next-router-segment-prefetch']){
+        const value=req.headers[name]
+        if(typeof value==='string')forwarded.set(name,value)
+      }
       const upstream=await fetch(nextTarget+url.pathname+url.search,{
-        headers:{Accept:req.headers.accept??'*/*'}
+        headers:forwarded
       })
       const bytes=Buffer.from(await upstream.arrayBuffer())
       res.writeHead(upstream.status,{
