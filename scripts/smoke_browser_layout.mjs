@@ -245,7 +245,9 @@ const server = createServer(async (req, res) => {
       {ruleCode:'LOW_STOCK',enabled:true,lowStockThreshold:3,version:0,updatedAt:null},
       {ruleCode:'REFUND_REVIEW',enabled:true,lowStockThreshold:null,version:0,updatedAt:null},
       {ruleCode:'FBA_INBOUND_REVIEW',enabled:true,lowStockThreshold:null,version:0,updatedAt:null},
-      {ruleCode:'ADS_REPORT_REVIEW',enabled:true,lowStockThreshold:null,version:0,updatedAt:null}
+      {ruleCode:'ADS_REPORT_REVIEW',enabled:true,lowStockThreshold:null,version:0,updatedAt:null},
+      {ruleCode:'FBA_PO_EVIDENCE_CHANGED',enabled:true,lowStockThreshold:null,version:0,updatedAt:null},
+      {ruleCode:'FBA_PO_EXCEPTION_OVERDUE',enabled:true,lowStockThreshold:null,version:0,updatedAt:null}
     ])
   if (url.pathname === '/api/v1/operations/marketplaces/' + market + '/rules/audit')
     return respond(res, [])
