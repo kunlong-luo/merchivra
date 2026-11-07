@@ -61,6 +61,20 @@ export const severityNames:Record<Finding['severity'],string>={
 }
 export const fetchFindings=async(filter:FindingFilter)=>
  z.array(findingSchema).max(100).parse((await listOperationFindings({filter})).data)
+const findingsPageSchema=z.object({
+ items:z.array(findingSchema).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{message:'Invalid operations cursor page'})
+/** V95: HTTP GET retains Owner Session; actions still use generated Orval+CSRF. */
+export const fetchFindingsPage=async(filter:FindingFilter,cursor:string|null=null)=>{
+ const params=new URLSearchParams({filter,limit:'50'})
+ if(cursor)params.set('cursor',cursor)
+ const res=await fetch('/api/v1/operations/findings/page?'+params.toString(),{
+  credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}
+ })
+ if(!res.ok)throw Error('运营待办分页 HTTP '+res.status)
+ return findingsPageSchema.parse(await res.json())
+}
 export const fetchOpsSummary=async()=>summarySchema.parse((await getOperationsSummary()).data)
 export const scanOperations=async()=>scanSchema.parse((await scanOperationsNow()).data)
 export const changeFindingState=async(id:string,state:FindingState)=>
