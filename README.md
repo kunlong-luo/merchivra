@@ -1,5 +1,5 @@
 # Merchivra ERP
-
+\n> **Public static GitHub Pages showcase:** [view read-only synthetic UI](https://kunlong-luo.github.io/merchivra/) (available only once Pages is enabled). This is **not** a hosted ERP: no login, database, Amazon OAuth, bank integration or writes. [Deployment and activation guide](docs/deployment/github-pages-public-demo-v98.md).\n
 **Open-source, self-hosted Amazon Seller ERP** — a Java 25 / Spring Boot 4.1 backend, React 19 / TypeScript frontend, and PostgreSQL 18 database.
 
 [简体中文](README.zh-CN.md) · [Detailed installation, deployment & removal guide (中文)](docs/deployment/local-spark-db.md) · [Architecture](docs/architecture/overview.md) · [Roadmap](docs/roadmap.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
