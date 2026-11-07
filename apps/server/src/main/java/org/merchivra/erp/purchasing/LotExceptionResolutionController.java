@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.security.TenantAccessService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -22,6 +24,15 @@ public class LotExceptionResolutionController {
     public List<LotExceptionResolutionService.Resolution> list(Authentication auth,
         HttpServletRequest request,@PathVariable UUID warehouseId){
         return service.list(access.currentTenant(auth,request),warehouseId);
+    }
+    @GetMapping("/warehouses/{warehouseId}/page")
+    public ResponseEntity<LocalKeysetPage.Page<LotExceptionResolutionService.Resolution>> listPage(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID warehouseId,
+        @RequestParam(defaultValue="PENDING") String filter,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.listPage(access.currentTenant(auth,request),warehouseId,filter,limit,cursor));
     }
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
