@@ -61,7 +61,8 @@ public class SupplierPerformanceService {
     }
     private record ScorecardRow(Scorecard score,String displayName) {}
     private List<ScorecardRow> scorecardsQuery(UUID tenant,String rawCursor,int requested) {
-        int limit=LocalKeysetPage.limit(requested);
+        int limit=requested;
+        if(limit<1||limit>200)throw LocalKeysetPage.bad("Invalid scorecard page limit");
         String[] cursor=LocalKeysetPage.decode(rawCursor,3);
         var args=new ArrayList<Object>();
         args.add(tenant);args.add(tenant);args.add(tenant);args.add(tenant);
