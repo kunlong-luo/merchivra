@@ -35,6 +35,10 @@ public class PurchaseQualityService {
                                  String createdAt,String dispatchedAt) {}
     public record Finding(String id,String inspectionId,String receiptId,String ruleCode,
                           String state,String lastSeenAt) {}
+    /** Full inspection aggregate, not derived from whichever 50 rows are visible. */
+    public record ReturnSummary(long rejectedUnits,long draftedUnits,
+                                long dispatchedUnits,long unallocatedUnits) {}
+    private record FindingSort(Finding value,String changedAt) {}
     public record ScanResult(String id,String triggerType,int matchedCount,int clearedCount) {}
     public record FindingChange(String id,String state) {}
     private static ResponseStatusException bad(String msg) {
@@ -299,6 +303,56 @@ public class PurchaseQualityService {
             AND inspection_id=? ORDER BY created_at DESC,id DESC LIMIT 100
             """,PurchaseQualityService::mapReturn,tenant,inspectionId);
     }
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<SupplierReturn> returnsPage(UUID tenant,UUID inspectionId,
+                                                             int requested,String cursor) {
+        if(inspectionId==null)throw bad("QC inspection required");
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=LocalKeysetPage.decode(cursor,4);
+        if(after!=null && (!tenant.toString().equals(after[0])
+            || !inspectionId.toString().equals(after[1])))
+            throw bad("Supplier return cursor belongs to a different inspection or tenant");
+        inspection(tenant,inspectionId);
+        var args=new java.util.ArrayList<Object>();
+        args.add(tenant);args.add(inspectionId);
+        String where="";
+        if(after!=null) {
+            try {
+                where=" AND (created_at,id) < (?,?)";
+                args.add(OffsetDateTime.ofInstant(java.time.Instant.parse(after[2]),
+                    java.time.ZoneOffset.UTC));
+                args.add(UUID.fromString(after[3]));
+            } catch(Exception e) {throw bad("Invalid supplier return cursor");}
+        }
+        args.add(limit+1);
+        List<SupplierReturn> rows=jdbc.query(RETURN_SELECT+
+            " AND inspection_id=?"+where+" ORDER BY created_at DESC,id DESC LIMIT ?",
+            PurchaseQualityService::mapReturn,args.toArray());
+        return LocalKeysetPage.pack(rows,limit,r->LocalKeysetPage.encode(
+            tenant.toString(),inspectionId.toString(),r.createdAt(),r.id()));
+    }
+    @Transactional(readOnly=true)
+    public ReturnSummary returnsSummary(UUID tenant,UUID inspectionId) {
+        if(inspectionId==null)throw bad("QC inspection required");
+        return jdbc.query("""
+            SELECT q.rejected_quantity::bigint AS rejected,
+              COALESCE(SUM(v.quantity) FILTER (WHERE v.status='DRAFT'),0)::bigint
+                  AS drafted,
+              COALESCE(SUM(v.quantity) FILTER (WHERE v.status='DISPATCHED'),0)::bigint
+                  AS dispatched
+            FROM erp_purchase_receipt_qc q
+            LEFT JOIN erp_supplier_return v
+              ON v.tenant_id=q.tenant_id AND v.inspection_id=q.id
+            WHERE q.tenant_id=? AND q.id=?
+            GROUP BY q.id,q.rejected_quantity
+            """,(rs,i)->{
+                long rejected=rs.getLong("rejected"),draft=rs.getLong("drafted"),
+                    dispatched=rs.getLong("dispatched");
+                return new ReturnSummary(rejected,draft,dispatched,
+                    Math.max(0,rejected-draft-dispatched));
+            },tenant,inspectionId).stream().findFirst()
+            .orElseThrow(PurchaseQualityService::missing);
+    }
     @Transactional
     public SupplierReturn createReturn(UUID tenant,UUID actor,UUID qcId,ReturnRequest request) {
         if(qcId==null || request==null || request.requestKey()==null
@@ -402,6 +456,44 @@ public class PurchaseQualityService {
             WHERE f.tenant_id=? AND (?='ALL' OR f.state IN ('OPEN','ACKNOWLEDGED'))
             ORDER BY f.changed_at DESC,f.id DESC LIMIT 100
             """,PurchaseQualityService::mapFinding,tenant,filter);
+    }
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Finding> findingsPage(UUID tenant,String filter,
+                                                      int requested,String cursor) {
+        if(!"ACTIVE".equals(filter) && !"ALL".equals(filter))
+            throw bad("Invalid QC finding filter");
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=LocalKeysetPage.decode(cursor,4);
+        if(after!=null && (!tenant.toString().equals(after[0])
+            || !filter.equals(after[1])))
+            throw bad("QC finding cursor belongs to a different filter or tenant");
+        var args=new java.util.ArrayList<Object>();
+        args.add(tenant);args.add(filter);
+        String where="";
+        if(after!=null) {
+            try {
+                where=" AND (f.changed_at,f.id) < (?,?)";
+                args.add(OffsetDateTime.ofInstant(java.time.Instant.parse(after[2]),
+                    java.time.ZoneOffset.UTC));
+                args.add(UUID.fromString(after[3]));
+            } catch(Exception e) {throw bad("Invalid QC finding cursor");}
+        }
+        args.add(limit+1);
+        List<FindingSort> rows=jdbc.query("""
+            SELECT f.id,f.inspection_id,q.purchase_receipt_id,
+                   f.rule_code,f.state,f.last_seen_at,f.changed_at
+            FROM erp_purchase_quality_finding f
+            JOIN erp_purchase_receipt_qc q
+              ON q.tenant_id=f.tenant_id AND q.id=f.inspection_id
+            WHERE f.tenant_id=? AND (?='ALL' OR f.state IN ('OPEN','ACKNOWLEDGED'))
+            """+where+" ORDER BY f.changed_at DESC,f.id DESC LIMIT ?",
+            (rs,i)->new FindingSort(mapFinding(rs,i),when(rs,"changed_at")),
+            args.toArray());
+        var page=LocalKeysetPage.pack(rows,limit,row->LocalKeysetPage.encode(
+            tenant.toString(),filter,row.changedAt(),row.value().id()));
+        return new LocalKeysetPage.Page<>(page.items().stream()
+            .map(FindingSort::value).toList(),page.nextCursor(),page.hasMore(),
+            page.pageSize());
     }
     private static final String UPSERT = """
         ON CONFLICT(tenant_id,inspection_id,rule_code)

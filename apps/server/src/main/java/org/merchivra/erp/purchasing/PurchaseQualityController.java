@@ -46,6 +46,20 @@ public class PurchaseQualityController {
         HttpServletRequest req,@PathVariable UUID inspectionId) {
         return quality.returns(access.currentTenant(auth,req),inspectionId);
     }
+    @GetMapping("/inspections/{inspectionId}/returns/page")
+    public ResponseEntity<LocalKeysetPage.Page<PurchaseQualityService.SupplierReturn>> returnsPage(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID inspectionId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(quality.returnsPage(access.currentTenant(auth,req),inspectionId,limit,cursor));
+    }
+    @GetMapping("/inspections/{inspectionId}/returns/summary")
+    public ResponseEntity<PurchaseQualityService.ReturnSummary> returnsSummary(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID inspectionId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(quality.returnsSummary(access.currentTenant(auth,req),inspectionId));
+    }
     @PostMapping("/inspections/{inspectionId}/returns")
     @ResponseStatus(HttpStatus.CREATED)
     public PurchaseQualityService.SupplierReturn createReturn(Authentication auth,
@@ -70,6 +84,15 @@ public class PurchaseQualityController {
     public List<PurchaseQualityService.Finding> findings(Authentication auth,
         HttpServletRequest req,@RequestParam(defaultValue="ACTIVE") String filter) {
         return quality.findings(access.currentTenant(auth,req),filter);
+    }
+    @GetMapping("/findings/page")
+    public ResponseEntity<LocalKeysetPage.Page<PurchaseQualityService.Finding>> findingsPage(
+        Authentication auth,HttpServletRequest req,
+        @RequestParam(defaultValue="ACTIVE") String filter,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(quality.findingsPage(access.currentTenant(auth,req),filter,limit,cursor));
     }
     @PostMapping("/scan")
     public PurchaseQualityService.ScanResult scan(Authentication auth,HttpServletRequest req) {

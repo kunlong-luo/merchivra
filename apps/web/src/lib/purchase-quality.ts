@@ -57,6 +57,25 @@ export const fetchQualityReceipts=(orderId:string)=>api(
 export const inspectQualityReceipt=(receiptId:string,body:{
  requestKey:string;acceptedQuantity:number;rejectedQuantity:number;reason:string})=>api(
  base+'/receipts/'+encodeURIComponent(receiptId)+'/inspect',inspection,'POST',body)
+const cursorPage=<T extends z.ZodTypeAny>(item:T)=>z.object({
+ items:z.array(item).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{message:'Invalid QC cursor'})
+const returnSummary=z.object({rejectedUnits:z.number().int().nonnegative(),
+ draftedUnits:z.number().int().nonnegative(),dispatchedUnits:z.number().int().nonnegative(),
+ unallocatedUnits:z.number().int().nonnegative()})
+function pageQuery(cursor:string|null,other:Record<string,string>={}){
+ const params=new URLSearchParams({limit:'50',...other})
+ if(cursor)params.set('cursor',cursor)
+ return params.toString()
+}
+export const fetchQualityReturnsPage=(inspectionId:string,cursor:string|null=null)=>api(
+ base+'/inspections/'+encodeURIComponent(inspectionId)+'/returns/page?'+pageQuery(cursor),
+ cursorPage(supplierReturn))
+export const fetchQualityReturnSummary=(inspectionId:string)=>api(
+ base+'/inspections/'+encodeURIComponent(inspectionId)+'/returns/summary',returnSummary)
+export const fetchQualityFindingsPage=(filter:'ACTIVE'|'ALL',cursor:string|null=null)=>api(
+ base+'/findings/page?'+pageQuery(cursor,{filter}),cursorPage(finding))
 export const fetchQualityReturns=(inspectionId:string)=>api(
  base+'/inspections/'+encodeURIComponent(inspectionId)+'/returns',
  z.array(supplierReturn))
