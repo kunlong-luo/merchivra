@@ -5,7 +5,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
+import org.merchivra.erp.purchasing.LocalKeysetPage;
 import java.util.UUID;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.http.HttpStatus;
@@ -29,6 +31,25 @@ public class SettlementStatementService {
     public record Candidate(String id,String sourceKey,String sourceType,
         String amount,String currency,String postedAt,String matchedReferenceKind) {}
     public record Audit(String action,String eventId,String actorId,String occurredAt) {}
+    private record RankedCandidate(Candidate value,int rank) {}
+    private record AuditItem(Audit value,String id) {}
+    private static OffsetDateTime afterTime(String text) {
+        try {return Instant.parse(text).atOffset(ZoneOffset.UTC);}
+        catch(Exception ex) {throw LocalKeysetPage.bad("Invalid settlement cursor time");}
+    }
+    private static UUID afterId(String text) {
+        try {return UUID.fromString(text);}
+        catch(IllegalArgumentException ex) {
+            throw LocalKeysetPage.bad("Invalid settlement cursor record ID");
+        }
+    }
+    private static String[] scope(String raw,String...parts) {
+        String[] value=LocalKeysetPage.decode(raw,parts.length+2);
+        if(value!=null)for(int i=0;i<parts.length;i++)
+            if(!parts[i].equals(value[i]))
+                throw LocalKeysetPage.bad("Settlement cursor scope mismatch");
+        return value;
+    }
 
     private static Instant at(java.sql.ResultSet r,String name)
         throws java.sql.SQLException {
@@ -87,6 +108,29 @@ public class SettlementStatementService {
             ORDER BY created_at DESC,id DESC LIMIT 50
             """,SettlementStatementService::statement,tenant,mp);
     }
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Statement> listPage(UUID tenant,UUID mp,int requested,
+        String rawCursor) {
+        requireMarketplace(tenant,mp);
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=scope(rawCursor,tenant.toString(),mp.toString());
+        var args=new ArrayList<Object>();
+        args.add(tenant);args.add(mp);
+        String where="";
+        if(after!=null) {
+            where=" AND (created_at,id)<(?,?)";
+            args.add(afterTime(after[2]));args.add(afterId(after[3]));
+        }
+        args.add(limit+1);
+        List<Statement> records=jdbc.query("""
+            SELECT * FROM finance_settlement_statement
+            WHERE tenant_id=? AND seller_marketplace_id=?
+            """+where+" ORDER BY created_at DESC,id DESC LIMIT ?",
+            SettlementStatementService::statement,args.toArray());
+        return LocalKeysetPage.pack(records,limit,v->LocalKeysetPage.encode(
+            tenant.toString(),mp.toString(),v.createdAt(),v.id()));
+    }
+
     @Transactional
     public Statement create(UUID tenant,UUID mp,UUID actor,String reference,
         OffsetDateTime from,OffsetDateTime until,String amount,String currency) {
@@ -147,6 +191,77 @@ public class SettlementStatementService {
             s.reference(),tenant,mp,s.currency(),OffsetDateTime.parse(s.periodStart()),
             OffsetDateTime.parse(s.periodEnd()));
     }
+    /**
+     * Immutable source facts: only LIVE Finances transactions from the statement
+     * marketplace, currency and period, excluding source events already linked
+     * to ANY settlement. Rank matches before unmatched records using numeric
+     * sort keys so NULLS LAST remains stable across all pages.
+     */
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Candidate> candidatesPage(UUID tenant,UUID mp,
+        UUID statementId,int requested,String rawCursor) {
+        Statement statement=get(tenant,mp,statementId,false);
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=LocalKeysetPage.decode(rawCursor,7);
+        if(after!=null && (!tenant.toString().equals(after[0])
+            || !mp.toString().equals(after[1])
+            || !statementId.toString().equals(after[2])
+            || !"CANDIDATES".equals(after[3])))
+            throw LocalKeysetPage.bad("Settlement candidate cursor scope mismatch");
+        var args=new ArrayList<Object>();
+        args.add(statement.reference());args.add(tenant);args.add(mp);
+        args.add(statement.currency());
+        args.add(OffsetDateTime.parse(statement.periodStart()));
+        args.add(OffsetDateTime.parse(statement.periodEnd()));
+        String rankSql="CASE matched_kind WHEN 'SETTLEMENT_ID' THEN 0 "+
+            "WHEN 'DISBURSEMENT_ID' THEN 1 "+
+            "WHEN 'FINANCIAL_EVENT_GROUP_ID' THEN 2 ELSE 3 END";
+        String seek="";
+        if(after!=null) {
+            int rank;
+            try {rank=Integer.parseInt(after[4]);}
+            catch(NumberFormatException ex) {
+                throw LocalKeysetPage.bad("Invalid settlement source match rank");
+            }
+            if(rank<0||rank>3)
+                throw LocalKeysetPage.bad("Invalid settlement source match rank");
+            seek=" WHERE ("+rankSql+" > ? OR ("+rankSql+
+                 " = ? AND (posted_at,id)<(?,?)))";
+            args.add(rank);args.add(rank);
+            args.add(afterTime(after[5]));args.add(afterId(after[6]));
+        }
+        args.add(limit+1);
+        List<RankedCandidate> rows=jdbc.query("""
+            WITH candidates AS (
+              SELECT f.id,f.source_event_key,f.source_type,f.amount,
+                     f.currency_code,f.posted_at,
+                (SELECT ref.reference_kind FROM finance_transaction_reference ref
+                  WHERE ref.tenant_id=f.tenant_id AND ref.event_id=f.id
+                    AND ref.reference_value=?
+                    AND ref.reference_kind IN
+                      ('SETTLEMENT_ID','DISBURSEMENT_ID','FINANCIAL_EVENT_GROUP_ID')
+                  ORDER BY CASE ref.reference_kind
+                    WHEN 'SETTLEMENT_ID' THEN 0
+                    WHEN 'DISBURSEMENT_ID' THEN 1 ELSE 2 END LIMIT 1) matched_kind
+              FROM finance_source_event f
+              WHERE f.tenant_id=? AND f.seller_marketplace_id=?
+                AND f.source_family='SPAPI_FINANCES' AND f.data_origin='LIVE'
+                AND f.currency_code=? AND f.posted_at>=? AND f.posted_at<?
+                AND NOT EXISTS (SELECT 1 FROM finance_settlement_event_link l
+                  WHERE l.tenant_id=f.tenant_id AND l.event_id=f.id)
+            )
+            SELECT *, """+rankSql+" AS match_rank FROM candidates "+seek+
+            " ORDER BY match_rank ASC,posted_at DESC,id DESC LIMIT ?",
+            (rs,i)->new RankedCandidate(candidate(rs,i),rs.getInt("match_rank")),
+            args.toArray());
+        var page=LocalKeysetPage.pack(rows,limit,v->LocalKeysetPage.encode(
+            tenant.toString(),mp.toString(),statementId.toString(),"CANDIDATES",
+            Integer.toString(v.rank()),v.value().postedAt(),v.value().id()));
+        return new LocalKeysetPage.Page<>(
+            page.items().stream().map(RankedCandidate::value).toList(),
+            page.nextCursor(),page.hasMore(),page.pageSize());
+    }
+
     /** Source row must be trusted, same tenant/Marketplace/currency, not allocated elsewhere. */
     @Transactional
     public void link(UUID tenant,UUID mp,UUID actor,UUID statementId,UUID event) {
@@ -211,6 +326,40 @@ public class SettlementStatementService {
                 r.getObject("actor_user_id",UUID.class).toString(),
                 time(r,"occurred_at")),tenant,statementId);
     }
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Audit> auditPage(UUID tenant,UUID mp,
+        UUID statementId,int requested,String rawCursor) {
+        get(tenant,mp,statementId,false);
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=scope(rawCursor,tenant.toString(),mp.toString(),
+            statementId.toString());
+        var args=new ArrayList<Object>();
+        args.add(tenant);args.add(statementId);
+        String where="";
+        if(after!=null) {
+            where=" AND (occurred_at,id)<(?,?)";
+            args.add(afterTime(after[3]));args.add(afterId(after[4]));
+        }
+        args.add(limit+1);
+        List<AuditItem> rows=jdbc.query("""
+            SELECT id,action,event_id,actor_user_id,occurred_at
+            FROM finance_settlement_audit
+            WHERE tenant_id=? AND statement_id=?
+            """+where+" ORDER BY occurred_at DESC,id DESC LIMIT ?",
+            (r,i)->new AuditItem(new Audit(r.getString("action"),
+                r.getObject("event_id",UUID.class)==null?null:
+                    r.getObject("event_id",UUID.class).toString(),
+                r.getObject("actor_user_id",UUID.class).toString(),
+                time(r,"occurred_at")),r.getObject("id",UUID.class).toString()),
+            args.toArray());
+        var page=LocalKeysetPage.pack(rows,limit,v->LocalKeysetPage.encode(
+            tenant.toString(),mp.toString(),statementId.toString(),
+            v.value().occurredAt(),v.id()));
+        return new LocalKeysetPage.Page<>(
+            page.items().stream().map(AuditItem::value).toList(),
+            page.nextCursor(),page.hasMore(),page.pageSize());
+    }
+
     public SettlementReconciliationEngine.Preview preview(
         UUID tenant,UUID mp,UUID statementId) {
         Statement batch=get(tenant,mp,statementId,false);
