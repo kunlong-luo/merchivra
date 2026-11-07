@@ -205,6 +205,7 @@ jobs:
           python3 scripts/smoke_paged_local_purchasing_v92.py
           python3 scripts/smoke_receipt_operational_pages_v93.py
           python3 scripts/smoke_quality_returns_findings_v94.py
+          python3 scripts/smoke_ops_lot_pagination_v95.py
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='81' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='80' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='79' AND success")" = "1"
