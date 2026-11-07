@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.security.TenantAccessService;
+import org.merchivra.erp.purchasing.LocalKeysetPage;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -61,4 +62,15 @@ public class BankPayoutManualReviewController {
             .body(service.decide(access.currentTenant(auth,req),marketplaceId,
                 reportId,access.authenticatedUser(auth),false,note.reason()));
     }
+    @GetMapping("/audit/page")
+    public ResponseEntity<LocalKeysetPage.Page<BankPayoutManualReviewService.Audit>> historyPage(
+        Authentication auth,HttpServletRequest req,
+        @PathVariable UUID marketplaceId,@PathVariable UUID reportId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.historyPage(access.currentTenant(auth,req),
+                marketplaceId,reportId,limit,cursor));
+    }
+
 }

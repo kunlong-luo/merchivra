@@ -1,6 +1,7 @@
-import {useState} from 'react'
+import CursorPageControls from './CursorPageControls'
+import {useEffect,useState} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
-import {decideSourceReview,getSourceReview,getSourceReviewAudit,
+import {decideSourceReview,getSourceReview,getSourceReviewAuditPage,
  requestSourceReview} from './lib/settlement-source-review'
 
 const states:Record<string,string>={
@@ -16,12 +17,17 @@ export default function SettlementSourceReviewPanel({tenantId,marketplaceId,repo
  const qc=useQueryClient()
  const [reason,setReason]=useState('')
  const [showHistory,setShowHistory]=useState(false)
+ const [auditCursors,setAuditCursors]=useState<(string|null)[]>([null])
+ const auditCursor=auditCursors.at(-1)??null
+ useEffect(()=>{setAuditCursors([null]);setShowHistory(false)},[
+  tenantId,marketplaceId,reportId])
  const base=['finance','reports',tenantId,marketplaceId,reportId,'source-review']
  const status=useQuery({queryKey:base,queryFn:()=>getSourceReview(marketplaceId,reportId),
   retry:false,staleTime:15000})
- const history=useQuery({queryKey:[...base,'audit'],enabled:showHistory,
-  queryFn:()=>getSourceReviewAudit(marketplaceId,reportId),retry:false})
+ const history=useQuery({queryKey:[...base,'audit-page',auditCursor],enabled:showHistory,
+  queryFn:()=>getSourceReviewAuditPage(marketplaceId,reportId,auditCursor),retry:false})
  const refresh=()=>{
+   setAuditCursors([null])
    void qc.invalidateQueries({queryKey:base})
    void qc.invalidateQueries({queryKey:['finance','reports',tenantId,marketplaceId,reportId,'finance-comparison']})
  }
@@ -71,17 +77,22 @@ export default function SettlementSourceReviewPanel({tenantId,marketplaceId,repo
   {(request.error||decide.error)&&<p className="setup-error" role="alert">
     {String(request.error??decide.error)}</p>}
   <button type="button" className="text-button"
-   onClick={()=>setShowHistory(x=>!x)}>{showHistory?'收起':'查看'}审核审计</button>
+   onClick={()=>{setAuditCursors([null]);setShowHistory(x=>!x)}}>{showHistory?'收起':'查看'}审核审计</button>
   {showHistory&&(history.isPending?<p>读取审计…</p>:
    history.isError?<p className="setup-error" role="alert">{String(history.error)}</p>:
-   !history.data?.length?<p>尚无审核记录。</p>:
+   !history.data?.items.length?<p>尚无审核记录。</p>:
    <div className="table-scroll" role="region" tabIndex={0}
     aria-label="结算来源审核审计">
     <table><thead><tr><th>版本</th><th>动作</th><th>操作人</th><th>依据说明</th><th>时间</th></tr></thead>
-     <tbody>{history.data.map((entry,i)=><tr key={i}>
+     <tbody>{history.data.items.map((entry,i)=><tr key={i}>
       <td>{entry.version}</td><td>{actions[entry.action]??entry.action}</td>
       <td>{entry.actorId}</td><td>{entry.reason}</td>
       <td>{new Date(entry.occurredAt).toLocaleString('zh-CN')}</td>
      </tr>)}</tbody></table></div>)}
+  {showHistory&&history.data&&<CursorPageControls label="结算来源双人复核审计"
+   page={auditCursors.length} hasMore={history.data.hasMore}
+   nextCursor={history.data.nextCursor} busy={history.isFetching}
+   onPrev={()=>setAuditCursors(v=>v.length>1?v.slice(0,-1):v)}
+   onNext={cursor=>setAuditCursors(v=>[...v,cursor])}/>}
  </div>
 }

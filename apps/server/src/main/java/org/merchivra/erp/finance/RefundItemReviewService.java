@@ -272,4 +272,25 @@ public class RefundItemReviewService {
                 r.getObject(8,java.time.OffsetDateTime.class).toInstant().toString()),
             tenant,event);
     }
+    @Transactional(readOnly=true)
+    public org.merchivra.erp.purchasing.LocalKeysetPage.Page<Audit> historyPage(
+        UUID tenant,UUID mp,UUID event,int limit,String cursor) {
+        source(tenant,mp,event); // retain LIVE matched refund and order check
+        return FinanceAuditPages.read(jdbc,tenant,mp,event,"REFUND",limit,cursor,"""
+            SELECT a.id,a.external_item_id,a.action,a.reviewed_quantity,
+                   a.disposition,a.evidence_reference,a.revision,
+                   a.actor_user_id,a.occurred_at
+            FROM finance_refund_review_audit a
+            JOIN finance_source_event f ON f.tenant_id=a.tenant_id
+              AND f.id=a.event_id
+            WHERE a.tenant_id=? AND f.seller_marketplace_id=? AND a.event_id=?
+            """,(r,i)->new Audit(r.getString("external_item_id"),
+                r.getString("action"),r.getInt("reviewed_quantity"),
+                r.getString("disposition"),r.getString("evidence_reference"),
+                r.getInt("revision"),
+                r.getObject("actor_user_id",UUID.class).toString(),
+                r.getObject("occurred_at",java.time.OffsetDateTime.class)
+                    .toInstant().toString()));
+    }
+
 }

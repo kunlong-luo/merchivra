@@ -1,6 +1,7 @@
-import {useState} from 'react'
+import CursorPageControls from './CursorPageControls'
+import {useEffect,useState} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
-import {decideBankManualReview,getBankManualReview,listBankManualAudit}
+import {decideBankManualReview,getBankManualReview,listBankManualAuditPage}
  from './lib/bank-manual-review'
 
 const label:Record<string,string>={
@@ -14,14 +15,18 @@ export default function BankManualReviewPanel({tenantId,marketplaceId,reportId,
  const qc=useQueryClient()
  const [reason,setReason]=useState('')
  const [showAudit,setShowAudit]=useState(false)
+ const [auditCursors,setAuditCursors]=useState<(string|null)[]>([null])
+ const auditCursor=auditCursors.at(-1)??null
+ useEffect(()=>{setAuditCursors([null]);setShowAudit(false)},[
+  tenantId,marketplaceId,reportId])
  const key=['finance','bank-review',tenantId,marketplaceId,reportId]
  const status=useQuery({queryKey:key,
   queryFn:()=>getBankManualReview(marketplaceId,reportId),retry:false,staleTime:15000})
- const history=useQuery({queryKey:[...key,'audit'],enabled:showAudit,
-  queryFn:()=>listBankManualAudit(marketplaceId,reportId),retry:false})
+ const history=useQuery({queryKey:[...key,'audit-page',auditCursor],enabled:showAudit,
+  queryFn:()=>listBankManualAuditPage(marketplaceId,reportId,auditCursor),retry:false})
  const submit=useMutation({mutationFn:(action:'request'|'approve'|'reject')=>
   decideBankManualReview(marketplaceId,reportId,action,reason),
-  onSuccess:()=>{setReason('');void qc.invalidateQueries({queryKey:key})}})
+  onSuccess:()=>{setReason('');setAuditCursors([null]);void qc.invalidateQueries({queryKey:key})}})
  const s=status.data
  const valid=reason.trim().length>=10&&reason.length<=500&&
   !/[\x00-\x1F\x7F]/.test(reason)
@@ -51,14 +56,19 @@ export default function BankManualReviewPanel({tenantId,marketplaceId,reportId,
   </div>
   {submit.error&&<p className="setup-error" role="alert">{String(submit.error)}</p>}
   <button type="button" className="text-button"
-   onClick={()=>setShowAudit(v=>!v)}>{showAudit?'收起':'查看'}审核审计</button>
+   onClick={()=>{setAuditCursors([null]);setShowAudit(v=>!v)}}>{showAudit?'收起':'查看'}审核审计</button>
   {showAudit&&(history.isPending?<p>读取审计…</p>:
    history.isError?<p className="setup-error" role="alert">{String(history.error)}</p>:
    <div className="table-scroll" role="region" tabIndex={0} aria-label="人工银行参考审计">
     <table><thead><tr><th>版本</th><th>动作</th><th>操作人</th><th>说明</th><th>时间</th></tr></thead>
-     <tbody>{(history.data??[]).map((a,i)=><tr key={i}>
+     <tbody>{(history.data?.items??[]).map((a,i)=><tr key={i}>
       <td>{a.version}</td><td>{a.action}</td><td>{a.actorId}</td>
       <td>{a.reason}</td><td>{a.occurredAt}</td></tr>)}</tbody>
     </table></div>)}
+  {showAudit&&history.data&&<CursorPageControls label="人工银行复核审计"
+   page={auditCursors.length} hasMore={history.data.hasMore}
+   nextCursor={history.data.nextCursor} busy={history.isFetching}
+   onPrev={()=>setAuditCursors(v=>v.length>1?v.slice(0,-1):v)}
+   onNext={cursor=>setAuditCursors(v=>[...v,cursor])}/>}
  </div>
 }

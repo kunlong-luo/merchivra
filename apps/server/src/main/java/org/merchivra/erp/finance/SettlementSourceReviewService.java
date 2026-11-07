@@ -238,4 +238,21 @@ public class SettlementSourceReviewService {
                 date(r.getObject("occurred_at",OffsetDateTime.class))),
             tenant,mp,report);
     }
+    @Transactional(readOnly=true)
+    public org.merchivra.erp.purchasing.LocalKeysetPage.Page<Audit> historyPage(
+        UUID tenant,UUID mp,UUID report,int limit,String cursor) {
+        evidence(tenant,mp,report); // never expose another report's existence
+        return FinanceAuditPages.read(jdbc,tenant,mp,report,"SOURCE",limit,cursor,"""
+            SELECT a.id,a.action,a.source_state,a.actor_user_id,a.reason,
+                   a.review_version,a.occurred_at
+            FROM finance_settlement_source_review_audit a
+            JOIN spapi_settlement_report r ON r.tenant_id=a.tenant_id
+              AND r.id=a.report_id
+            WHERE a.tenant_id=? AND r.seller_marketplace_id=? AND a.report_id=?
+            """,(r,i)->new Audit(r.getString("action"),r.getString("source_state"),
+                r.getObject("actor_user_id",UUID.class).toString(),r.getString("reason"),
+                r.getInt("review_version"),
+                date(r.getObject("occurred_at",OffsetDateTime.class))));
+    }
+
 }

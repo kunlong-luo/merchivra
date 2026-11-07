@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.security.TenantAccessService;
+import org.merchivra.erp.purchasing.LocalKeysetPage;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -60,4 +61,15 @@ public class RefundItemReviewController {
             .body(service.history(access.currentTenant(authentication,request),
                 marketplaceId,eventId));
     }
+    @GetMapping("/audit/page")
+    public ResponseEntity<LocalKeysetPage.Page<RefundItemReviewService.Audit>> historyPage(
+        Authentication authentication,HttpServletRequest request,
+        @PathVariable UUID marketplaceId,@PathVariable UUID eventId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.historyPage(access.currentTenant(authentication,request),
+                marketplaceId,eventId,limit,cursor));
+    }
+
 }

@@ -1,4 +1,5 @@
 import {z} from 'zod'
+import {financeAuditPage,financeAuditUrl} from './finance-audit-pages'
 import {csrfHeader} from './auth'
 const disposition=z.enum(['RESTOCKED_CLAIMED','NOT_RESTOCKED','UNKNOWN'])
 const item=z.object({
@@ -51,3 +52,6 @@ export const withdrawRefundItem=(mp:string,event:string,itemId:string)=>
  req(root(mp,event)+'/'+encodeURIComponent(itemId),null,'DELETE')
 export const getRefundAudit=(mp:string,event:string)=>
  req(root(mp,event)+'/audit',z.array(audit))
+
+export const getRefundAuditPage=(mp:string,event:string,cursor:string|null=null)=>
+ req(financeAuditUrl(root(mp,event),cursor),financeAuditPage(audit))

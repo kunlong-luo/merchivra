@@ -1,5 +1,5 @@
 # Merchivra ERP（麦奇维拉）
-
+\n> **GitHub Pages 公开只读演示：** [查看虚构数据的静态 React 界面](https://kunlong-luo.github.io/merchivra/)（需要仓库先启用 GitHub Pages）。**它不是可登录的 ERP 服务**：没有数据库、真实 Amazon 授权或采购/财务写入。[部署与首次启用说明](docs/deployment/github-pages-public-demo-v98.md)。\n
 **开源、自托管的 Amazon Seller ERP。** 采用 Java 25 / Spring Boot 4.1、React 19 / TypeScript、PostgreSQL 18，优先把核心业务代码、模拟工作流与本地部署打通；真实 Amazon 授权留给使用者在功能开发完成后本地进行。
 
 [English](README.md) · [完整部署与卸载指南](docs/deployment/local-spark-db.md) · [架构设计](docs/architecture/overview.md) · [功能路线图](docs/roadmap.md) · [贡献指南](CONTRIBUTING.md) · [安全说明](SECURITY.md)

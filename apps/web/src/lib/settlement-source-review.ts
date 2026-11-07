@@ -1,4 +1,5 @@
 import {z} from 'zod'
+import {financeAuditPage,financeAuditUrl} from './finance-audit-pages'
 import {csrfHeader} from './auth'
 
 export const sourceReview=z.object({
@@ -49,3 +50,6 @@ export const requestSourceReview=(mp:string,report:string,reason:string)=>
 export const decideSourceReview=(mp:string,report:string,
  action:'approve'|'reject',reason:string)=>
  call(root(mp,report)+'/'+action,sourceReview,'POST',reason)
+
+export const getSourceReviewAuditPage=(mp:string,report:string,cursor:string|null=null)=>
+ call(financeAuditUrl(root(mp,report),cursor),financeAuditPage(sourceReviewAudit))
