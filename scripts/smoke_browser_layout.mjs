@@ -90,7 +90,7 @@ const server = createServer(async (req, res) => {
       : respond(res, { userId: account, activeTenantId: tenant, availableTenantIds:[tenant],
           isOwner: mode !== 'staff' })
   }
-  if (url.pathname === '/api/v1/ping') return respond(res, { status:'ok' })
+  if (url.pathname === '/api/v1/ping') return respond(res, { service:'merchivra',status:'ok',stage:'MOCK_BROWSER' })
   if (url.pathname === '/api/v1/team/members') return respond(res, [
     {userId:account,loginName:'local-smoke-admin',status:'ACTIVE',reviewer:false},
     {userId:'88888888-8888-4888-8888-888888888888',loginName:'ops-reviewer',status:'ACTIVE',reviewer:true}
@@ -476,7 +476,7 @@ async function main() {
       try{
         await waitFor(send,`location.pathname==='/orders' &&
           document.querySelector('.core-subtab.selected')?.textContent?.includes('订单') &&
-          document.querySelectorAll('.core-data-scroll tbody tr').length===2`,
+          document.querySelector('.core-data-scroll tbody tr')?.textContent?.includes('TEST-ORDER-100')`,
           'V100 real Core Orders route')
       }catch(error){
         const state=await evaluate(send,`(() => ({
