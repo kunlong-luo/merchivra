@@ -111,7 +111,7 @@ created=sql(f"""WITH lines AS (
   CASE WHEN n>271 THEN 'OPEN' ELSE 'REVIEWED' END,
   '{actor}'::uuid,
   CASE WHEN n>271 THEN NULL ELSE '{actor}'::uuid END,
-  CASE WHEN n<=240 THEN NULL ELSE now() END,
+  CASE WHEN n>271 THEN NULL ELSE now() END,
   now()-n*interval '1 minute'
  FROM lines l
  RETURNING id
