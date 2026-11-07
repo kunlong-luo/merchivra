@@ -85,7 +85,7 @@ public class LotExceptionResolutionService {
           source_receipt_id,position_id,warehouse_id,product_sku_id,
           expected_bin_id,expected_position_quantity,expected_on_hand,
           adjustment_quantity,evidence_reference,reason,status,proposed_by,
-          reviewed_by,review_reason,operation_id
+          reviewed_by,review_reason,operation_id,created_at
         FROM erp_local_lot_exception_resolution WHERE tenant_id=?
         """;
     @Transactional(readOnly=true)
@@ -119,7 +119,7 @@ public class LotExceptionResolutionService {
         }
         args.add(limit+1);
         List<TimedResolution> rows=jdbc.query(
-            SQL.replace("operation_id\\n", "operation_id,created_at\\n")+
+            SQL+
             " AND warehouse_id=?"+where+" ORDER BY created_at DESC,id DESC LIMIT ?",
             (rs,i)->new TimedResolution(map(rs,i),
                 rs.getObject("created_at",OffsetDateTime.class).toInstant().toString()),
