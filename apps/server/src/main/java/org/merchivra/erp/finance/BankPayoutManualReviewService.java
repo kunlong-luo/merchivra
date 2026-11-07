@@ -212,4 +212,20 @@ public class BankPayoutManualReviewService {
                 r.getObject("occurred_at",OffsetDateTime.class).toInstant().toString()),
             tenant,mp,report);
     }
+    @Transactional(readOnly=true)
+    public org.merchivra.erp.purchasing.LocalKeysetPage.Page<Audit> historyPage(
+        UUID tenant,UUID mp,UUID report,int limit,String cursor) {
+        evidence(tenant,mp,report); // preserve manual-bank evidence/Marketplace gate
+        return FinanceAuditPages.read(jdbc,tenant,mp,report,"BANK",limit,cursor,"""
+            SELECT a.id,a.action,a.review_version,a.actor_user_id,a.reason,a.occurred_at
+            FROM bank_payout_manual_review_audit a
+            JOIN bank_payout_manual_review r ON r.tenant_id=a.tenant_id
+              AND r.report_id=a.report_id
+            WHERE a.tenant_id=? AND r.seller_marketplace_id=? AND a.report_id=?
+            """,(r,i)->new Audit(r.getString("action"),r.getInt("review_version"),
+                r.getObject("actor_user_id",UUID.class).toString(),
+                r.getString("reason"),
+                r.getObject("occurred_at",OffsetDateTime.class).toInstant().toString()));
+    }
+
 }
