@@ -23,7 +23,7 @@ function mockFetch(body:unknown){
   expect(options?.credentials).toBe('same-origin')
   expect(options?.cache).toBe('no-store')
   expect(options?.method===undefined||options?.method==='GET').toBe(true)
-  return new Response(JSON.stringify(body),{status:200})
+  return new Response(JSON.stringify(body),{status:200,headers:{'Content-Type':'application/json'}})
  }))
  return calls
 }
