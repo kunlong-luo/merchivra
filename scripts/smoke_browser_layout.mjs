@@ -49,6 +49,39 @@ const mime = { '.html':'text/html', '.js':'text/javascript', '.css':'text/css',
   '.svg':'image/svg+xml', '.png':'image/png', '.ico':'image/x-icon', '.woff2':'font/woff2' }
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', 'http://127.0.0.1')
+  // The React core screens have used V86/V87/V88 server-side pages since
+  // those versions. Keep the synthetic browser fixture contract in sync; the
+  // original uncapped array endpoints below remain for legacy consumers.
+  const limit = Number(url.searchParams.get('limit') ?? '50')
+  const search = url.searchParams.get('search') ?? ''
+  const emptyCursorPage = items => ({
+    items:items.slice(0,limit), nextCursor:null, hasMore:false, pageSize:limit
+  })
+  if (url.pathname === '/api/v1/seller-marketplaces/' + market + '/listings/page') {
+    const field = url.searchParams.get('field') ?? 'SELLER_SKU'
+    const mappingStatus = url.searchParams.get('status') ?? 'ALL'
+    const items = mock.get('/api/v1/seller-marketplaces/' + market + '/listings')
+      .filter(x => (mappingStatus === 'ALL' || x.mappingStatus === mappingStatus)
+        && (field === 'ASIN' ? x.asin ?? '' : x.sellerSku).startsWith(search))
+      .map(x => ({...x,activeMappingVersion:x.mappingStatus==='ACTIVE'?1:null,
+        latestMappingVersion:x.mappingStatus==='ACTIVE'?1:null}))
+    return respond(res, {...emptyCursorPage(items),field,searchPrefix:search,mappingStatus})
+  }
+  if (url.pathname === '/api/v1/seller-marketplaces/' + market + '/orders/page') {
+    const items = mock.get('/api/v1/seller-marketplaces/' + market + '/orders')
+      .filter(x => x.externalOrderId.startsWith(search))
+    return respond(res, {...emptyCursorPage(items),searchPrefix:search})
+  }
+  if (url.pathname === '/api/v1/seller-marketplaces/' + market + '/inventory/fba/page') {
+    const quality = url.searchParams.get('quality') ?? 'ALL'
+    const origin = url.searchParams.get('origin') ?? 'ALL'
+    const items = mock.get('/api/v1/seller-marketplaces/' + market + '/inventory/fba')
+      .filter(x => x.sellerSku.startsWith(search)
+        && (quality==='ALL'||x.quality===quality)
+        && (origin==='ALL'||x.dataOrigin===origin))
+    return respond(res, {...emptyCursorPage(items),
+      searchPrefix:search,quality,origin})
+  }
   if (url.pathname === '/api/v1/auth/me') {
     return mode === 'guest' ? respond(res, { error:'Not authenticated' }, 401)
       : respond(res, { userId: account, activeTenantId: tenant, availableTenantIds:[tenant],
@@ -93,12 +126,21 @@ const server = createServer(async (req, res) => {
         recommendedAction:'SECOND_OWNER_REVIEW'
       }],amazonVerified:false,fbaStockCredited:false
     })
-  if (url.pathname === '/api/v1/fba/marketplaces/' + market + '/shipments')
-    return respond(res,[{
+  if (url.pathname === '/api/v1/fba/marketplaces/' + market + '/shipments'
+      || url.pathname === '/api/v1/fba/marketplaces/' + market + '/shipments/page') {
+    const shipments=[{
       id:'abcd1111-1111-4111-8111-111111111111',reference:'V75-LOCAL-FBA',
       origin:'MOCK',state:'DRAFT',createdAt:'2026-11-02T00:00:00Z',
       dispatchedAt:null,reviewStartedAt:null,reconciledAt:null
-    }])
+    }]
+    if (url.pathname.endsWith('/page')) {
+      const state=url.searchParams.get('state')??'ALL'
+      const items=shipments.filter(x=>x.reference.startsWith(search)
+        && (state==='ALL'||x.state===state))
+      return respond(res,{...emptyCursorPage(items),searchPrefix:search,state})
+    }
+    return respond(res,shipments)
+  }
   if (url.pathname === '/api/v1/fba/marketplaces/' + market + '/shipments/in-transit')
     return respond(res,[])
   if (url.pathname === '/api/v1/fba/marketplaces/' + market +
@@ -203,7 +245,9 @@ const server = createServer(async (req, res) => {
       {ruleCode:'LOW_STOCK',enabled:true,lowStockThreshold:3,version:0,updatedAt:null},
       {ruleCode:'REFUND_REVIEW',enabled:true,lowStockThreshold:null,version:0,updatedAt:null},
       {ruleCode:'FBA_INBOUND_REVIEW',enabled:true,lowStockThreshold:null,version:0,updatedAt:null},
-      {ruleCode:'ADS_REPORT_REVIEW',enabled:true,lowStockThreshold:null,version:0,updatedAt:null}
+      {ruleCode:'ADS_REPORT_REVIEW',enabled:true,lowStockThreshold:null,version:0,updatedAt:null},
+      {ruleCode:'FBA_PO_EVIDENCE_CHANGED',enabled:true,lowStockThreshold:null,version:0,updatedAt:null},
+      {ruleCode:'FBA_PO_EXCEPTION_OVERDUE',enabled:true,lowStockThreshold:null,version:0,updatedAt:null}
     ])
   if (url.pathname === '/api/v1/operations/marketplaces/' + market + '/rules/audit')
     return respond(res, [])
