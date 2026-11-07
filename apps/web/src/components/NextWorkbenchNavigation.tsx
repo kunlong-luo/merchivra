@@ -1,7 +1,7 @@
 import {useState} from 'react'
 import {Dialog} from '@base-ui/react/dialog'
 import {
-  AlertTriangle, Boxes, Database, ExternalLink, KeyRound,
+  TriangleAlert, Boxes, Database, ExternalLink, KeyRound,
   LayoutDashboard, Menu, Package, RefreshCw, ShoppingCart,
   Truck, Users, Wallet, X
 } from 'lucide-react'
@@ -23,7 +23,7 @@ const modules:{view:WorkbenchView;label:string;Icon:LucideIcon}[]=[
   {view:'catalog',label:'商品与 Listing',Icon:Package},
   {view:'inventory',label:'FBA 库存',Icon:Boxes},
   {view:'purchasing',label:'采购与供应商',Icon:Truck},
-  {view:'ops',label:'运营自动化',Icon:AlertTriangle},
+  {view:'ops',label:'运营自动化',Icon:TriangleAlert},
   {view:'finance',label:'财务与对账',Icon:Wallet},
   {view:'connections',label:'卖家授权',Icon:KeyRound},
   {view:'team',label:'团队与权限',Icon:Users},
