@@ -542,27 +542,32 @@ async function main() {
     }
     if(width===360){
       await select(send,'订单')
+      // Both route and source must belong to the same concrete order row.
+      // Next may remount the Core section during App Router transitions;
+      // a generic row-count check alone can race with that remount.
       await waitFor(send,
+        (nextTarget?"location.pathname==='/orders' && ":"")+
         "document.querySelector('.core-subtab.selected')?.textContent?.includes('订单') && "+
-        "document.querySelector('.core-data-scroll tbody tr')?.textContent?.includes('TEST-ORDER-100')",
-        'Core orders finished rendering after routed tab selection')
+        "[...document.querySelectorAll('#core-panel-orders .core-data-scroll tbody tr')]"+
+        ".some(row=>row.textContent.includes('TEST-ORDER-100') && "+
+        "row.textContent.includes('模拟测试'))",
+        'Core Orders route, fixture identity and MOCK source provenance together')
       await layout(send,width,'core-orders-360',true)
-      assert.equal(await evaluate(send,
-        "[...document.querySelectorAll('.core-data-scroll tbody tr:first-child td')]" +
-        ".some(x=>x.textContent.includes('模拟测试'))"),true,
-        'Order dataOrigin must be present')
       await screenshot(send,'core-orders-360.png',true)
       await select(send,'FBA 库存')
+      // Verify unknown and observed zero from separate exact cells of the
+      // same SKU row, not via loose text fragments or a stale previous table.
       await waitFor(send,
+        (nextTarget?"location.pathname==='/inventory' && ":"")+
         "document.querySelector('.core-subtab.selected')?.textContent?.includes('FBA 库存') && "+
-        "document.querySelector('.core-data-scroll tbody tr')?.textContent?.includes('TEST-SKU-100')",
-        'Core inventory finished rendering after routed tab selection')
+        "(() => {const row=[...document.querySelectorAll("+
+        "'#core-panel-inventory .core-data-scroll tbody tr')]"+
+        ".find(r=>r.textContent.includes('TEST-SKU-100'));"+
+        "if(!row)return false;const cells=[...row.querySelectorAll('td')]"+
+        ".map(c=>c.textContent.trim());"+
+        "return cells.includes('未知')&&cells.includes('0')})()",
+        'Core FBA route preserves UNKNOWN and observed 0 in one fixture row')
       await layout(send,width,'core-inventory-360',true)
-      const cells=await evaluate(send,
-        "[...document.querySelectorAll('.core-data-scroll tbody tr:first-child td')]" +
-        ".map(x=>x.textContent.trim())")
-      assert.ok(cells.includes('未知'),'Unknown inventory must stay unknown')
-      assert.ok(cells.includes('0'),'Observed zero must stay zero')
       await screenshot(send,'core-inventory-360.png',true)
       await waitFor(send,
         "[...document.querySelectorAll('[aria-label=\"V74 SKU 补货风险优先级表\"] tbody tr')]" +
