@@ -126,12 +126,21 @@ const server = createServer(async (req, res) => {
         recommendedAction:'SECOND_OWNER_REVIEW'
       }],amazonVerified:false,fbaStockCredited:false
     })
-  if (url.pathname === '/api/v1/fba/marketplaces/' + market + '/shipments')
-    return respond(res,[{
+  if (url.pathname === '/api/v1/fba/marketplaces/' + market + '/shipments'
+      || url.pathname === '/api/v1/fba/marketplaces/' + market + '/shipments/page') {
+    const shipments=[{
       id:'abcd1111-1111-4111-8111-111111111111',reference:'V75-LOCAL-FBA',
       origin:'MOCK',state:'DRAFT',createdAt:'2026-11-02T00:00:00Z',
       dispatchedAt:null,reviewStartedAt:null,reconciledAt:null
-    }])
+    }]
+    if (url.pathname.endsWith('/page')) {
+      const state=url.searchParams.get('state')??'ALL'
+      const items=shipments.filter(x=>x.reference.startsWith(search)
+        && (state==='ALL'||x.state===state))
+      return respond(res,{...emptyCursorPage(items),searchPrefix:search,state})
+    }
+    return respond(res,shipments)
+  }
   if (url.pathname === '/api/v1/fba/marketplaces/' + market + '/shipments/in-transit')
     return respond(res,[])
   if (url.pathname === '/api/v1/fba/marketplaces/' + market +
