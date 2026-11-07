@@ -399,3 +399,106 @@
   align-self:stretch;
  }
 }
+
+/* V103: Next-only accessible Base UI shell (Vite remains untouched).
+ * Desktop: persistent grouped sidebar. Mobile: modal off-canvas navigation.
+ * The mobile Dialog.Portal is outside .next-workbench, so sheet rules are global.
+ */
+.next-workbench .next-ui-sidebar .nav-link{
+ text-decoration:none;
+ min-height:44px;
+ outline-offset:2px;
+}
+.next-workbench .next-ui-sidebar .nav-link:hover:not(.active){
+ color:#fff;background:#263c5b;
+}
+.next-workbench .next-ui-sidebar .nav-icon{
+ flex:0 0 20px;width:20px;height:20px;
+}
+.next-workbench .next-ui-sidebar .sidebar-repo{
+ align-items:center;gap:8px;
+}
+.next-workbench .next-ui-mobile-trigger{display:none}
+.next-ui-nav-backdrop{
+ position:fixed;inset:0;z-index:70;
+ background:rgba(8,19,35,.54);
+}
+.next-ui-nav-sheet{
+ position:fixed;z-index:71;
+ inset:0 auto 0 0;
+ width:min(320px,calc(100vw - 48px));
+ max-height:100dvh;overflow-y:auto;
+ background:#14243b;color:#dce5f4;
+ padding:18px 14px 22px;
+ box-shadow:14px 0 50px rgba(0,0,0,.25);
+}
+.next-ui-nav-sheet-head{
+ display:flex;align-items:flex-start;justify-content:space-between;
+ gap:12px;padding:7px 9px 19px;
+ border-bottom:1px solid #ffffff20;margin-bottom:14px;
+}
+.next-ui-nav-sheet-head [data-slot="dialog-title"],
+.next-ui-nav-sheet-head h2{
+ color:white;font-size:16px;letter-spacing:-.02em;
+}
+.next-ui-nav-sheet-head p{
+ font-size:11px;color:#a5b8d0;line-height:1.6;margin:7px 0 0;
+}
+.next-ui-nav-close{
+ display:grid;place-items:center;
+ min-width:40px;min-height:40px;border-radius:9px;
+ border:1px solid #ffffff2a;background:#ffffff12;color:white;
+}
+.next-ui-nav-sheet .nav-links{
+ display:flex;flex-direction:column;gap:14px;overflow:visible;
+}
+.next-ui-nav-sheet .nav-group{
+ display:flex;flex-direction:column;gap:4px;
+}
+.next-ui-nav-sheet .nav-group-label{
+ font-size:10px;letter-spacing:.13em;font-weight:750;
+ color:#94afd0;padding:8px 12px 5px;
+}
+.next-ui-nav-sheet .nav-link{
+ display:flex;align-items:center;gap:12px;
+ min-height:44px;padding:11px 12px;
+ border-radius:10px;text-decoration:none;
+ font-size:13px;font-weight:650;color:#cbd7e8;
+}
+.next-ui-nav-sheet .nav-link .nav-icon{
+ flex:0 0 20px;width:20px;height:20px;color:#a9c5e8;
+}
+.next-ui-nav-sheet .nav-link:hover{background:#293f5e;color:#fff}
+.next-ui-nav-sheet .nav-link.active{
+ background:#315fea;color:white;box-shadow:inset 3px 0 #a7c3ff;
+}
+.next-ui-nav-sheet .nav-link.active .nav-icon{color:white}
+.next-ui-nav-foot{
+ border-top:1px solid #ffffff22;margin-top:20px;
+ padding:16px 12px;color:#98aecb;font-size:11px;line-height:1.6;
+}
+.next-ui-nav-sheet a:focus-visible,
+.next-ui-nav-sheet button:focus-visible{
+ outline:2px solid #b4ceff;outline-offset:3px;
+}
+@media(max-width:760px){
+ .next-workbench .next-ui-sidebar{display:none!important}
+ .next-workbench .next-ui-mobile-trigger{
+  position:fixed;left:11px;top:10px;z-index:20;
+  display:inline-flex;align-items:center;justify-content:center;gap:5px;
+  padding:8px 10px;min-height:38px;
+  background:#eef3ff;border:1px solid #cfdcff;border-radius:9px;
+  color:#204aa4;font-weight:750;font-size:12px;
+ }
+ .next-workbench .topbar{
+  min-height:57px;padding-left:88px;padding-right:12px;
+ }
+ .next-workbench .topbar-right{gap:9px}
+ .next-workbench .avatar{display:none}
+ .next-workbench .breadcrumb{font-size:11px;white-space:nowrap}
+ .next-workbench .connection{white-space:nowrap}
+ .next-workbench .logout-control{font-size:11px;white-space:nowrap}
+}
+@media(prefers-reduced-motion:reduce){
+ .next-ui-nav-sheet,.next-ui-nav-backdrop{animation:none!important;transition:none!important}
+}
