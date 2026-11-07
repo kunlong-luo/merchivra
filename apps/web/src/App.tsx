@@ -2,6 +2,7 @@ import {useEffect,useState} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {AuthViewer} from './lib/auth'
 import type {WorkbenchView} from './lib/workbench-routes'
+import NextWorkbenchNavigation from './components/NextWorkbenchNavigation'
 import CoreWorkspace from './CoreWorkspace'
 import BusinessOverviewWorkspace from './BusinessOverviewWorkspace'
 import OperationsWorkspace from './OperationsWorkspace'
@@ -87,6 +88,9 @@ export default function App({viewer,signingOut,onLogout,initialView='core',
  const title=nav.find(n=>n.key===activeView)?.label??'经营总览'
  const status=ping.isPending?'连接检查中':ping.isError?'API 不可用':ping.data?.status==='ok'?'API 已连接':'API 状态异常'
  return <div className="workspace"><a className="skip-link" href="#main-content">跳转到主要内容</a>
+ {routeNavigation?
+ <NextWorkbenchNavigation active={activeView} isOwner={viewer.isOwner}
+   isDemo={demo} onNavigate={view=>navigate(view)}/>:
  <aside className="sidebar"><div className="brand-wrap"><div className="brand-icon">M</div><div className="brand-copy"><strong>merchivra</strong><small>SELLER OPERATIONS</small></div></div>
  <div className="sidebar-section-title">工作空间</div><nav className="nav-links" aria-label="主导航">
  {(()=>{
@@ -108,7 +112,7 @@ export default function App({viewer,signingOut,onLogout,initialView='core',
   API 连通不代表 Amazon 已授权；财务与库存保留来源状态。
  </div>}
  <div className="sidebar-spacer"/><div className="sidebar-info"><span className="local-indicator"/><div><strong>{demo?'本地演示环境':'核心业务工作台'}</strong><small>{demo?'纯虚构数据 · 无真实连接':'会话租户隔离 · 数据记录标注来源'}</small></div></div>
- <a className="sidebar-repo" href="https://github.com/kunlong-luo/merchivra" target="_blank" rel="noopener noreferrer">GitHub 源代码 <span aria-hidden="true">↗</span></a></aside>
+ <a className="sidebar-repo" href="https://github.com/kunlong-luo/merchivra" target="_blank" rel="noopener noreferrer">GitHub 源代码 <span aria-hidden="true">↗</span></a></aside>}
  <main id="main-content" className="main-panel" tabIndex={-1}><header className="topbar">
  <div className="breadcrumb">工作空间 <span>/</span> <strong>{title}</strong></div>
  <div className="topbar-right"><span className={`connection ${ping.isError?'connectionError':''}`} role="status" aria-label="后端 API 连接状态"><span className="connection-dot" aria-hidden="true"/>{status}</span>
