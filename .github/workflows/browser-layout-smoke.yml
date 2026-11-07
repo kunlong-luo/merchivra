@@ -4,6 +4,12 @@ name: Optional Chromium responsive UI smoke
 
 on:
   workflow_dispatch:
+  # Only changes to this optional browser test or its workflow require an
+  # extra PR-level run. Normal feature PRs keep the lean 4-job CI contract.
+  pull_request:
+    paths:
+      - scripts/smoke_browser_layout.mjs
+      - .github/workflows/browser-layout-smoke.yml
   push:
     branches: [main]
     paths:
