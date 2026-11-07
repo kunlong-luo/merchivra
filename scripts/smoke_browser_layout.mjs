@@ -468,6 +468,22 @@ async function main() {
     await layout(send,width,'core-listings-'+width,true)
     await screenshot(send,'core-listings-'+width+'.png')
     await screenshot(send,'core-listings-table-'+width+'.png',true)
+    if(nextTarget&&width===360){
+      await evaluate(send,
+        "document.querySelector('.next-ui-mobile-trigger')?.click()")
+      await waitFor(send,
+        "!!document.querySelector('.next-ui-nav-sheet') && "+
+        "[...document.querySelectorAll('.next-ui-nav-sheet .nav-link')]"+
+        ".some(a=>a.textContent.includes('订单管理') && "+
+        "a.getAttribute('href')==='/orders')",
+        'V103 Base UI mobile navigation opens with native deep links')
+      await screenshot(send,'v103-base-ui-mobile-navigation-360.png')
+      await evaluate(send,
+        "document.querySelector('.next-ui-nav-close')?.click()")
+      await waitFor(send,
+        "!document.querySelector('.next-ui-nav-sheet')",
+        'V103 mobile dialog closes without leaving an overlay')
+    }
     // V100: test actual Next App Router navigation, not history.pushState
     // on an unchanged SPA. All data below is from local synthetic API fixtures.
     if(nextTarget&&width===360){
