@@ -1,4 +1,5 @@
 import {z} from 'zod'
+import {financeAuditPage,financeAuditUrl} from './finance-audit-pages'
 import {csrfHeader} from './auth'
 
 export const bankManualReview=z.object({
@@ -45,3 +46,6 @@ export async function decideBankManualReview(mp:string,report:string,
   '人工银行复核失败（HTTP '+res.status+'）')
  return bankManualReview.parse(await res.json())
 }
+
+export const listBankManualAuditPage=(mp:string,report:string,cursor:string|null=null)=>
+ read(financeAuditUrl(root(mp,report),cursor),financeAuditPage(bankManualReviewAudit))
