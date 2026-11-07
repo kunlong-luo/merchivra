@@ -3,6 +3,9 @@ package org.merchivra.erp.purchasing;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -39,6 +42,12 @@ public class SupplierDisputeService {
                               long openDiscrepancies,long openClaims,long overdueAsns) {}
     public record Event(String id,String eventType,String actorUserId,
                         String note,String createdAt) {}
+    /** A source is claimable only if the entire tenant has no prior claim,
+     * including cancelled records (V45 partial unique indexes are permanent).
+     */
+    public record ClaimSource(String sourceType,String sourceId,int maxQuantity,
+                              String createdAt) {}
+    private record Timed<T>(T item,String createdAt) {}
     private record OrderState(String status,String supplierId) {}
     private record Source(String orderId,String supplierId,long maxQuantity,
                           String status) {}
@@ -64,6 +73,28 @@ public class SupplierDisputeService {
             throw bad("Reason must contain 5..300 printable characters");
         return raw.strip();
     }
+    private static void checkFilter(String filter) {
+        if(!List.of("ACTIONABLE","ALL").contains(filter))
+            throw bad("Dispute filter must be ACTIONABLE or ALL");
+    }
+    private static String[] cursor(String raw,String...scope) {
+        String[] parsed=LocalKeysetPage.decode(raw,scope.length+2);
+        if(parsed!=null) {
+            for(int i=0;i<scope.length;i++)
+                if(!scope[i].equals(parsed[i]))throw bad("Cursor scope mismatch");
+        }
+        return parsed;
+    }
+    private static OffsetDateTime cursorTime(String raw) {
+        try {
+            return OffsetDateTime.ofInstant(Instant.parse(raw),ZoneOffset.UTC);
+        } catch(Exception e) { throw bad("Invalid dispute pagination timestamp"); }
+    }
+    private static UUID cursorUuid(String raw) {
+        try {return UUID.fromString(raw);}
+        catch(IllegalArgumentException e) {throw bad("Invalid dispute pagination ID");}
+    }
+
     private void tenantLock(UUID tenant) {
         List<UUID> rows=jdbc.queryForList("""
             SELECT id FROM tenant WHERE id=? AND status='ACTIVE' FOR UPDATE
@@ -131,6 +162,29 @@ public class SupplierDisputeService {
             AND purchase_order_id=? ORDER BY created_at DESC,id DESC LIMIT 200
             """,SupplierDisputeService::mapVariance,tenant,order);
     }
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Variance> variancesPage(UUID tenant,UUID order,
+        String filter,int requested,String rawCursor) {
+        checkFilter(filter);
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=cursor(rawCursor,tenant.toString(),order.toString(),filter);
+        var args=new ArrayList<Object>();
+        args.add(tenant);args.add(order);
+        String where="ACTIONABLE".equals(filter)
+            ?" AND state IN ('OPEN','REVIEWED')":"";
+        if(after!=null) {
+            where+=" AND (created_at,id)<(?,?)";
+            args.add(cursorTime(after[3]));args.add(cursorUuid(after[4]));
+        }
+        args.add(limit+1);
+        List<Variance> rows=jdbc.query(VARIANCE_SQL+
+            " AND purchase_order_id=?"+where+
+            " ORDER BY created_at DESC,id DESC LIMIT ?",
+            SupplierDisputeService::mapVariance,args.toArray());
+        return LocalKeysetPage.pack(rows,limit,v->LocalKeysetPage.encode(
+            tenant.toString(),order.toString(),filter,v.createdAt(),v.id()));
+    }
+
     private void audit(UUID tenant,UUID actor,UUID variance,UUID claim,String event,
                        String note) {
         jdbc.update("""
@@ -167,6 +221,15 @@ public class SupplierDisputeService {
                 throw conflict("Discrepancy request key was already used differently");
             return old;
         }
+        // V96: UI pages are never a valid full-order duplicate check.
+        // Guard the V45 unique source rule explicitly for an actionable 409.
+        List<UUID> sourceConflict=jdbc.queryForList("""
+            SELECT id FROM erp_purchase_variance
+            WHERE tenant_id=? AND purchase_order_line_id=? AND kind=?
+              AND asn_id IS NOT DISTINCT FROM ?::uuid
+            """,UUID.class,tenant,req.lineId(),req.kind(),req.asnId());
+        if(!sourceConflict.isEmpty())
+            throw conflict("This line / ASN discrepancy is already reported");
         OrderState order=orderLock(tenant,orderId);
         if(!List.of("APPROVED","RECEIVING","RECEIVED").contains(order.status()))
             throw conflict("Purchase order is not approved");
@@ -293,6 +356,76 @@ public class SupplierDisputeService {
             AND purchase_order_id=? ORDER BY created_at DESC,id DESC LIMIT 200
             """,SupplierDisputeService::mapClaim,tenant,order);
     }
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Claim> claimsPage(UUID tenant,UUID order,
+        String filter,int requested,String rawCursor) {
+        checkFilter(filter);
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=cursor(rawCursor,tenant.toString(),order.toString(),filter);
+        var args=new ArrayList<Object>();
+        args.add(tenant);args.add(order);
+        String where="ACTIONABLE".equals(filter)
+            ?" AND status IN ('DRAFT','SUBMITTED','APPROVED')":"";
+        if(after!=null) {
+            where+=" AND (created_at,id)<(?,?)";
+            args.add(cursorTime(after[3]));args.add(cursorUuid(after[4]));
+        }
+        args.add(limit+1);
+        List<Claim> rows=jdbc.query(CLAIM_SQL+
+            " AND purchase_order_id=?"+where+
+            " ORDER BY created_at DESC,id DESC LIMIT ?",
+            SupplierDisputeService::mapClaim,args.toArray());
+        return LocalKeysetPage.pack(rows,limit,c->LocalKeysetPage.encode(
+            tenant.toString(),order.toString(),filter,c.createdAt(),c.id()));
+    }
+
+    /** Includes reviewed variances and confirmed QC rejected quantities
+     * without relying on any of the capped variance/receipt/claim lists.
+     * The permanent V45 claim unique indexes are respected across ALL states.
+     */
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<ClaimSource> claimSourcesPage(UUID tenant,UUID order,
+        int requested,String rawCursor) {
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=cursor(rawCursor,tenant.toString(),order.toString(),"SOURCES");
+        var args=new ArrayList<Object>();
+        args.add(tenant);args.add(order);args.add(tenant);args.add(tenant);
+        args.add(order);args.add(tenant);
+        String where="";
+        if(after!=null) {
+            where=" WHERE (created_at,source_id) < (?,?)";
+            args.add(cursorTime(after[3]));args.add(cursorUuid(after[4]));
+        }
+        args.add(limit+1);
+        List<ClaimSource> rows=jdbc.query("""
+            WITH sources AS (
+              SELECT 'VARIANCE'::text AS source_type,v.id AS source_id,
+                     v.variance_quantity AS max_quantity,v.created_at
+              FROM erp_purchase_variance v
+              WHERE v.tenant_id=? AND v.purchase_order_id=? AND v.state='REVIEWED'
+                AND NOT EXISTS (SELECT 1 FROM erp_supplier_claim c
+                    WHERE c.tenant_id=? AND c.variance_id=v.id)
+              UNION ALL
+              SELECT 'QC'::text AS source_type,q.id AS source_id,
+                     q.rejected_quantity AS max_quantity,q.created_at
+              FROM erp_purchase_receipt_qc q
+              JOIN erp_purchase_receipt r ON r.tenant_id=q.tenant_id
+                    AND r.id=q.purchase_receipt_id
+              WHERE q.tenant_id=? AND r.purchase_order_id=?
+                AND q.rejected_quantity>0
+                AND NOT EXISTS (SELECT 1 FROM erp_supplier_claim c
+                    WHERE c.tenant_id=? AND c.inspection_id=q.id)
+            )
+            SELECT source_type,source_id,max_quantity,created_at FROM sources
+            """+where+" ORDER BY created_at DESC,source_id DESC LIMIT ?",
+            (rs,i)->new ClaimSource(rs.getString("source_type"),
+                rs.getObject("source_id",UUID.class).toString(),
+                rs.getInt("max_quantity"),instant(rs,"created_at")),
+            args.toArray());
+        return LocalKeysetPage.pack(rows,limit,c->LocalKeysetPage.encode(
+            tenant.toString(),order.toString(),"SOURCES",c.createdAt(),c.sourceId()));
+    }
+
     private Source source(UUID tenant,UUID varianceId,UUID inspectionId) {
         if(varianceId!=null) {
             return jdbc.query("""
@@ -352,6 +485,14 @@ public class SupplierDisputeService {
                 throw conflict("Discrepancy must be reviewed before creating a claim");
             verifyVarianceSnapshot(tenant,variance(tenant,req.varianceId()));
         }
+        // This check covers sources beyond the user's current page, while
+        // the V45 database partial unique indexes protect concurrent writers.
+        Integer already=jdbc.queryForObject("""
+            SELECT COUNT(*) FROM erp_supplier_claim
+            WHERE tenant_id=? AND (variance_id=? OR inspection_id=?)
+            """,Integer.class,tenant,req.varianceId(),req.inspectionId());
+        if(already!=null&&already>0)
+            throw conflict("This discrepancy or QC inspection already has a claim");
         if(req.requestedQuantity()>src.maxQuantity())
             throw conflict("Claim cannot exceed source observed variance or rejected QC units");
         UUID id=UUID.randomUUID();
@@ -432,6 +573,37 @@ public class SupplierDisputeService {
                 rs.getObject("actor_user_id",UUID.class).toString(),
                 rs.getString("note"),instant(rs,"created_at")),
                 tenant,varianceId,varianceId,claimId,claimId);
+    }
+
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Event> eventsPage(UUID tenant,UUID sourceId,
+        String type,int requested,String rawCursor) {
+        if(!"variances".equals(type)&&!"claims".equals(type))
+            throw bad("Invalid supplier case type");
+        if("variances".equals(type))variance(tenant,sourceId);
+        else claim(tenant,sourceId);
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=cursor(rawCursor,tenant.toString(),type,sourceId.toString());
+        var args=new ArrayList<Object>();
+        args.add(tenant);args.add(sourceId);
+        String where="";
+        if(after!=null) {
+            where=" AND (created_at,id)<(?,?)";
+            args.add(cursorTime(after[3]));args.add(cursorUuid(after[4]));
+        }
+        args.add(limit+1);
+        List<Event> rows=jdbc.query("""
+            SELECT id,event_type,actor_user_id,note,created_at
+            FROM erp_supplier_case_audit
+            WHERE tenant_id=? AND """+
+            ("variances".equals(type)?"variance_id=?":"claim_id=?")+
+            where+" ORDER BY created_at DESC,id DESC LIMIT ?",
+            (rs,i)->new Event(rs.getObject("id",UUID.class).toString(),
+                rs.getString("event_type"),
+                rs.getObject("actor_user_id",UUID.class).toString(),
+                rs.getString("note"),instant(rs,"created_at")),args.toArray());
+        return LocalKeysetPage.pack(rows,limit,e->LocalKeysetPage.encode(
+            tenant.toString(),type,sourceId.toString(),e.createdAt(),e.id()));
     }
 
     @Transactional(readOnly=true)
