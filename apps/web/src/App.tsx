@@ -19,7 +19,7 @@ const nav:{key:View;label:string;symbol:string}[]=[
  {key:'catalog',label:'商品与 Listing',symbol:'▧'},
  {key:'inventory',label:'FBA 库存',symbol:'▥'},
  {key:'purchasing',label:'采购与供应商',symbol:'▤'},
- {key:'ops',label:'异常工作台',symbol:'✳'},
+ {key:'ops',label:'运营自动化',symbol:'✳'},
  {key:'finance',label:'财务与对账',symbol:'▥'},
  {key:'connections',label:'卖家授权',symbol:'◇'},
  {key:'team',label:'团队与权限',symbol:'♙'},
