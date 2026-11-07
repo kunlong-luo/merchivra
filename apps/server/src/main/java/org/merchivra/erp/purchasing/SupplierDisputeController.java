@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.security.TenantAccessService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,6 +26,15 @@ public class SupplierDisputeController {
         HttpServletRequest req,@PathVariable UUID orderId) {
         return service.variances(access.currentTenant(auth,req),orderId);
     }
+    @GetMapping("/orders/{orderId}/variances/page")
+    public ResponseEntity<LocalKeysetPage.Page<SupplierDisputeService.Variance>> variancesPage(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID orderId,
+        @RequestParam(defaultValue="ACTIONABLE") String filter,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.variancesPage(access.currentTenant(auth,req),orderId,filter,limit,cursor));
+    }
     @PostMapping("/orders/{orderId}/variances")
     @ResponseStatus(HttpStatus.CREATED)
     public SupplierDisputeService.Variance report(Authentication auth,HttpServletRequest req,
@@ -41,6 +52,23 @@ public class SupplierDisputeController {
     public List<SupplierDisputeService.Claim> claims(Authentication auth,
         HttpServletRequest req,@PathVariable UUID orderId) {
         return service.claims(access.currentTenant(auth,req),orderId);
+    }
+    @GetMapping("/orders/{orderId}/claims/page")
+    public ResponseEntity<LocalKeysetPage.Page<SupplierDisputeService.Claim>> claimsPage(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID orderId,
+        @RequestParam(defaultValue="ACTIONABLE") String filter,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.claimsPage(access.currentTenant(auth,req),orderId,filter,limit,cursor));
+    }
+    @GetMapping("/orders/{orderId}/claim-sources/page")
+    public ResponseEntity<LocalKeysetPage.Page<SupplierDisputeService.ClaimSource>> claimSourcesPage(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID orderId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.claimSourcesPage(access.currentTenant(auth,req),orderId,limit,cursor));
     }
     @PostMapping("/claims")
     @ResponseStatus(HttpStatus.CREATED)
@@ -65,6 +93,22 @@ public class SupplierDisputeController {
     public List<SupplierDisputeService.Event> claimEvents(Authentication auth,
         HttpServletRequest req,@PathVariable UUID id) {
         return service.events(access.currentTenant(auth,req),null,id);
+    }
+    @GetMapping("/variances/{id}/events/page")
+    public ResponseEntity<LocalKeysetPage.Page<SupplierDisputeService.Event>> varianceEventsPage(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID id,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.eventsPage(access.currentTenant(auth,req),id,"variances",limit,cursor));
+    }
+    @GetMapping("/claims/{id}/events/page")
+    public ResponseEntity<LocalKeysetPage.Page<SupplierDisputeService.Event>> claimEventsPage(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID id,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.eventsPage(access.currentTenant(auth,req),id,"claims",limit,cursor));
     }
     @GetMapping("/supplier-performance")
     public List<SupplierDisputeService.Performance> performance(Authentication auth,

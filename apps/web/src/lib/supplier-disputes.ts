@@ -54,6 +54,42 @@ async function api<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown)
  }
  return schema.parse(await response.json())
 }
+export type CaseFilter='ACTIONABLE'|'ALL'
+const claimSource=z.object({
+ sourceType:z.enum(['VARIANCE','QC']),sourceId:z.string().uuid(),
+ maxQuantity:z.number().int().positive(),createdAt:z.string()
+})
+export type SupplierClaimSource=z.infer<typeof claimSource>
+const cursorPage=<T extends z.ZodType>(item:T)=>z.object({
+ items:z.array(item).max(100),
+ nextCursor:z.string().min(1).nullable(),hasMore:z.boolean(),
+ pageSize:z.number().int().min(1).max(100)
+}).refine(v=>v.hasMore===(v.nextCursor!==null),{
+ message:'无效的业务游标分页响应'
+})
+const pageUrl=(path:string,cursor:string|null,filter?:CaseFilter)=>{
+ const params=new URLSearchParams({limit:'50',...(filter?{filter}:{})})
+ if(cursor)params.set('cursor',cursor)
+ return base+path+'/page?'+params.toString()
+}
+export const fetchPurchaseVariancesPage=(orderId:string,filter:CaseFilter,
+ cursor:string|null=null)=>api(
+ pageUrl('/orders/'+encodeURIComponent(orderId)+'/variances',cursor,filter),
+ cursorPage(variance))
+export const fetchSupplierClaimsPage=(orderId:string,filter:CaseFilter,
+ cursor:string|null=null)=>api(
+ pageUrl('/orders/'+encodeURIComponent(orderId)+'/claims',cursor,filter),
+ cursorPage(claim))
+/** The backend excludes claimed sources across ALL rows, including cancelled. */
+export const fetchSupplierClaimSourcesPage=(orderId:string,
+ cursor:string|null=null)=>api(
+ pageUrl('/orders/'+encodeURIComponent(orderId)+'/claim-sources',cursor),
+ cursorPage(claimSource))
+export const fetchSupplierCaseEventsPage=(id:string,type:'variances'|'claims',
+ cursor:string|null=null)=>api(
+ pageUrl('/'+type+'/'+encodeURIComponent(id)+'/events',cursor),
+ cursorPage(event))
+
 export const fetchPurchaseVariances=(orderId:string)=>api(
  base+'/orders/'+encodeURIComponent(orderId)+'/variances',z.array(variance))
 export const reportPurchaseVariance=(orderId:string,body:ReportVariance)=>api(

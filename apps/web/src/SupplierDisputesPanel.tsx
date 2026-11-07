@@ -1,14 +1,15 @@
-import {useState,type FormEvent} from 'react'
+import {useEffect,useState,type FormEvent} from 'react'
+import CursorPageControls from './CursorPageControls'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {PurchaseLine} from './lib/purchasing'
 import {fetchSupplierAsns} from './lib/supplier-asns'
-import {fetchQualityReceipts} from './lib/purchase-quality'
 import {
- fetchPurchaseVariances,reportPurchaseVariance,actPurchaseVariance,
- fetchSupplierClaims,createSupplierClaim,actSupplierClaim,
- fetchSupplierPerformance,fetchSupplierCaseEvents,
+ fetchPurchaseVariancesPage,reportPurchaseVariance,actPurchaseVariance,
+ fetchSupplierClaimsPage,createSupplierClaim,actSupplierClaim,
+ fetchSupplierPerformance,fetchSupplierCaseEventsPage,
+ fetchSupplierClaimSourcesPage,
  type ReportVariance,type CreateSupplierClaim,
- type PurchaseVariance
+ type CaseFilter,type PurchaseVariance
 } from './lib/supplier-disputes'
 
 const varianceKind:Record<string,string>={
@@ -29,6 +30,16 @@ export default function SupplierDisputesPanel({tenantId,orderId,lines,currentUse
 }){
  const client=useQueryClient()
  const root=['purchasing',tenantId]
+ const [varianceFilter,setVarianceFilter]=useState<CaseFilter>('ACTIONABLE')
+ const [claimFilter,setClaimFilter]=useState<CaseFilter>('ACTIONABLE')
+ const [varianceCursors,setVarianceCursors]=useState<(string|null)[]>([null])
+ const [claimCursors,setClaimCursors]=useState<(string|null)[]>([null])
+ const [sourceCursors,setSourceCursors]=useState<(string|null)[]>([null])
+ const [eventCursors,setEventCursors]=useState<(string|null)[]>([null])
+ const varianceCursor=varianceCursors.at(-1)??null
+ const claimCursor=claimCursors.at(-1)??null
+ const sourceCursor=sourceCursors.at(-1)??null
+ const eventCursor=eventCursors.at(-1)??null
  const [lineId,setLineId]=useState('')
  const [kind,setKind]=useState<PurchaseVariance['kind']>('PO_SHORTAGE')
  const [asnId,setAsnId]=useState('')
@@ -43,48 +54,60 @@ export default function SupplierDisputesPanel({tenantId,orderId,lines,currentUse
  const [closureNotes,setClosureNotes]=useState<Record<string,string>>({})
  const [viewEvent,setViewEvent]=useState<{id:string;type:'variances'|'claims'}|null>(null)
  const [message,setMessage]=useState(''),[error,setError]=useState('')
+ useEffect(()=>{
+  setVarianceCursors([null]);setClaimCursors([null]);setSourceCursors([null])
+  setEventCursors([null]);setViewEvent(null);setClaimSource('')
+ },[orderId])
 
- const variances=useQuery({queryKey:[...root,'disputes',orderId,'variances'],
-  queryFn:()=>fetchPurchaseVariances(orderId),enabled:!!orderId,retry:false})
- const claims=useQuery({queryKey:[...root,'disputes',orderId,'claims'],
-  queryFn:()=>fetchSupplierClaims(orderId),enabled:!!orderId,retry:false})
+ const variances=useQuery({
+  queryKey:[...root,'disputes',orderId,'variances-page',varianceFilter,varianceCursor],
+  queryFn:()=>fetchPurchaseVariancesPage(orderId,varianceFilter,varianceCursor),
+  enabled:!!orderId,retry:false})
+ const claims=useQuery({
+  queryKey:[...root,'disputes',orderId,'claims-page',claimFilter,claimCursor],
+  queryFn:()=>fetchSupplierClaimsPage(orderId,claimFilter,claimCursor),
+  enabled:!!orderId,retry:false})
+ const sources=useQuery({
+  queryKey:[...root,'disputes',orderId,'claim-sources-page',sourceCursor],
+  queryFn:()=>fetchSupplierClaimSourcesPage(orderId,sourceCursor),
+  enabled:!!orderId,retry:false})
  const asns=useQuery({queryKey:[...root,'disputes',orderId,'asns'],
   queryFn:()=>fetchSupplierAsns(orderId),enabled:!!orderId,retry:false})
- const receipts=useQuery({queryKey:[...root,'disputes',orderId,'receipts'],
-  queryFn:()=>fetchQualityReceipts(orderId),enabled:!!orderId,retry:false})
  const metrics=useQuery({queryKey:[...root,'supplier-performance'],
   queryFn:fetchSupplierPerformance,retry:false})
- const events=useQuery({queryKey:[...root,'case-events',viewEvent?.type,viewEvent?.id],
-  queryFn:()=>fetchSupplierCaseEvents(viewEvent!.id,viewEvent!.type),
+ const events=useQuery({queryKey:[...root,'case-events-page',viewEvent?.type,viewEvent?.id,eventCursor],
+  queryFn:()=>fetchSupplierCaseEventsPage(viewEvent!.id,viewEvent!.type,eventCursor),
   enabled:viewEvent!==null,retry:false})
  const refresh=()=>void client.invalidateQueries({queryKey:root})
  const reported=useMutation({mutationFn:(body:ReportVariance)=>
   reportPurchaseVariance(orderId,body),onSuccess:()=>{setMessage('已记录采购数量差异；未修改库存或任何财务流水');
-   setError('');setReason('');setReportKey(crypto.randomUUID());refresh()},
+   setError('');setReason('');setReportKey(crypto.randomUUID());
+   setVarianceCursors([null]);setSourceCursors([null]);refresh()},
   onError:(e:Error)=>setError(e.message)})
  const varianceAction=useMutation({
   mutationFn:({id,action}:{id:string;action:'review'|'close'})=>
    actPurchaseVariance(id,action),
-  onSuccess:()=>{setMessage('采购差异审阅状态已更新');setError('');refresh()},
+  onSuccess:()=>{setMessage('采购差异审阅状态已更新');setError('');
+   setVarianceCursors([null]);setSourceCursors([null]);refresh()},
   onError:(e:Error)=>setError(e.message)})
  const claimCreated=useMutation({mutationFn:(body:CreateSupplierClaim)=>
   createSupplierClaim(body),onSuccess:()=>{setMessage('仅本地建立供应商索赔草稿');
-   setError('');setClaimReason('');setClaimKey(crypto.randomUUID());refresh()},
+   setError('');setClaimReason('');setClaimKey(crypto.randomUUID());
+   setClaimCursors([null]);setSourceCursors([null]);setClaimSource('');refresh()},
   onError:(e:Error)=>setError(e.message)})
  const claimAction=useMutation({
   mutationFn:({id,action,note}:{id:string;
    action:'submit'|'approve'|'close'|'cancel';note?:string})=>
    actSupplierClaim(id,action,note),
   onSuccess:()=>{setMessage('索赔状态已更新，未向供应商发起真实系统请求或退款');
-   setError('');refresh()},onError:(e:Error)=>setError(e.message)})
+   setError('');setClaimCursors([null]);setSourceCursors([null]);refresh()},
+  onError:(e:Error)=>setError(e.message)})
 
  const selectedLine=lines.find(l=>l.id===lineId)
  const eligibleAsns=asns.data?.filter(a=>a.lineId===lineId&&
   a.status==='SHIPPED'&&a.receivedQuantity<a.quantity)??[]
- const hasExistingReport=(variances.data??[]).some(v=>v.lineId===lineId&&
-  v.kind===kind&&(kind!=='ASN_SHORTAGE'||v.asnId===asnId))
  const canReport=!!selectedLine&&reason.trim().length>=5&&reason.trim().length<=300&&
-  !hasExistingReport&&!reported.isPending&&
+  !reported.isPending&&
   (kind!=='ASN_SHORTAGE'||eligibleAsns.some(a=>a.id===asnId))&&
   (kind!=='OVERAGE_UNPOSTED'||(Number.isSafeInteger(excess)&&excess>0&&excess<=1000000))
  function report(e:FormEvent){
@@ -94,24 +117,17 @@ export default function SupplierDisputesPanel({tenantId,orderId,lines,currentUse
    asnId:kind==='ASN_SHORTAGE'?asnId:null,
    reportedExcessQuantity:kind==='OVERAGE_UNPOSTED'?excess:0,reason:reason.trim()})
  }
- const reviewedVariances=variances.data?.filter(v=>v.state==='REVIEWED')??[]
- const qcSources=receipts.data?.filter(r=>r.inspectionId&&r.rejectedQuantity>0)??[]
- const alreadyClaimed=(v:string)=>claims.data?.some(c=>c.varianceId===v||
-  c.inspectionId===v)??false
- const sourceOptions=[
-  ...reviewedVariances.filter(v=>!alreadyClaimed(v.id)).map(v=>({
-   value:'v:'+v.id,max:v.varianceQuantity,
-   label:'数量差异 '+v.id.slice(0,8)+' · '+v.varianceQuantity+' 件'
-  })),
-  ...qcSources.filter(r=>!alreadyClaimed(r.inspectionId!)).map(r=>({
-   value:'q:'+r.inspectionId,max:r.rejectedQuantity,
-   label:'不合格实收 '+r.id.slice(0,8)+' · '+r.rejectedQuantity+' 件'
-  }))
- ]
+ // Server computes eligibility across every reviewed variance and QC record,
+ // excluding claims across ALL statuses, not just this visible page.
+ const sourceOptions=(sources.data?.items??[]).map(v=>({
+  value:(v.sourceType==='VARIANCE'?'v:':'q:')+v.sourceId,max:v.maxQuantity,
+  label:(v.sourceType==='VARIANCE'?'已复核数量差异 ':'已确认质检不合格 ')+
+   v.sourceId.slice(0,8)+' · '+v.maxQuantity+' 件'
+ }))
  const chosen=sourceOptions.find(s=>s.value===claimSource)
  const canClaim=!!chosen&&Number.isSafeInteger(claimQty)&&claimQty>=1&&
   claimQty<=chosen.max&&claimReason.trim().length>=5&&claimReason.trim().length<=300&&
-  !claimCreated.isPending
+  !sources.isFetching&&!sources.isError&&!claimCreated.isPending
  function claim(e:FormEvent){
   e.preventDefault();if(!canClaim)return
   if(!window.confirm('仅建立本地索赔草稿，随后需提交并由另一位 Owner 审批；不会自动对外发送。'))return
@@ -186,14 +202,21 @@ export default function SupplierDisputesPanel({tenantId,orderId,lines,currentUse
      保存差异证据（不修改库存）</button>
    </form>
    <h3>采购差异复核清单</h3>
+   <label htmlFor="dispute-variance-filter">差异记录范围</label>
+   <select id="dispute-variance-filter" value={varianceFilter}
+    onChange={e=>{setVarianceFilter(e.target.value as CaseFilter);
+     setVarianceCursors([null])}}>
+    <option value="ACTIONABLE">待复核及待关闭</option>
+    <option value="ALL">全部差异历史</option>
+   </select>
    {variances.isPending?<p className="empty-state">读取差异…</p>:
     variances.isError?<p className="setup-error" role="alert">{String(variances.error)}</p>:
-    !variances.data?.length?<p className="empty-state">当前采购单没有人工登记的差异。</p>:
+    !variances.data?.items.length?<p className="empty-state">当前采购单没有人工登记的差异。</p>:
     <div className="table-scroll" role="region" tabIndex={0} aria-label="差异复核清单">
      <table><thead><tr><th scope="col">来源</th><th scope="col">应有 / 观察</th>
       <th scope="col">差异</th><th scope="col">状态</th><th scope="col">操作</th>
      </tr></thead><tbody>
-     {variances.data.map(v=><tr key={v.id}>
+     {variances.data.items.map(v=><tr key={v.id}>
       <td>{varianceKind[v.kind]}
        <div className="secondary-cell">{v.reason}</div></td>
       <td>{v.expectedQuantity} / {v.observedQuantity}</td>
@@ -210,11 +233,20 @@ export default function SupplierDisputesPanel({tenantId,orderId,lines,currentUse
          onClick={()=>{if(window.confirm('确认关闭差异记录？不代表供应商已赔偿。'))
           varianceAction.mutate({id:v.id,action:'close'})}}>关闭差异</button>}
        <button type="button" className="text-button"
-        onClick={()=>setViewEvent({id:v.id,type:'variances'})}>审计记录</button>
+        onClick={()=>{setEventCursors([null]);setViewEvent({id:v.id,type:'variances'})}}>审计记录</button>
       </div></td>
      </tr>)}</tbody></table>
     </div>}
+   {!!variances.data&&<CursorPageControls label="采购差异复核清单"
+    page={varianceCursors.length} hasMore={variances.data.hasMore}
+    nextCursor={variances.data.nextCursor} busy={variances.isFetching}
+    onPrev={()=>setVarianceCursors(v=>v.length>1?v.slice(0,-1):v)}
+    onNext={v=>setVarianceCursors(h=>[...h,v])}/>}
    <h3>供应商索赔草稿</h3>
+   <p className="setup-hint">可追溯索赔来源由服务器全量查询，排除所有已有索赔的来源，
+    包括历史已取消记录；翻页后只能选择当前页真实可用的来源，防止部分列表误判。</p>
+   {sources.isError&&<p className="setup-error" role="alert">
+    无法加载可索赔来源：{String(sources.error)}</p>}
    <form className="team-invite-form" onSubmit={claim}>
     <label htmlFor="claim-source">可追溯索赔依据</label>
     <select id="claim-source" value={claimSource}
@@ -222,6 +254,11 @@ export default function SupplierDisputesPanel({tenantId,orderId,lines,currentUse
      <option value="">选择已复核差异或已确认质检不合格</option>
      {sourceOptions.map(s=><option key={s.value} value={s.value}>{s.label}</option>)}
     </select>
+    {!!sources.data&&<CursorPageControls label="可追溯索赔来源"
+     page={sourceCursors.length} hasMore={sources.data.hasMore}
+     nextCursor={sources.data.nextCursor} busy={sources.isFetching}
+     onPrev={()=>{setClaimSource('');setSourceCursors(v=>v.length>1?v.slice(0,-1):v)}}
+     onNext={v=>{setClaimSource('');setSourceCursors(h=>[...h,v])}}/>}
     <label htmlFor="claim-quantity">索赔件数</label>
     <input id="claim-quantity" type="number" min={1}
      max={chosen?.max??1} value={claimQty}
@@ -240,13 +277,20 @@ export default function SupplierDisputesPanel({tenantId,orderId,lines,currentUse
      创建本地索赔草稿</button>
    </form>
    <h3>内部索赔审批与处置</h3>
+   <label htmlFor="dispute-claim-filter">索赔记录范围</label>
+   <select id="dispute-claim-filter" value={claimFilter}
+    onChange={e=>{setClaimFilter(e.target.value as CaseFilter);
+     setClaimCursors([null])}}>
+    <option value="ACTIONABLE">草稿、待审批及待关闭</option>
+    <option value="ALL">全部索赔历史</option>
+   </select>
    {claims.isPending?<p className="empty-state">读取索赔…</p>:
     claims.isError?<p className="setup-error" role="alert">{String(claims.error)}</p>:
-    !claims.data?.length?<p className="empty-state">当前采购单暂无索赔草稿。</p>:
+    !claims.data?.items.length?<p className="empty-state">当前采购单暂无索赔草稿。</p>:
     <div className="table-scroll" role="region" tabIndex={0} aria-label="供应商索赔流程">
      <table><thead><tr><th scope="col">来源与方案</th><th scope="col">数量</th>
       <th scope="col">状态</th><th scope="col">操作</th></tr></thead><tbody>
-      {claims.data.map(c=><tr key={c.id}>
+      {claims.data.items.map(c=><tr key={c.id}>
        <td>{c.varianceId?'数量差异':'质检不合格'} ·
         {c.remedy==='REPLACEMENT'?'申请补发':'申请信用折让'}
         <div className="secondary-cell">{c.reason}</div></td>
@@ -274,25 +318,35 @@ export default function SupplierDisputesPanel({tenantId,orderId,lines,currentUse
           人工关闭</button>
         </div>}
         <button type="button" className="text-button"
-         onClick={()=>setViewEvent({id:c.id,type:'claims'})}>审计记录</button>
+         onClick={()=>{setEventCursors([null]);setViewEvent({id:c.id,type:'claims'})}}>审计记录</button>
        </div></td>
       </tr>)}</tbody></table>
     </div>}
+   {!!claims.data&&<CursorPageControls label="供应商索赔审批记录"
+    page={claimCursors.length} hasMore={claims.data.hasMore}
+    nextCursor={claims.data.nextCursor} busy={claims.isFetching}
+    onPrev={()=>setClaimCursors(v=>v.length>1?v.slice(0,-1):v)}
+    onNext={v=>setClaimCursors(h=>[...h,v])}/>}
    {!!viewEvent&&<div aria-label="供应商差异与索赔审计">
     <h3>不可覆盖的 {viewEvent.type==='claims'?'索赔':'差异'} 审计记录</h3>
     {events.isPending?<p className="empty-state">读取审计…</p>:
      events.isError?<p className="setup-error" role="alert">{String(events.error)}</p>:
-     !events.data?.length?<p className="empty-state">尚无审计。</p>:
+     !events.data?.items.length?<p className="empty-state">尚无审计。</p>:
      <div className="table-scroll" role="region" tabIndex={0}>
       <table><thead><tr><th scope="col">时间</th><th scope="col">事件</th>
        <th scope="col">操作者</th><th scope="col">说明</th></tr></thead><tbody>
-       {events.data.map(e=><tr key={e.id}>
+       {events.data.items.map(e=><tr key={e.id}>
         <td>{new Date(e.createdAt).toLocaleString('zh-CN')}</td>
         <td>{e.eventType}</td><td>{e.actorUserId.slice(0,8)}</td>
         <td>{e.note??'—'}</td>
        </tr>)}
       </tbody></table>
      </div>}
+    {!!events.data&&<CursorPageControls label="差异与索赔审计历史"
+     page={eventCursors.length} hasMore={events.data.hasMore}
+     nextCursor={events.data.nextCursor} busy={events.isFetching}
+     onPrev={()=>setEventCursors(v=>v.length>1?v.slice(0,-1):v)}
+     onNext={v=>setEventCursors(h=>[...h,v])}/>}
    </div>}
   </>}
   {message&&<p className="panel-caption" role="status">{message}</p>}
