@@ -542,6 +542,10 @@ async function main() {
     }
     if(width===360){
       await select(send,'订单')
+      await waitFor(send,
+        "document.querySelector('.core-subtab.selected')?.textContent?.includes('订单') && "+
+        "document.querySelector('.core-data-scroll tbody tr')?.textContent?.includes('TEST-ORDER-100')",
+        'Core orders finished rendering after routed tab selection')
       await layout(send,width,'core-orders-360',true)
       assert.equal(await evaluate(send,
         "[...document.querySelectorAll('.core-data-scroll tbody tr:first-child td')]" +
@@ -549,6 +553,10 @@ async function main() {
         'Order dataOrigin must be present')
       await screenshot(send,'core-orders-360.png',true)
       await select(send,'FBA 库存')
+      await waitFor(send,
+        "document.querySelector('.core-subtab.selected')?.textContent?.includes('FBA 库存') && "+
+        "document.querySelector('.core-data-scroll tbody tr')?.textContent?.includes('TEST-SKU-100')",
+        'Core inventory finished rendering after routed tab selection')
       await layout(send,width,'core-inventory-360',true)
       const cells=await evaluate(send,
         "[...document.querySelectorAll('.core-data-scroll tbody tr:first-child td')]" +
