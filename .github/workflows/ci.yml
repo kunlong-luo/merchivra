@@ -166,9 +166,7 @@ jobs:
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='64' AND success")" = "1"
           curl -fsS http://127.0.0.1:8080/v3/api-docs/operations-v67 > /tmp/ops-live.json
           node scripts/normalize-ops-openapi.mjs /tmp/ops-live.json /tmp/ops-normalized.json
-          # V95 bootstrap only: collect exact runtime SpringDoc/Orval output.
-          # This will return to strict cmp after checked-in generated files land.
-          diff -u apps/web/openapi/operations-v67.json /tmp/ops-normalized.json || true
+          cmp apps/web/openapi/operations-v67.json /tmp/ops-normalized.json
           cp /tmp/ops-normalized.json apps/web/openapi/operations-v67.json
           (
             cd apps/web
@@ -234,17 +232,6 @@ jobs:
           MERCHIVRA_V68_DISPOSABLE_ONLY=true bash scripts/smoke_pg_restore_v68.sh
           echo "PostgreSQL 18 / Flyway / actual finance + FBA OpenAPI and local mock chain verified"
           kill "$app_pid" 2>/dev/null || true
-      - name: Temporary V95 verified operations OpenAPI and Orval clients
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: v95-operations-generated-review
-          path: |
-            apps/web/openapi/operations-v67.json
-            apps/web/src/generated/operations-v67.ts
-            apps/web/src/generated/operations-models/
-          if-no-files-found: warn
-          retention-days: 2
       - name: Preserve verified V65 OpenAPI contract for Orval review
         uses: actions/upload-artifact@v4
         with:
