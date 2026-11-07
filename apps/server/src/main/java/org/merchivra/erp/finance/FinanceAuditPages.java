@@ -1,7 +1,5 @@
 package org.merchivra.erp.finance;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -46,7 +44,7 @@ final class FinanceAuditPages {
                 seek=" AND (a.occurred_at,a.id)<(?,?)";
                 args.add(Instant.parse(cursor[4]).atOffset(ZoneOffset.UTC));
                 args.add(UUID.fromString(cursor[5]));
-            } catch(IllegalArgumentException ex) {
+            } catch(RuntimeException ex) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Invalid audit cursor timestamp or identifier");
             }
