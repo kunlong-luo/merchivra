@@ -776,3 +776,15 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - **Next.js 16.4.5 是迁移目标，当前仍在双构建验证期**：`apps/web/app`、`next.config.ts`、`tsconfig.next.json` 和 `npm run *:next` 均为真实 App Router；旧 Vite/Nginx 是回退路径。**不要错误宣称已切生产或已删除 Vite**，必须先通过 Next 登录/CSRF/API、动态导航、Chrome 及 HTTPS ingress 安全核查。
 - 复用原有 Spring Boot 4 / Java 25 / Gradle / PostgreSQL 18、Orval、TanStack Query、Zod；完整 ERP 在 Node Next + Spring Boot 后端上运行，静态 GitHub Pages 只能提供虚构演示，不得发布有真实 Session/OAuth/财务写入能力的应用。
 - 下一步优先把 /orders、/purchasing、/core FBA、/ops、/finance 的真实页面按 A+B token 逐页视觉对照，再把原单页面内部导航迁移为可回退的 App Router 语义路由。真实 Amazon OAuth/远程写入继续默认禁用，待维护者本地联调。
+
+## V101 Next.js real proxy security test (2026-11-07)
+
+- In `pg18-migrations`, keep `scripts/smoke_next_session_csrf_v101.py` wired
+  to the actual disposable Spring Boot 4 + PostgreSQL 18 backend, never a
+  mocked auth API; run against Next's same-origin `/api/v1/*` rewrite.
+- Negative CSRF and anonymous/isolated Session checks must pass alongside
+  positive login/logout, HttpOnly/SameSite cookies and safe no-store reads.
+  Never print disposable credentials, tokens or cookie values in CI logs.
+- This does NOT replace production HTTPS/forwarded-header, OAuth logging,
+  browser pixel/interaction, operator-permission or rollback checks.
+  Retain the Vite fallback and synthetic-only GitHub Pages deployment.
