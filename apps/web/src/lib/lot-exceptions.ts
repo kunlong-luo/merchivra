@@ -34,6 +34,18 @@ async function api<T>(path:string,schema:z.ZodType<T>,method='GET',body?:unknown
 }
 export const fetchLotExceptions=(warehouseId:string)=>api(
  '/warehouses/'+encodeURIComponent(warehouseId),z.array(resolution))
+const pageSchema=z.object({items:z.array(resolution).max(100),
+ nextCursor:z.string().min(1).nullable(),hasMore:z.boolean(),
+ pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{message:'Invalid lot resolution cursor'})
+export type LotExceptionFilter='PENDING'|'ALL'
+export const fetchLotExceptionsPage=(warehouseId:string,filter:LotExceptionFilter='PENDING',
+ cursor:string|null=null)=>{
+ const params=new URLSearchParams({filter,limit:'50'})
+ if(cursor)params.set('cursor',cursor)
+ return api('/warehouses/'+encodeURIComponent(warehouseId)+'/page?'+params.toString(),
+  pageSchema)
+}
 export const proposeLotException=(body:NewLotException)=>
  api('',resolution,'POST',body)
 export const decideLotException=(id:string,body:{
