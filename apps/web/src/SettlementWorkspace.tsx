@@ -1,7 +1,8 @@
-import {useState,type FormEvent} from 'react'
+import {useEffect,useState,type FormEvent} from 'react'
+import CursorPageControls from './CursorPageControls'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
-import {assignSettlementEvent,createStatement,listStatements,settlementAudit,
- settlementCandidates,settlementPreview,unassignSettlementEvent} from './lib/settlements'
+import {assignSettlementEvent,createStatement,listStatementsPage,settlementAuditPage,
+ settlementCandidatesPage,settlementPreview,unassignSettlementEvent} from './lib/settlements'
 
 const labels:Record<string,string>={
  NO_LINKED_EVENTS:'尚无已分配的来源交易',
@@ -21,28 +22,50 @@ export default function SettlementWorkspace({tenantId,marketplaceId,currency}:{
  const [amount,setAmount]=useState('')
  const [notice,setNotice]=useState(''),[failure,setFailure]=useState('')
  const [showAudit,setShowAudit]=useState(false)
+ const [statementCursors,setStatementCursors]=useState<(string|null)[]>([null])
+ const [candidateCursors,setCandidateCursors]=useState<(string|null)[]>([null])
+ const [auditCursors,setAuditCursors]=useState<(string|null)[]>([null])
+ const statementCursor=statementCursors.at(-1)??null
+ const candidateCursor=candidateCursors.at(-1)??null
+ const auditCursor=auditCursors.at(-1)??null
+ useEffect(()=>{
+  setSelected('');setShowAudit(false)
+  setStatementCursors([null]);setCandidateCursors([null]);setAuditCursors([null])
+ },[tenantId,marketplaceId])
  const key=['finance','settlements',tenantId,marketplaceId]
- const statements=useQuery({queryKey:key,queryFn:()=>listStatements(marketplaceId),
-   retry:false})
- const current=statements.data?.find(s=>s.id===selected)
+ const statements=useQuery({
+  queryKey:[...key,'statements-page',statementCursor],
+  queryFn:()=>listStatementsPage(marketplaceId,statementCursor),retry:false})
+ const current=statements.data?.items.find(s=>s.id===selected)
  const details=useQuery({queryKey:[...key,selected,'preview'],
   queryFn:()=>settlementPreview(marketplaceId,selected),
   enabled:!!selected,retry:false})
- const candidates=useQuery({queryKey:[...key,selected,'candidates'],
-  queryFn:()=>settlementCandidates(marketplaceId,selected),
+ const candidates=useQuery({
+  queryKey:[...key,selected,'candidates-page',candidateCursor],
+  queryFn:()=>settlementCandidatesPage(marketplaceId,selected,candidateCursor),
   enabled:!!selected,retry:false})
- const audit=useQuery({queryKey:[...key,selected,'audit'],
-  queryFn:()=>settlementAudit(marketplaceId,selected),
+ const audit=useQuery({
+  queryKey:[...key,selected,'audit-page',auditCursor],
+  queryFn:()=>settlementAuditPage(marketplaceId,selected,auditCursor),
   enabled:!!selected&&showAudit,retry:false})
  function refresh(){
+  setCandidateCursors([null]);setAuditCursors([null])
   void client.invalidateQueries({queryKey:key})
+ }
+ function selectStatement(id:string){
+  setSelected(id);setShowAudit(false)
+  setCandidateCursors([null]);setAuditCursors([null])
+ }
+ function changeStatementPage(next:(string|null)[]){
+  setStatementCursors(next);selectStatement('')
  }
  const create=useMutation({
   mutationFn:()=>createStatement(marketplaceId,{
    reference,periodStart:new Date(start).toISOString(),
    periodEnd:new Date(end).toISOString(),reportedNet:amount,currency}),
   onSuccess:s=>{setReference('');setAmount('');setStart('');setEnd('');
-   setSelected(s.id);setNotice('已保存人工参考结算单，尚未证明 Amazon 已结算或银行到账')
+   changeStatementPage([null]);setSelected(s.id);
+   setNotice('已保存人工参考结算单，尚未证明 Amazon 已结算或银行到账')
    setFailure('');refresh()},
   onError:(e:Error)=>setFailure(e.message)})
  const link=useMutation({mutationFn:(id:string)=>
@@ -84,16 +107,22 @@ export default function SettlementWorkspace({tenantId,marketplaceId,currency}:{
     disabled={!canCreate||create.isPending}>建立参考结算单（非银行确认）</button>
   </form>
   {statements.isError?<p className="setup-error" role="alert">{String(statements.error)}</p>:
-   !statements.data?.length?<p className="empty-state">当前站点还没有人工参考结算单。</p>:
+   !statements.data?.items.length?<p className="empty-state">当前站点还没有人工参考结算单。</p>:
    <label className="shop-filter" htmlFor="settlement-selected">
     <span>选择参考结算单</span>
     <select id="settlement-selected" value={selected}
-     onChange={e=>{setSelected(e.target.value);setShowAudit(false)}}>
+     onChange={e=>selectStatement(e.target.value)}>
      <option value="">选择要核对的批次</option>
-     {statements.data.map(s=><option key={s.id} value={s.id}>
+     {statements.data.items.map(s=><option key={s.id} value={s.id}>
       {s.reference} · {s.currency} {s.reportedNet}</option>)}
     </select>
    </label>}
+  {!!statements.data&&<CursorPageControls label="人工参考结算单分页"
+   page={statementCursors.length} hasMore={statements.data.hasMore}
+   nextCursor={statements.data.nextCursor} busy={statements.isFetching}
+   onPrev={()=>changeStatementPage(statementCursors.length>1?
+    statementCursors.slice(0,-1):statementCursors)}
+   onNext={c=>changeStatementPage([...statementCursors,c])}/>}
   {current&&<div className="core-tools">
    <p><strong>{current.reference}</strong> · {current.currency} {current.reportedNet}</p>
    <p className="setup-hint">参考来源：人工未核验；期间：{time(current.periodStart)}
@@ -124,11 +153,11 @@ export default function SettlementWorkspace({tenantId,marketplaceId,currency}:{
    <h3>尚未分配的正式 Finances 来源交易</h3>
    {candidates.isPending?<p>正在读取同站点同币种候选…</p>:
     candidates.isError?<p className="setup-error" role="alert">{String(candidates.error)}</p>:
-    !candidates.data?.length?<p>此期间暂无未分配的受信来源记录。</p>:
+    !candidates.data?.items.length?<p>此期间暂无未分配的受信来源记录。</p>:
     <div className="table-scroll" tabIndex={0} role="region" aria-label="结算候选交易">
      <table><thead><tr><th>来源交易键</th><th>类型</th><th>有符号金额</th>
       <th>发生时间</th><th>匹配证据</th><th>操作</th></tr></thead>
-      <tbody>{candidates.data.map(e=><tr key={e.id}>
+      <tbody>{candidates.data.items.map(e=><tr key={e.id}>
        <td>{e.sourceKey}</td><td>{e.sourceType}</td>
        <td>{e.currency} {e.amount}</td><td>{time(e.postedAt)}</td>
        <td>{e.matchedReferenceKind?
@@ -136,16 +165,26 @@ export default function SettlementWorkspace({tenantId,marketplaceId,currency}:{
        <td><button type="button" className="refresh-button" disabled={link.isPending}
         onClick={()=>link.mutate(e.id)}>分配到参考结算单</button></td>
       </tr>)}</tbody></table></div>}
+   {!!candidates.data&&<CursorPageControls label="待分配正式来源交易分页"
+    page={candidateCursors.length} hasMore={candidates.data.hasMore}
+    nextCursor={candidates.data.nextCursor} busy={candidates.isFetching}
+    onPrev={()=>setCandidateCursors(v=>v.length>1?v.slice(0,-1):v)}
+    onNext={c=>setCandidateCursors(v=>[...v,c])}/>}
    <button type="button" className="text-button"
-    onClick={()=>setShowAudit(v=>!v)}>{showAudit?'收起':'查看'}关联审计记录</button>
+    onClick={()=>{setAuditCursors([null]);setShowAudit(v=>!v)}}>{showAudit?'收起':'查看'}关联审计记录</button>
    {showAudit&&(audit.isPending?<p>正在读取审计…</p>:
     audit.isError?<p className="setup-error">{String(audit.error)}</p>:
     <div className="table-scroll" tabIndex={0} role="region" aria-label="结算分配审计">
      <table><thead><tr><th>操作</th><th>来源事件</th><th>操作人</th><th>时间</th></tr></thead>
-      <tbody>{(audit.data??[]).map((a,i)=><tr key={i}>
+      <tbody>{(audit.data?.items??[]).map((a,i)=><tr key={i}>
        <td>{a.action}</td><td>{a.eventId??'创建结算参考'}</td>
        <td>{a.actorId}</td><td>{time(a.occurredAt)}</td>
       </tr>)}</tbody></table></div>)}
+   {!!showAudit&&!!audit.data&&<CursorPageControls label="结算关联审计分页"
+    page={auditCursors.length} hasMore={audit.data.hasMore}
+    nextCursor={audit.data.nextCursor} busy={audit.isFetching}
+    onPrev={()=>setAuditCursors(v=>v.length>1?v.slice(0,-1):v)}
+    onNext={c=>setAuditCursors(v=>[...v,c])}/>}
   </div>}
   {notice&&<p className="panel-caption" role="status">{notice}</p>}
   {failure&&<p className="setup-error" role="alert">{failure}</p>}
