@@ -264,6 +264,33 @@ jobs:
           v70_migration=$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='67' AND success")
           test "$v70_migration" = "1"
           MERCHIVRA_V68_DISPOSABLE_ONLY=true python3 scripts/smoke_http_security_v68.py
+          # V101: verify the REAL Spring Session and CSRF transport via a
+          # disposable Next.js reverse proxy on the same loopback runner.
+          # No Seller OAuth, remote SP-API, production data or real credentials.
+          (
+            cd apps/web
+            MERCHIVRA_API_INTERNAL_URL=http://127.0.0.1:8080 npm run build:next
+            MERCHIVRA_API_INTERNAL_URL=http://127.0.0.1:8080 \
+              ./node_modules/.bin/next start --hostname 127.0.0.1 --port 3355 \
+              >/tmp/merchivra-next-v101-session.log 2>&1 &
+            next_pid=$!
+            trap 'kill "$next_pid" 2>/dev/null || true' EXIT
+            next_ready=0
+            for i in $(seq 1 40); do
+              if curl -fsS http://127.0.0.1:3355/ >/dev/null 2>&1; then
+                next_ready=1
+                break
+              fi
+              if ! kill -0 "$next_pid" 2>/dev/null; then
+                tail -100 /tmp/merchivra-next-v101-session.log
+                exit 1
+              fi
+              sleep 1
+            done
+            test "$next_ready" = 1
+            MERCHIVRA_V101_DISPOSABLE_ONLY=true python3 \
+              ../../scripts/smoke_next_session_csrf_v101.py
+          )
           MERCHIVRA_V68_DISPOSABLE_ONLY=true bash scripts/smoke_pg_restore_v68.sh
           echo "PostgreSQL 18 / Flyway / actual finance + FBA OpenAPI and local mock chain verified"
           kill "$app_pid" 2>/dev/null || true

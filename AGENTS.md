@@ -791,3 +791,15 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
   Continue to test separate Vite and public Pages builds.
 - Before production replacement, require Next route, Chromium mobile,
   real backend cookies+CSRF and OAuth reverse proxy safety validation.
+
+## V101 Next.js real proxy security test (2026-11-07)
+
+- In `pg18-migrations`, keep `scripts/smoke_next_session_csrf_v101.py` wired
+  to the actual disposable Spring Boot 4 + PostgreSQL 18 backend, never a
+  mocked auth API; run against Next's same-origin `/api/v1/*` rewrite.
+- Negative CSRF and anonymous/isolated Session checks must pass alongside
+  positive login/logout, HttpOnly/SameSite cookies and safe no-store reads.
+  Never print disposable credentials, tokens or cookie values in CI logs.
+- This does NOT replace production HTTPS/forwarded-header, OAuth logging,
+  browser pixel/interaction, operator-permission or rollback checks.
+  Retain the Vite fallback and synthetic-only GitHub Pages deployment.
