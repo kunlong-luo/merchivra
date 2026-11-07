@@ -1,0 +1,78 @@
+# Public, read-only GitHub Pages SHOWCASE. Not the private ERP deployment.
+# No Spring Boot, PostgreSQL, credentials, Amazon calls or remote writes.
+name: Publish read-only React GitHub Pages showcase
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/github-pages.yml'
+      - 'apps/web/**'
+      - 'scripts/check_pages_dist.mjs'
+  pull_request:
+    paths:
+      - '.github/workflows/github-pages.yml'
+      - 'apps/web/**'
+      - 'scripts/check_pages_dist.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: github-pages-public-showcase
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build public read-only React site
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+          package-manager-cache: false
+      - name: Install reproducibly from frontend lockfile
+        working-directory: apps/web
+        run: npm ci --no-audit --no-fund
+      - name: Compile Pages-only static React bundle
+        working-directory: apps/web
+        env:
+          VITE_PUBLIC_DEMO: 'true'
+        run: npm run build
+      - name: Verify public mode has no live login or OAuth clients
+        run: node scripts/check_pages_dist.mjs apps/web/dist
+      - name: Add GitHub Pages no-Jekyll marker
+        if: github.event_name != 'pull_request'
+        run: touch apps/web/dist/.nojekyll
+      - name: Upload Pages site artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: apps/web/dist
+
+  deploy:
+    name: Deploy public showcase
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # Pages source must be GitHub Actions in repository Settings > Pages.
+      # There are intentionally no PATs / secrets in this workflow.
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+      - name: Deploy React static artifact
+        id: deployment
+        uses: actions/deploy-pages@v4
