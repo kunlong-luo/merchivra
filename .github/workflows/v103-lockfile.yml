@@ -1,0 +1,41 @@
+# V103 temporary one-shot bootstrap to generate npm's reviewed lockfile.
+# This workflow is removed from the feature branch as soon as lock is committed.
+name: V103 one-shot component lockfile
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - apps/web/package.json
+      - .github/workflows/v103-lockfile.yml
+
+permissions:
+  contents: write
+
+jobs:
+  lockfile:
+    if: ${{ github.event.pull_request.head.repo.full_name == github.repository && github.head_ref == 'feat/v103-base-ui-next-workbench-shell' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.head_ref }}
+          persist-credentials: true
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+      - name: Resolve pinned Base UI and Lucide from npm registry
+        working-directory: apps/web
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Commit only generated lockfile to the same feature branch
+        run: |
+          set -euo pipefail
+          test "$(git branch --show-current)" = "feat/v103-base-ui-next-workbench-shell"
+          git add apps/web/package-lock.json
+          git diff --cached --quiet && exit 0
+          git -c user.name="github-actions[bot]" \
+              -c user.email="41898282+github-actions[bot]@users.noreply.github.com" \
+              commit -m "build(V103): lock Base UI and Lucide npm transitive dependencies"
+          git push origin HEAD:feat/v103-base-ui-next-workbench-shell
