@@ -23,7 +23,7 @@ An open-source, self-hosted Amazon Seller ERP for operations staff. Prioritize o
 - Respect `prefers-reduced-motion`; transitions are enhancements, not required to interpret system state.
 - Never blur the trust boundary of the Core workbench (session-verified tenant resources) versus Mock fictional datasets. Sidebar environment copy must follow active view.
 - Make navigation/task hierarchy explicit: selected view, selected Marketplace and currently selected Core data subtype. Label each filter in text; do not rely on an icon.
-- Preserve existing Vue 3 + TypeScript + Vite architecture, real auth/session, CSRF, API contracts, field semantics and test behaviors.
+- Preserve existing React 19 + TypeScript source, real auth/session, CSRF, API contracts, field semantics and test behaviors. V99 introduces a Next.js 16.4.5 App Router bridge without cutting over the Vite production site until verified.
 
 ## Reviewed 2026-10-31
 
@@ -109,3 +109,15 @@ multi-browser and full keyboard path acceptance remain pending.
 ## 2026-10-31 React implementation
 
 Component framework is React TSX (React 19.3), replacing Vue SFC. Preserve existing semantic class names, layout, 360px mobile tables, labels, source-origin indicators and CSRF-backed actions. Historical Vue-specific guidance is superseded. See [React ADR](docs/architecture/react-migration-2026-10-31.md).
+
+## V99 · A+B 视觉系统与 Next.js 迁移纪律（2026-11-07）
+
+已选择 A+B：A 的企业级、高信息密度工作台结构 + B 的精致留白、视觉层级与轻量组件质感。设计基础以已交付的 Penpot 兼容 SVG 原型包为参考，不要求先生成 Penpot/Figma 可交互原型即可实施代码。
+
+Next.js 初期 **仅作为迁移试运行 App Router**，复用真实 `src/Root.tsx`、`src/App.tsx` 和已实现的 React 业务模块，而非再做一套没有真实 API 的假页面。Next 专属样式见 `apps/web/app/design-system.css`；测试通过前不得直接覆盖 Vite 生产和 GitHub Pages 静态演示。
+
+品牌令牌：导航 `#14243B`、主操作 `#315FEA`、画布 `#F6F8FC`、表面 `#FFFFFF`、边框 `#E5EBF3`、正文 `#1A2A40`、成功 `#159F78`、警告 `#C7820B`、风险 `#DA5362`。卡片半径约 14px，间距按 4/8/12/16/24/32px，数据表保留分页、行操作和出处/状态，避免装饰性巨卡损害操作密度。
+
+**金融和来源守则高于视觉设计**：未知 ≠ 0；原币不混算；MANUAL_UNVERIFIED 不表示银行到账；静态公开演示不能加载业务 API/真实 Session；Amazon Seller OAuth/远程写入仍维持禁用。
+
+每次页面迁移需做真实 Next TS/生产编译、服务端路由 HTTP 200/404、登录会话/CSRF 代理测试和关键业务截图比较；这些门槛未达成前不得宣称生产 Next 全量替换。
