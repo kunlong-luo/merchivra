@@ -1,10 +1,10 @@
 import {useState} from 'react'
 import {useQuery,useQueryClient} from '@tanstack/react-query'
-import App from './App'
+import App,{type View} from './App'
 import {fetchViewer,loginSession,logoutSession} from './lib/auth'
 import {acceptTeamInvitation} from './lib/team'
 
-export default function Root(){
+export default function Root({initialView='core',routeNavigation=false}:{initialView?:View;routeNavigation?:boolean}={}){
  const client=useQueryClient()
  const [username,setUsername]=useState(''),[password,setPassword]=useState('')
  const [inviteMode,setInviteMode]=useState(false),[inviteToken,setInviteToken]=useState('')
@@ -35,7 +35,7 @@ export default function Root(){
    finally{setSigningOut(false)}
  }
  if(isPending||isError) return <div className="auth-shell"><section className="auth-card" role={isError?'alert':undefined}><div className="auth-symbol">M</div><h1>{isError?'无法验证身份':'Merchivra'}</h1><p>{isError?(error instanceof Error?error.message:'请检查数据库与 API 服务。'):'正在校验登录会话…'}</p>{isError&&<button className="auth-submit" onClick={()=>void refetch()}>重试</button>}</section></div>
- if(viewer)return <App viewer={viewer} signingOut={signingOut} onLogout={()=>void signOut()}/>
+ if(viewer)return <App viewer={viewer} signingOut={signingOut} onLogout={()=>void signOut()} initialView={initialView} routeNavigation={routeNavigation}/>
  return <div className="auth-shell">
  {!inviteMode?<form className="auth-card" onSubmit={signIn}>
   <div className="auth-symbol">M</div><div className="auth-kicker">SELF-HOSTED COMMERCE ERP</div>
