@@ -1,4 +1,6 @@
 # Merchivra ERP
+
+> **Next.js 16 preview (V99):** A real App Router bridge is being validated against the existing authenticated ERP modules without replacing the current Vite/Nginx production deployment. In `apps/web`, use `npm ci`, `npm run build:next`, and `npm run dev:next` (port 3001; requires the Spring Boot backend running on 8080). [Migration gates](docs/architecture/next16-ab-migration-v99.md). GitHub Pages remains a separate synthetic-only static site.
 \n> **Public static GitHub Pages showcase:** [view read-only synthetic UI](https://kunlong-luo.github.io/merchivra/) (available only once Pages is enabled). This is **not** a hosted ERP: no login, database, Amazon OAuth, bank integration or writes. [Deployment and activation guide](docs/deployment/github-pages-public-demo-v98.md).\n
 **Open-source, self-hosted Amazon Seller ERP** — a Java 25 / Spring Boot 4.1 backend, React 19 / TypeScript frontend, and PostgreSQL 18 database.
 

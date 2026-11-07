@@ -1,0 +1,156 @@
+/*
+ * Merchivra A+B design system, V99 Next.js migration preview.
+ * Tokens match the reviewed 2026 Penpot-compatible SVG design package.
+ * This stylesheet is loaded ONLY by Next.js, not the production Vite site.
+ */
+:root{
+ --mv-color-navy:#14243b;
+ --mv-color-navy-alt:#1d3553;
+ --mv-color-blue:#315fea;
+ --mv-color-blue-light:#ecf2ff;
+ --mv-color-canvas:#f6f8fc;
+ --mv-color-surface:#ffffff;
+ --mv-color-ink:#1a2a40;
+ --mv-color-muted:#718198;
+ --mv-color-line:#e5ebf3;
+ --mv-color-success:#159f78;
+ --mv-color-warning:#c7820b;
+ --mv-color-danger:#da5362;
+ --mv-radius-sm:8px;
+ --mv-radius-card:14px;
+ --mv-space-1:4px;
+ --mv-space-2:8px;
+ --mv-space-3:12px;
+ --mv-space-4:16px;
+ --mv-space-6:24px;
+ --mv-space-8:32px;
+ --mv-shadow:0 5px 18px rgba(22,45,76,.045);
+}
+.next-workbench{
+ min-height:100vh;
+ background:var(--mv-color-canvas);
+ color:var(--mv-color-ink);
+ font-feature-settings:"tnum" 1;
+}
+.next-workbench .workspace{background:var(--mv-color-canvas)}
+.next-workbench .sidebar{
+ width:252px;
+ background:var(--mv-color-navy);
+ padding:26px 14px 22px;
+}
+.next-workbench .brand-wrap{padding:4px 14px 34px}
+.next-workbench .brand-icon{
+ background:linear-gradient(138deg,#4469f2,#11a7b3);
+ border-radius:12px;
+}
+.next-workbench .brand-copy strong{font-size:19px;letter-spacing:-.035em}
+.next-workbench .sidebar-section-title{
+ color:#8ca1bf;
+ margin-top:7px;
+}
+.next-workbench .nav-links{gap:4px}
+.next-workbench .nav-link{
+ min-height:42px;
+ padding:11px 14px;
+ border-radius:10px;
+ color:#c3cee2;
+ font-size:13px;
+}
+.next-workbench .nav-link.active{
+ background:linear-gradient(100deg,#2d61dd,#386de8);
+ box-shadow:0 5px 12px rgba(13,58,149,.20);
+ color:#fff;
+}
+.next-workbench .sidebar-info{
+ border:1px solid rgba(187,212,244,.22);
+ background:rgba(255,255,255,.055);
+}
+.next-workbench .topbar{
+ background:#fff;
+ height:70px;
+ border-bottom:1px solid var(--mv-color-line);
+ padding:0 32px;
+}
+.next-workbench .main-panel{background:var(--mv-color-canvas)}
+.next-workbench .content{
+ max-width:1540px;
+ padding:30px 32px 26px;
+}
+.next-workbench .page-heading{margin-bottom:24px}
+.next-workbench .page-heading h1,
+.next-workbench h1{
+ color:#14243b;
+ font-weight:750;
+ letter-spacing:-.035em;
+}
+.next-workbench .eyebrow{
+ color:var(--mv-color-blue);
+ letter-spacing:.115em;
+}
+.next-workbench .panel,
+.next-workbench .metric-card{
+ background:var(--mv-color-surface);
+ border:1px solid var(--mv-color-line);
+ border-radius:var(--mv-radius-card);
+ box-shadow:var(--mv-shadow);
+}
+.next-workbench .panel{overflow:hidden}
+.next-workbench .metric-card{padding:21px 20px}
+.next-workbench .metric-value{color:#1b2c45;font-variant-numeric:tabular-nums}
+.next-workbench .panel-heading{border-bottom-color:#edf0f6}
+.next-workbench th{
+ background:#fafbfe;
+ color:#63758d;
+ font-weight:700;
+ letter-spacing:.01em;
+ padding:13px 16px;
+}
+.next-workbench td{
+ border-top-color:#edf0f5;
+ padding:15px 16px;
+ font-variant-numeric:tabular-nums;
+}
+.next-workbench .primary-button{
+ background:var(--mv-color-blue);
+ border-color:var(--mv-color-blue);
+ color:white;
+}
+.next-workbench .primary-button:hover{
+ background:#244dd0;
+ border-color:#244dd0;
+}
+.next-workbench .refresh-button,
+.next-workbench input,
+.next-workbench select{
+ border-radius:var(--mv-radius-sm);
+}
+.next-workbench .mock-banner{
+ background:#f0f5ff;
+ border-color:#d6e4fd;
+ color:#355d97;
+}
+.next-workbench .count-pill{border-radius:9px}
+.next-workbench button:focus-visible,
+.next-workbench a:focus-visible,
+.next-workbench input:focus-visible,
+.next-workbench select:focus-visible{
+ outline:2px solid var(--mv-color-blue);
+ outline-offset:3px;
+}
+@media(max-width:1040px){
+ .next-workbench .content{padding:22px 20px}
+ .next-workbench .sidebar{width:220px}
+}
+@media(max-width:760px){
+ .next-workbench .sidebar{width:auto}
+ .next-workbench .topbar{padding:0 14px}
+ .next-workbench .content{padding:20px 14px}
+ .next-workbench .metric-card{padding:16px}
+ .next-workbench td,.next-workbench th{padding:11px 12px}
+}
+@media(prefers-reduced-motion:reduce){
+ .next-workbench *, .next-workbench *::before, .next-workbench *::after{
+  animation-duration:.01ms!important;
+  transition-duration:.01ms!important;
+ }
+}

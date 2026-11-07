@@ -10,7 +10,7 @@ import PurchasingWorkspace from './PurchasingWorkspace'
 import FinanceWorkspace from './FinanceWorkspace'
 import {fetchPing} from './lib/api'
 import {fetchDemoOverview,fetchDemoSyncRuns,startDemoSync,fetchDemoOrders,fetchDemoListings,fetchDemoInventory,fetchDemoCoreStatus} from './lib/demo'
-type View='core'|'ops'|'team'|'connections'|'purchasing'|'finance'|'overview'|'orders'|'catalog'|'inventory'|'sync'
+export type View='core'|'ops'|'team'|'connections'|'purchasing'|'finance'|'overview'|'orders'|'catalog'|'inventory'|'sync'
 const nav:{key:View;label:string;symbol:string}[]=[
  {key:'core',label:'核心业务数据',symbol:'▣'},{key:'ops',label:'运营自动化',symbol:'✳'},
  {key:'team',label:'团队与权限',symbol:'♙'},{key:'purchasing',label:'采购与供应商',symbol:'▤'},{key:'finance',label:'财务与对账',symbol:'▥'},{key:'connections',label:'卖家授权',symbol:'◇'},{key:'overview',label:'经营总览',symbol:'◫'},
@@ -21,10 +21,10 @@ function money(v?:{amount:string;currency:string}|null){return v?`${v.currency} 
 function timestamp(v?:string|null){if(!v)return '暂无来源时间';const date=new Date(v);return Number.isNaN(date.getTime())?'时间未知':date.toLocaleString('zh-CN',{timeZone:'UTC',hour12:false})+' UTC'}
 function qualityLabel(v:string){const names:Record<string,string>={OBSERVED:'已观测',UNKNOWN:'未取得',STALE:'已过期',PARTIAL:'部分数据',UNMAPPED:'待映射',ACTIVE:'已映射',SHIPPED:'已发货',UNSHIPPED:'待发货',PARTIAL_REFUND:'部分退款',NOT_OBSERVED:'未取得财务数据'};return names[v]??v}
 function Table({heads,children,label='可水平滚动的演示数据表格'}:{heads:string[];children:React.ReactNode;label?:string}){return <div className="table-scroll" role="region" tabIndex={0} aria-label={label}><table><thead><tr>{heads.map(h=><th key={h} scope="col">{h}</th>)}</tr></thead><tbody>{children}</tbody></table></div>}
-export default function App({viewer,signingOut,onLogout}:{viewer:AuthViewer;signingOut:boolean;onLogout:()=>void}){
+export default function App({viewer,signingOut,onLogout,initialView='core',routeNavigation=false}:{viewer:AuthViewer;signingOut:boolean;onLogout:()=>void;initialView?:View;routeNavigation?:boolean}){
  const [activeView,setActiveView]=useState<View>(() => typeof window !== 'undefined' &&
   new URLSearchParams(window.location.search).get('amazon_oauth') === 'pending_verification'
-  ? 'connections' : 'core'),[accountId,setAccountId]=useState(''),[syncMessage,setSyncMessage]=useState('')
+  ? 'connections' : initialView),[accountId,setAccountId]=useState(''),[syncMessage,setSyncMessage]=useState('')
  const [fbaFocus,setFbaFocus]=useState<{marketplaceId:string;lineId:string}|null>(null)
  const openFbaException=(marketplaceId:string,lineId:string)=>{
   setFbaFocus({marketplaceId,lineId})
@@ -49,7 +49,7 @@ export default function App({viewer,signingOut,onLogout}:{viewer:AuthViewer;sign
  return <div className="workspace"><a className="skip-link" href="#main-content">跳转到主要内容</a>
  <aside className="sidebar"><div className="brand-wrap"><div className="brand-icon">M</div><div className="brand-copy"><strong>merchivra</strong><small>SELLER OPERATIONS</small></div></div>
  <div className="sidebar-section-title">工作空间</div><nav className="nav-links" aria-label="主导航">
- {(viewer.isOwner?nav:nav.filter(n=>n.key==='core')).map(item=><button key={item.key} type="button" className={`nav-link ${activeView===item.key?'active':''}`} aria-current={activeView===item.key?'page':undefined} onClick={()=>setActiveView(item.key)}><span className="nav-icon" aria-hidden="true">{item.symbol}</span>{item.label}</button>)}
+ {(viewer.isOwner?nav:nav.filter(n=>n.key==='core')).map(item=><button key={item.key} type="button" className={`nav-link ${activeView===item.key?'active':''}`} aria-current={activeView===item.key?'page':undefined} onClick={()=>{setActiveView(item.key);if(routeNavigation)window.history.pushState(null,'',item.key==='overview'?'/':'/'+item.key)}}><span className="nav-icon" aria-hidden="true">{item.symbol}</span>{item.label}</button>)}
 </nav>
  <div className="sidebar-spacer"/><div className="sidebar-info"><span className="local-indicator"/><div><strong>{demo?'本地演示环境':'核心业务工作台'}</strong><small>{demo?'纯虚构数据 · 无真实连接':'会话租户隔离 · 数据记录标注来源'}</small></div></div>
  <a className="sidebar-repo" href="https://github.com/kunlong-luo/merchivra" target="_blank" rel="noopener noreferrer">GitHub 源代码 <span aria-hidden="true">↗</span></a></aside>

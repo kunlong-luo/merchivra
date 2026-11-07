@@ -36,7 +36,7 @@ jobs:
         run: ./apps/server/gradlew -p apps/server --no-daemon --console plain test jacocoTestReport
 
   frontend:
-    name: React 19 / TypeScript / Vitest / Vite
+    name: React 19 / Vite baseline + Next.js 16 preview
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -62,6 +62,38 @@ jobs:
         run: npm run test
       - name: Build
         run: npm run build
+      - name: Next 16 App Router TS gate
+        run: npm run typecheck:next
+      - name: Next 16 App Router production build preview
+        run: npm run build:next
+      - name: Next 16 standalone App Router HTTP smoke (no Seller/API auth)
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./node_modules/.bin/next start --hostname 127.0.0.1 --port 3355 >/tmp/merchivra-next-http.log 2>&1 &
+          app_pid=$!
+          trap 'kill "$app_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for i in $(seq 1 50); do
+            if curl --silent --fail http://127.0.0.1:3355/ >/tmp/next-v99.html; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$app_pid" 2>/dev/null; then
+              cat /tmp/merchivra-next-http.log
+              exit 1
+            fi
+            sleep 1
+          done
+          test "$ready" = 1
+          for path in / /orders /purchasing /finance /ops /core /connections; do
+            code=$(curl --silent --output /tmp/next-v99.html --write-out '%{http_code}' "http://127.0.0.1:3355$path")
+            test "$code" = 200 || { cat /tmp/merchivra-next-http.log; exit 1; }
+            grep -Fq 'Merchivra ERP' /tmp/next-v99.html
+          done
+          status=$(curl --silent --output /dev/null --write-out '%{http_code}' http://127.0.0.1:3355/no-such-workbench-v99)
+          test "$status" = 404
+          echo 'PASS Next 16 App Router: seven real workbench routes and unknown-route 404; backend credentials absent'
 
   pg18-migrations:
     name: PostgreSQL 18 / real Flyway migrations

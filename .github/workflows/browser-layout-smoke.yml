@@ -23,6 +23,8 @@ on:
       - apps/web/package.json
       - apps/web/package-lock.json
       - apps/web/vite.config.ts
+      - apps/web/next.config.ts
+      - 'apps/web/app/**'
 
 permissions:
   contents: read
@@ -30,7 +32,7 @@ permissions:
 jobs:
   browser-layout:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 18
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -60,6 +62,43 @@ jobs:
           "$CHROME_BIN" --version
           node --check scripts/smoke_browser_layout.mjs
           node scripts/smoke_browser_layout.mjs apps/web/dist browser-smoke-artifacts
+      - name: Build Next.js 16 App Router production preview
+        working-directory: apps/web
+        run: npm run build:next
+      - name: Next App Router Chromium layout and real-workspace fixture smoke
+        shell: bash
+        run: |
+          set -euo pipefail
+          (
+            cd apps/web
+            ./node_modules/.bin/next start --hostname 127.0.0.1 --port 3355
+          ) >/tmp/merchivra-next-browser.log 2>&1 &
+          next_pid=$!
+          trap 'kill "$next_pid" 2>/dev/null || true' EXIT
+          ready=0
+          for i in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3355/core >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            if ! kill -0 "$next_pid" 2>/dev/null; then
+              cat /tmp/merchivra-next-browser.log
+              exit 1
+            fi
+            sleep 1
+          done
+          test "$ready" = 1
+          export CHROME_BIN="$(command -v google-chrome || command -v google-chrome-stable)"
+          export MERCHIVRA_BROWSER_NEXT_URL=http://127.0.0.1:3355
+          node scripts/smoke_browser_layout.mjs apps/web/dist browser-smoke-next-artifacts
+      - name: Upload Next App Router viewport screenshots for visual review
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: merchivra-next16-synthetic-browser-screenshots
+          path: browser-smoke-next-artifacts/*.png
+          if-no-files-found: ignore
+          retention-days: 7
       - name: Upload viewport screenshots for manual review
         if: always()
         uses: actions/upload-artifact@v4

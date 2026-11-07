@@ -9,6 +9,9 @@ build/
 node_modules/
 dist/
 *.tsbuildinfo
+# Next.js migration outputs (not source files)
+apps/web/.next/
+apps/web/out/
 # IDE
 .idea/
 .vscode/
