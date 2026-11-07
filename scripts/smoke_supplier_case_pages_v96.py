@@ -87,7 +87,7 @@ stock_before=sql(f"""SELECT count(*) FROM erp_local_stock_movement
  WHERE tenant_id='{tenant}'""")
 po_before=sql(f"""SELECT count(*) FROM erp_purchase_order WHERE tenant_id='{tenant}'""")
 
-# 535 independent local line variance observations under an existing V92 order.
+# 441 independent local line variance observations under an existing V92 order.
 # Actual unreceived quantity is snapshotted for the V45 submit verification.
 created=sql(f"""WITH lines AS (
  SELECT l.id,l.ordered_quantity,
@@ -97,7 +97,7 @@ created=sql(f"""WITH lines AS (
         row_number() OVER (ORDER BY l.id) n
  FROM erp_purchase_order_line l
  WHERE l.tenant_id='{tenant}' AND l.purchase_order_id='{po}'
- ORDER BY l.id LIMIT 535
+ ORDER BY l.id LIMIT 441
 ), added AS (
  INSERT INTO erp_purchase_variance(
   id,tenant_id,request_key,purchase_order_id,purchase_order_line_id,
@@ -108,23 +108,23 @@ created=sql(f"""WITH lines AS (
   (l.ordered_quantity-l.received)::int,
   (l.ordered_quantity-l.received+1)::int,1,
   'V96 disposable source observation',
-  CASE WHEN n<=240 THEN 'OPEN' ELSE 'REVIEWED' END,
+  CASE WHEN n>271 THEN 'OPEN' ELSE 'REVIEWED' END,
   '{actor}'::uuid,
-  CASE WHEN n<=240 THEN NULL ELSE '{actor}'::uuid END,
+  CASE WHEN n>271 THEN NULL ELSE '{actor}'::uuid END,
   CASE WHEN n<=240 THEN NULL ELSE now() END,
   now()-n*interval '1 minute'
  FROM lines l
  RETURNING id
 ) SELECT count(*) FROM added""")
-assert created=="535",created
+assert created=="441",created
 assert len(call(base+"/orders/"+po+"/variances"))==200
 varbase=base+"/orders/"+po+"/variances"
 all_variances,variance_pages=traverse(varbase+"/page",filter="ALL")
 active_variances,_=traverse(varbase+"/page",filter="ACTIONABLE")
 ours=[v for v in all_variances if v["reason"]=="V96 disposable source observation"]
-assert len(ours)==535 and variance_pages>=11
-assert len({v["id"] for v in ours})==535
-assert len(active_variances)>=535
+assert len(ours)==441 and variance_pages>=9
+assert len({v["id"] for v in ours})==441
+assert len(active_variances)>=441
 open_last=next(v for v in ours[200:] if v["state"]=="OPEN")
 call(base+"/variances/"+open_last["id"]+"/review","POST",expected=409)
 reviewed_last=next(v for v in ours[200:] if v["state"]=="REVIEWED")
@@ -137,7 +137,7 @@ duplicate={"requestKey":str(uuid4()),"lineId":open_last["lineId"],
  "reason":"V96 duplicate observation must fail"}
 call(varbase,"POST",duplicate,expected=409)
 
-# 235 claims on 235 distinct REVIEWED variances. The remaining 59+ sources
+# 205 claims on 205 distinct REVIEWED variances. The remaining 65+ sources
 # plus older QC rejected observations must be discoverable independent of
 # the current variance, claim or receipt pages.
 claims_added=sql(f"""WITH selected AS (
@@ -145,7 +145,7 @@ claims_added=sql(f"""WITH selected AS (
  FROM erp_purchase_variance WHERE tenant_id='{tenant}'
  AND purchase_order_id='{po}' AND state='REVIEWED'
  AND reason='V96 disposable source observation'
- ORDER BY created_at DESC,id DESC LIMIT 235
+ ORDER BY created_at DESC,id DESC LIMIT 205
 ), added AS (
  INSERT INTO erp_supplier_claim(
  id,tenant_id,request_key,variance_id,purchase_order_id,supplier_id,
@@ -153,20 +153,20 @@ claims_added=sql(f"""WITH selected AS (
  SELECT gen_random_uuid(),'{tenant}'::uuid,gen_random_uuid(),
   s.id,'{po}'::uuid,'{supplier}'::uuid,1,'REPLACEMENT',
   'V96 disposable internal claim fixture',
-  CASE WHEN n<=215 THEN 'DRAFT' WHEN n<=225 THEN 'SUBMITTED'
+  CASE WHEN n<=202 THEN 'DRAFT' WHEN n<=204 THEN 'SUBMITTED'
        ELSE 'CANCELLED' END,
   '{actor}'::uuid,now()-n*interval '1 minute'
  FROM selected s RETURNING id
 ) SELECT count(*) FROM added""")
-assert claims_added=="235",claims_added
+assert claims_added=="205",claims_added
 claimbase=base+"/orders/"+po+"/claims"
 assert len(call(claimbase))==200
 claims,claim_pages=traverse(claimbase+"/page",filter="ALL")
 actionable,_=traverse(claimbase+"/page",filter="ACTIONABLE")
 ours_claims=[c for c in claims if c["reason"]=="V96 disposable internal claim fixture"]
-assert len(ours_claims)==235 and claim_pages>=5
-assert len({c["id"] for c in ours_claims})==235
-assert len([c for c in actionable if c["reason"]=="V96 disposable internal claim fixture"])==225
+assert len(ours_claims)==205 and claim_pages>=5
+assert len({c["id"] for c in ours_claims})==205
+assert len([c for c in actionable if c["reason"]=="V96 disposable internal claim fixture"])==204
 old_claim=next(c for c in ours_claims[200:] if c["status"]=="DRAFT")
 assert call(base+"/claims/"+old_claim["id"]+"/submit","POST")["status"]=="SUBMITTED"
 call(base+"/claims/"+old_claim["id"]+"/approve","POST",expected=409)
@@ -177,7 +177,7 @@ assert sql(f"""SELECT count(*) FROM erp_supplier_case_audit
 sources_path=base+"/orders/"+po+"/claim-sources/page"
 sources,source_pages=traverse(sources_path)
 ours_sources=[x for x in sources if x["sourceType"]=="VARIANCE"]
-assert len(ours_sources)>=59 and source_pages>=2,(len(ours_sources),source_pages)
+assert len(ours_sources)>=65 and source_pages>=2,(len(ours_sources),source_pages)
 claimed_ids={c["varianceId"] for c in ours_claims}
 assert all(x["sourceId"] not in claimed_ids for x in ours_sources)
 assert reviewed_last["id"] not in {s["sourceId"] for s in ours_sources}
@@ -235,7 +235,7 @@ assert sql(f"""SELECT count(*) FROM erp_local_stock_movement
  WHERE tenant_id='{tenant}'""")==stock_before
 assert sql(f"""SELECT count(*) FROM erp_purchase_order
  WHERE tenant_id='{tenant}'""")==po_before
-print("PASS V96 PG18 Mock: 535 variances (>200) with reviewed/duplicate guard, "+
- "235 claims (>200) with later DRAFT submit+approval prohibition, "+
- "all-order claimable source picker with 59+ reviewed unclaimed and QC options, "+
+print("PASS V96 PG18 Mock: 441 variances (>200) with reviewed/duplicate guard, "+
+ "205 claims (>200) with later DRAFT submit+approval prohibition, "+
+ "all-order claimable source picker with 65+ reviewed unclaimed and QC options, "+
  "136 immutable claim audits (>100), scoped cursors/401, no stock/PO/Amazon writes")
