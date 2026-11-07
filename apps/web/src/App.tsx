@@ -122,9 +122,9 @@ export default function App({viewer,signingOut,onLogout,initialView='core',
   <CoreWorkspace tenantId={viewer.activeTenantId} isOwner={viewer.isOwner}
    initialSection={activeView==='orders'?'orders':
     activeView==='inventory'?'inventory':'listings'}
-   onSectionNavigate={routeNavigation?(section)=>navigate({
+   onSectionNavigate={routeNavigation?(section)=>navigate(({
     listings:'catalog',orders:'orders',inventory:'inventory'
-   }[section]):undefined}
+   } as const)[section]):undefined}
    focusException={fbaFocus}/>:
  activeView==='ops'&&viewer.isOwner?<OperationsWorkspace tenantId={viewer.activeTenantId} onOpenFbaException={openFbaException}/>:
  activeView==='team'&&viewer.isOwner?<TeamWorkspace tenantId={viewer.activeTenantId} currentUserId={viewer.userId}/>:
