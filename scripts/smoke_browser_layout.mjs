@@ -505,7 +505,7 @@ async function main() {
         .find(x=>x.textContent.includes('FBA 库存'));if(!b)throw Error('FBA nav');b.click()})()`)
       await waitFor(send,`location.pathname==='/inventory' &&
         document.querySelector('.core-subtab.selected')?.textContent?.includes('FBA 库存') &&
-        document.querySelectorAll('.core-data-scroll tbody tr').length>=2`,
+        document.querySelector('.core-data-scroll tbody tr')?.textContent?.includes('TEST-SKU-100')`,
         'V100 real FBA inventory route')
       await screenshot(send,'v100-next-real-fba-360.png',true)
       await evaluate(send,"history.back()")
@@ -519,7 +519,7 @@ async function main() {
       await send('Page.reload')
       await waitFor(send,`location.pathname==='/inventory' &&
         document.querySelector('.core-subtab.selected')?.textContent?.includes('FBA 库存') &&
-        document.querySelectorAll('.core-data-scroll tbody tr').length>=2`,
+        document.querySelector('.core-data-scroll tbody tr')?.textContent?.includes('TEST-SKU-100')`,
         'V100 hard refresh preserves real FBA deep link')
       await send('Page.navigate',{url:url+'?core=again'})
       await waitFor(send,`location.pathname==='/core' &&
