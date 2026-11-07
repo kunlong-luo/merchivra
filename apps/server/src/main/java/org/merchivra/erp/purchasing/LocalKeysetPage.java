@@ -12,15 +12,15 @@ public final class LocalKeysetPage {
     private LocalKeysetPage() {}
     public record Page<T>(List<T> items,String nextCursor,boolean hasMore,int pageSize) {}
 
-    static int limit(int limit) {
+    public static int limit(int limit) {
         if(limit<1 || limit>100)throw bad("Page limit must be 1..100");
         return limit;
     }
-    static String encode(String... parts) {
+    public static String encode(String... parts) {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(
             String.join(Character.toString((char)31),parts).getBytes(StandardCharsets.UTF_8));
     }
-    static String[] decode(String cursor,int expected) {
+    public static String[] decode(String cursor,int expected) {
         if(cursor==null || cursor.isBlank())return null;
         if(cursor.length()>2048 || !cursor.matches("[A-Za-z0-9_-]+"))
             throw bad("Invalid pagination cursor");
@@ -35,7 +35,7 @@ public final class LocalKeysetPage {
             throw bad("Invalid pagination cursor");
         }
     }
-    static <T> Page<T> pack(List<T> fetched,int limit,Function<T,String> cursor) {
+    public static <T> Page<T> pack(List<T> fetched,int limit,Function<T,String> cursor) {
         boolean more=fetched.size()>limit;
         List<T> items=List.copyOf(fetched.subList(0,Math.min(limit,fetched.size())));
         return new Page<>(items,more?cursor.apply(items.getLast()):null,more,limit);
