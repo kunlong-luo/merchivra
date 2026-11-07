@@ -26,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 35
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Configure disposable bootstrap + Redis session; no Amazon egress
         shell: bash
         run: |
