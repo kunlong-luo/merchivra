@@ -459,6 +459,49 @@ async function main() {
     await layout(send,width,'core-listings-'+width,true)
     await screenshot(send,'core-listings-'+width+'.png')
     await screenshot(send,'core-listings-table-'+width+'.png',true)
+    // V100: test actual Next App Router navigation, not history.pushState
+    // on an unchanged SPA. All data below is from local synthetic API fixtures.
+    if(nextTarget&&width===360){
+      await evaluate(send,`(() => {const b=[...document.querySelectorAll('.nav-link')]
+        .find(x=>x.textContent.includes('订单管理'));if(!b)throw Error('orders nav');b.click()})()`)
+      await waitFor(send,`location.pathname==='/orders' &&
+        document.querySelector('.core-subtab.selected')?.textContent?.includes('订单') &&
+        document.querySelectorAll('.core-data-scroll tbody tr').length===2`,
+        'V100 real Core Orders route')
+      assert.equal(await evaluate(send,
+        "!!document.querySelector('.mock-banner')"),false,
+        'Next /orders must not use the separate mock Gateway')
+      await screenshot(send,'v100-next-real-orders-360.png',true)
+      await evaluate(send,"history.back()")
+      await waitFor(send,`location.pathname==='/core' &&
+        document.querySelector('.core-subtab.selected')?.textContent?.includes('Listing')`,
+        'V100 browser back restores /core')
+      await evaluate(send,`(() => {const b=[...document.querySelectorAll('.nav-link')]
+        .find(x=>x.textContent.includes('FBA 库存'));if(!b)throw Error('FBA nav');b.click()})()`)
+      await waitFor(send,`location.pathname==='/inventory' &&
+        document.querySelector('.core-subtab.selected')?.textContent?.includes('FBA 库存') &&
+        document.querySelectorAll('.core-data-scroll tbody tr').length>=2`,
+        'V100 real FBA inventory route')
+      await screenshot(send,'v100-next-real-fba-360.png',true)
+      await evaluate(send,"history.back()")
+      await waitFor(send,`location.pathname==='/core' &&
+        document.querySelector('.core-subtab.selected')?.textContent?.includes('Listing')`,
+        'V100 browser back from FBA')
+      await evaluate(send,"history.forward()")
+      await waitFor(send,`location.pathname==='/inventory' &&
+        document.querySelector('.core-subtab.selected')?.textContent?.includes('FBA 库存')`,
+        'V100 browser forward restores FBA')
+      await send('Page.reload')
+      await waitFor(send,`location.pathname==='/inventory' &&
+        document.querySelector('.core-subtab.selected')?.textContent?.includes('FBA 库存') &&
+        document.querySelectorAll('.core-data-scroll tbody tr').length>=2`,
+        'V100 hard refresh preserves real FBA deep link')
+      await send('Page.navigate',{url:url+'?core=again'})
+      await waitFor(send,`location.pathname==='/core' &&
+        document.querySelector('.core-subtab.selected')?.textContent?.includes('Listing') &&
+        document.querySelectorAll('.core-data-scroll tbody tr').length===2`,
+        'V100 return to core baseline')
+    }
     if(width===360){
       await evaluate(send,
         "document.querySelector('.core-tools summary')?.click()")
