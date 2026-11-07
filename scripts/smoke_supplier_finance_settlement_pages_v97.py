@@ -212,8 +212,9 @@ for c in ours_candidates[:52]:
     call(path,"DELETE",expected=204)
 assert len(call(entry+"/audit"))==100
 audits,audit_pages=traverse(entry+"/audit/page")
-assert len(audits)==107 and audit_pages==3,(len(audits),audit_pages)
-assert audits[-1]["action"]=="CREATED"
+assert len(audits)==106 and audit_pages==3,(len(audits),audit_pages)
+assert sum(a["action"]=="EVENT_LINKED" for a in audits)==53
+assert sum(a["action"]=="EVENT_UNLINKED" for a in audits)==53
 assert all(a["actorId"]==actor for a in audits)
 assert call(entry+"/preview")["bankVerified"] is False
 
