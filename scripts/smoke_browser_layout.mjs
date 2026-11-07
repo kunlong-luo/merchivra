@@ -473,10 +473,26 @@ async function main() {
     if(nextTarget&&width===360){
       await evaluate(send,`(() => {const b=[...document.querySelectorAll('.nav-link')]
         .find(x=>x.textContent.includes('订单管理'));if(!b)throw Error('orders nav');b.click()})()`)
-      await waitFor(send,`location.pathname==='/orders' &&
-        document.querySelector('.core-subtab.selected')?.textContent?.includes('订单') &&
-        document.querySelectorAll('.core-data-scroll tbody tr').length===2`,
-        'V100 real Core Orders route')
+      try{
+        await waitFor(send,`location.pathname==='/orders' &&
+          document.querySelector('.core-subtab.selected')?.textContent?.includes('订单') &&
+          document.querySelectorAll('.core-data-scroll tbody tr').length===2`,
+          'V100 real Core Orders route')
+      }catch(error){
+        const state=await evaluate(send,`(() => ({
+          path:location.pathname,
+          selected:document.querySelector('.core-subtab.selected')?.textContent,
+          rows:document.querySelectorAll('.core-data-scroll tbody tr').length,
+          title:document.querySelector('#main-content h1')?.textContent,
+          nav:[...document.querySelectorAll('.nav-link')].map(x=>({
+            label:x.textContent,active:x.getAttribute('aria-current')
+          })),
+          main:document.querySelector('#main-content')?.textContent?.slice(0,1300),
+          html:document.body.innerText.slice(0,1300)
+        }))()`)
+        console.error('V100 Next route failure snapshot:',JSON.stringify(state))
+        throw error
+      }
       assert.equal(await evaluate(send,
         "!!document.querySelector('.mock-banner')"),false,
         'Next /orders must not use the separate mock Gateway')
