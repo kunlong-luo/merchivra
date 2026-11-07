@@ -57,7 +57,7 @@ public class SupplierPerformanceService {
 
     @Transactional(readOnly=true)
     public List<Scorecard> scorecards(UUID tenant) {
-        return scorecardsQuery(tenant,null,200).stream().map(ScorecardRow::score).toList();
+        return scorecardsQuery(tenant,null,200).stream().limit(200).map(ScorecardRow::score).toList();
     }
     private record ScorecardRow(Scorecard score,String displayName) {}
     private List<ScorecardRow> scorecardsQuery(UUID tenant,String rawCursor,int requested) {
