@@ -45,6 +45,24 @@ async function req<T>(url:string,schema:z.ZodType<T>|null,
 }
 const root=(mp:string)=>origin+encodeURIComponent(mp)+'/settlements'
 const item=(mp:string,id:string)=>root(mp)+'/'+encodeURIComponent(id)
+const cursorPage=<T extends z.ZodType>(item:T)=>z.object({
+ items:z.array(item).max(100),
+ nextCursor:z.string().min(1).nullable(),hasMore:z.boolean(),
+ pageSize:z.number().int().min(1).max(100)
+}).refine(x=>x.hasMore===(x.nextCursor!==null),{
+ message:'结算分页游标与状态不一致'
+})
+const pageUrl=(base:string,cursor:string|null=null)=>{
+ const params=new URLSearchParams({limit:'50'})
+ if(cursor)params.set('cursor',cursor)
+ return base+'/page?'+params.toString()
+}
+export const listStatementsPage=(mp:string,cursor:string|null=null)=>
+ req(pageUrl(root(mp),cursor),cursorPage(statement))
+export const settlementCandidatesPage=(mp:string,id:string,cursor:string|null=null)=>
+ req(pageUrl(item(mp,id)+'/candidates',cursor),cursorPage(event))
+export const settlementAuditPage=(mp:string,id:string,cursor:string|null=null)=>
+ req(pageUrl(item(mp,id)+'/audit',cursor),cursorPage(audit))
 export const listStatements=(mp:string)=>req(root(mp),z.array(statement))
 export const createStatement=(mp:string,data:{
  reference:string;periodStart:string;periodEnd:string;reportedNet:string;currency:string
