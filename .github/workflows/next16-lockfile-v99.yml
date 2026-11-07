@@ -1,0 +1,44 @@
+# One-time migration branch helper: generate the reproducible npm lock
+# from Next.js 16.4.5 stable without changing production default builds.
+name: V99 Next.js 16 lockfile bootstrap
+on:
+  push:
+    branches:
+      - feat/v99-next16-ab-workbench-bridge
+    paths:
+      - apps/web/package.json
+      - .github/workflows/next16-lockfile-v99.yml
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  lockfile:
+    name: Generate package-lock for pinned Next.js release
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+      - name: Refresh reproducible frontend dependency lock
+        working-directory: apps/web
+        run: npm install --package-lock-only --no-audit --no-fund
+      - name: Verify lock and manifest agree
+        working-directory: apps/web
+        run: |
+          node -e 'let m=require("./package.json"),l=require("./package-lock.json"); if(l.packages[""].dependencies.next!==m.dependencies.next)process.exit(1); console.log("NEXT LOCK OK",l.packages[""].dependencies.next)'
+      - name: Commit generated lock back to the migration branch
+        run: |
+          set -euo pipefail
+          if git diff --quiet -- apps/web/package-lock.json; then
+            echo "No package-lock update necessary"
+            exit 0
+          fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add apps/web/package-lock.json
+          git commit -m 'build(V99): lock Next.js 16.4.5 npm dependencies'
+          git push origin HEAD:feat/v99-next16-ab-workbench-bridge
