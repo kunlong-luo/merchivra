@@ -1,0 +1,53 @@
+/* Static GitHub Pages showcase only. Reuses the production React design tokens. */
+.public-demo .public-demo-mark{
+ display:inline-flex;align-items:center;border:1px solid #cfe0f8;
+ border-radius:999px;padding:7px 11px;background:#eef5ff;color:#3366a4;
+ font-size:10px;font-weight:800;letter-spacing:.08em;
+}
+.public-demo .public-demo-link{
+ display:inline-flex;align-items:center;text-decoration:none;justify-content:center;
+ white-space:normal;line-height:1.4;text-align:center
+}
+.public-demo .public-demo-shortcuts{
+ padding:13px 19px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px
+}
+.public-demo .public-demo-shortcuts button{
+ display:flex;flex-direction:column;align-items:flex-start;gap:7px;border:1px solid #e6edf5;
+ background:#f9fbff;border-radius:10px;padding:17px;text-align:left;color:#2c4563
+}
+.public-demo .public-demo-shortcuts button:hover,
+.public-demo .public-demo-shortcuts button:focus-visible{
+ outline:2px solid #78a7e5;outline-offset:1px;background:#eef5ff
+}
+.public-demo .public-demo-shortcuts strong{font-size:13px}
+.public-demo .public-demo-shortcuts span{font-size:11px;color:#7089a6}
+.public-demo .public-demo-deploy{
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+ gap:18px;padding:24px
+}
+.public-demo .public-demo-deploy>div{
+ border:1px solid #e6edf5;border-radius:12px;padding:20px;background:#f9fbfe
+}
+.public-demo .public-demo-deploy h3{font-size:16px;margin:0 0 12px;color:#274564}
+.public-demo .public-demo-deploy p{
+ font-size:13px;line-height:1.85;color:#627792;margin-bottom:24px
+}
+.public-demo .mock-banner div span{max-width:780px}
+.public-demo .metric-value{white-space:normal}
+.public-demo .table-scroll th,.public-demo .table-scroll td{min-width:100px}
+.public-demo .table-scroll td:first-child{white-space:nowrap}
+.public-demo .content{min-height:calc(100vh - 68px);display:flex;flex-direction:column}
+.public-demo .content>.footer{margin-top:auto}
+@media(max-width:900px){
+ .public-demo .public-demo-deploy{grid-template-columns:1fr}
+ .public-demo .mock-banner .mock-pill{display:none}
+}
+@media(max-width:600px){
+ .public-demo .public-demo-shortcuts{grid-template-columns:1fr}
+ .public-demo .page-heading{align-items:flex-start;flex-direction:column}
+ .public-demo .topbar-right{gap:8px}
+ .public-demo .public-demo-mark{font-size:9px;padding:5px 7px}
+}
+@media(prefers-reduced-motion:reduce){
+ .public-demo *{transition:none!important;animation:none!important}
+}
