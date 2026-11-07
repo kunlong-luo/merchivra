@@ -1,6 +1,7 @@
 import {useEffect,useState} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {AuthViewer} from './lib/auth'
+import type {WorkbenchView} from './lib/workbench-routes'
 import CoreWorkspace from './CoreWorkspace'
 import BusinessOverviewWorkspace from './BusinessOverviewWorkspace'
 import OperationsWorkspace from './OperationsWorkspace'
@@ -10,28 +11,67 @@ import PurchasingWorkspace from './PurchasingWorkspace'
 import FinanceWorkspace from './FinanceWorkspace'
 import {fetchPing} from './lib/api'
 import {fetchDemoOverview,fetchDemoSyncRuns,startDemoSync,fetchDemoOrders,fetchDemoListings,fetchDemoInventory,fetchDemoCoreStatus} from './lib/demo'
-export type View='core'|'ops'|'team'|'connections'|'purchasing'|'finance'|'overview'|'orders'|'catalog'|'inventory'|'sync'
+export type View=WorkbenchView
 const nav:{key:View;label:string;symbol:string}[]=[
- {key:'core',label:'核心业务数据',symbol:'▣'},{key:'ops',label:'运营自动化',symbol:'✳'},
- {key:'team',label:'团队与权限',symbol:'♙'},{key:'purchasing',label:'采购与供应商',symbol:'▤'},{key:'finance',label:'财务与对账',symbol:'▥'},{key:'connections',label:'卖家授权',symbol:'◇'},{key:'overview',label:'经营总览',symbol:'◫'},
- {key:'orders',label:'订单管理',symbol:'▤'},{key:'catalog',label:'商品与 Listing',symbol:'▧'},
- {key:'inventory',label:'FBA 库存',symbol:'▥'},{key:'sync',label:'模拟同步',symbol:'↻'}
+ {key:'overview',label:'经营总览',symbol:'◫'},
+ {key:'core',label:'核心业务数据',symbol:'▣'},
+ {key:'orders',label:'订单管理',symbol:'▤'},
+ {key:'catalog',label:'商品与 Listing',symbol:'▧'},
+ {key:'inventory',label:'FBA 库存',symbol:'▥'},
+ {key:'purchasing',label:'采购与供应商',symbol:'▤'},
+ {key:'ops',label:'运营自动化',symbol:'✳'},
+ {key:'finance',label:'财务与对账',symbol:'▥'},
+ {key:'connections',label:'卖家授权',symbol:'◇'},
+ {key:'team',label:'团队与权限',symbol:'♙'},
+ {key:'sync',label:'模拟同步',symbol:'↻'}
 ]
+const navGroups:{title:string;views:View[]}[]=[
+ {title:'经营与商品',views:['overview','core','orders','catalog','inventory']},
+ {title:'供应链与对账',views:['purchasing','ops','finance']},
+ {title:'协作与设置',views:['connections','team','sync']}
+]
+
 function money(v?:{amount:string;currency:string}|null){return v?`${v.currency} ${v.amount}`:'不可计算'}
 function timestamp(v?:string|null){if(!v)return '暂无来源时间';const date=new Date(v);return Number.isNaN(date.getTime())?'时间未知':date.toLocaleString('zh-CN',{timeZone:'UTC',hour12:false})+' UTC'}
 function qualityLabel(v:string){const names:Record<string,string>={OBSERVED:'已观测',UNKNOWN:'未取得',STALE:'已过期',PARTIAL:'部分数据',UNMAPPED:'待映射',ACTIVE:'已映射',SHIPPED:'已发货',UNSHIPPED:'待发货',PARTIAL_REFUND:'部分退款',NOT_OBSERVED:'未取得财务数据'};return names[v]??v}
 function Table({heads,children,label='可水平滚动的演示数据表格'}:{heads:string[];children:React.ReactNode;label?:string}){return <div className="table-scroll" role="region" tabIndex={0} aria-label={label}><table><thead><tr>{heads.map(h=><th key={h} scope="col">{h}</th>)}</tr></thead><tbody>{children}</tbody></table></div>}
-export default function App({viewer,signingOut,onLogout,initialView='core',routeNavigation=false}:{viewer:AuthViewer;signingOut:boolean;onLogout:()=>void;initialView?:View;routeNavigation?:boolean}){
+export default function App({viewer,signingOut,onLogout,initialView='core',
+ routeNavigation=false,onNavigate}:{viewer:AuthViewer;signingOut:boolean;
+ onLogout:()=>void;initialView?:View;routeNavigation?:boolean;
+ onNavigate?:(view:View,mode?:'push'|'replace')=>void}){
  const [activeView,setActiveView]=useState<View>(() => typeof window !== 'undefined' &&
   new URLSearchParams(window.location.search).get('amazon_oauth') === 'pending_verification'
   ? 'connections' : initialView),[accountId,setAccountId]=useState(''),[syncMessage,setSyncMessage]=useState('')
  const [fbaFocus,setFbaFocus]=useState<{marketplaceId:string;lineId:string}|null>(null)
+ const navigate=(view:View,mode:'push'|'replace'='push')=>{
+  setActiveView(view)
+  if(routeNavigation)onNavigate?.(view,mode)
+ }
+ useEffect(()=>{
+  if(!routeNavigation)return
+  if(!viewer.isOwner&&initialView!=='core'){
+   setActiveView('core')
+   onNavigate?.('core','replace')
+   return
+  }
+  if(new URLSearchParams(window.location.search).get('amazon_oauth')==='pending_verification'
+     &&viewer.isOwner){
+   setActiveView('connections')
+   return
+  }
+  setActiveView(initialView)
+ },[initialView,routeNavigation,viewer.isOwner,onNavigate])
  const openFbaException=(marketplaceId:string,lineId:string)=>{
   setFbaFocus({marketplaceId,lineId})
-  setActiveView('core')
+  navigate(routeNavigation?'inventory':'core')
  }
+ const securedCoreModule=routeNavigation&&
+  (activeView==='orders'||activeView==='inventory'||activeView==='catalog')
  const client=useQueryClient()
- const demo=activeView!=='core'&&activeView!=='ops'&&activeView!=='team'&&activeView!=='connections'&&activeView!=='purchasing'&&activeView!=='finance'&&activeView!=='overview'&&viewer.isOwner
+ const demo=!securedCoreModule&&activeView!=='core'&&activeView!=='ops'&&
+  activeView!=='team'&&activeView!=='connections'&&
+  activeView!=='purchasing'&&activeView!=='finance'&&
+  activeView!=='overview'&&viewer.isOwner
  const ping=useQuery({queryKey:['api','ping'],queryFn:fetchPing,staleTime:30000,retry:1})
  const overview=useQuery({queryKey:['api','demo','overview'],queryFn:fetchDemoOverview,enabled:demo,staleTime:60000,retry:1})
  useEffect(()=>{if(overview.data?.accounts.length&&!overview.data.accounts.some(a=>a.id===accountId))setAccountId(overview.data.accounts[0].id)},[overview.data,accountId])
@@ -49,8 +89,24 @@ export default function App({viewer,signingOut,onLogout,initialView='core',route
  return <div className="workspace"><a className="skip-link" href="#main-content">跳转到主要内容</a>
  <aside className="sidebar"><div className="brand-wrap"><div className="brand-icon">M</div><div className="brand-copy"><strong>merchivra</strong><small>SELLER OPERATIONS</small></div></div>
  <div className="sidebar-section-title">工作空间</div><nav className="nav-links" aria-label="主导航">
- {(viewer.isOwner?nav:nav.filter(n=>n.key==='core')).map(item=><button key={item.key} type="button" className={`nav-link ${activeView===item.key?'active':''}`} aria-current={activeView===item.key?'page':undefined} onClick={()=>{setActiveView(item.key);if(routeNavigation)window.history.pushState(null,'',item.key==='overview'?'/':'/'+item.key)}}><span className="nav-icon" aria-hidden="true">{item.symbol}</span>{item.label}</button>)}
+ {(()=>{
+  const allowed=viewer.isOwner?nav:nav.filter(n=>n.key==='core')
+  const itemButton=(item:typeof nav[number])=><button key={item.key} type="button"
+   className={`nav-link ${activeView===item.key?'active':''}`}
+   aria-current={activeView===item.key?'page':undefined}
+   onClick={()=>navigate(item.key)}><span className="nav-icon" aria-hidden="true">{item.symbol}</span>
+   <span className="nav-link-label">{item.label}</span></button>
+  return routeNavigation?navGroups.map(group=>{
+   const items=group.views.flatMap(key=>allowed.filter(item=>item.key===key))
+   return items.length?<div key={group.title} className="nav-group">
+    <div className="nav-group-label">{group.title}</div>{items.map(itemButton)}
+   </div>:null
+  }):allowed.map(itemButton)
+ })()}
 </nav>
+ {routeNavigation&&<div className="workbench-source-note" role="note">
+  API 连通不代表 Amazon 已授权；财务与库存保留来源状态。
+ </div>}
  <div className="sidebar-spacer"/><div className="sidebar-info"><span className="local-indicator"/><div><strong>{demo?'本地演示环境':'核心业务工作台'}</strong><small>{demo?'纯虚构数据 · 无真实连接':'会话租户隔离 · 数据记录标注来源'}</small></div></div>
  <a className="sidebar-repo" href="https://github.com/kunlong-luo/merchivra" target="_blank" rel="noopener noreferrer">GitHub 源代码 <span aria-hidden="true">↗</span></a></aside>
  <main id="main-content" className="main-panel" tabIndex={-1}><header className="topbar">
@@ -58,11 +114,22 @@ export default function App({viewer,signingOut,onLogout,initialView='core',route
  <div className="topbar-right"><span className={`connection ${ping.isError?'connectionError':''}`} role="status" aria-label="后端 API 连接状态"><span className="connection-dot" aria-hidden="true"/>{status}</span>
  <span className="avatar" aria-label="已登录的工作台">✓</span><button className="logout-control" type="button" disabled={signingOut} onClick={onLogout}>{signingOut?'退出中…':'退出登录'}</button></div></header>
  <div className="content"><div className="page-heading"><div><div className="eyebrow">{demo?'COMMERCE INTELLIGENCE / DEMO':'SECURE ERP / CORE DATA'}</div><h1>{title}</h1>
- <p>{activeView==='core'?'基于当前 Session 的租户权限读取 PostgreSQL 核心业务表。':activeView==='ops'?'通过规则检查来源数据，生成可认领、可审计的运营待办。':activeView==='team'?'使用一次性邀请开通成员，并审计 Orders 安全审核员权限。':activeView==='connections'?'仅 Owner 可操作 Amazon OAuth、站点校验和 Orders 角色审核；所有真实连接仍受后端开关保护。':activeView==='purchasing'?'管理供应商、采购草稿、独立审批和收货；本地入库不会改动 Amazon FBA 库存。':activeView==='finance'?'查看原币来源事件、手工未核验财务记录和独立订单匹配，不把订单预计收入当平台结算。':activeView==='overview'?'逐 Marketplace 读取 PostgreSQL 核心来源质量与已冻结财务报告，不合并不同币种，不猜测净利润。':'集中查看店铺运营数据，所有示例来自本地 Mock Gateway。'}</p></div>
+ <p>{activeView==='core'?'基于当前 Session 的租户权限读取 PostgreSQL 核心业务表。':activeView==='ops'?'通过规则检查来源数据，生成可认领、可审计的运营待办。':activeView==='team'?'使用一次性邀请开通成员，并审计 Orders 安全审核员权限。':activeView==='connections'?'仅 Owner 可操作 Amazon OAuth、站点校验和 Orders 角色审核；所有真实连接仍受后端开关保护。':activeView==='purchasing'?'管理供应商、采购草稿、独立审批和收货；本地入库不会改动 Amazon FBA 库存。':activeView==='finance'?'查看原币来源事件、手工未核验财务记录和独立订单匹配，不把订单预计收入当平台结算。':activeView==='overview'?'逐 Marketplace 读取 PostgreSQL 核心来源质量与已冻结财务报告，不合并不同币种，不猜测净利润。':
+ activeView==='orders'&&routeNavigation?'读取当前租户的真实订单入库记录；履约、退款和财务状态独立标注，不把订单预计金额当结算。':
+ activeView==='catalog'&&routeNavigation?'读取当前租户的 Listing 与内部 SKU 关系；明确区分 MOCK、未验证及经授权的来源记录。':
+ activeView==='inventory'&&routeNavigation?'查看 FBA 库存最新来源观测与入仓证据；未知不等于零，历史数据不冒充实时可售库存。':
+ '集中查看店铺运营数据，所有示例来自本地 Mock Gateway。'}</p></div>
  {demo&&<div className="heading-actions"><label className="shop-filter"><span>当前店铺</span><select aria-label="切换演示店铺" value={accountId} disabled={!overview.data?.accounts.length} onChange={e=>setAccountId(e.target.value)}>{(overview.data?.accounts??[]).map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
  <button className="refresh-button" disabled={overview.isFetching} onClick={()=>void overview.refetch()}>↻ {overview.isFetching?'读取中':'刷新'}</button></div>}</div>
  {demo&&<div className="mock-banner" role="status"><span className="mock-banner-icon" aria-hidden="true">✦</span><div><strong>MOCK 演示模式</strong><span>全部商品、订单、账户与库存为虚构数据；无真实 Amazon 凭证或财务结算。</span></div><span className="mock-pill">DEMO ONLY</span></div>}
- {activeView==='core'?<CoreWorkspace tenantId={viewer.activeTenantId} isOwner={viewer.isOwner} focusException={fbaFocus}/>:
+ {activeView==='core'||securedCoreModule?
+  <CoreWorkspace tenantId={viewer.activeTenantId} isOwner={viewer.isOwner}
+   initialSection={activeView==='orders'?'orders':
+    activeView==='inventory'?'inventory':'listings'}
+   onSectionNavigate={routeNavigation?(section)=>navigate(({
+    listings:'catalog',orders:'orders',inventory:'inventory'
+   } as const)[section]):undefined}
+   focusException={fbaFocus}/>:
  activeView==='ops'&&viewer.isOwner?<OperationsWorkspace tenantId={viewer.activeTenantId} onOpenFbaException={openFbaException}/>:
  activeView==='team'&&viewer.isOwner?<TeamWorkspace tenantId={viewer.activeTenantId} currentUserId={viewer.userId}/>:
  activeView==='connections'&&viewer.isOwner?<SellerConnections tenantId={viewer.activeTenantId} currentUserId={viewer.userId}/>:
@@ -70,7 +137,7 @@ export default function App({viewer,signingOut,onLogout,initialView='core',route
  activeView==='finance'&&viewer.isOwner?<FinanceWorkspace tenantId={viewer.activeTenantId}/>:
  activeView==='overview'&&viewer.isOwner?
   <BusinessOverviewWorkspace tenantId={viewer.activeTenantId}
-   onOpenFinance={()=>setActiveView('finance')}/>:
+   onOpenFinance={()=>navigate('finance')}/>:
  overview.isPending?<div className="state-panel"><div className="loading-ring"/><strong>正在读取模拟数据…</strong><p>连接后端 Mock Marketplace Gateway</p></div>:
  overview.isError?<div className="state-panel error-panel" role="alert"><h2>暂时无法加载业务演示</h2><p>{overview.error instanceof Error?overview.error.message:'请检查服务状态及 Mock 配置。'}</p><button className="primary-button" onClick={()=>void overview.refetch()}>重新尝试</button></div>:
  overview.data&&account&&summary?<><div className="section-meta"><span><span className="data-dot"/> {account.name} · {account.marketplaceId} · {account.region}</span><span>模拟数据截止 {timestamp(overview.data.fixtureAsOf)}</span></div>
@@ -81,7 +148,7 @@ export default function App({viewer,signingOut,onLogout,initialView='core',route
  ['已观测退款',money(summary.observedRefunds),'单独列示，不重复相加'],
  ['预估订单贡献额','不可计算','缺少完整成本和费用；不显示虚假利润']
  ].map((m,i)=><div className={`metric-card ${i===3?'accent-card':''}`} key={i}><div className="metric-label">{m[0]}</div><div className="metric-value">{m[1]}</div><div className="metric-foot">{m[2]}</div></div>)}</section>
- <section className="two-column"><div className="panel"><div className="panel-heading"><div><h2>近期订单</h2><p>来源状态、退款与财务状态分别记录</p></div><button className="text-button" onClick={()=>setActiveView('orders')}>查看全部 →</button></div>
+ <section className="two-column"><div className="panel"><div className="panel-heading"><div><h2>近期订单</h2><p>来源状态、退款与财务状态分别记录</p></div><button className="text-button" onClick={()=>navigate('orders')}>查看全部 →</button></div>
  <Table heads={['订单编号','SKU','预计金额','履约状态']}>{recent.map(o=><tr key={o.id}><td className="strong-cell">{o.externalOrderId}</td><td>{o.sellerSku}</td><td>{money(o.provisionalSales)}</td><td><span className={`status-chip ${o.fulfillmentStatus==='SHIPPED'?'chip-green':'chip-amber'}`}>{qualityLabel(o.fulfillmentStatus)}</span></td></tr>)}</Table>{!recent.length&&<div className="empty-state">暂无订单</div>}</div>
  <div className="panel insight-panel"><div className="panel-heading"><div><h2>需要关注</h2><p>仅反映模拟数据质量</p></div></div>
  <div className="insight-row"><span className="insight-icon warning">!</span><div><strong>{summary.unmappedListings} 个 SKU 待映射</strong><small>原始 Listing 已保留</small></div></div>

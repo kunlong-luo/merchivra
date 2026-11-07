@@ -776,3 +776,18 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - **Next.js 16.4.5 是迁移目标，当前仍在双构建验证期**：`apps/web/app`、`next.config.ts`、`tsconfig.next.json` 和 `npm run *:next` 均为真实 App Router；旧 Vite/Nginx 是回退路径。**不要错误宣称已切生产或已删除 Vite**，必须先通过 Next 登录/CSRF/API、动态导航、Chrome 及 HTTPS ingress 安全核查。
 - 复用原有 Spring Boot 4 / Java 25 / Gradle / PostgreSQL 18、Orval、TanStack Query、Zod；完整 ERP 在 Node Next + Spring Boot 后端上运行，静态 GitHub Pages 只能提供虚构演示，不得发布有真实 Session/OAuth/财务写入能力的应用。
 - 下一步优先把 /orders、/purchasing、/core FBA、/ops、/finance 的真实页面按 A+B token 逐页视觉对照，再把原单页面内部导航迁移为可回退的 App Router 语义路由。真实 Amazon OAuth/远程写入继续默认禁用，待维护者本地联调。
+
+## V100 routing / data provenance enforcement (2026-11-07)
+
+- In Next.js: /orders, /catalog, /inventory MUST render the real
+  tenant-scoped CoreWorkspace, never the independent Vite Mock Gateway.
+  All real Seller OAuth, FBA writes, financial posting remain disabled.
+- Keep WORKBENCH_VIEWS in src/lib/workbench-routes.ts as the source of truth
+  for Server Component 404 validation, client URLs and browser history.
+  Use next/navigation router.push/replace, NOT history.pushState hacks.
+- Preserve Root/session and backend authorization; unauthorized
+  deep links must not reveal restricted modules or nonempty data.
+- A+B styles in app/design-system.css affect only the Next preview.
+  Continue to test separate Vite and public Pages builds.
+- Before production replacement, require Next route, Chromium mobile,
+  real backend cookies+CSRF and OAuth reverse proxy safety validation.
