@@ -62,3 +62,29 @@ CI executes the original locked Vite/Orval/Vitest build, then `npm run
  compilation only; it **does not** prove valid real Seller OAuth, session cookie
  forwarding, CSRF write flows, or finance authorization. Those remain explicit
  production migration blockers.
+
+## V100 — Next.js native routes, real data and A+B refinement
+
+- `src/lib/workbench-routes.ts` is the central typed route registry.
+  The Next `app/[view]/page.tsx` validates only known views; unknown
+  nested paths yield 404, not arbitrary API or business handlers.
+- `app/portal.tsx` now uses Next `useRouter`/`usePathname` to update
+  navigation without directly mutating browser history. Back, forward and
+  hard refresh must restore the selected module. The legacy Vite build
+  retains its original local tab behavior.
+- **Important provenance correction:** Next `/orders`, `/catalog` and
+  `/inventory` are real tenant-scoped `CoreWorkspace` sections, not the
+  separate legacy Vite Mock Gateway. The app retains actual roles, source
+  quality, known-zero vs UNKNOWN, and backend paging.
+- V100 A+B CSS adds sectioned sidebar, consistent selected tabs, data-table
+  rhythm, operator-focused evidence note and a mobile scrollable nav strip,
+  scoped to the Next preview only.
+- Chromium V100 tests exercise synthetic (only fixture) Core order/inventory
+  data and assert Next URL transitions, back/forward, hard refresh, no
+  unexpected Mock Gateway banner, keyboard and small-screen layouts.
+
+Remaining cutover gates are unchanged: verify true Session/CSRF and reverse
+proxy with non-synthetic backend, review OAuth callback redaction/HTTPS
+forwarded headers, validate operator role restrictions and visually review
+all key workbenches. GitHub Pages still runs only the Vite static public
+showcase; Next full ERP does **not** run on Pages.
