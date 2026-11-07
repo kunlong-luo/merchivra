@@ -181,8 +181,9 @@ const server = createServer(async (req, res) => {
       orderedQuantity:20,localReceivedQuantity:4,asnId:null,
       asnStatus:null,asnQuantity:null,asnReceivedQuantity:0
     }])
-  if (url.pathname === '/api/v1/purchasing/supplier-performance/scorecards')
-    return respond(res,[{
+  if (url.pathname === '/api/v1/purchasing/supplier-performance/scorecards'
+      || url.pathname === '/api/v1/purchasing/supplier-performance/scorecards/page') {
+    const scorecards=[{
       supplierId:'22222222-2222-4222-8222-222222222222',
       supplierName:'V73 Synthetic Supplier',
       completeAsnSampleCount:1,observedOnTimeAsnCount:1,
@@ -190,9 +191,13 @@ const server = createServer(async (req, res) => {
       activeVarianceCount:0,observedOnTimePercent:'100.0',
       inspectedAcceptancePercent:null,evidenceScore:null,
       scoringStatus:'INSUFFICIENT_EVIDENCE'
-    }])
-  if (url.pathname === '/api/v1/purchasing/supplier-performance/followups')
-    return respond(res,[])
+    }]
+    return respond(res,url.pathname.endsWith('/page')
+      ? emptyCursorPage(scorecards) : scorecards)
+  }
+  if (url.pathname === '/api/v1/purchasing/supplier-performance/followups'
+      || url.pathname === '/api/v1/purchasing/supplier-performance/followups/page')
+    return respond(res,url.pathname.endsWith('/page')?emptyCursorPage([]):[])
   if (url.pathname === '/api/v1/purchasing/delivery/overview')
     return respond(res,{
       asOfDateUtc:'2026-11-02',
