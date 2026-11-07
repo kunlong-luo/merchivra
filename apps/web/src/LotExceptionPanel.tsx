@@ -2,10 +2,11 @@ import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
 import {fetchLotPositions} from './lib/released-lots'
+import CursorPageControls from './CursorPageControls'
 import {fetchLotCountCases,fetchDestinationTransfers} from './lib/lot-reconciliation'
 import {
- fetchLotExceptions,proposeLotException,decideLotException,
- type NewLotException
+ fetchLotExceptionsPage,proposeLotException,decideLotException,
+ type LotExceptionFilter,type NewLotException
 } from './lib/lot-exceptions'
 
 const reasonOk=(s:string)=>s.trim().length>=5&&s.trim().length<=300
@@ -15,6 +16,9 @@ export default function LotExceptionPanel({tenantId,currentUserId,warehouses}:{
  const client=useQueryClient()
  const root=['purchasing',tenantId]
  const [warehouse,setWarehouse]=useState('')
+ const [reviewFilter,setReviewFilter]=useState<LotExceptionFilter>('PENDING')
+ const [reviewCursors,setReviewCursors]=useState<(string|null)[]>([null])
+ const reviewCursor=reviewCursors.at(-1)??null
  const [type,setType]=useState<NewLotException['resolutionType']>('RELEASED_SURPLUS_BIND')
  const [sourceId,setSourceId]=useState('')
  const [reference,setReference]=useState('')
@@ -28,13 +32,14 @@ export default function LotExceptionPanel({tenantId,currentUserId,warehouses}:{
   queryFn:()=>fetchDestinationTransfers(warehouse),enabled:!!warehouse,retry:false})
  const positions=useQuery({queryKey:[...root,'lot-positions',warehouse],
   queryFn:()=>fetchLotPositions(warehouse),enabled:!!warehouse,retry:false})
- const resolutions=useQuery({queryKey:[...root,'lot-exceptions',warehouse],
-  queryFn:()=>fetchLotExceptions(warehouse),enabled:!!warehouse,retry:false})
+ const resolutions=useQuery({queryKey:[...root,'lot-exceptions-page',warehouse,reviewFilter,reviewCursor],
+  queryFn:()=>fetchLotExceptionsPage(warehouse,reviewFilter,reviewCursor),
+  enabled:!!warehouse,retry:false})
  const refresh=()=>void client.invalidateQueries({queryKey:root})
  const surplus=(counts.data??[]).filter(c=>c.status==='EVIDENCE_REQUIRED'&&
-  c.observedQuantity>c.expectedPositionQuantity&&!resolutions.data?.some(r=>r.countReviewId===c.id))
+  c.observedQuantity>c.expectedPositionQuantity)
  const shortages=(transfers.data??[]).filter(t=>t.status==='MISMATCH'&&
-  t.expectedQuantity>t.receivedQuantity&&!resolutions.data?.some(r=>r.transferActionId===t.actionId))
+  t.expectedQuantity>t.receivedQuantity)
  const count=counts.data?.find(c=>c.id===sourceId)
  const sourceReceipt=positions.data?.find(p=>p.id===count?.positionId)?.receiptId??null
  const valid=!!sourceId&&reasonOk(reason)&&reference.trim().length>=4&&
@@ -47,7 +52,7 @@ export default function LotExceptionPanel({tenantId,currentUserId,warehouses}:{
   onSuccess:()=>{
    setSuccess('异常纠正申请已保存，必须由另一位 Owner 审核；尚未修改库存')
    setError('');setKey(crypto.randomUUID());setSourceId('');setReference('');
-   setReason('');refresh()
+   setReason('');setReviewCursors([null]);refresh()
   },onError:(e:Error)=>setError(e.message)})
  const decide=useMutation({mutationFn:({id,decision}:{
   id:string;decision:'APPROVE'|'REJECT'
@@ -57,7 +62,7 @@ export default function LotExceptionPanel({tenantId,currentUserId,warehouses}:{
     r.resolutionType==='TRANSFER_SHORTAGE'?
      '已按真实目的仓短收差额正式扣减目标仓和库位库存':
      '已将原始已放行的未定位库存分配到来源库位，没有增加仓库库存')
-   setError('');setReviewReason('');refresh()
+   setError('');setReviewReason('');setReviewCursors([null]);refresh()
   },onError:(e:Error)=>setError(e.message)})
  function submit(e:FormEvent){
   e.preventDefault()
@@ -76,7 +81,8 @@ export default function LotExceptionPanel({tenantId,currentUserId,warehouses}:{
   </div><button type="button" className="refresh-button" onClick={refresh}>刷新</button></div>
   <label htmlFor="v51-warehouse">需要处理的仓库</label>
   <select id="v51-warehouse" value={warehouse} onChange={e=>{
-   setWarehouse(e.target.value);setSourceId('');setKey(crypto.randomUUID())}}>
+   setWarehouse(e.target.value);setReviewCursors([null]);
+   setSourceId('');setKey(crypto.randomUUID())}}>
    <option value="">选择仓库</option>
    {warehouses.filter(w=>w.status==='ACTIVE').map(w=>
     <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}
@@ -119,6 +125,15 @@ export default function LotExceptionPanel({tenantId,currentUserId,warehouses}:{
      disabled={!valid||propose.isPending}>提交独立审核（暂不调账）</button>
    </form>
    <h3>独立审批队列</h3>
+   <label htmlFor="v51-review-filter">审核记录范围</label>
+   <select id="v51-review-filter" value={reviewFilter}
+    onChange={e=>{setReviewFilter(e.target.value as LotExceptionFilter);
+      setReviewCursors([null])}}>
+    <option value="PENDING">待另一 Owner 审核</option>
+    <option value="ALL">全部状态及历史</option>
+   </select>
+   <p className="setup-hint">待纠正来源来自 V50 盘点与调拨观察，不代表已经通过去重；
+    正式申请时服务器会全库拒绝已有申请。队列按时间稳定分页，不因当前页有限而允许重复申请。</p>
    <p className="setup-hint">审批前重新读取当前库位与库存快照。
     来源不符、库存被其他操作消费、或数量已变化，都将拒绝而非强行调账。</p>
    <label htmlFor="v51-review-reason">审批意见</label>
@@ -126,12 +141,12 @@ export default function LotExceptionPanel({tenantId,currentUserId,warehouses}:{
     onChange={e=>setReviewReason(e.target.value)}/>
    {resolutions.isPending?<p className="empty-state">正在读取审核单…</p>:
     resolutions.isError?<p role="alert" className="setup-error">{String(resolutions.error)}</p>:
-    !resolutions.data?.length?<p className="empty-state">当前仓库暂无 V51 异常纠正申请。</p>:
+    !resolutions.data?.items.length?<p className="empty-state">当前仓库暂无 V51 异常纠正申请。</p>:
     <div className="table-scroll" role="region" tabIndex={0}>
      <table><thead><tr><th scope="col">异常类型</th><th scope="col">待纠正</th>
       <th scope="col">凭据</th><th scope="col">状态</th>
       <th scope="col">另一位 Owner 审核</th></tr></thead><tbody>
-      {resolutions.data.map(x=><tr key={x.id}>
+      {resolutions.data.items.map(x=><tr key={x.id}>
        <td>{x.resolutionType==='TRANSFER_SHORTAGE'?'跨仓少收':'有来源盘盈'}</td>
        <td>{x.adjustmentQuantity} 件</td><td>{x.evidenceReference}</td>
        <td>{x.status==='PENDING_REVIEW'?'待审核':
@@ -149,6 +164,11 @@ export default function LotExceptionPanel({tenantId,currentUserId,warehouses}:{
         </div>:'—'}</td>
       </tr>)}</tbody></table>
     </div>}
+   {!!resolutions.data&&<CursorPageControls label="库位异常独立审批记录"
+    page={reviewCursors.length} hasMore={resolutions.data.hasMore}
+    nextCursor={resolutions.data.nextCursor} busy={resolutions.isFetching}
+    onPrev={()=>setReviewCursors(v=>v.length>1?v.slice(0,-1):v)}
+    onNext={v=>setReviewCursors(h=>[...h,v])}/>}
   </>}
   {success&&<p className="panel-caption" role="status">{success}</p>}
   {error&&<p className="setup-error" role="alert">{error}</p>}

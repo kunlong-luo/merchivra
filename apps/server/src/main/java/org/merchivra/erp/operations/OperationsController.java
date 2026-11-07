@@ -11,6 +11,9 @@ import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.security.TenantAccessService;
 import org.merchivra.erp.fba.FbaExceptionPermissionService;
+import org.merchivra.erp.purchasing.LocalKeysetPage;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -45,6 +48,19 @@ public class OperationsController {
         @RequestParam(defaultValue = "ACTIVE") String filter) {
         UUID tenant=access.currentTenant(auth,request);
         return service.findings(tenant,filter,access.authenticatedUser(auth));
+    }
+
+    @Operation(operationId="listOperationFindingsPage")
+    @GetMapping("/findings/page")
+    public ResponseEntity<LocalKeysetPage.Page<OperationsAutomationService.Finding>> findingsPage(
+        Authentication auth,HttpServletRequest request,
+        @RequestParam(defaultValue="ACTIVE") String filter,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        UUID tenant=access.currentTenant(auth,request);
+        UUID actor=access.authenticatedUser(auth);
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.findingsPage(tenant,filter,actor,limit,cursor));
     }
 
     @Operation(operationId="getOperationsSummary")

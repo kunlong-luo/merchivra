@@ -7,7 +7,8 @@ const expected=['listOperationFindings','getOperationsSummary','scanOperationsNo
  'setOperationFindingState','claimOperationFinding','releaseOperationFinding',
  'snoozeOperationFinding','unsnoozeOperationFinding',
  'getOperationFindingAttentionAudit',
- 'listOperationRules','saveOperationRule','listOperationRuleAudit']
+ 'listOperationRules','saveOperationRule','listOperationRuleAudit',
+ 'listOperationFindingsPage']
 const paths=Object.fromEntries(Object.entries(raw.paths??{})
  .filter(([p])=>p==='/api/v1/operations/findings'||
   p.startsWith('/api/v1/operations/findings/')||
@@ -21,8 +22,8 @@ for(const id of expected)
 if(actual.length!==expected.length)throw Error('Unexpected operations endpoints: '+actual.join(','))
 const result=structuredClone(raw)
 result.paths=paths
-result.info={title:'Merchivra V69 owner operations rule settings',version:'69.1.0',
- description:'V10/V67/V69 advisory only, MOCK/UNVERIFIED or source-labeled; no Amazon calls.'}
+result.info={title:'Merchivra V95 owner operations work queue and rule settings',version:'95.1.0',
+ description:'V10/V67/V69/V95 advisory only, MOCK/UNVERIFIED or source-labeled; no Amazon calls.'}
 result.servers=[{url:''}]
 result.security=[{sessionCookie:[]}]
 result.components??={}
@@ -43,4 +44,4 @@ function sort(o){
 }
 fs.mkdirSync(target.slice(0,target.lastIndexOf('/'))||'.',{recursive:true})
 fs.writeFileSync(target,JSON.stringify(sort(result),null,2)+'\n')
-console.log('Verified '+actual.length+' runtime V69 ops routes')
+console.log('Verified '+actual.length+' runtime V95 ops routes')

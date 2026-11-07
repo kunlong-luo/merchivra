@@ -1,6 +1,6 @@
 import {z} from 'zod'
 import {
- listOperationFindings,getOperationsSummary,scanOperationsNow,
+ listOperationFindings,listOperationFindingsPage,getOperationsSummary,scanOperationsNow,
  setOperationFindingState,claimOperationFinding,releaseOperationFinding,
  snoozeOperationFinding,unsnoozeOperationFinding,getOperationFindingAttentionAudit
 } from '../generated/operations-v67'
@@ -61,6 +61,17 @@ export const severityNames:Record<Finding['severity'],string>={
 }
 export const fetchFindings=async(filter:FindingFilter)=>
  z.array(findingSchema).max(100).parse((await listOperationFindings({filter})).data)
+const findingsPageSchema=z.object({
+ items:z.array(findingSchema).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{message:'Invalid operations cursor page'})
+/** V95: SpringDoc + Orval GET with shared no-store Session transport. */
+export const fetchFindingsPage=async(filter:FindingFilter,cursor:string|null=null)=>{
+ const response=await listOperationFindingsPage({
+  filter,limit:50,...(cursor?{cursor}:{})
+ })
+ return findingsPageSchema.parse(response.data)
+}
 export const fetchOpsSummary=async()=>summarySchema.parse((await getOperationsSummary()).data)
 export const scanOperations=async()=>scanSchema.parse((await scanOperationsNow()).data)
 export const changeFindingState=async(id:string,state:FindingState)=>

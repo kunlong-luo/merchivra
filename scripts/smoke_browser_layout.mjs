@@ -253,14 +253,24 @@ const server = createServer(async (req, res) => {
     return respond(res, [])
   if (url.pathname === '/api/v1/operations/summary')
     return respond(res, { open:1, acknowledged:0, done:0, cleared:0, snoozed:0 })
-  if (url.pathname === '/api/v1/operations/findings')
-    return respond(res, [{
+  if (url.pathname === '/api/v1/operations/findings'
+      || url.pathname === '/api/v1/operations/findings/page') {
+    const findings=[{
       id:'77777777-7777-4777-8777-777777777777',
       marketplaceId:market, ruleCode:'INVENTORY_UNKNOWN',
       sourceKey:'TEST-SKU-100', title:'FBA 库存数据不完整',
       severity:'WARNING', state:'OPEN', dataOrigin:'MOCK',
       lastSeenAt:'2026-10-31T00:00:00Z', assignedTo:null, snoozedUntil:null
-    }])
+    }]
+    if (url.pathname.endsWith('/page')) {
+      const filter=url.searchParams.get('filter')??'ACTIVE'
+      // V95 page is priority-ordered, permission-filtered, cursor-based.
+      // This fixture has one visible, unsnoozed MOCK finding on the first page.
+      return respond(res,emptyCursorPage(findings.filter(x=>filter==='ALL'
+        || x.state==='OPEN'||x.state==='ACKNOWLEDGED')))
+    }
+    return respond(res,findings)
+  }
   if (url.pathname.startsWith('/api/v1/')) {
     if (url.pathname === '/api/v1/seller-marketplaces' && mode === 'connected')
       return respond(res, mock.get(url.pathname).map(x=>({ ...x, connectionStatus:'CONNECTED' })))

@@ -2,6 +2,10 @@ package org.merchivra.erp.purchasing;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.OffsetDateTime;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -32,6 +36,7 @@ public class LotExceptionResolutionService {
         int expectedPositionQuantity,long expectedOnHand,int adjustmentQuantity,
         String evidenceReference,String reason,String status,String proposedBy,
         String reviewedBy,String reviewReason,String operationId) {}
+    private record TimedResolution(Resolution item,String createdAt) {}
     private record CountEvidence(UUID id,UUID position,UUID warehouse,UUID sku,UUID bin,
                                  int expected,int observed,String status) {}
     private record TransferEvidence(UUID id,UUID position,UUID warehouse,UUID sku,
@@ -80,7 +85,7 @@ public class LotExceptionResolutionService {
           source_receipt_id,position_id,warehouse_id,product_sku_id,
           expected_bin_id,expected_position_quantity,expected_on_hand,
           adjustment_quantity,evidence_reference,reason,status,proposed_by,
-          reviewed_by,review_reason,operation_id
+          reviewed_by,review_reason,operation_id,created_at
         FROM erp_local_lot_exception_resolution WHERE tenant_id=?
         """;
     @Transactional(readOnly=true)
@@ -88,6 +93,43 @@ public class LotExceptionResolutionService {
         return jdbc.query(SQL+"""
             AND warehouse_id=? ORDER BY created_at DESC,id DESC LIMIT 200
             """,LotExceptionResolutionService::map,tenant,warehouse);
+    }
+    /** V95: all warehouse approvals, not only 200 newest applications.
+     * PENDING is the action queue; ALL includes applied/rejected history.
+     */
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Resolution> listPage(UUID tenant,UUID warehouse,
+        String filter,int requested,String cursor) {
+        if(!"PENDING".equals(filter) && !"ALL".equals(filter))throw bad(
+            "Lot exception filter must be PENDING or ALL");
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=LocalKeysetPage.decode(cursor,5);
+        if(after!=null && (!tenant.toString().equals(after[0])
+            || !warehouse.toString().equals(after[1]) || !filter.equals(after[2])))
+            throw bad("Lot exception cursor belongs to another tenant, warehouse or filter");
+        var args=new ArrayList<Object>();
+        args.add(tenant);args.add(warehouse);
+        String where="PENDING".equals(filter)?" AND status='PENDING_REVIEW'":"";
+        if(after!=null) {
+            try {
+                where+=" AND (created_at,id) < (?,?)";
+                args.add(OffsetDateTime.ofInstant(Instant.parse(after[3]),ZoneOffset.UTC));
+                args.add(UUID.fromString(after[4]));
+            } catch(Exception ex) {throw bad("Invalid lot exception cursor");}
+        }
+        args.add(limit+1);
+        List<TimedResolution> rows=jdbc.query(
+            SQL+
+            " AND warehouse_id=?"+where+" ORDER BY created_at DESC,id DESC LIMIT ?",
+            (rs,i)->new TimedResolution(map(rs,i),
+                rs.getObject("created_at",OffsetDateTime.class).toInstant().toString()),
+            args.toArray());
+        var page=LocalKeysetPage.pack(rows,limit,r->LocalKeysetPage.encode(
+            tenant.toString(),warehouse.toString(),filter,
+            r.createdAt(),r.item().id()));
+        return new LocalKeysetPage.Page<>(
+            page.items().stream().map(TimedResolution::item).toList(),
+            page.nextCursor(),page.hasMore(),page.pageSize());
     }
     private Resolution one(UUID tenant,UUID id){
         return jdbc.query(SQL+" AND id=?",LotExceptionResolutionService::map,tenant,id)

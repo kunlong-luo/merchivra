@@ -3,6 +3,9 @@ package org.merchivra.erp.operations;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import org.merchivra.erp.purchasing.LocalKeysetPage;
 import java.util.ArrayList;
 import java.util.Collections;
 import org.merchivra.erp.fba.FbaPurchaseExceptionService;
@@ -46,6 +49,7 @@ public class OperationsAutomationService {
     public record Finding(String id, String marketplaceId, String ruleCode, String sourceKey,
                           String title, String severity, String state, String dataOrigin,
                           String lastSeenAt,String assignedTo,String snoozedUntil) {}
+    private record RankedFinding(Finding item,int rank,String changedAt) {}
     public record ScanResult(String id, String triggerType, int matchedCount,
                              int clearedCount) {}
     public record Summary(long open, long acknowledged, long done, long cleared,
@@ -219,6 +223,75 @@ public class OperationsAutomationService {
                      changed_at DESC, id DESC
             LIMIT 100
             """, OperationsAutomationService::mapFinding, tenant, filter, filter, actor,actor);
+    }
+
+    /** V95: tenant/actor/filter-scoped cursor, full queue (not LIMIT 100).
+     * VIEW-denied FBA findings are removed by SQL BEFORE pagination.
+     * State priority is preserved across page boundaries; changing findings
+     * can reorder a live queue, so this is deliberately not a snapshot.
+     */
+    @Transactional(readOnly = true)
+    public LocalKeysetPage.Page<Finding> findingsPage(UUID tenant,String filter,
+        UUID actor,int requested,String cursor) {
+        if (!List.of("ACTIVE","ACTIONABLE","ALL").contains(filter))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "filter must be ACTIVE, ACTIONABLE or ALL");
+        if(actor==null)throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+            "Authenticated Owner required");
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=LocalKeysetPage.decode(cursor,6);
+        if(after!=null && (!tenant.toString().equals(after[0])
+            || !actor.toString().equals(after[1]) || !filter.equals(after[2])))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Operations cursor belongs to another tenant, Owner or filter");
+        var args=new ArrayList<Object>();
+        args.add(tenant);args.add(filter);args.add(filter);args.add(actor);args.add(actor);
+        String where="";
+        if(after!=null) {
+            try {
+                int rank=Integer.parseInt(after[3]);
+                if(rank<0||rank>3)throw new IllegalArgumentException();
+                OffsetDateTime time=OffsetDateTime.ofInstant(Instant.parse(after[4]),ZoneOffset.UTC);
+                where=" WHERE (state_rank > ? OR (state_rank = ? AND (changed_at,id) < (?,?)))";
+                args.add(rank);args.add(rank);args.add(time);args.add(UUID.fromString(after[5]));
+            } catch(Exception ex) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Invalid Operations cursor");
+            }
+        }
+        args.add(limit+1);
+        List<RankedFinding> rows=jdbc.query("""
+            WITH visible AS (
+              SELECT id,seller_marketplace_id,rule_code,source_key,title,
+                     severity,state,data_origin,last_seen_at,assigned_to,snoozed_until,
+                     changed_at,
+                     CASE state WHEN 'OPEN' THEN 0 WHEN 'ACKNOWLEDGED' THEN 1
+                                WHEN 'DONE' THEN 2 ELSE 3 END AS state_rank
+              FROM ops_finding
+              WHERE tenant_id=?
+                AND (?='ALL' OR state IN ('OPEN','ACKNOWLEDGED'))
+                AND (?<>'ACTIONABLE' OR snoozed_until IS NULL OR snoozed_until<=now())
+                AND (?::uuid IS NULL OR NOT (
+                    rule_code IN ('FBA_PO_EVIDENCE_CHANGED','FBA_PO_EXCEPTION_OVERDUE')
+                    AND EXISTS (
+                      SELECT 1 FROM fba_exception_owner_permission p
+                      WHERE p.tenant_id=ops_finding.tenant_id
+                        AND p.seller_marketplace_id=ops_finding.seller_marketplace_id
+                        AND p.owner_user_id=?::uuid AND NOT p.can_view
+                    )))
+            )
+            SELECT * FROM visible
+            """+where+" ORDER BY state_rank ASC,changed_at DESC,id DESC LIMIT ?",
+            (rs,i)->new RankedFinding(mapFinding(rs,i),
+                rs.getInt("state_rank"),
+                rs.getObject("changed_at",OffsetDateTime.class).toInstant().toString()),
+            args.toArray());
+        var page=LocalKeysetPage.pack(rows,limit,r->LocalKeysetPage.encode(
+            tenant.toString(),actor.toString(),filter,String.valueOf(r.rank()),
+            r.changedAt(),r.item().id()));
+        return new LocalKeysetPage.Page<>(
+            page.items().stream().map(RankedFinding::item).toList(),
+            page.nextCursor(),page.hasMore(),page.pageSize());
     }
 
     @Transactional(readOnly = true)
