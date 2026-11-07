@@ -1,6 +1,6 @@
 import {z} from 'zod'
 import {
- listOperationFindings,getOperationsSummary,scanOperationsNow,
+ listOperationFindings,listOperationFindingsPage,getOperationsSummary,scanOperationsNow,
  setOperationFindingState,claimOperationFinding,releaseOperationFinding,
  snoozeOperationFinding,unsnoozeOperationFinding,getOperationFindingAttentionAudit
 } from '../generated/operations-v67'
@@ -65,15 +65,12 @@ const findingsPageSchema=z.object({
  items:z.array(findingSchema).max(100),nextCursor:z.string().min(1).nullable(),
  hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
 }).refine(p=>p.hasMore===(p.nextCursor!==null),{message:'Invalid operations cursor page'})
-/** V95: HTTP GET retains Owner Session; actions still use generated Orval+CSRF. */
+/** V95: SpringDoc + Orval GET with shared no-store Session transport. */
 export const fetchFindingsPage=async(filter:FindingFilter,cursor:string|null=null)=>{
- const params=new URLSearchParams({filter,limit:'50'})
- if(cursor)params.set('cursor',cursor)
- const res=await fetch('/api/v1/operations/findings/page?'+params.toString(),{
-  credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}
+ const response=await listOperationFindingsPage({
+  filter,limit:50,...(cursor?{cursor}:{})
  })
- if(!res.ok)throw Error('运营待办分页 HTTP '+res.status)
- return findingsPageSchema.parse(await res.json())
+ return findingsPageSchema.parse(response.data)
 }
 export const fetchOpsSummary=async()=>summarySchema.parse((await getOperationsSummary()).data)
 export const scanOperations=async()=>scanSchema.parse((await scanOperationsNow()).data)
