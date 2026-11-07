@@ -32,9 +32,9 @@ class SupplierPerformanceServiceTest {
     }
     @Test void scorecardsNeverUseAnotherTenantOrForeignUrls() {
         when(jdbc.query(contains("FROM erp_supplier s"),any(RowMapper.class),
-            eq(tenant),eq(tenant),eq(tenant),eq(tenant))).thenReturn(List.of());
+            eq(tenant),eq(tenant),eq(tenant),eq(tenant),eq(201))).thenReturn(List.of());
         assertTrue(service.scorecards(tenant).isEmpty());
         verify(jdbc).query(contains("WHERE s.tenant_id=? AND s.status='ACTIVE'"),
-            any(RowMapper.class),eq(tenant),eq(tenant),eq(tenant),eq(tenant));
+            any(RowMapper.class),eq(tenant),eq(tenant),eq(tenant),eq(tenant),eq(201));
     }
 }
