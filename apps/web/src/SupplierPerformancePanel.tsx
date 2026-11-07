@@ -1,7 +1,8 @@
-import {useState} from 'react'
+import {useEffect,useState} from 'react'
+import CursorPageControls from './CursorPageControls'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {
- fetchSupplierScorecards,fetchPurchaseFollowups,scanPurchaseFollowups,
+ fetchSupplierScorecardsPage,fetchPurchaseFollowupsPage,scanPurchaseFollowups,
  setPurchaseFollowupState,type FollowupState
 } from './lib/supplier-performance'
 
@@ -14,13 +15,19 @@ export default function SupplierPerformancePanel({tenantId,onOpenOrder}:{
 }){
  const client=useQueryClient()
  const [filter,setFilter]=useState<'ACTIVE'|'ALL'>('ACTIVE')
+ const [scoreCursors,setScoreCursors]=useState<(string|null)[]>([null])
+ const [followCursors,setFollowCursors]=useState<(string|null)[]>([null])
+ const scoreCursor=scoreCursors.at(-1)??null
+ const followCursor=followCursors.at(-1)??null
+ useEffect(()=>{setScoreCursors([null]);setFollowCursors([null])},[tenantId])
  const [message,setMessage]=useState(''),[error,setError]=useState('')
  const key=['purchasing',tenantId,'supplier-performance']
- const scores=useQuery({queryKey:[...key,'scorecards'],
-  queryFn:fetchSupplierScorecards,retry:false})
- const followups=useQuery({queryKey:[...key,'followups',filter],
-  queryFn:()=>fetchPurchaseFollowups(filter),retry:false})
- const refresh=()=>{void client.invalidateQueries({queryKey:key});
+ const scores=useQuery({queryKey:[...key,'scorecards-page',scoreCursor],
+  queryFn:()=>fetchSupplierScorecardsPage(scoreCursor),retry:false})
+ const followups=useQuery({queryKey:[...key,'followups-page',filter,followCursor],
+  queryFn:()=>fetchPurchaseFollowupsPage(filter,followCursor),retry:false})
+ const refresh=()=>{setScoreCursors([null]);setFollowCursors([null]);
+  void client.invalidateQueries({queryKey:key});
   void client.invalidateQueries({queryKey:['purchasing',tenantId,'delivery']})}
  const scan=useMutation({mutationFn:scanPurchaseFollowups,
   onSuccess:r=>{setMessage('已完成本地采购催办扫描：匹配 '+r.matchedCount+
@@ -37,12 +44,12 @@ export default function SupplierPerformancePanel({tenantId,onOpenOrder}:{
    <button type="button" className="refresh-button" onClick={refresh}>刷新评分</button></div>
   {scores.isPending?<p className="empty-state">读取供应商履约证据…</p>:
    scores.isError?<p className="setup-error" role="alert">{String(scores.error)}</p>:
-   !scores.data?.length?<p className="empty-state">尚无有效供应商。</p>:
+   !scores.data?.items.length?<p className="empty-state">尚无有效供应商。</p>:
    <div className="table-scroll" tabIndex={0} role="region" aria-label="供应商履约样本评分表">
     <table><thead><tr><th scope="col">供应商</th>
      <th scope="col">完整 ASN / 准时样本</th><th scope="col">已检收货批次 / QC 接受量</th>
      <th scope="col">待结差异</th><th scope="col">临时证据评分</th></tr></thead><tbody>
-     {scores.data.map(s=><tr key={s.supplierId}>
+     {scores.data.items.map(s=><tr key={s.supplierId}>
       <td>{s.supplierName}</td>
       <td>{s.observedOnTimeAsnCount} / {s.completeAsnSampleCount}
        <div className="secondary-cell">准时比例 {s.observedOnTimePercent===null?'证据不足':s.observedOnTimePercent+'%'}</div></td>
@@ -53,6 +60,11 @@ export default function SupplierPerformancePanel({tenantId,onOpenOrder}:{
      </tr>)}
     </tbody></table>
    </div>}
+  {!!scores.data&&<CursorPageControls label="供应商履约评分分页"
+   page={scoreCursors.length} hasMore={scores.data.hasMore}
+   nextCursor={scores.data.nextCursor} busy={scores.isFetching}
+   onPrev={()=>setScoreCursors(v=>v.length>1?v.slice(0,-1):v)}
+   onNext={c=>setScoreCursors(v=>[...v,c])}/>}
   <p className="panel-caption">参考评分＝60% × ASN 收货准时率 + 40% × QC 接受率；
    两类有效样本各至少 3 条才计算。人工 ETA 不是承运商承诺，评分不直接用于自动取消供应商、付款或采购决策。
    差异单独列示，未混入评分；正在运输/未验收的数据不算失败样本。</p>
@@ -63,17 +75,17 @@ export default function SupplierPerformancePanel({tenantId,onOpenOrder}:{
     onClick={()=>scan.mutate()}>手动扫描待跟进采购</button></div>
   <label htmlFor="po-followup-filter">待办范围</label>
   <select id="po-followup-filter" value={filter}
-   onChange={e=>setFilter(e.target.value as 'ACTIVE'|'ALL')}>
+   onChange={e=>{setFilter(e.target.value as 'ACTIVE'|'ALL');setFollowCursors([null])}}>
    <option value="ACTIVE">需要处理</option><option value="ALL">全部（含已清除）</option>
   </select>
   {followups.isPending?<p className="empty-state">正在读取采购催办记录…</p>:
    followups.isError?<p className="setup-error" role="alert">{String(followups.error)}</p>:
-   !followups.data?.length?<p className="empty-state">暂无这类采购催办。可以手动扫描。</p>:
+   !followups.data?.items.length?<p className="empty-state">暂无这类采购催办。可以手动扫描。</p>:
    <div className="table-scroll" tabIndex={0} role="region" aria-label="采购交付催办待办表">
     <table><thead><tr><th scope="col">采购单 / SKU</th>
      <th scope="col">跟进原因</th><th scope="col">订购 / 已收 / ASN 覆盖</th>
      <th scope="col">状态</th><th scope="col">操作</th></tr></thead><tbody>
-     {followups.data.map(f=><tr key={f.id}>
+     {followups.data.items.map(f=><tr key={f.id}>
       <td>{f.orderNumber}<div className="secondary-cell">{f.supplierName} · {f.internalSku}</div></td>
       <td>{states[f.ruleCode]}<div className="secondary-cell">
        该行未覆盖 {f.uncoveredQuantity} 件；批准于 {f.approvedAt.slice(0,10)} UTC</div></td>
@@ -92,6 +104,11 @@ export default function SupplierPerformancePanel({tenantId,onOpenOrder}:{
      </tr>)}
     </tbody></table>
    </div>}
+  {!!followups.data&&<CursorPageControls label="供应商采购人工跟进分页"
+   page={followCursors.length} hasMore={followups.data.hasMore}
+   nextCursor={followups.data.nextCursor} busy={followups.isFetching}
+   onPrev={()=>setFollowCursors(v=>v.length>1?v.slice(0,-1):v)}
+   onNext={c=>setFollowCursors(v=>[...v,c])}/>}
   {message&&<p className="panel-caption" role="status">{message}</p>}
   {error&&<p className="setup-error" role="alert">{error}</p>}
   <p className="panel-caption">可选定时扫描默认关闭，所有催办仅在本地形成审计记录，
