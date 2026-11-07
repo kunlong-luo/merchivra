@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -56,6 +57,26 @@ public class SupplierPerformanceService {
 
     @Transactional(readOnly=true)
     public List<Scorecard> scorecards(UUID tenant) {
+        return scorecardsQuery(tenant,null,200).stream().map(ScorecardRow::score).toList();
+    }
+    private record ScorecardRow(Scorecard score,String displayName) {}
+    private List<ScorecardRow> scorecardsQuery(UUID tenant,String rawCursor,int requested) {
+        int limit=LocalKeysetPage.limit(requested);
+        String[] cursor=LocalKeysetPage.decode(rawCursor,3);
+        var args=new ArrayList<Object>();
+        args.add(tenant);args.add(tenant);args.add(tenant);args.add(tenant);
+        String pageWhere="";
+        if(cursor!=null) {
+            if(!tenant.toString().equals(cursor[0]))
+                throw LocalKeysetPage.bad("Supplier scorecard cursor scope mismatch");
+            pageWhere=" AND (s.display_name,s.id)>(?,?)";
+            args.add(cursor[1]);
+            try {args.add(UUID.fromString(cursor[2]));}
+            catch(IllegalArgumentException e) {
+                throw LocalKeysetPage.bad("Invalid supplier scorecard ID");
+            }
+        }
+        args.add(limit+1);
         return jdbc.query("""
             SELECT s.id AS supplier_id,s.display_name,
               COALESCE(a.complete_asns,0)::integer AS complete_asns,
@@ -115,7 +136,20 @@ public class SupplierPerformanceService {
               GROUP BY o.supplier_id
             ) v ON v.supplier_id=s.id
             WHERE s.tenant_id=? AND s.status='ACTIVE'
-            ORDER BY s.display_name,s.id LIMIT 200
-            """,SupplierPerformanceService::map,tenant,tenant,tenant,tenant);
+            """+pageWhere+"""
+            ORDER BY s.display_name,s.id LIMIT ?
+            """,(rs,i)->new ScorecardRow(map(rs,i),rs.getString("display_name")),
+            args.toArray());
+    }
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Scorecard> scorecardsPage(UUID tenant,int requested,
+        String rawCursor) {
+        int limit=LocalKeysetPage.limit(requested);
+        List<ScorecardRow> rows=scorecardsQuery(tenant,rawCursor,limit);
+        var page=LocalKeysetPage.pack(rows,limit,row->LocalKeysetPage.encode(
+            tenant.toString(),row.displayName(),row.score().supplierId()));
+        return new LocalKeysetPage.Page<>(
+            page.items().stream().map(ScorecardRow::score).toList(),
+            page.nextCursor(),page.hasMore(),page.pageSize());
     }
 }
