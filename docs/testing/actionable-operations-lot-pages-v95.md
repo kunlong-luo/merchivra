@@ -12,6 +12,8 @@
 
 复用现有 `LocalKeysetPage`（将既有静态方法暴露为跨模块公共方法）、Spring JDBC、TanStack React Query、Zod 和 `CursorPageControls`，没有新加缓存队列、ORM 或分页库。
 
+V95 运营模块新增 `listOperationFindingsPage` OpenAPI operationId；从真实 PostgreSQL 18 Spring Boot 导出的 13 条运营接口，经 `scripts/normalize-ops-openapi.mjs` 规范化后纳入 `apps/web/openapi/operations-v67.json`。使用 **Orval 8.44** 生成 `apps/web/src/generated/operations-v67.ts` 与对应类型；界面查询直接调用生成的 `listOperationFindingsPage`，通过原有 `merchivraFetch` 自动落实同源 Cookie、禁缓存与失败处理，独立写入继续使用生成的 CSRF 接口。PG18 CI 仍执行 **严格 `cmp`** 验证运行时合同匹配已审核的仓库 JSON，未保留一次性生成辅助工作流。
+
 **运营异常：**
 - `GET /api/v1/operations/findings/page?filter=ACTIVE|ACTIONABLE|ALL&limit=50&cursor=...`。
 - 服务端延续旧版状态优先级 `OPEN → ACKNOWLEDGED → DONE → CLEARED`；同一优先级按 `changed_at DESC,id DESC` 排序并游标翻页。
