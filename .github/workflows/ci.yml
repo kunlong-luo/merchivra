@@ -36,7 +36,7 @@ jobs:
         run: ./apps/server/gradlew -p apps/server --no-daemon --console plain test jacocoTestReport
 
   frontend:
-    name: React 19 / TypeScript / Vitest / Vite
+    name: React 19 / Vite baseline + Next.js 16 preview
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -62,6 +62,10 @@ jobs:
         run: npm run test
       - name: Build
         run: npm run build
+      - name: Next 16 App Router TS gate
+        run: npm run typecheck:next
+      - name: Next 16 App Router production build preview
+        run: npm run build:next
 
   pg18-migrations:
     name: PostgreSQL 18 / real Flyway migrations
