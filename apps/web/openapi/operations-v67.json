@@ -104,6 +104,27 @@
         },
         "type": "object"
       },
+      "PageFinding": {
+        "properties": {
+          "hasMore": {
+            "type": "boolean"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/Finding"
+            },
+            "type": "array"
+          },
+          "nextCursor": {
+            "type": "string"
+          },
+          "pageSize": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      },
       "RuleAudit": {
         "properties": {
           "actorId": {
@@ -261,9 +282,9 @@
     }
   },
   "info": {
-    "description": "V10/V67/V69 advisory only, MOCK/UNVERIFIED or source-labeled; no Amazon calls.",
-    "title": "Merchivra V69 owner operations rule settings",
-    "version": "69.1.0"
+    "description": "V10/V67/V69/V95 advisory only, MOCK/UNVERIFIED or source-labeled; no Amazon calls.",
+    "title": "Merchivra V95 owner operations work queue and rule settings",
+    "version": "95.1.0"
   },
   "openapi": "3.1.0",
   "paths": {
@@ -542,6 +563,60 @@
         "security": [
           {
             "csrfHeader": [],
+            "sessionCookie": []
+          }
+        ],
+        "tags": [
+          "operations-controller"
+        ]
+      }
+    },
+    "/api/v1/operations/findings/page": {
+      "get": {
+        "operationId": "listOperationFindingsPage",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "filter",
+            "required": false,
+            "schema": {
+              "default": "ACTIVE",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageFinding"
+                }
+              }
+            },
+            "description": "OK"
+          }
+        },
+        "security": [
+          {
             "sessionCookie": []
           }
         ],
