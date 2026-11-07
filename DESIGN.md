@@ -121,3 +121,12 @@ Next.js 初期 **仅作为迁移试运行 App Router**，复用真实 `src/Root.
 **金融和来源守则高于视觉设计**：未知 ≠ 0；原币不混算；MANUAL_UNVERIFIED 不表示银行到账；静态公开演示不能加载业务 API/真实 Session；Amazon Seller OAuth/远程写入仍维持禁用。
 
 每次页面迁移需做真实 Next TS/生产编译、服务端路由 HTTP 200/404、登录会话/CSRF 代理测试和关键业务截图比较；这些门槛未达成前不得宣称生产 Next 全量替换。
+
+## V100 · Next A+B real workbench routing and layout
+
+Next App Router now groups navigation into 经营与商品 / 供应链与对账 /
+协作与设置; operators see real source-labelled PostgreSQL data instead
+of mock Gateway samples for Orders, Catalog and FBA. Selected route,
+browser navigation, keyboard focus, table-local scroll and mobile header
+must remain comprehensible. A+B CSS is scoped to `.next-workbench`;
+the legacy Vite and public static Pages visuals remain separate.

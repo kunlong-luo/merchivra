@@ -154,3 +154,248 @@
   transition-duration:.01ms!important;
  }
 }
+
+/* V100 · A+B navigation hierarchy and production-density workspaces. */
+.next-workbench {
+ --ui-canvas:var(--mv-color-canvas);
+ --ui-surface:var(--mv-color-surface);
+ --ui-ink:var(--mv-color-ink);
+ --ui-secondary:#5d708a;
+ --ui-tertiary:#73859c;
+ --ui-border:var(--mv-color-line);
+ --ui-accent:var(--mv-color-blue);
+ --ui-accent-hover:#254dd2;
+ --ui-focus:#315fea;
+ --ui-radius:14px;
+ --ui-shadow:var(--mv-shadow);
+}
+.next-workbench .sidebar{
+ position:sticky;top:0;
+ height:100vh;max-height:100vh;
+ overflow-y:auto;overscroll-behavior:contain;
+}
+.next-workbench .brand-wrap{
+ border-bottom:1px solid #ffffff1b;
+ margin-bottom:16px;padding-bottom:22px;
+}
+.next-workbench .nav-links{gap:16px}
+.next-workbench .nav-group{display:flex;flex-direction:column;gap:3px}
+.next-workbench .nav-group-label{
+ color:#91a9ca;padding:7px 13px 8px;
+ font-size:10px;font-weight:750;letter-spacing:.15em;
+}
+.next-workbench .nav-link{
+ display:flex;gap:13px;align-items:center;
+ padding:11px 13px;min-height:43px;
+ transition:background .14s,color .14s,box-shadow .14s;
+}
+.next-workbench .nav-link .nav-link-label{flex:1}
+.next-workbench .nav-link:hover:not(.active){background:#263c5b}
+.next-workbench .nav-link.active{
+ background:#315fea;
+ box-shadow:inset 3px 0 #a7c3ff,0 6px 16px #050e2840;
+}
+.next-workbench .nav-icon{width:22px;font-size:18px;color:#acc5e4}
+.next-workbench .nav-link.active .nav-icon{color:white}
+.next-workbench .workbench-source-note{
+ margin:21px 8px 12px;
+ padding:13px 12px;
+ border-radius:10px;
+ border:1px solid #b8cce022;
+ background:#101f34;
+ color:#b1c2d8;
+ font-size:11px;line-height:1.8;
+}
+.next-workbench .sidebar-info{margin:0 4px}
+.next-workbench .topbar{position:relative;z-index:3}
+.next-workbench .breadcrumb strong{font-weight:750}
+.next-workbench .connection{
+ background:#f2f7fc;border:1px solid #e1eaf5;
+ padding:8px 12px;border-radius:10px;color:#4f6683;
+}
+.next-workbench .page-heading h1{
+ font-size:clamp(24px,2.6vw,32px);
+ line-height:1.18;
+}
+.next-workbench .page-heading p{max-width:850px}
+.next-workbench .core-intro,
+.next-workbench .ops-workspace .core-intro{
+ background:linear-gradient(110deg,#fff,#f6f9ff);
+ border:1px solid var(--mv-color-line);
+ border-radius:var(--mv-radius-card);
+ box-shadow:var(--mv-shadow);
+}
+.next-workbench .core-subtabs{gap:6px}
+.next-workbench .core-subtab.selected{
+ background:#ebf1ff;border-color:#bbcdff;color:#244bc7;
+}
+.next-workbench .ops-summary>div{
+ border-color:var(--mv-color-line);
+ border-radius:12px;box-shadow:var(--mv-shadow);
+ background:white;
+}
+.next-workbench .ops-summary strong{
+ letter-spacing:-.04em;
+ font-variant-numeric:tabular-nums;
+}
+.next-workbench .panel-heading h2{font-weight:760;letter-spacing:-.025em}
+.next-workbench .panel-heading p{line-height:1.65}
+.next-workbench .table-scroll{scrollbar-color:#c6d4e8 transparent}
+.next-workbench table{border-collapse:separate;border-spacing:0}
+.next-workbench table tbody tr:hover{background:#f8faff}
+.next-workbench table td{vertical-align:middle;line-height:1.5}
+.next-workbench .status-chip{
+ border-radius:7px;font-weight:700;padding:5px 9px;
+}
+.next-workbench .chip-amber{background:#fff5e2;color:#946207}
+.next-workbench .chip-green{background:#e8f9f0;color:#117956}
+.next-workbench .shop-filter select{
+ background-color:#fff;border-color:#dbe5f3;
+}
+.next-workbench .primary-button{box-shadow:0 4px 10px #315fea21}
+.next-workbench .primary-button:disabled{box-shadow:none}
+@media(max-width:760px){
+ .next-workbench .sidebar{
+  position:relative;top:auto;height:auto;max-height:none;
+  padding:12px 12px 8px;overflow:visible;width:100%;
+ }
+ .next-workbench .brand-wrap{
+  margin-bottom:9px;padding:0 6px 11px;
+ }
+ .next-workbench .nav-links{
+  flex-direction:row;gap:4px;
+  overflow-x:auto;overflow-y:hidden;
+  scrollbar-width:thin;padding:2px 0 8px;
+ }
+ .next-workbench .nav-group{display:contents}
+ .next-workbench .nav-group-label{display:none}
+ .next-workbench .nav-link{
+  flex:0 0 auto;width:auto;
+  min-height:40px;padding:8px 11px;
+  font-size:12px;white-space:nowrap;
+ }
+ .next-workbench .nav-icon{width:16px;font-size:15px}
+ .next-workbench .workbench-source-note,
+ .next-workbench .sidebar-info{display:none}
+ .next-workbench .connection{
+  padding:5px 7px;font-size:10px;
+ }
+ .next-workbench .topbar{height:auto;min-height:52px;gap:10px}
+ .next-workbench .content{padding:19px 14px}
+ .next-workbench .page-heading{margin-bottom:18px}
+ .next-workbench .ops-summary{gap:9px}
+}
+@media(prefers-reduced-motion:reduce){
+ .next-workbench .nav-link{transition:none}
+}
+
+/* V100 visual QA: keep source-aware Core filters above the fold on desktop. */
+.next-workbench .sidebar{
+ scrollbar-width:thin;
+ scrollbar-color:#4b6489 transparent;
+}
+.next-workbench .core-table-controls{
+ display:block;
+ padding:16px 18px;
+ margin:0 0 18px;
+ border:1px solid var(--mv-color-line);
+ background:var(--mv-color-surface);
+ border-radius:var(--mv-radius-card);
+ box-shadow:var(--mv-shadow);
+}
+.next-workbench .core-table-controls .core-search-field{
+ flex:none;
+ width:100%;
+ max-width:none;
+ min-width:0;
+}
+.next-workbench .core-table-controls .core-search-field>label{
+ color:#556b88;
+ font-size:11px;
+ font-weight:750;
+ line-height:1.45;
+}
+.next-workbench .core-table-controls .core-search-field>input,
+.next-workbench .core-table-controls .core-search-field>select{
+ width:100%;
+ min-width:0;
+ min-height:42px;
+ border:1px solid #d8e3f0;
+ border-radius:9px;
+ background:#fff;
+ color:var(--mv-color-ink);
+ font:inherit;
+ font-size:13px;
+ padding:9px 12px;
+}
+.next-workbench .core-table-controls .core-search-field>button{
+ min-height:42px;
+ align-self:stretch;
+ white-space:nowrap;
+}
+@media(min-width:1180px){
+ .next-workbench .core-search-field:has(#core-listing-search-field),
+ .next-workbench .core-search-field:has(#core-inventory-quality){
+  display:grid;
+  grid-template-columns:minmax(125px,180px) minmax(140px,180px)
+   minmax(190px,1fr) max-content max-content;
+  grid-template-rows:auto 42px;
+  align-items:end;
+  gap:7px 12px;
+ }
+ .next-workbench .core-search-field:has(#core-listing-search-field)
+  label[for="core-listing-search-field"],
+ .next-workbench .core-search-field:has(#core-inventory-quality)
+  label[for="core-inventory-quality"]{grid-column:1;grid-row:1}
+ .next-workbench .core-search-field:has(#core-listing-search-field)
+  #core-listing-search-field,
+ .next-workbench .core-search-field:has(#core-inventory-quality)
+  #core-inventory-quality{grid-column:1;grid-row:2}
+ .next-workbench .core-search-field
+  label[for="core-listing-mapping-status"],
+ .next-workbench .core-search-field
+  label[for="core-inventory-origin"]{grid-column:2;grid-row:1}
+ .next-workbench .core-search-field
+  #core-listing-mapping-status,
+ .next-workbench .core-search-field
+  #core-inventory-origin{grid-column:2;grid-row:2}
+ .next-workbench .core-search-field
+  label[for="core-listing-server-search"],
+ .next-workbench .core-search-field
+  label[for="core-inventory-search"]{grid-column:3;grid-row:1}
+ .next-workbench .core-search-field
+  #core-listing-server-search,
+ .next-workbench .core-search-field
+  #core-inventory-search{grid-column:3;grid-row:2}
+ .next-workbench .core-search-field:has(#core-listing-search-field)
+  button[type="submit"],
+ .next-workbench .core-search-field:has(#core-inventory-quality)
+  button[type="submit"]{grid-column:4;grid-row:2}
+ .next-workbench .core-search-field:has(#core-listing-search-field)
+  button[type="button"],
+ .next-workbench .core-search-field:has(#core-inventory-quality)
+  button[type="button"]{grid-column:5;grid-row:2}
+ .next-workbench .core-search-field:has(#core-order-server-search){
+  display:grid;
+  grid-template-columns:minmax(240px,1fr) max-content max-content;
+  grid-template-rows:auto 42px;
+  align-items:end;
+  gap:7px 12px;
+ }
+ .next-workbench .core-search-field
+  label[for="core-order-server-search"]{grid-column:1;grid-row:1}
+ .next-workbench .core-search-field
+  #core-order-server-search{grid-column:1;grid-row:2}
+ .next-workbench .core-search-field:has(#core-order-server-search)
+  button[type="submit"]{grid-column:2;grid-row:2}
+ .next-workbench .core-search-field:has(#core-order-server-search)
+  button[type="button"]{grid-column:3;grid-row:2}
+}
+@media(max-width:760px){
+ .next-workbench .core-table-controls{
+  padding:12px 13px;
+ }
+ .next-workbench .core-search-field>button[type="submit"]{
+  align-self:stretch;
+ }
+}

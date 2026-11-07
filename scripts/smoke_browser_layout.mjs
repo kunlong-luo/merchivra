@@ -90,7 +90,7 @@ const server = createServer(async (req, res) => {
       : respond(res, { userId: account, activeTenantId: tenant, availableTenantIds:[tenant],
           isOwner: mode !== 'staff' })
   }
-  if (url.pathname === '/api/v1/ping') return respond(res, { status:'ok' })
+  if (url.pathname === '/api/v1/ping') return respond(res, { service:'merchivra',status:'ok',stage:'MOCK_BROWSER' })
   if (url.pathname === '/api/v1/team/members') return respond(res, [
     {userId:account,loginName:'local-smoke-admin',status:'ACTIVE',reviewer:false},
     {userId:'88888888-8888-4888-8888-888888888888',loginName:'ops-reviewer',status:'ACTIVE',reviewer:true}
@@ -294,8 +294,17 @@ const server = createServer(async (req, res) => {
     if(!/^http:\/\/127\.0\.0\.1:\d+$/.test(nextTarget))
       throw Error('Next smoke upstream must be local loopback')
     try {
+      const forwarded=new Headers()
+      // Next Router's RSC/Flight navigation depends on these request headers.
+      // Forward only router protocol fields to disposable local Next; never
+      // forward browser cookies, Authorization or other sensitive headers.
+      for(const name of ['accept','rsc','next-router-state-tree',
+        'next-router-prefetch','next-url','next-router-segment-prefetch']){
+        const value=req.headers[name]
+        if(typeof value==='string')forwarded.set(name,value)
+      }
       const upstream=await fetch(nextTarget+url.pathname+url.search,{
-        headers:{Accept:req.headers.accept??'*/*'}
+        headers:forwarded
       })
       const bytes=Buffer.from(await upstream.arrayBuffer())
       res.writeHead(upstream.status,{
@@ -459,6 +468,65 @@ async function main() {
     await layout(send,width,'core-listings-'+width,true)
     await screenshot(send,'core-listings-'+width+'.png')
     await screenshot(send,'core-listings-table-'+width+'.png',true)
+    // V100: test actual Next App Router navigation, not history.pushState
+    // on an unchanged SPA. All data below is from local synthetic API fixtures.
+    if(nextTarget&&width===360){
+      await evaluate(send,`(() => {const b=[...document.querySelectorAll('.nav-link')]
+        .find(x=>x.textContent.includes('订单管理'));if(!b)throw Error('orders nav');b.click()})()`)
+      try{
+        await waitFor(send,`location.pathname==='/orders' &&
+          document.querySelector('.core-subtab.selected')?.textContent?.includes('订单') &&
+          document.querySelector('.core-data-scroll tbody tr')?.textContent?.includes('TEST-ORDER-100')`,
+          'V100 real Core Orders route')
+      }catch(error){
+        const state=await evaluate(send,`(() => ({
+          path:location.pathname,
+          selected:document.querySelector('.core-subtab.selected')?.textContent,
+          rows:document.querySelectorAll('.core-data-scroll tbody tr').length,
+          title:document.querySelector('#main-content h1')?.textContent,
+          nav:[...document.querySelectorAll('.nav-link')].map(x=>({
+            label:x.textContent,active:x.getAttribute('aria-current')
+          })),
+          main:document.querySelector('#main-content')?.textContent?.slice(0,1300),
+          html:document.body.innerText.slice(0,1300)
+        }))()`)
+        console.error('V100 Next route failure snapshot:',JSON.stringify(state))
+        throw error
+      }
+      assert.equal(await evaluate(send,
+        "!!document.querySelector('.mock-banner')"),false,
+        'Next /orders must not use the separate mock Gateway')
+      await screenshot(send,'v100-next-real-orders-360.png',true)
+      await evaluate(send,"history.back()")
+      await waitFor(send,`location.pathname==='/core' &&
+        document.querySelector('.core-subtab.selected')?.textContent?.includes('Listing')`,
+        'V100 browser back restores /core')
+      await evaluate(send,`(() => {const b=[...document.querySelectorAll('.nav-link')]
+        .find(x=>x.textContent.includes('FBA 库存'));if(!b)throw Error('FBA nav');b.click()})()`)
+      await waitFor(send,`location.pathname==='/inventory' &&
+        document.querySelector('.core-subtab.selected')?.textContent?.includes('FBA 库存') &&
+        document.querySelector('.core-data-scroll tbody tr')?.textContent?.includes('TEST-SKU-100')`,
+        'V100 real FBA inventory route')
+      await screenshot(send,'v100-next-real-fba-360.png',true)
+      await evaluate(send,"history.back()")
+      await waitFor(send,`location.pathname==='/core' &&
+        document.querySelector('.core-subtab.selected')?.textContent?.includes('Listing')`,
+        'V100 browser back from FBA')
+      await evaluate(send,"history.forward()")
+      await waitFor(send,`location.pathname==='/inventory' &&
+        document.querySelector('.core-subtab.selected')?.textContent?.includes('FBA 库存')`,
+        'V100 browser forward restores FBA')
+      await send('Page.reload')
+      await waitFor(send,`location.pathname==='/inventory' &&
+        document.querySelector('.core-subtab.selected')?.textContent?.includes('FBA 库存') &&
+        document.querySelector('.core-data-scroll tbody tr')?.textContent?.includes('TEST-SKU-100')`,
+        'V100 hard refresh preserves real FBA deep link')
+      await send('Page.navigate',{url:url+'?core=again'})
+      await waitFor(send,`location.pathname==='/core' &&
+        document.querySelector('.core-subtab.selected')?.textContent?.includes('Listing') &&
+        document.querySelectorAll('.core-data-scroll tbody tr').length===2`,
+        'V100 return to core baseline')
+    }
     if(width===360){
       await evaluate(send,
         "document.querySelector('.core-tools summary')?.click()")
@@ -474,6 +542,10 @@ async function main() {
     }
     if(width===360){
       await select(send,'订单')
+      await waitFor(send,
+        "document.querySelector('.core-subtab.selected')?.textContent?.includes('订单') && "+
+        "document.querySelector('.core-data-scroll tbody tr')?.textContent?.includes('TEST-ORDER-100')",
+        'Core orders finished rendering after routed tab selection')
       await layout(send,width,'core-orders-360',true)
       assert.equal(await evaluate(send,
         "[...document.querySelectorAll('.core-data-scroll tbody tr:first-child td')]" +
@@ -481,6 +553,10 @@ async function main() {
         'Order dataOrigin must be present')
       await screenshot(send,'core-orders-360.png',true)
       await select(send,'FBA 库存')
+      await waitFor(send,
+        "document.querySelector('.core-subtab.selected')?.textContent?.includes('FBA 库存') && "+
+        "document.querySelector('.core-data-scroll tbody tr')?.textContent?.includes('TEST-SKU-100')",
+        'Core inventory finished rendering after routed tab selection')
       await layout(send,width,'core-inventory-360',true)
       const cells=await evaluate(send,
         "[...document.querySelectorAll('.core-data-scroll tbody tr:first-child td')]" +

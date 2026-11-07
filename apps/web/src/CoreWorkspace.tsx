@@ -10,12 +10,15 @@ import CatalogSyncPanel from './CatalogSyncPanel'
 import {coreStatusLabel,formatSourceTime,sourceLabel} from './lib/core-view'
 import {fetchCoreMarketplaces,fetchCoreListingsPage,fetchCoreOrdersPage,fetchCoreOrderItems,fetchCoreInventoryPage} from './lib/core'
 
-type Section='listings'|'orders'|'inventory'
-export default function CoreWorkspace({tenantId,isOwner=true,focusException}:{
+export type Section='listings'|'orders'|'inventory'
+export default function CoreWorkspace({tenantId,isOwner=true,focusException,
+ initialSection='listings',onSectionNavigate}:{
  tenantId:string;isOwner?:boolean;
- focusException?:{marketplaceId:string;lineId:string}|null
+ focusException?:{marketplaceId:string;lineId:string}|null;
+ initialSection?:Section;
+ onSectionNavigate?:(section:Section)=>void
 }){
- const [marketplaceId,setMarketplaceId]=useState(''),[section,setSection]=useState<Section>('listings'),[search,setSearch]=useState('')
+ const [marketplaceId,setMarketplaceId]=useState(''),[section,setSection]=useState<Section>(initialSection),[search,setSearch]=useState('')
  const [selectedOrderId,setSelectedOrderId]=useState('')
  const [inventorySearch,setInventorySearch]=useState('')
  const [inventoryQualityDraft,setInventoryQualityDraft]=useState<
@@ -39,6 +42,11 @@ export default function CoreWorkspace({tenantId,isOwner=true,focusException}:{
  const [orderSearch,setOrderSearch]=useState('')
  const [orderCursors,setOrderCursors]=useState<Array<string|null>>([null])
  const orderCursor=orderCursors.at(-1)??null
+ useEffect(()=>{
+  setSection(initialSection)
+  setSearch('')
+  setSelectedOrderId('')
+ },[initialSection])
  const marketplaces=useQuery({queryKey:['core','marketplaces',tenantId],queryFn:fetchCoreMarketplaces,staleTime:30000,retry:1})
  useEffect(()=>{if(!marketplaces.data?.some(m=>m.id===marketplaceId))setMarketplaceId(marketplaces.data?.[0]?.id??'')},[marketplaces.data,marketplaceId])
  useEffect(()=>{
@@ -76,7 +84,12 @@ export default function CoreWorkspace({tenantId,isOwner=true,focusException}:{
  const filteredListings=listings.data?.items??[]
  const filteredOrders=orders.data?.items??[]
  const filteredInventory=inventory.data?.items??[]
- function changeSection(id:Section){setSection(id);setSearch('');setSelectedOrderId('')}
+ function changeSection(id:Section){
+  setSection(id)
+  setSearch('')
+  setSelectedOrderId('')
+  onSectionNavigate?.(id)
+ }
  function applyInventorySearch(){
   if(search.trim().length>80)return
   setInventorySearch(search.trim())
