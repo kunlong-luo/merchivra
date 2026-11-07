@@ -1,8 +1,9 @@
-import {useState,type FormEvent} from 'react'
+import CursorPageControls from './CursorPageControls'
+import {useEffect,useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import RefundAmountAllocationPanel from './RefundAmountAllocationPanel'
 import RefundRecoveryPanel from './RefundRecoveryPanel'
-import {getRefundAudit,getRefundSnapshot,saveRefundItem,withdrawRefundItem,
+import {getRefundAuditPage,getRefundSnapshot,saveRefundItem,withdrawRefundItem,
  type RefundReviewDisposition} from './lib/refund-review'
 
 const dispositions:Record<RefundReviewDisposition,string>={
@@ -19,18 +20,22 @@ export default function RefundReviewPanel({tenantId,marketplaceId,eventId}:{
  const [status,setStatus]=useState<RefundReviewDisposition>('UNKNOWN')
  const [evidence,setEvidence]=useState('')
  const [showHistory,setShowHistory]=useState(false)
+ const [auditCursors,setAuditCursors]=useState<(string|null)[]>([null])
+ const auditCursor=auditCursors.at(-1)??null
+ useEffect(()=>{setAuditCursors([null]);setShowHistory(false)},[
+  tenantId,marketplaceId,eventId])
  const [notice,setNotice]=useState(''),[failure,setFailure]=useState('')
  const key=['finance','refund',tenantId,marketplaceId,eventId]
  const info=useQuery({queryKey:[...key,'snapshot'],
   queryFn:()=>getRefundSnapshot(marketplaceId,eventId),retry:false})
- const history=useQuery({queryKey:[...key,'history'],
-  queryFn:()=>getRefundAudit(marketplaceId,eventId),enabled:showHistory,retry:false})
+ const history=useQuery({queryKey:[...key,'history-page',auditCursor],
+  queryFn:()=>getRefundAuditPage(marketplaceId,eventId,auditCursor),enabled:showHistory,retry:false})
  const selected=info.data?.items.find(x=>x.itemId===itemId)
  const count=Number(quantity)
  const valid=!!selected&&Number.isInteger(count)&&count>0&&
    count<=(selected.orderedQuantity??0)&&
    /^[A-Za-z0-9][A-Za-z0-9._:/-]{7,159}$/.test(evidence)
- const refresh=()=>void cache.invalidateQueries({queryKey:key})
+ const refresh=()=>{setAuditCursors([null]);void cache.invalidateQueries({queryKey:key})}
  const save=useMutation({mutationFn:()=>saveRefundItem(marketplaceId,eventId,{
   itemId,quantity:count,disposition:status,evidenceReference:evidence}),
   onSuccess:()=>{setNotice('人工审核已保存并追加审计；并未变更库存或利润')
@@ -107,17 +112,22 @@ export default function RefundReviewPanel({tenantId,marketplaceId,eventId}:{
     <RefundAmountAllocationPanel tenantId={tenantId} marketplaceId={marketplaceId}
       eventId={eventId} refund={info.data}/>
     <button className="text-button" type="button"
-      onClick={()=>setShowHistory(v=>!v)}>{showHistory?'收起':'查看'}审核历史</button>
+      onClick={()=>{setAuditCursors([null]);setShowHistory(v=>!v)}}>{showHistory?'收起':'查看'}审核历史</button>
     {showHistory&&(history.isPending?<p>正在读取审计…</p>:
      history.isError?<p className="setup-error">{String(history.error)}</p>:
      <div className="table-scroll" tabIndex={0} role="region" aria-label="退款审核历史">
       <table><thead><tr><th>订单项</th><th>操作</th><th>数量</th><th>处置</th>
        <th>证据编号</th><th>版本</th><th>操作时间</th></tr></thead><tbody>
-      {(history.data??[]).map((x,i)=><tr key={i}>
+      {(history.data?.items??[]).map((x,i)=><tr key={i}>
        <td>{x.itemId}</td><td>{x.action}</td><td>{x.quantity}</td>
        <td>{dispositions[x.disposition]}</td><td>{x.evidenceReference}</td>
        <td>{x.revision}</td><td>{x.timestamp}</td></tr>)}
       </tbody></table></div>)}
+    {showHistory&&history.data&&<CursorPageControls label="退款订单项审核历史"
+     page={auditCursors.length} hasMore={history.data.hasMore}
+     nextCursor={history.data.nextCursor} busy={history.isFetching}
+     onPrev={()=>setAuditCursors(v=>v.length>1?v.slice(0,-1):v)}
+     onNext={cursor=>setAuditCursors(v=>[...v,cursor])}/>}
    </>}
   {notice&&<p role="status" className="panel-caption">{notice}</p>}
   {failure&&<p role="alert" className="setup-error">{failure}</p>}
