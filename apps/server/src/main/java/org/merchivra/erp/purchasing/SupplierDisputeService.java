@@ -595,7 +595,8 @@ public class SupplierDisputeService {
         List<Event> rows=jdbc.query("""
             SELECT id,event_type,actor_user_id,note,created_at
             FROM erp_supplier_case_audit
-            WHERE tenant_id=? AND """+
+            WHERE tenant_id=?
+            """+" AND "+
             ("variances".equals(type)?"variance_id=?":"claim_id=?")+
             where+" ORDER BY created_at DESC,id DESC LIMIT ?",
             (rs,i)->new Event(rs.getObject("id",UUID.class).toString(),
