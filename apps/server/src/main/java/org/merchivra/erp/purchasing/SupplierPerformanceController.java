@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.security.TenantAccessService;
 import org.springframework.security.core.Authentication;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 /** Owner Session-scoped read-only scorecards and manual local PO follow-up workflow. */
@@ -24,11 +26,28 @@ public class SupplierPerformanceController {
         Authentication auth,HttpServletRequest req) {
         return performance.scorecards(access.currentTenant(auth,req));
     }
+    @GetMapping("/scorecards/page")
+    public ResponseEntity<LocalKeysetPage.Page<SupplierPerformanceService.Scorecard>> scorecardsPage(
+        Authentication auth,HttpServletRequest req,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            performance.scorecardsPage(access.currentTenant(auth,req),limit,cursor));
+    }
     @GetMapping("/followups")
     public List<PurchaseFollowupService.Finding> followups(
         Authentication auth,HttpServletRequest req,
         @RequestParam(defaultValue="ACTIVE") String filter) {
         return followups.findings(access.currentTenant(auth,req),filter);
+    }
+    @GetMapping("/followups/page")
+    public ResponseEntity<LocalKeysetPage.Page<PurchaseFollowupService.Finding>> followupsPage(
+        Authentication auth,HttpServletRequest req,
+        @RequestParam(defaultValue="ACTIVE") String filter,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            followups.findingsPage(access.currentTenant(auth,req),filter,limit,cursor));
     }
     @PostMapping("/scan")
     public PurchaseFollowupService.ScanResult scan(Authentication auth,HttpServletRequest req) {

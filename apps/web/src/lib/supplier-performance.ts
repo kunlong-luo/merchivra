@@ -45,6 +45,21 @@ async function request<T>(path:string,schema:z.ZodType<T>,method='GET',body?:unk
  }
  return schema.parse(await response.json())
 }
+const page=<T extends z.ZodType>(item:T)=>z.object({
+ items:z.array(item).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(x=>x.hasMore===(x.nextCursor!==null),{
+ message:'供应商分页游标与状态不一致'
+})
+const pageQuery=(cursor:string|null,filter?:'ACTIVE'|'ALL')=>{
+ const args=new URLSearchParams({limit:'50',...(filter?{filter}:{})})
+ if(cursor)args.set('cursor',cursor)
+ return '/page?'+args.toString()
+}
+export const fetchSupplierScorecardsPage=(cursor:string|null=null)=>
+ request('/scorecards'+pageQuery(cursor),page(scorecard))
+export const fetchPurchaseFollowupsPage=(filter:'ACTIVE'|'ALL'='ACTIVE',
+ cursor:string|null=null)=>request('/followups'+pageQuery(cursor,filter),page(followup))
 export const fetchSupplierScorecards=()=>request('/scorecards',z.array(scorecard).max(200))
 export const fetchPurchaseFollowups=(filter:'ACTIVE'|'ALL'='ACTIVE')=>
  request('/followups?filter='+filter,z.array(followup).max(100))

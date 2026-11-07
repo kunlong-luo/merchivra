@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.security.TenantAccessService;
+import org.merchivra.erp.purchasing.LocalKeysetPage;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,6 +31,14 @@ public class SettlementStatementController {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
             .body(service.list(access.currentTenant(auth,req),marketplaceId));
     }
+    @GetMapping("/page")
+    public ResponseEntity<LocalKeysetPage.Page<SettlementStatementService.Statement>> listPage(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID marketplaceId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.listPage(access.currentTenant(auth,req),marketplaceId,limit,cursor));
+    }
     @PostMapping
     public ResponseEntity<SettlementStatementService.Statement> create(
         Authentication auth,HttpServletRequest req,@PathVariable UUID marketplaceId,
@@ -45,6 +54,15 @@ public class SettlementStatementController {
         @PathVariable UUID statementId) {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
             .body(service.candidates(access.currentTenant(auth,req),marketplaceId,statementId));
+    }
+    @GetMapping("/{statementId}/candidates/page")
+    public ResponseEntity<LocalKeysetPage.Page<SettlementStatementService.Candidate>> candidatesPage(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID marketplaceId,
+        @PathVariable UUID statementId,@RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.candidatesPage(access.currentTenant(auth,req),marketplaceId,
+                statementId,limit,cursor));
     }
     @GetMapping("/{statementId}/preview")
     public ResponseEntity<SettlementReconciliationEngine.Preview> preview(
@@ -68,6 +86,15 @@ public class SettlementStatementController {
         service.unlink(access.currentTenant(auth,req),marketplaceId,
             access.authenticatedUser(auth),statementId,eventId);
         return ResponseEntity.noContent().cacheControl(CacheControl.noStore()).build();
+    }
+    @GetMapping("/{statementId}/audit/page")
+    public ResponseEntity<LocalKeysetPage.Page<SettlementStatementService.Audit>> auditPage(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID marketplaceId,
+        @PathVariable UUID statementId,@RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.auditPage(access.currentTenant(auth,req),marketplaceId,
+                statementId,limit,cursor));
     }
     @GetMapping("/{statementId}/audit")
     public ResponseEntity<List<SettlementStatementService.Audit>> audit(

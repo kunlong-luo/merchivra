@@ -3,6 +3,9 @@ package org.merchivra.erp.purchasing;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
@@ -28,6 +31,72 @@ public class PurchaseFollowupService {
         long activeAsnQuantity,long uncoveredQuantity,String lastSeenAt) {}
     public record ScanResult(String id,String triggerType,int matchedCount,int clearedCount) {}
     public record FindingChange(String id,String state) {}
+    private record RankedFinding(Finding finding,int priority,String changedAt) {}
+    private static int priority(String state) {
+        return switch(state) {
+            case "OPEN" -> 0;
+            case "ACKNOWLEDGED" -> 1;
+            case "DONE" -> 2;
+            default -> 3;
+        };
+    }
+    private static OffsetDateTime cursorTime(String value) {
+        try {return Instant.parse(value).atOffset(ZoneOffset.UTC);}
+        catch(Exception e) {throw LocalKeysetPage.bad("Invalid follow-up cursor timestamp");}
+    }
+    private static UUID cursorId(String value) {
+        try {return UUID.fromString(value);}
+        catch(IllegalArgumentException e) {throw LocalKeysetPage.bad("Invalid follow-up cursor ID");}
+    }
+    private static final String FINDINGS_RANK = """
+        CASE f.state WHEN 'OPEN' THEN 0 WHEN 'ACKNOWLEDGED' THEN 1
+          WHEN 'DONE' THEN 2 ELSE 3 END
+        """;
+    private static final String FINDINGS_SORT = " ORDER BY "+FINDINGS_RANK+
+        ",f.changed_at DESC,f.id DESC LIMIT ?";
+    private static final String FINDINGS_SELECT = """
+        SELECT f.id,o.id AS order_id,o.order_number,l.id AS line_id,
+          sku.internal_sku,sup.display_name AS supplier_name,
+          f.rule_code,f.state,o.approved_at,l.ordered_quantity,
+          a.active_units,r.received_units,r.unlinked_units,f.last_seen_at,
+          f.changed_at
+        FROM erp_purchase_followup_finding f
+        JOIN erp_purchase_order_line l ON l.tenant_id=f.tenant_id
+          AND l.id=f.purchase_order_line_id
+        JOIN erp_purchase_order o ON o.tenant_id=l.tenant_id AND o.id=l.purchase_order_id
+        JOIN erp_supplier sup ON sup.tenant_id=o.tenant_id AND sup.id=o.supplier_id
+        JOIN product_sku sku ON sku.tenant_id=l.tenant_id AND sku.id=l.product_sku_id
+        LEFT JOIN LATERAL (
+          SELECT COALESCE(SUM(a.quantity),0)::bigint AS active_units
+          FROM erp_purchase_asn a WHERE a.tenant_id=l.tenant_id
+            AND a.purchase_order_line_id=l.id AND a.status<>'CANCELLED'
+        ) a ON TRUE
+        LEFT JOIN LATERAL (
+          SELECT COALESCE(SUM(r.quantity),0)::bigint AS received_units,
+            COALESCE(SUM(r.quantity) FILTER (WHERE r.asn_id IS NULL),0)::bigint AS unlinked_units
+          FROM erp_purchase_receipt r WHERE r.tenant_id=l.tenant_id
+            AND r.purchase_order_line_id=l.id
+        ) r ON TRUE
+        WHERE f.tenant_id=? AND (?='ALL' OR f.state IN ('OPEN','ACKNOWLEDGED'))
+        """;
+    private static Finding mapFinding(ResultSet rs,int i) throws SQLException {
+        long ordered=rs.getLong("ordered_quantity");
+        long asn=rs.getLong("active_units"),unlinked=rs.getLong("unlinked_units");
+        OffsetDateTime approved=rs.getObject("approved_at",OffsetDateTime.class);
+        OffsetDateTime seen=rs.getObject("last_seen_at",OffsetDateTime.class);
+        return new Finding(rs.getObject("id",UUID.class).toString(),
+            rs.getObject("order_id",UUID.class).toString(),
+            rs.getString("order_number"),rs.getObject("line_id",UUID.class).toString(),
+            rs.getString("internal_sku"),rs.getString("supplier_name"),
+            rs.getString("rule_code"),rs.getString("state"),
+            approved==null?null:approved.toInstant().toString(),
+            ordered,rs.getLong("received_units"),asn,
+            Math.max(0,ordered-asn-unlinked),seen.toInstant().toString());
+    }
+    private static void validateFilter(String filter) {
+        if(!List.of("ACTIVE","ALL").contains(filter))throw LocalKeysetPage.bad(
+            "Invalid follow-up filter");
+    }
     private static final String SOURCES = """
         FROM erp_purchase_order_line l
         JOIN erp_purchase_order o ON o.tenant_id=l.tenant_id
@@ -101,48 +170,47 @@ public class PurchaseFollowupService {
     }
     @Transactional(readOnly=true)
     public List<Finding> findings(UUID tenant,String filter) {
-        if(!List.of("ACTIVE","ALL").contains(filter))
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-        return jdbc.query("""
-            SELECT f.id,o.id AS order_id,o.order_number,l.id AS line_id,
-              sku.internal_sku,sup.display_name AS supplier_name,
-              f.rule_code,f.state,o.approved_at,l.ordered_quantity,
-              a.active_units,r.received_units,r.unlinked_units,f.last_seen_at
-            FROM erp_purchase_followup_finding f
-            JOIN erp_purchase_order_line l ON l.tenant_id=f.tenant_id
-              AND l.id=f.purchase_order_line_id
-            JOIN erp_purchase_order o ON o.tenant_id=l.tenant_id AND o.id=l.purchase_order_id
-            JOIN erp_supplier sup ON sup.tenant_id=o.tenant_id AND sup.id=o.supplier_id
-            JOIN product_sku sku ON sku.tenant_id=l.tenant_id AND sku.id=l.product_sku_id
-            LEFT JOIN LATERAL (
-              SELECT COALESCE(SUM(a.quantity),0)::bigint AS active_units
-              FROM erp_purchase_asn a WHERE a.tenant_id=l.tenant_id
-                AND a.purchase_order_line_id=l.id AND a.status<>'CANCELLED'
-            ) a ON TRUE
-            LEFT JOIN LATERAL (
-              SELECT COALESCE(SUM(r.quantity),0)::bigint AS received_units,
-                COALESCE(SUM(r.quantity) FILTER (WHERE r.asn_id IS NULL),0)::bigint AS unlinked_units
-              FROM erp_purchase_receipt r WHERE r.tenant_id=l.tenant_id
-                AND r.purchase_order_line_id=l.id
-            ) r ON TRUE
-            WHERE f.tenant_id=? AND (?='ALL' OR f.state IN ('OPEN','ACKNOWLEDGED'))
-            ORDER BY CASE f.state WHEN 'OPEN' THEN 0 WHEN 'ACKNOWLEDGED' THEN 1
-                 WHEN 'DONE' THEN 2 ELSE 3 END,f.changed_at DESC,f.id DESC LIMIT 100
-            """,(rs,i)->{
-                long ordered=rs.getLong("ordered_quantity");
-                long asn=rs.getLong("active_units"),unlinked=rs.getLong("unlinked_units");
-                OffsetDateTime approved=rs.getObject("approved_at",OffsetDateTime.class);
-                OffsetDateTime seen=rs.getObject("last_seen_at",OffsetDateTime.class);
-                return new Finding(rs.getObject("id",UUID.class).toString(),
-                    rs.getObject("order_id",UUID.class).toString(),
-                    rs.getString("order_number"),rs.getObject("line_id",UUID.class).toString(),
-                    rs.getString("internal_sku"),rs.getString("supplier_name"),
-                    rs.getString("rule_code"),rs.getString("state"),
-                    approved==null?null:approved.toInstant().toString(),
-                    ordered,rs.getLong("received_units"),asn,
-                    Math.max(0,ordered-asn-unlinked),seen.toInstant().toString());
-            },tenant,filter);
+        validateFilter(filter);
+        return jdbc.query(FINDINGS_SELECT+" ORDER BY "+FINDINGS_RANK+
+            ",f.changed_at DESC,f.id DESC LIMIT 100",
+            PurchaseFollowupService::mapFinding,tenant,filter);
     }
+
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Finding> findingsPage(UUID tenant,String filter,
+        int requested,String rawCursor) {
+        validateFilter(filter);
+        int limit=LocalKeysetPage.limit(requested);
+        String[] cursor=LocalKeysetPage.decode(rawCursor,5);
+        var args=new ArrayList<Object>();
+        args.add(tenant);args.add(filter);
+        String where="";
+        if(cursor!=null) {
+            if(!tenant.toString().equals(cursor[0])||!filter.equals(cursor[1]))
+                throw LocalKeysetPage.bad("Follow-up cursor scope mismatch");
+            int rank;
+            try {rank=Integer.parseInt(cursor[2]);}
+            catch(NumberFormatException e) {throw LocalKeysetPage.bad("Invalid follow-up state rank");}
+            if(rank<0||rank>3)throw LocalKeysetPage.bad("Invalid follow-up state rank");
+            where=" AND ("+FINDINGS_RANK+" > ? OR ("+FINDINGS_RANK+
+                " = ? AND (f.changed_at,f.id)<(?,?)))";
+            args.add(rank);args.add(rank);
+            args.add(cursorTime(cursor[3]));args.add(cursorId(cursor[4]));
+        }
+        args.add(limit+1);
+        List<RankedFinding> rows=jdbc.query(FINDINGS_SELECT+where+FINDINGS_SORT,
+            (rs,i)->new RankedFinding(mapFinding(rs,i),
+                priority(rs.getString("state")),
+                rs.getObject("changed_at",OffsetDateTime.class).toInstant().toString()),
+            args.toArray());
+        var page=LocalKeysetPage.pack(rows,limit,row->LocalKeysetPage.encode(
+            tenant.toString(),filter,Integer.toString(row.priority()),
+            row.changedAt(),row.finding().id()));
+        return new LocalKeysetPage.Page<>(
+            page.items().stream().map(RankedFinding::finding).toList(),
+            page.nextCursor(),page.hasMore(),page.pageSize());
+    }
+
     @Transactional
     public FindingChange changeState(UUID tenant,UUID actor,UUID id,String target) {
         if(!List.of("OPEN","ACKNOWLEDGED","DONE").contains(target))
