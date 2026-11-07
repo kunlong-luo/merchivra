@@ -33,21 +33,24 @@ public class SettlementStatementService {
     public record Audit(String action,String eventId,String actorId,String occurredAt) {}
     private record RankedCandidate(Candidate value,int rank) {}
     private record AuditItem(Audit value,String id) {}
+    private static ResponseStatusException bad(String detail) {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST,detail);
+    }
     private static OffsetDateTime afterTime(String text) {
         try {return Instant.parse(text).atOffset(ZoneOffset.UTC);}
-        catch(Exception ex) {throw LocalKeysetPage.bad("Invalid settlement cursor time");}
+        catch(Exception ex) {throw bad("Invalid settlement cursor time");}
     }
     private static UUID afterId(String text) {
         try {return UUID.fromString(text);}
         catch(IllegalArgumentException ex) {
-            throw LocalKeysetPage.bad("Invalid settlement cursor record ID");
+            throw bad("Invalid settlement cursor record ID");
         }
     }
     private static String[] scope(String raw,String...parts) {
         String[] value=LocalKeysetPage.decode(raw,parts.length+2);
         if(value!=null)for(int i=0;i<parts.length;i++)
             if(!parts[i].equals(value[i]))
-                throw LocalKeysetPage.bad("Settlement cursor scope mismatch");
+                throw bad("Settlement cursor scope mismatch");
         return value;
     }
 
@@ -207,7 +210,7 @@ public class SettlementStatementService {
             || !mp.toString().equals(after[1])
             || !statementId.toString().equals(after[2])
             || !"CANDIDATES".equals(after[3])))
-            throw LocalKeysetPage.bad("Settlement candidate cursor scope mismatch");
+            throw bad("Settlement candidate cursor scope mismatch");
         var args=new ArrayList<Object>();
         args.add(statement.reference());args.add(tenant);args.add(mp);
         args.add(statement.currency());
@@ -221,10 +224,10 @@ public class SettlementStatementService {
             int rank;
             try {rank=Integer.parseInt(after[4]);}
             catch(NumberFormatException ex) {
-                throw LocalKeysetPage.bad("Invalid settlement source match rank");
+                throw bad("Invalid settlement source match rank");
             }
             if(rank<0||rank>3)
-                throw LocalKeysetPage.bad("Invalid settlement source match rank");
+                throw bad("Invalid settlement source match rank");
             seek=" WHERE ("+rankSql+" > ? OR ("+rankSql+
                  " = ? AND (posted_at,id)<(?,?)))";
             args.add(rank);args.add(rank);
