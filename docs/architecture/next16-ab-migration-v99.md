@@ -51,3 +51,14 @@ show unknown, not fabricated profit.
 5. Only after checks are green, replace the production Vite/Nginx container.
    No real Amazon seller authorization until the maintainer locally enables
    and validates it.
+
+## Automated checks (V99)
+
+CI executes the original locked Vite/Orval/Vitest build, then `npm run
+ typecheck:next` and `npm run build:next` using Next 16.4.5. It also starts
+ a disposable Next production server on 127.0.0.1:3355 and verifies that /,
+ /orders, /purchasing, /finance, /ops, /core and /connections serve HTTP 200,
+ while an unknown module returns 404. This checks routing and production
+ compilation only; it **does not** prove valid real Seller OAuth, session cookie
+ forwarding, CSRF write flows, or finance authorization. Those remain explicit
+ production migration blockers.
