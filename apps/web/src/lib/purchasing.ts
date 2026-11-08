@@ -4,7 +4,8 @@ import {
  listPendingReceiptsPage,
  createLocalSupplier,createLocalWarehouse,createLocalPurchaseOrder,
  getLocalPurchaseOrder,submitLocalPurchaseOrder,approveLocalPurchaseOrder,
- cancelLocalPurchaseOrder,receiveLocalPurchaseOrder,createLocalStockOperation
+ cancelLocalPurchaseOrder,receiveLocalPurchaseOrder,createLocalStockOperation,
+ resolveLocalWarehouseLabels
 } from '../generated/purchasing-v114'
 import {z} from 'zod'
 import {csrfHeader} from './auth'
@@ -128,6 +129,13 @@ export const fetchWarehousesPage=({limit=50,status='ALL',prefix='',cursor=null}:
 }={}):Promise<WarehousePage>=>{
  return listWarehousesPage({limit,status,prefix,...(cursor?{cursor}:{})})
   .then(r=>warehousePage.parse(r.data))
+}
+/** Resolve up to 100 historical warehouse IDs in one tenant-bound HTTP call.
+ * The server omits unknown/foreign IDs; never synthesize a label. */
+export const fetchWarehouseLabels=(ids:string[]):Promise<LocalWarehouse[]>=>{
+ if(ids.length<1||ids.length>100||new Set(ids).size!==ids.length)
+  return Promise.reject(new Error('Warehouse label batch must have 1..100 unique IDs'))
+ return resolveLocalWarehouseLabels({ids}).then(r=>z.array(warehouse).max(100).parse(r.data))
 }
 export const fetchWarehouseItem=(warehouseId:string)=>
  getWarehouseItem({warehouseId}).then(r=>warehouse.parse(r.data))
