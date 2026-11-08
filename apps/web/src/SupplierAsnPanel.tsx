@@ -1,3 +1,4 @@
+import {useWarehouseLabelMap} from './useWarehouseLabelMap'
 import WarehousePicker from './WarehousePicker'
 import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
@@ -42,6 +43,8 @@ export default function SupplierAsnPanel({tenantId,orderId,orderStatus,lines,
   enabled:!!orderId&&!!viewEvents,retry:false})
  const findings=useQuery({queryKey:[...root,'asn-findings',filter],
   queryFn:()=>fetchSupplierAsnFindings(filter),retry:false})
+ const warehouseLabels=useWarehouseLabelMap(tenantId,
+  asns.data?.map(a=>a.warehouseId)??[],warehouses).labels
  const refresh=()=>void client.invalidateQueries({queryKey:root})
  const created=useMutation({
   mutationFn:(body:NewSupplierAsn)=>createSupplierAsn(orderId,body),
@@ -130,7 +133,7 @@ export default function SupplierAsnPanel({tenantId,orderId,orderStatus,lines,
       {asns.data.map(a=><tr key={a.id}>
        <td>{a.trackingReference??a.id.slice(0,8)}
         <div className="secondary-cell">
-         {warehouses.find(w=>w.id===a.warehouseId)?.code??a.warehouseId}</div></td>
+         {warehouseLabels.get(a.warehouseId)?.code??a.warehouseId}</div></td>
        <td>{a.quantity} / {a.receivedQuantity}</td>
        <td>{a.expectedArrivalDate}</td>
        <td>{a.status==='SHIPPED'?'供应商申报已发货':
