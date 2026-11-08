@@ -257,6 +257,7 @@ jobs:
           python3 scripts/smoke_fba_local_history_supplier_sku_v92.py
           python3 scripts/smoke_paged_local_purchasing_v92.py
           python3 scripts/smoke_purchase_orders_page_v110.py
+          python3 scripts/smoke_supplier_pages_v111.py
           python3 scripts/smoke_receipt_operational_pages_v93.py
           python3 scripts/smoke_quality_returns_findings_v94.py
           python3 scripts/smoke_ops_lot_pagination_v95.py

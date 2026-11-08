@@ -81,6 +81,66 @@ public class PurchasingService {
             WHERE tenant_id=? ORDER BY supplier_code LIMIT 200
             """,PurchasingService::supplier,tenant);
     }
+    /**
+     * V111: Tenant-bound full supplier directory. Supplier code is unique per
+     * tenant; UUID remains a deterministic tie breaker. Pages are live views,
+     * not snapshots. The legacy /suppliers endpoint remains compatible.
+     */
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Supplier> suppliersPage(UUID tenant,int requested,
+                                                        String status,String prefix,String cursor) {
+        int limit=LocalKeysetPage.limit(requested);
+        String filter=(status==null || status.isBlank())?"ALL":status;
+        if(!List.of("ALL","ACTIVE","ARCHIVED").contains(filter))
+            throw bad("Unknown supplier status filter");
+        String term=prefix==null?"":prefix.strip().toUpperCase(Locale.ROOT);
+        if(term.length()>60 || !term.matches("[A-Z0-9_-]*"))
+            throw bad("Supplier prefix must be 0..60 safe literal characters");
+        String[] after=LocalKeysetPage.decode(cursor,6);
+        String lastCode=null;
+        UUID lastId=null;
+        if(after!=null) {
+            if(!"supplier-v1".equals(after[0]) || !tenant.toString().equals(after[1])
+                || !filter.equals(after[2]) || !("q:"+term).equals(after[3]))
+                throw bad("Supplier cursor does not match tenant or filters");
+            if(!after[4].matches("[A-Z0-9][A-Z0-9_-]{1,59}"))
+                throw bad("Invalid supplier pagination cursor");
+            lastCode=after[4];
+            try {
+                lastId=UUID.fromString(after[5]);
+            } catch(IllegalArgumentException e) {
+                throw bad("Invalid supplier pagination cursor");
+            }
+        }
+        StringBuilder sql=new StringBuilder("""
+            SELECT id,supplier_code,display_name,status FROM erp_supplier
+            WHERE tenant_id=?
+            """);
+        List<Object> params=new ArrayList<>();
+        params.add(tenant);
+        if(!"ALL".equals(filter)) {
+            sql.append(" AND status=?");
+            params.add(filter);
+        }
+        if(!term.isEmpty()) {
+            // LEFT comparison treats underscores literally, unlike LIKE patterns.
+            sql.append(" AND LEFT(supplier_code,LENGTH(?))=?");
+            params.add(term);
+            params.add(term);
+        }
+        if(lastCode!=null) {
+            sql.append(" AND (supplier_code,id) > (?,?)");
+            params.add(lastCode);
+            params.add(lastId);
+        }
+        sql.append(" ORDER BY supplier_code ASC,id ASC LIMIT ?");
+        params.add(limit+1);
+        List<Supplier> fetched=jdbc.query(sql.toString(),PurchasingService::supplier,
+            params.toArray());
+        return LocalKeysetPage.pack(fetched,limit,s->LocalKeysetPage.encode(
+            "supplier-v1",tenant.toString(),filter,"q:"+term,s.code(),s.id()));
+    }
+
     @Transactional
     public Supplier createSupplier(UUID tenant,UUID actor,String supplierCode,String displayName) {
         supplierCode=code(supplierCode);displayName=name(displayName);

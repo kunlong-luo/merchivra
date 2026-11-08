@@ -58,6 +58,18 @@ public class PurchasingController {
     public List<PurchasingService.Supplier> suppliers(Authentication auth,HttpServletRequest req){
         return purchasing.suppliers(access.currentTenant(auth,req));
     }
+    /** Full directory: only the tenant from the authenticated session is used. */
+    @GetMapping("/suppliers/page")
+    public ResponseEntity<LocalKeysetPage.Page<PurchasingService.Supplier>> suppliersPage(
+        Authentication auth,HttpServletRequest req,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(defaultValue="ALL") String status,
+        @RequestParam(defaultValue="") String prefix,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(purchasing.suppliersPage(access.currentTenant(auth,req),
+                limit,status,prefix,cursor));
+    }
     @PostMapping("/suppliers")
     @ResponseStatus(HttpStatus.CREATED)
     public PurchasingService.Supplier createSupplier(Authentication auth,HttpServletRequest req,

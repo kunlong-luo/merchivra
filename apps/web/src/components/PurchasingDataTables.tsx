@@ -1,12 +1,13 @@
 import {useMemo,useState,type FormEvent} from 'react'
 import {useQuery} from '@tanstack/react-query'
 import {Select} from '@base-ui/react/select'
+import CursorPageControls from '../CursorPageControls'
 import {Check,ChevronDown,Columns3} from 'lucide-react'
 import {
  flexRender,getCoreRowModel,useReactTable,
  type ColumnDef,type VisibilityState
 } from '@tanstack/react-table'
-import {fetchPurchaseOrdersPage,type Supplier,type PurchaseOrder,
+import {fetchPurchaseOrdersPage,fetchSuppliersPage,type Supplier,type PurchaseOrder,
  type LocalStockMovement} from '../lib/purchasing'
 
 type Option={value:string;label:string}
@@ -92,22 +93,63 @@ function ScopedTable<T>({rows,columns,getRowId,label,hidden={},labels={}}:{
  </>
 }
 
-export function SupplierDirectoryTable({suppliers}:{
- suppliers:Supplier[]
-}){
+export function SupplierDirectoryTable({tenantId}:{tenantId:string}){
+ const [draftPrefix,setDraftPrefix]=useState('')
+ const [prefix,setPrefix]=useState('')
+ const [status,setStatus]=useState<'ALL'|'ACTIVE'|'ARCHIVED'>('ALL')
+ const [cursors,setCursors]=useState<(string|null)[]>([null])
+ const cursor=cursors.at(-1)??null
+ const suppliers=useQuery({
+  queryKey:['purchasing',tenantId,'suppliers-page',status,prefix,cursor],
+  queryFn:()=>fetchSuppliersPage({limit:50,status,prefix,cursor}),
+  retry:false
+ })
+ const rows=suppliers.data?.items??[]
  const columns:ColumnDef<Supplier>[]=[
   {accessorKey:'code',header:'供应商编号',enableHiding:false},
   {accessorKey:'name',header:'供应商名称',enableHiding:false},
   {accessorKey:'status',header:'状态',enableHiding:false,
-   cell:({row})=><span className="status-chip chip-muted">
-    {row.original.status}
-   </span>}
+   cell:({row})=><span className="status-chip chip-muted">{row.original.status}</span>}
  ]
+ function applySearch(e:FormEvent){
+  e.preventDefault()
+  const next=draftPrefix.trim().toUpperCase()
+  if(!/^[A-Z0-9_-]{0,60}$/.test(next))return
+  setPrefix(next);setCursors([null])
+ }
  return <div className="v107-supplier-directory">
-  <p className="setup-hint">当前接口返回 {suppliers.length} 个供应商（非全库总数）。</p>
-  {suppliers.length===0?<p className="empty-state">暂无供应商。</p>:
-   <ScopedTable rows={suppliers} columns={columns}
+  <div className="v107-list-toolbar">
+   <form onSubmit={applySearch} className="v107-search-form">
+    <label htmlFor="v111-supplier-search" className="v107-search-label">
+     <span>供应商编号前缀（服务器全库查询）</span>
+     <input id="v111-supplier-search" type="search" value={draftPrefix}
+      maxLength={60} pattern="[A-Za-z0-9_-]*" autoComplete="off"
+      onChange={e=>setDraftPrefix(e.target.value)} placeholder="例如 SUP-"/>
+    </label>
+    <button type="submit" className="refresh-button">查询</button>
+   </form>
+   <ListFilter label="筛选供应商状态" value={status}
+    options={[{value:'ALL',label:'全部状态'},{value:'ACTIVE',label:'已启用'},
+     {value:'ARCHIVED',label:'已归档'}]}
+    onChange={next=>{
+     if(next==='ALL'||next==='ACTIVE'||next==='ARCHIVED'){
+      setStatus(next);setCursors([null])
+     }
+    }}/>
+  </div>
+  <p className="setup-hint">服务器按供应商编号排序 · 当前第 {cursors.length} 页
+   （最多 50 条），当前页 {rows.length} 条。这里不是全库供应商总数。</p>
+  {suppliers.isPending?<p className="empty-state">加载供应商目录…</p>:
+   suppliers.isError?<p className="setup-error" role="alert">
+    供应商目录加载失败：{String(suppliers.error)}</p>:
+   rows.length===0?<p className="empty-state">当前检索条件下没有供应商。</p>:
+   <ScopedTable rows={rows} columns={columns}
     getRowId={row=>row.id} label="供应商目录"/>}
+  {!!suppliers.data&&<CursorPageControls label="供应商目录" page={cursors.length}
+   hasMore={suppliers.data.hasMore} nextCursor={suppliers.data.nextCursor}
+   busy={suppliers.isFetching}
+   onPrev={()=>setCursors(v=>v.length>1?v.slice(0,-1):v)}
+   onNext={next=>setCursors(v=>[...v,next])}/>}
  </div>
 }
 
