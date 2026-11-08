@@ -209,6 +209,7 @@ public class WarehouseInventoryService {
     public LocalKeysetPage.Page<Movement> ledgerPage(UUID tenant,UUID warehouseId,
         int requested,String movementType,String search,String cursor) {
         int limit=LocalKeysetPage.limit(requested);
+        if(warehouseId==null)throw bad("Warehouse ID is required");
         String filter=movementType==null || movementType.isBlank()?"ALL":movementType;
         if(!List.of("ALL","PURCHASE_RECEIPT","OUTBOUND","TRANSFER_OUT",
             "TRANSFER_IN","COUNT_ADJUSTMENT","QC_QUARANTINE","QC_RELEASE",
