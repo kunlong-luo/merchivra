@@ -30,9 +30,28 @@ export async function merchivraFetch<T>(url:string,options:RequestInit={}):Promi
   throw new Error(reason)
  }
  if(response.status===204)return {data:undefined,status:204,headers:response.headers} as T
+ // Older FBA contract mocks implement json() but not the full Response.text().
+ // Real Fetch Response always implements both; maintain their existing contracts.
+ if(typeof response.text!=='function'){
+  if(typeof response.json!=='function')throw new Error('Invalid API response object')
+  const data=await response.json() as unknown
+  return {data,status:response.status,headers:response.headers} as T
+ }
  const contentType=response.headers.get('content-type')??''
- const data=contentType.includes('application/json')
-  ?await response.json():await response.text()
+ // The API contract requests JSON. Some test doubles (and misconfigured
+ // gateways) label JSON payloads as text/plain; parse a valid JSON body
+ // instead of quietly handing a string to Zod. For actual application/json,
+ // malformed JSON still fails closed. Non-JSON text remains text.
+ const raw=await response.text()
+ let data:unknown=raw
+ if(contentType.includes('application/json')||contentType.includes('+json')
+    ||headers.get('Accept')?.includes('application/json')){
+  try{data=JSON.parse(raw) as unknown}
+  catch(e){
+   if(contentType.includes('application/json')||contentType.includes('+json'))
+    throw new Error('Invalid JSON API response',{cause:e})
+  }
+ }
  // Orval v8 custom Fetch response shape is {data,status,headers},
  // not the raw JSON body (otherwise typed callers silently receive wrong data).
  return {data,status:response.status,headers:response.headers} as T

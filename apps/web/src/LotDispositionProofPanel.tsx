@@ -1,3 +1,4 @@
+import WarehousePicker from './WarehousePicker'
 import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
@@ -52,13 +53,9 @@ export default function LotDispositionProofPanel({tenantId,currentUserId,warehou
     SHA-256 摘要和说明。这里不上传证明文件，也不冒充第三方物流核验；
     审核结论仅表示本地 Owner 对记录元数据进行了检查。</p>
   </div><button className="refresh-button" type="button" onClick={refresh}>刷新</button></div>
-  <label htmlFor="v51-proof-wh">本地仓库</label>
-  <select id="v51-proof-wh" value={warehouse}
-   onChange={e=>{setWarehouse(e.target.value);setDispositionId('')}}>
-   <option value="">选择仓库</option>
-   {warehouses.filter(w=>w.status==='ACTIVE').map(w=>
-    <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}
-  </select>
+  <WarehousePicker tenantId={tenantId} id="v51-proof-wh"
+    label="本地仓库（全库）" value={warehouse}
+    onChange={id=>{setWarehouse(id);setDispositionId('')}}/>
   {!!warehouse&&<>
    <h3>提供已报告处置的参考证据</h3>
    <form className="team-invite-form" onSubmit={post}>

@@ -1,3 +1,4 @@
+import WarehousePicker from './WarehousePicker'
 import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
@@ -100,14 +101,11 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
     跨仓调拨同步修改两个仓库的签名流水；过期隔离会减少可用库存；
     盘点观察只保存差异证据，不会擅自调整库存。</p>
   </div><button type="button" className="refresh-button" onClick={refresh}>刷新</button></div>
-  <label htmlFor="v49-wh">来源本地仓库</label>
-  <select id="v49-wh" value={warehouseId} onChange={e=>{
-   setWarehouseId(e.target.value);setPositionId('');setDestWarehouse('');
-   setDestBin('');setHistoryId('');change()}}>
-   <option value="">选择来源仓库</option>
-   {warehouses.filter(w=>w.status==='ACTIVE').map(w=>
-    <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}
-  </select>
+  <WarehousePicker tenantId={tenantId} id="v49-wh"
+    label="来源本地仓库（全库）" value={warehouseId}
+    onChange={id=>{
+   setWarehouseId(id);setPositionId('');setDestWarehouse('');
+   setDestBin('');setHistoryId('');change()}}/>
   {!!warehouseId&&<>
    <h3>近 30 天到期与已过期批次</h3>
    <p className="setup-hint">根据人工登记的到期日期提示；未登记日期的批次无法自动推断有效期。
@@ -146,13 +144,9 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
        <option key={id} value={id}>{label}</option>)}
      </select>
      {type==='TRANSFER'&&<>
-      <label htmlFor="v49-dst-wh">目标仓库</label>
-      <select id="v49-dst-wh" value={destWarehouse}
-       onChange={e=>{setDestWarehouse(e.target.value);setDestBin('');change()}}>
-       <option value="">选择不同的目标仓库</option>
-       {warehouses.filter(w=>w.status==='ACTIVE'&&w.id!==warehouseId).map(w=>
-        <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}
-      </select>
+      <WarehousePicker tenantId={tenantId} id="v49-dst-wh"
+    label="目标仓库（全库）" value={destWarehouse} excludeId={warehouseId}
+    onChange={id=>{setDestWarehouse(id);setDestBin('');change()}}/>
      </>}
      {['MOVE','TRANSFER'].includes(type)&&<>
       <label htmlFor="v49-dest-bin">目标 STORAGE 库位</label>

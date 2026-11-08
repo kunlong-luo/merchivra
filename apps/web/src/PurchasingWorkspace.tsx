@@ -3,6 +3,7 @@ import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchSkus} from './lib/catalog'
 import InternalSkuPicker from './InternalSkuPicker'
 import SupplierPicker from './SupplierPicker'
+import WarehousePicker from './WarehousePicker'
 import {useConfirmAction} from './components/useConfirmAction'
 import {
  SupplierDirectoryTable,PurchaseOrdersTable,WarehouseLedgerTable
@@ -24,7 +25,7 @@ import LotDispositionProofPanel from './LotDispositionProofPanel'
 import LotEvidenceFilesPanel from './LotEvidenceFilesPanel'
 import SupplierDisputesPanel from './SupplierDisputesPanel'
 import {createSupplier,fetchSuppliersPage,createPurchaseOrder,
- fetchPurchaseOrder,purchaseAction,receivePurchase,fetchWarehouses,createWarehouse,
+ fetchPurchaseOrder,purchaseAction,receivePurchase,fetchWarehouses,fetchWarehouseItem,createWarehouse,
  fetchWarehouseStockItem,postStockOperation,
  type NewPurchaseLine,type StockOperationRequest} from './lib/purchasing'
 
@@ -53,7 +54,18 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  const [operationReason,setOperationReason]=useState('')
  const [operationKey,setOperationKey]=useState(()=>crypto.randomUUID())
  const [message,setMessage]=useState(''),[failure,setFailure]=useState('')
+ // Legacy first-200 warehouse directory is now read-only auxiliary labeling.
  const warehouses=useQuery({queryKey:['purchasing',tenantId,'warehouses'],queryFn:fetchWarehouses})
+ const stockWarehouse=useQuery({
+  queryKey:['purchasing',tenantId,'warehouse-exact',stockWarehouseId],
+  queryFn:()=>fetchWarehouseItem(stockWarehouseId),
+  enabled:!!stockWarehouseId,retry:false
+ })
+ const destinationWarehouse=useQuery({
+  queryKey:['purchasing',tenantId,'warehouse-exact',operationDestination],
+  queryFn:()=>fetchWarehouseItem(operationDestination),
+  enabled:!!operationDestination,retry:false
+ })
  const stockItem=useQuery({
   queryKey:['purchasing',tenantId,'stock-item',stockWarehouseId,operationSku],
   queryFn:()=>fetchWarehouseStockItem(stockWarehouseId,operationSku),
@@ -69,8 +81,9 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  const refresh=()=>void client.invalidateQueries({queryKey:['purchasing',tenantId]})
  const warehouseCreated=useMutation({
   mutationFn:()=>createWarehouse(warehouseCode,warehouseName),
-  onSuccess:w=>{setWarehouseCode('');setWarehouseName('');setWarehouseId(w.id);
-    setStockWarehouseId(w.id);setMessage('本地仓库已创建：'+w.code);setFailure('');refresh()},
+  onSuccess:w=>{setWarehouseCode('');setWarehouseName('');
+    setMessage('本地仓库已创建：'+w.code+'；请在全库选择器中搜索并选用。');
+    setFailure('');refresh()},
   onError:(e:Error)=>setFailure(e.message)
  })
  const supplier=useMutation({mutationFn:()=>createSupplier(supplierCode,supplierName),
@@ -102,7 +115,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  const remaining=selected.data?.lines.filter(l=>l.receivedQuantity<l.orderedQuantity)??[]
  const supplierOptions=suppliers.data?.items.filter(s=>s.status==='ACTIVE')??[]
  const activeSkus=skus.data?.filter(s=>s.status==='ACTIVE')??[]
- const activeWarehouses=warehouses.data?.filter(w=>w.status==='ACTIVE')??[]
+
  // A missing SKU on the current list page is UNKNOWN, never zero.
  // Exact authenticated tenant/warehouse/SKU observation is required even for COUNT.
  const currentOnHand=stockItem.data?.onHandQuantity
@@ -113,9 +126,11 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  const operationReady=!!stockWarehouseId&&!!operationSku&&!!stockItem.data&&
   // V91: SKU is verified by the scoped server-paged picker, not the first 100 rows.
   
-  activeWarehouses.some(w=>w.id===stockWarehouseId)&&
-  (operationType!=='TRANSFER'||activeWarehouses.some(w=>w.id===operationDestination
-    &&w.id!==stockWarehouseId))&&quantityValid&&
+  stockWarehouse.data?.id===stockWarehouseId&&stockWarehouse.data.status==='ACTIVE'&&
+  !stockWarehouse.isFetching&&
+  (operationType!=='TRANSFER'||(destinationWarehouse.data?.id===operationDestination
+    &&destinationWarehouse.data.status==='ACTIVE'&&
+    !destinationWarehouse.isFetching&&operationDestination!==stockWarehouseId))&&quantityValid&&
   operationReason.trim().length>=5&&operationReason.trim().length<=300&&
   !stockItem.isFetching&&!stockItem.isPending&&!stockOperation.isPending
  function submitStockOperation(e:FormEvent){
@@ -153,7 +168,8 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
    </form>
    {warehouses.isPending?<p className="empty-state">读取仓库中…</p>:
     warehouses.isError?<p className="setup-error" role="alert">{String(warehouses.error)}</p>:
-    <p className="setup-hint">已创建 {warehouses.data?.length??0} 个仓库；请在采购收货时选择实际接收仓库。</p>}
+    <p className="setup-hint">兼容接口本次读取 {warehouses.data?.length??0} 个仓库（最多 200），
+     不代表本租户仓库总数。收货、库存和调拨使用可搜索全库选择器。</p>}
   </section>
   <section className="panel full-panel"><div className="panel-heading"><h2>供应商</h2></div>
    <form className="team-invite-form" onSubmit={addSupplier}>
@@ -252,13 +268,9 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
       </div>
       {['APPROVED','RECEIVING'].includes(selected.data.order.status)&&
        <div className="team-invite-form">
-        <label htmlFor="receipt-warehouse">实际收货仓库（必选）</label>
-        <select id="receipt-warehouse" value={warehouseId}
-         onChange={e=>{setWarehouseId(e.target.value);setReceiveAsnId('')}}>
-         <option value="">选择本地仓库</option>
-         {activeWarehouses.map(w=><option value={w.id} key={w.id}>
-          {w.code} · {w.name}</option>)}
-        </select>
+        <WarehousePicker tenantId={tenantId} id="receipt-warehouse"
+         label="实际收货仓库（全库必选）" value={warehouseId}
+         onChange={id=>{setWarehouseId(id);setReceiveAsnId('')}}/>
         <label htmlFor="receipt-line">待收货明细</label>
         <select id="receipt-line" value={receiveLine} onChange={e=>{setReceiveLine(e.target.value);setReceiveAsnId('')}}>
          <option value="">选择未收完的行</option>
@@ -289,14 +301,10 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
    <div className="panel-heading"><div><h2>本地仓库库存台账</h2>
     <p>只统计明确分配仓库的采购入库、人工出库、仓间调拨与盘点差异。
      台账余额不含未知历史收货、未记录的损耗、预留或 Amazon FBA 库存。</p></div></div>
-   <label htmlFor="warehouse-stock-select">选择仓库查看</label>
-   <select id="warehouse-stock-select" value={stockWarehouseId}
-    onChange={e=>{setStockWarehouseId(e.target.value);setOperationSku('');
-     setOperationDestination('');setOperationKey(crypto.randomUUID())}}>
-    <option value="">选择仓库</option>
-    {(warehouses.data??[]).map(w=><option key={w.id} value={w.id}>
-     {w.code} · {w.name}</option>)}
-   </select>
+   <WarehousePicker tenantId={tenantId} id="warehouse-stock-select"
+    label="选择仓库查看库存（全库）" value={stockWarehouseId}
+    onChange={id=>{setStockWarehouseId(id);setOperationSku('');
+     setOperationDestination('');setOperationKey(crypto.randomUUID())}}/>
    {stockWarehouseId&&<>
     <WarehouseStockPagePanel key={tenantId+':'+stockWarehouseId}
      tenantId={tenantId} warehouseId={stockWarehouseId}/>
@@ -320,15 +328,11 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
        currentOnHand===undefined?'余额未知，禁止写入':currentOnHand}。
       当前列表页没有此 SKU 不代表库存为 0；写入时服务器仍锁仓并重新核对余额，
       变化则要求刷新。</p>
-     {operationType==='TRANSFER'&&<>
-      <label htmlFor="stock-op-dest">目标仓库</label>
-      <select id="stock-op-dest" value={operationDestination}
-       onChange={e=>{setOperationDestination(e.target.value);setOperationKey(crypto.randomUUID())}}>
-       <option value="">选择目标仓库</option>
-       {activeWarehouses.filter(w=>w.id!==stockWarehouseId).map(w=>
-        <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}
-      </select>
-     </>}
+     {operationType==='TRANSFER'&&
+      <WarehousePicker tenantId={tenantId} id="stock-op-dest"
+       label="目标仓库（全库，不能与来源相同）" value={operationDestination}
+       excludeId={stockWarehouseId}
+       onChange={id=>{setOperationDestination(id);setOperationKey(crypto.randomUUID())}}/>}
      <label htmlFor="stock-op-quantity">
       {operationType==='COUNT'?'盘点实数（允许 0）':'本次操作件数'}
      </label>

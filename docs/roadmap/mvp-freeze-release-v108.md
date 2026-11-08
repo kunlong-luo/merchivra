@@ -60,6 +60,8 @@
 
 > **A1 / V113 实施进展（2026-11-08）**：仓库库存余额与已审批/部分收货明细新增全库游标接口 `/warehouse-stock/page`、`/pending-receipts/page`，工作台接入服务端按 SKU、采购单号及状态搜索；旧 500 条兼容接口保留。新增 `/warehouse-stock/item` 在人工库存操作前精确查询 tenant+warehouse+ACTIVE SKU，**未加载或请求失败不是零库存**，现有事务内 expected-on-hand 与 lot-position 校验不变。Flyway V83 索引及 [V113 专项单测/待运行 PG18 HTTP 冒烟](../purchasing/warehouse-stock-pending-pages-v113.md) 已纳入开发分支；普通 PR 快速 CI 与集中 PG18 证据独立记录。**Issue #62 中的仓库目录旧 200 条上限、OpenAPI/Orval 统一与 A3 PG18 全链验收仍然未完成，Issue #63 Next 正式切换未完成。**
 
+> **A1 / V114 实施进展（2026-11-08）**：新增可搜索、租户/过滤绑定 `/warehouses/page` 和精确 `/warehouses/item`，采购收货、调拨、ASN/批次/异常等仓库下拉选择改为全库游标组件，不再被旧 `LIMIT 200` 阻断。另新增 [采购读取域 OpenAPI/Orval V114](../purchasing/warehouse-directory-orval-v114.md)：V110–V114 八项读取 API 采用 Orval v8 生成客户端 + Zod 响应验证，按构建/测试前置钩子生成而非手工签入；采购写入及附属子模块尚未全部迁移，不能视为整个采购域 Orval 工作完成。225 仓库专项 JUnit/Vitest 与一次性 PG18 HTTP（含第 201 仓人工库存 COUNT）已列入 `full_suite`，**未执行的 PG18 不记为通过**；Next 正式切换与真实 Amazon 授权仍未放行。
+
 ## 第一批可执行 P0 核查清单
 
 | 核查对象 | 当前有证据的缺口 | 下一步 |

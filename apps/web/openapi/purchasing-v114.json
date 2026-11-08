@@ -1,0 +1,1111 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Merchivra local purchasing read pages",
+    "version": "114.0.0",
+    "description": "Owner/authenticated tenant scoped; read-only local purchasing list and exact lookups. No Amazon live source, no remote write."
+  },
+  "servers": [
+    {
+      "url": ""
+    }
+  ],
+  "paths": {
+    "/api/v1/purchasing/warehouses/page": {
+      "get": {
+        "operationId": "listWarehousesPage",
+        "summary": "Full tenant warehouse directory; server ACTIVE/code prefix filtering",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ALL",
+                "ACTIVE",
+                "ARCHIVED"
+              ],
+              "default": "ALL"
+            }
+          },
+          {
+            "name": "prefix",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 60,
+              "default": ""
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Live tenant-scoped page, not a frozen snapshot; Cache-Control: no-store",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WarehousePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or cross-scope opaque cursor"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/warehouses/item": {
+      "get": {
+        "operationId": "getWarehouseItem",
+        "summary": "Exact tenant warehouse ID lookup",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Live tenant-scoped page, not a frozen snapshot; Cache-Control: no-store",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Warehouse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or cross-scope opaque cursor"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/suppliers/page": {
+      "get": {
+        "operationId": "listSuppliersPage",
+        "summary": "Full supplier directory with status and literal prefix",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ALL",
+                "ACTIVE",
+                "ARCHIVED"
+              ],
+              "default": "ALL"
+            }
+          },
+          {
+            "name": "prefix",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 60,
+              "default": ""
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Live tenant-scoped page, not a frozen snapshot; Cache-Control: no-store",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or cross-scope opaque cursor"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/orders/page": {
+      "get": {
+        "operationId": "listPurchaseOrdersPage",
+        "summary": "All local purchase orders with status and search",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ALL",
+                "DRAFT",
+                "SUBMITTED",
+                "APPROVED",
+                "RECEIVING",
+                "RECEIVED",
+                "CANCELLED"
+              ],
+              "default": "ALL"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 80,
+              "default": ""
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Live tenant-scoped page, not a frozen snapshot; Cache-Control: no-store",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseOrdersPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or cross-scope opaque cursor"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/warehouse-stock/page": {
+      "get": {
+        "operationId": "listWarehouseStockPage",
+        "summary": "All local warehouse stock keys, by server SKU search",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 80,
+              "default": ""
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Live tenant-scoped page, not a frozen snapshot; Cache-Control: no-store",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WarehouseStockPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or cross-scope opaque cursor"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/warehouse-stock/item": {
+      "get": {
+        "operationId": "getWarehouseStockItem",
+        "summary": "Exact tenant+warehouse+ACTIVE SKU balance; missing is not zero",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "productSkuId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Live tenant-scoped page, not a frozen snapshot; Cache-Control: no-store",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WarehouseStock"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or cross-scope opaque cursor"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/warehouse-ledger/page": {
+      "get": {
+        "operationId": "listWarehouseLedgerPage",
+        "summary": "Full local warehouse signed movement history",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "movementType",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ALL",
+                "PURCHASE_RECEIPT",
+                "OUTBOUND",
+                "TRANSFER_OUT",
+                "TRANSFER_IN",
+                "COUNT_ADJUSTMENT",
+                "QC_QUARANTINE",
+                "QC_RELEASE",
+                "LOT_QUARANTINE"
+              ],
+              "default": "ALL"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 80,
+              "default": ""
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Live tenant-scoped page, not a frozen snapshot; Cache-Control: no-store",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WarehouseLedgerPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or cross-scope opaque cursor"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/pending-receipts/page": {
+      "get": {
+        "operationId": "listPendingReceiptsPage",
+        "summary": "All approved/unreceived local purchase lines",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ALL",
+                "APPROVED",
+                "RECEIVING"
+              ],
+              "default": "ALL"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 80,
+              "default": ""
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Live tenant-scoped page, not a frozen snapshot; Cache-Control: no-store",
+            "headers": {
+              "Cache-Control": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PendingReceiptPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid or cross-scope opaque cursor"
+          },
+          "401": {
+            "description": "Unauthenticated"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Warehouse": {
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "name",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED"
+            ]
+          }
+        }
+      },
+      "Supplier": {
+        "type": "object",
+        "required": [
+          "id",
+          "code",
+          "name",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED"
+            ]
+          }
+        }
+      },
+      "PurchaseOrder": {
+        "type": "object",
+        "required": [
+          "id",
+          "orderNumber",
+          "supplierId",
+          "status",
+          "currency",
+          "createdBy",
+          "approvedBy",
+          "notes",
+          "updatedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderNumber": {
+            "type": "string"
+          },
+          "supplierId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "APPROVED",
+              "RECEIVING",
+              "RECEIVED",
+              "CANCELLED"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "approvedBy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        }
+      },
+      "WarehouseStock": {
+        "type": "object",
+        "required": [
+          "warehouseId",
+          "productSkuId",
+          "internalSku",
+          "recordedReceivedQuantity",
+          "onHandQuantity"
+        ],
+        "properties": {
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "internalSku": {
+            "type": "string"
+          },
+          "recordedReceivedQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "onHandQuantity": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "WarehouseMovement": {
+        "type": "object",
+        "required": [
+          "id",
+          "warehouseId",
+          "productSkuId",
+          "internalSku",
+          "purchaseReceiptId",
+          "operationId",
+          "inspectionId",
+          "lotActionId",
+          "quantity",
+          "movementType",
+          "reason",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "internalSku": {
+            "type": "string"
+          },
+          "purchaseReceiptId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "operationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inspectionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lotActionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "movementType": {
+            "type": "string",
+            "enum": [
+              "PURCHASE_RECEIPT",
+              "OUTBOUND",
+              "TRANSFER_OUT",
+              "TRANSFER_IN",
+              "COUNT_ADJUSTMENT",
+              "QC_QUARANTINE",
+              "QC_RELEASE",
+              "LOT_QUARANTINE"
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        }
+      },
+      "PendingReceipt": {
+        "type": "object",
+        "required": [
+          "purchaseOrderId",
+          "orderNumber",
+          "purchaseOrderLineId",
+          "productSkuId",
+          "internalSku",
+          "status",
+          "orderedQuantity",
+          "receivedQuantity",
+          "remainingQuantity",
+          "currency",
+          "unitCost"
+        ],
+        "properties": {
+          "purchaseOrderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderNumber": {
+            "type": "string"
+          },
+          "purchaseOrderLineId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "internalSku": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "APPROVED",
+              "RECEIVING"
+            ]
+          },
+          "orderedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "receivedQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "remainingQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "unitCost": {
+            "type": "string"
+          }
+        }
+      },
+      "WarehousePage": {
+        "type": "object",
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Warehouse"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "SupplierPage": {
+        "type": "object",
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Supplier"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "PurchaseOrdersPage": {
+        "type": "object",
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PurchaseOrder"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "WarehouseStockPage": {
+        "type": "object",
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WarehouseStock"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "WarehouseLedgerPage": {
+        "type": "object",
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WarehouseMovement"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "PendingReceiptPage": {
+        "type": "object",
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PendingReceipt"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      }
+    }
+  }
+}

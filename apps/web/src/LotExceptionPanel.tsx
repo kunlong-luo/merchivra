@@ -1,3 +1,4 @@
+import WarehousePicker from './WarehousePicker'
 import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
@@ -79,14 +80,11 @@ export default function LotExceptionPanel({tenantId,currentUserId,warehouses}:{
     但尚未指定库位的真实库存；少收纠正则需要目标仓未发生后续拣货或移位，
     由另一位 Owner 审核后按签名盘点差额扣账。</p>
   </div><button type="button" className="refresh-button" onClick={refresh}>刷新</button></div>
-  <label htmlFor="v51-warehouse">需要处理的仓库</label>
-  <select id="v51-warehouse" value={warehouse} onChange={e=>{
-   setWarehouse(e.target.value);setReviewCursors([null]);
-   setSourceId('');setKey(crypto.randomUUID())}}>
-   <option value="">选择仓库</option>
-   {warehouses.filter(w=>w.status==='ACTIVE').map(w=>
-    <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}
-  </select>
+  <WarehousePicker tenantId={tenantId} id="v51-warehouse"
+    label="需要处理的仓库（全库）" value={warehouse}
+    onChange={id=>{
+   setWarehouse(id);setReviewCursors([null]);
+   setSourceId('');setKey(crypto.randomUUID())}}/>
   {!!warehouse&&<>
    <h3>提出有来源的异常纠正申请</h3>
    <form className="team-invite-form" onSubmit={submit}>
