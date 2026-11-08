@@ -8,6 +8,7 @@ import {
  SupplierDirectoryTable,PurchaseOrdersTable,WarehouseLedgerTable
 } from './components/PurchasingDataTables'
 import WarehouseAlertsPanel from './WarehouseAlertsPanel'
+import {WarehouseStockPagePanel,PendingReceiptPages} from './WarehouseReadPages'
 import SupplierPurchasePlanningPanel from './SupplierPurchasePlanningPanel'
 import SupplierAsnPanel from './SupplierAsnPanel'
 import PurchaseDeliveryPanel from './PurchaseDeliveryPanel'
@@ -24,7 +25,7 @@ import LotEvidenceFilesPanel from './LotEvidenceFilesPanel'
 import SupplierDisputesPanel from './SupplierDisputesPanel'
 import {createSupplier,fetchSuppliersPage,createPurchaseOrder,
  fetchPurchaseOrder,purchaseAction,receivePurchase,fetchWarehouses,createWarehouse,
- fetchWarehouseStock,fetchPendingReceipts,postStockOperation,
+ fetchWarehouseStockItem,postStockOperation,
  type NewPurchaseLine,type StockOperationRequest} from './lib/purchasing'
 
 export default function PurchasingWorkspace({tenantId,currentUserId}:{
@@ -53,10 +54,11 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  const [operationKey,setOperationKey]=useState(()=>crypto.randomUUID())
  const [message,setMessage]=useState(''),[failure,setFailure]=useState('')
  const warehouses=useQuery({queryKey:['purchasing',tenantId,'warehouses'],queryFn:fetchWarehouses})
- const stock=useQuery({queryKey:['purchasing',tenantId,'stock',stockWarehouseId],
-  queryFn:()=>fetchWarehouseStock(stockWarehouseId),enabled:!!stockWarehouseId,retry:false})
- const pending=useQuery({queryKey:['purchasing',tenantId,'pending'],
-  queryFn:fetchPendingReceipts,retry:false})
+ const stockItem=useQuery({
+  queryKey:['purchasing',tenantId,'stock-item',stockWarehouseId,operationSku],
+  queryFn:()=>fetchWarehouseStockItem(stockWarehouseId,operationSku),
+  enabled:!!stockWarehouseId&&!!operationSku,retry:false
+ })
  const suppliers=useQuery({
   queryKey:['purchasing',tenantId,'suppliers-page','ALL','',null],
   queryFn:()=>fetchSuppliersPage({limit:50,status:'ALL'}),retry:false
@@ -101,22 +103,24 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  const supplierOptions=suppliers.data?.items.filter(s=>s.status==='ACTIVE')??[]
  const activeSkus=skus.data?.filter(s=>s.status==='ACTIVE')??[]
  const activeWarehouses=warehouses.data?.filter(w=>w.status==='ACTIVE')??[]
- const currentOnHand=stock.data?.find(s=>s.productSkuId===operationSku)?.onHandQuantity??0
- const quantityValid=Number.isSafeInteger(operationQuantity)&&
+ // A missing SKU on the current list page is UNKNOWN, never zero.
+ // Exact authenticated tenant/warehouse/SKU observation is required even for COUNT.
+ const currentOnHand=stockItem.data?.onHandQuantity
+ const quantityValid=currentOnHand!==undefined&&Number.isSafeInteger(operationQuantity)&&
   (operationType==='COUNT'?(operationQuantity>=0&&operationQuantity<=10000000
     &&operationQuantity!==currentOnHand):
    (operationQuantity>=1&&operationQuantity<=1000000&&operationQuantity<=currentOnHand))
- const operationReady=!!stockWarehouseId&&!!operationSku&&!!stock.data&&
+ const operationReady=!!stockWarehouseId&&!!operationSku&&!!stockItem.data&&
   // V91: SKU is verified by the scoped server-paged picker, not the first 100 rows.
   
   activeWarehouses.some(w=>w.id===stockWarehouseId)&&
   (operationType!=='TRANSFER'||activeWarehouses.some(w=>w.id===operationDestination
     &&w.id!==stockWarehouseId))&&quantityValid&&
   operationReason.trim().length>=5&&operationReason.trim().length<=300&&
-  !stock.isFetching&&!stockOperation.isPending
+  !stockItem.isFetching&&!stockItem.isPending&&!stockOperation.isPending
  function submitStockOperation(e:FormEvent){
   e.preventDefault()
-  if(!operationReady)return
+  if(!operationReady||currentOnHand===undefined)return
   const body:StockOperationRequest={requestKey:operationKey,type:operationType,
    warehouseId:stockWarehouseId,destinationWarehouseId:operationType==='TRANSFER'
     ?operationDestination:null,productSkuId:operationSku,quantity:operationQuantity,
@@ -214,22 +218,10 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
   <section className="panel full-panel" aria-label="已审批待收货">
    <div className="panel-heading"><div><h2>已审批待收货</h2>
     <p>仅统计 APPROVED / RECEIVING 采购单的剩余数量，不代表供应商已发货或真实在途。</p></div></div>
-   {pending.isPending?<p className="empty-state">读取待收货记录中…</p>:
-    pending.isError?<p className="setup-error" role="alert">{String(pending.error)}</p>:
-    !pending.data?.length?<p className="empty-state">当前没有已审批的待收货明细。</p>:
-    <div className="table-scroll" role="region" tabIndex={0} aria-label="采购待收货明细">
-     <table><thead><tr><th scope="col">采购单号</th><th scope="col">内部 SKU</th>
-      <th scope="col">已收 / 订购</th><th scope="col">待收货</th>
-      <th scope="col">原币单价</th><th scope="col">操作</th></tr></thead><tbody>
-      {pending.data.map(p=><tr key={p.purchaseOrderLineId}>
-       <td>{p.orderNumber}</td><td>{p.internalSku}</td>
-       <td>{p.receivedQuantity} / {p.orderedQuantity}</td>
-       <td>{p.remainingQuantity}</td><td>{p.currency} {p.unitCost}</td>
-       <td><button type="button" className="refresh-button" onClick={()=>{
-        setSelectedId(p.purchaseOrderId);setReceiveLine(p.purchaseOrderLineId)}}>打开收货</button></td>
-      </tr>)}
-     </tbody></table>
-    </div>}
+   <PendingReceiptPages key={tenantId} tenantId={tenantId}
+    onOpen={(orderId,lineId)=>{
+     setSelectedId(orderId);setReceiveLine(lineId);setReceiveAsnId('')
+    }}/>
   </section>
   <section className="panel full-panel"><div className="panel-heading"><div><h2>采购单列表与流程</h2>
    <p>批准人必须是另一名 Owner；收货可以分批，但不能超过每行订购数量。</p></div>
@@ -306,16 +298,8 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
      {w.code} · {w.name}</option>)}
    </select>
    {stockWarehouseId&&<>
-    {stock.isPending?<p className="empty-state">加载本地库存台账…</p>:
-     stock.isError?<p className="setup-error" role="alert">{String(stock.error)}</p>:
-     !stock.data?.length?<p className="empty-state">所选仓库还没有已入账的库存流水。</p>:
-     <div className="table-scroll" role="region" tabIndex={0} aria-label="本地库存台账余额">
-      <table><thead><tr><th scope="col">内部 SKU</th>
-       <th scope="col">历史采购收货</th><th scope="col">本地台账余额</th></tr></thead><tbody>
-       {stock.data.map(s=><tr key={s.productSkuId}><td>{s.internalSku}</td>
-        <td>{s.recordedReceivedQuantity}</td><td>{s.onHandQuantity}</td></tr>)}
-      </tbody></table>
-     </div>}
+    <WarehouseStockPagePanel key={tenantId+':'+stockWarehouseId}
+     tenantId={tenantId} warehouseId={stockWarehouseId}/>
     <form className="team-invite-form" onSubmit={submitStockOperation}>
      <h3>人工更新本地库存（有审计、不可直接删除）</h3>
      <label htmlFor="stock-op-type">操作类型</label>
@@ -329,8 +313,13 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
      <InternalSkuPicker tenantId={tenantId} id="stock-op-sku"
       label="本地库存操作内部 SKU（全库选择）" value={operationSku}
       onChange={id=>{setOperationSku(id);setOperationKey(crypto.randomUUID())}}/>
-     <p className="setup-hint">当前本地台账余额：{operationSku?currentOnHand:'请先选择 SKU'}。
-      操作时服务端重新验证余额，变化则要求刷新。</p>
+     <p className="setup-hint" role="status">
+      当前本地台账精确核验余额：{!operationSku?'请先选择 SKU':
+       stockItem.isPending?'读取服务端观测中…':
+       stockItem.isError?'余额未知，禁止写入（'+String(stockItem.error)+'）':
+       currentOnHand===undefined?'余额未知，禁止写入':currentOnHand}。
+      当前列表页没有此 SKU 不代表库存为 0；写入时服务器仍锁仓并重新核对余额，
+      变化则要求刷新。</p>
      {operationType==='TRANSFER'&&<>
       <label htmlFor="stock-op-dest">目标仓库</label>
       <select id="stock-op-dest" value={operationDestination}
