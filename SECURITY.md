@@ -2,7 +2,7 @@
 
 ## 当前安全状态 / Current security status (2026-11-08)
 
-**Pre-alpha. The authenticated ERP must not be exposed publicly or used with production Seller/Ads/bank data yet.** The [public GitHub Pages showcase](https://kunlong-luo.github.io/merchivra/) is separate, synthetic-only and not an ERP instance.
+**Pre-alpha. The authenticated ERP is not suitable for production or public exposure and must not be used with production Seller/Ads/bank data yet.** The [public GitHub Pages showcase](https://kunlong-luo.github.io/merchivra/) is separate, synthetic-only and not an ERP instance.
 
 Security controls that **already have implementation and isolated Mock/CI coverage** include Spring Security Session + CSRF, first-run Owner bootstrap, tenant- and Marketplace-scoped business API checks, selected staff/read permissions, audit events, sensitive Seller OAuth callback/state handling, encrypted Seller credential vault and versioned key rewrap, and optional Redis 8 session/admission support. These statements describe implemented code and disposable test coverage **only**; they are not production certifications. See [local authentication](docs/security/local-auth.md), [Seller OAuth design and implementation](docs/security/seller-oauth.md), and [key rotation](docs/security/seller-key-rotation.md).
 
