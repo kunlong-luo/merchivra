@@ -60,6 +60,8 @@
 
 > **A1 / V113 实施进展（2026-11-08）**：仓库库存余额与已审批/部分收货明细新增全库游标接口 `/warehouse-stock/page`、`/pending-receipts/page`，工作台接入服务端按 SKU、采购单号及状态搜索；旧 500 条兼容接口保留。新增 `/warehouse-stock/item` 在人工库存操作前精确查询 tenant+warehouse+ACTIVE SKU，**未加载或请求失败不是零库存**，现有事务内 expected-on-hand 与 lot-position 校验不变。Flyway V83 索引及 [V113 专项单测/待运行 PG18 HTTP 冒烟](../purchasing/warehouse-stock-pending-pages-v113.md) 已纳入开发分支；普通 PR 快速 CI 与集中 PG18 证据独立记录。**Issue #62 中的仓库目录旧 200 条上限、OpenAPI/Orval 统一与 A3 PG18 全链验收仍然未完成，Issue #63 Next 正式切换未完成。**
 
+> **A1 / V114 实施进展（2026-11-08）**：仓库目录新增 `/warehouses/page` + `/warehouses/item`，完成第 201 个及之后本地仓库的服务端查找、ACTIVE 精确验证和多个收货/库位/批次/调拨/异常工作台的共享选仓。V110–V114 已实现的 **10 条采购/仓储读取与创建路由**写入 [真实代码合同 OpenAPI](../../apps/web/openapi/purchasing-pages.json)，Orval 已生成并提交 `purchasing-pages.ts` + 33 个模型、接入共享 Session/CSRF mutator 与 Zod。详见 [V114](../purchasing/warehouse-directory-orval-v114.md)。采购审批/收货/人工库存操作及全部附属模块的 OpenAPI 仍不完整；本批 PG18 225 仓库 HTTP 脚本与 V110–V113 冒烟仅在 `full_suite` 下运行，未实跑前不能冒充通过。Issue #62 继续 OPEN 直到合同/集中回归满足条件；Next 正式部署 #63 不受此批完成声明覆盖。
+
 ## 第一批可执行 P0 核查清单
 
 | 核查对象 | 当前有证据的缺口 | 下一步 |
