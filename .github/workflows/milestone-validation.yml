@@ -3,9 +3,16 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V108-initial-baseline' }} · ${{ github.sha }}"
 
 on:
+  # Exactly one automatic baseline when this workflow first lands on main
+  # (also if the milestone workflow definition itself changes later).
+  # Ordinary feature commits do NOT invoke the heavy milestone suite.
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/milestone-validation.yml'
   workflow_dispatch:
     inputs:
       milestone:
