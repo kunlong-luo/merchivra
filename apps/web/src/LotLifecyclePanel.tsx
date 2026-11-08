@@ -1,3 +1,4 @@
+import {useWarehouseLabelMap} from './useWarehouseLabelMap'
 import WarehousePicker from './WarehousePicker'
 import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
@@ -44,6 +45,8 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
   queryFn:()=>fetchLotActionHistory(historyId),enabled:!!historyId,retry:false})
  const ancestry=useQuery({queryKey:[...root,'lot-lineage',historyId],
   queryFn:()=>fetchLotLineage(historyId),enabled:!!historyId,retry:false})
+ const warehouseLabels=useWarehouseLabelMap(tenantId,
+  ancestry.data?.map(a=>a.warehouseId)??[],warehouses).labels
  const usable=chosen?(stock.data?.find(s=>s.productSkuId===chosen.productSkuId)
   ?.onHandQuantity??0):0
  const chosenBinAllowed=bins.data?.some(b=>b.id===destBin&&
@@ -198,7 +201,7 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
        {(ancestry.data??[]).map((a,i)=><tr key={a.positionId}>
         <td>{i===0?'最初放行来源':'后续跨仓链路'}</td>
         <td>{a.receiptId.slice(0,8)} · {a.lotCode}</td>
-        <td>{warehouses.find(w=>w.id===a.warehouseId)?.code??a.warehouseId.slice(0,8)}
+        <td>{warehouseLabels.get(a.warehouseId)?.code??a.warehouseId.slice(0,8)}
          {' / '+a.binCode}</td>
         <td>{a.placedQuantity} / {a.remainingQuantity}</td>
        </tr>)}
