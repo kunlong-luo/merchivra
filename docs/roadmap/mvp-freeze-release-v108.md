@@ -50,6 +50,8 @@
 - 记录工作流运行时间、PR 执行次数及失败类型。不要只按“运行 2 分钟”评估消耗，也要关注多次重复工作流与排查时间。
 - 文档：`docs/testing/ci-policy.md`、`AGENTS.md`、`Agent.md`、`docs/roadmap.md` 均引用此现行计划；里程碑入口不可因后续重构被删。
 
+> **A1 源码对标补充（2026-11-08）**：已对 Wimoor、ERPNext、metasfresh 及 Amazon 官方 SDK/示例的实际源码完成 [BENCH-001 对照](../architecture/open-source-erp-benchmark-2026-11-08.md)。结论是保持现有业务状态机、Gradle/PG18/React/官方 SDK，不因竞品有更多界面而增加新 P0。**先做 Issue #62 的真实全库分页/历史入口，再做 #63 Next 正式切换**；供应商应付/采购付款、库存历史可视化等仅为需 G1 评审的 P1 候选。
+
 ## 第一批可执行 P0 核查清单
 
 | 核查对象 | 当前有证据的缺口 | 下一步 |
