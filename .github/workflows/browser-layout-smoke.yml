@@ -1,30 +1,10 @@
-# Browser layout smoke is opt-in and independently triggered, not a M0-M2 CI gate.
-# Runs installed Chrome with Node 24 DevTools Protocol (no Playwright/npm deps).
+# V108: full Vite + Next Chromium run is a manually triggered milestone
+# or called by milestone-validation.yml, not every TSX/CSS push.
 name: Optional Chromium responsive UI smoke
 
 on:
   workflow_dispatch:
-  # Only changes to this optional browser test or its workflow require an
-  # extra PR-level run. Normal feature PRs keep the lean 4-job CI contract.
-  pull_request:
-    paths:
-      - scripts/smoke_browser_layout.mjs
-      - .github/workflows/browser-layout-smoke.yml
-  push:
-    branches: [main]
-    paths:
-      - .github/workflows/browser-layout-smoke.yml
-      - scripts/smoke_browser_layout.mjs
-      - apps/web/src/TeamWorkspace.tsx
-      - apps/web/src/Root.tsx
-      - apps/web/src/App.tsx
-      - apps/web/src/lib/team.ts
-      - 'apps/web/src/**/*.tsx'
-      - apps/web/package.json
-      - apps/web/package-lock.json
-      - apps/web/vite.config.ts
-      - apps/web/next.config.ts
-      - 'apps/web/app/**'
+  workflow_call:
 
 permissions:
   contents: read
