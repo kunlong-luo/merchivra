@@ -16,6 +16,7 @@
     "api:generate:fba": "orval --config orval.fba.config.ts",
     "api:generate:ads": "orval --config orval.ads.config.ts",
     "api:generate:ops": "orval --config orval.ops.config.ts",
+    "api:generate:purchasing": "orval --config orval.purchasing.config.ts",
     "api:check": "npm run api:generate && node ../../scripts/check-orval-generated.mjs",
     "dev:next": "next dev --hostname 127.0.0.1 --port 3001",
     "build:next": "next build",
