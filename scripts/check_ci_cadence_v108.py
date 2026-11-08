@@ -44,8 +44,7 @@ assert "uses: ./.github/workflows/ci.yml" in milestone
 assert "uses: ./.github/workflows/browser-layout-smoke.yml" in milestone
 assert "uses: ./.github/workflows/mock-full-chain.yml" in milestone
 assert "full_suite: true" in milestone
-assert "refs/heads/main" not in milestone or "main" in milestone
-assert "Only main" not in policy  # scope has explicit rules, not live secrets
+assert 'test "$GITHUB_REF_NAME" = "main"' in milestone
 assert "真实" in policy and "PG18" in policy
 
 print("PASS V108: quick PR/main checks; full PG18/Chromium/Compose on milestone")
