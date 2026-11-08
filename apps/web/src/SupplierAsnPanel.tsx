@@ -1,3 +1,4 @@
+import WarehousePicker from './WarehousePicker'
 import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {PurchaseLine,LocalWarehouse} from './lib/purchasing'
@@ -74,7 +75,8 @@ export default function SupplierAsnPanel({tenantId,orderId,orderStatus,lines,
  const line=lines.find(l=>l.id===lineId)
  const remaining=line?line.orderedQuantity-line.receivedQuantity:0
  const canCreate=activeOrder&&!!line&&!!warehouseId&&
-  warehouses.some(w=>w.id===warehouseId&&w.status==='ACTIVE')&&
+  // WarehousePicker verifies tenant/ACTIVE on exact lookup; writes revalidate server-side.
+  !!warehouseId&&
   Number.isInteger(quantity)&&quantity>0&&quantity<=Math.min(remaining,1000000)&&
   /^\d{4}-\d{2}-\d{2}$/.test(eta)&&tracking.length<=120&&!created.isPending
  function submit(e:FormEvent){
@@ -101,13 +103,9 @@ export default function SupplierAsnPanel({tenantId,orderId,orderStatus,lines,
       <option key={l.id} value={l.id}>{l.productSkuId} ·
        剩余可收 {l.orderedQuantity-l.receivedQuantity}</option>)}
     </select>
-    <label htmlFor="asn-warehouse">预计入库的本地仓库</label>
-    <select id="asn-warehouse" value={warehouseId}
-     onChange={e=>{setWarehouseId(e.target.value);setRequestKey(crypto.randomUUID())}}>
-     <option value="">选择仓库</option>
-     {warehouses.filter(w=>w.status==='ACTIVE').map(w=>
-      <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}
-    </select>
+    <WarehousePicker tenantId={tenantId} id="asn-warehouse"
+    label="预计入库的本地仓库（全库）" value={warehouseId}
+    onChange={id=>{setWarehouseId(id);setRequestKey(crypto.randomUUID())}}/>
     <label htmlFor="asn-quantity">供应商预计发货件数</label>
     <input id="asn-quantity" type="number" min={1} max={Math.max(1,remaining)}
      value={quantity} onChange={e=>{setQuantity(Number(e.target.value));
