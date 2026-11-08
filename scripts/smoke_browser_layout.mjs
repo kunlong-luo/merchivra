@@ -17,6 +17,27 @@ const output = resolve(process.argv[3] ?? 'browser-smoke-artifacts')
 const tenant = '11111111-1111-4111-8111-111111111111'
 const account = '22222222-2222-4222-8222-222222222222'
 const market = '33333333-3333-4333-8333-333333333333'
+// Separate, synthetically authorized second Marketplace for V106 scope tests.
+const v106OtherMarket = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
+const v106FinanceQueries=[]
+const v106FinanceRows=Array.from({length:51},(_,i)=>({
+  id:'96969696-9696-4969-8969-'+String(i+1).padStart(12,'0'),
+  marketplaceId:market,
+  sourceFamily:i%2?'SPAPI_FINANCES':'MANUAL',
+  eventKey:'FIN-V106-'+String(i).padStart(3,'0'),
+  dataOrigin:i%2?'LIVE':'MANUAL_UNVERIFIED',
+  category:i%2?'AMAZON_FEE':'PRODUCT_SALES',
+  amount:i%2?'-2.500000':'12.300000',currency:'USD',
+  postedAt:new Date(Date.UTC(2026,10,8,12,0)-i*60_000).toISOString(),
+  externalOrderId:null,
+  sourceType:i%2?'SPAPI_FINANCES':'MANUAL_ENTRY',
+  reviewStatus:'REVIEW_REQUIRED',reviewedOrderId:null
+}))
+const v106OtherEvent={
+  ...v106FinanceRows[0],id:'97979797-9797-4979-8979-000000000001',
+  marketplaceId:v106OtherMarket,eventKey:'FIN-V106-EU-ONLY',
+  currency:'EUR',amount:'23.000000'
+}
 let mode = 'guest'
 // V104: mutable synthetic local PO for cancel/confirm without live operations.
 const v104Order={
@@ -77,6 +98,30 @@ const server = createServer(async (req, res) => {
   if(url.pathname==='/api/v1/auth/csrf')
     return respond(res,{token:'V104_DISPOSABLE_BROWSER_CSRF_ONLY_12345',
       headerName:'X-CSRF-TOKEN'})
+  // V106 synthetic finance exception scan has a valid read-only response,
+  // not a generic [] that falsely renders a Zod parse error on screenshot.
+  if([market,v106OtherMarket].some(id=>
+    url.pathname===`/api/v1/finance/marketplaces/${id}/exceptions`))
+    return respond(res,{
+      scannedSourceTransactions:0,scannedSettlements:0,scannedOrders:0,
+      partialScan:false,issueCount:0,findings:[]
+    })
+  // Finance: real 50-row server cursor shape, not a fake client paginator.
+  // Every row and Marketplace is synthetic; no Amazon credentials or calls.
+  if(url.pathname===`/api/v1/finance/marketplaces/${market}/events`){
+    const beforeAt=url.searchParams.get('beforeAt')
+    const beforeId=url.searchParams.get('beforeId')
+    v106FinanceQueries.push({marketplaceId:market,beforeAt,beforeId})
+    if(req.method!=='GET')return respond(res,{error:'read-only synthetic fixture'},405)
+    const rows=v106FinanceRows.filter(e=>!beforeAt||e.postedAt<beforeAt)
+    return respond(res,rows.slice(0,Math.min(50,limit)))
+  }
+  if(url.pathname===`/api/v1/finance/marketplaces/${v106OtherMarket}/events`){
+    v106FinanceQueries.push({marketplaceId:v106OtherMarket,
+      beforeAt:url.searchParams.get('beforeAt'),
+      beforeId:url.searchParams.get('beforeId')})
+    return respond(res,[v106OtherEvent])
+  }
   if(url.pathname==='/api/v1/purchasing/orders' && req.method==='GET')
     return respond(res,[{...v104Order,status:v104Cancelled?'CANCELLED':'DRAFT'}])
   if(url.pathname===`/api/v1/purchasing/orders/${v104Order.id}/cancel`
@@ -308,6 +353,12 @@ const server = createServer(async (req, res) => {
     return respond(res,findings)
   }
   if (url.pathname.startsWith('/api/v1/')) {
+    if (url.pathname === '/api/v1/seller-marketplaces' && mode === 'finance')
+      return respond(res,[...mock.get(url.pathname),{
+        id:v106OtherMarket,sellerAccountId:account,
+        marketplaceId:'A1PA6795UKMFR9',region:'EU',currency:'EUR',
+        timezone:'Europe/London',connectionStatus:'UNCONFIGURED'
+      }])
     if (url.pathname === '/api/v1/seller-marketplaces' && mode === 'connected')
       return respond(res, mock.get(url.pathname).map(x=>({ ...x, connectionStatus:'CONNECTED' })))
     if (mock.has(url.pathname)) return respond(res, mock.get(url.pathname))
@@ -818,6 +869,98 @@ async function main() {
           'V104 confirmed local PO cancel updates status')
         assert.equal(v104CancelWrites,1,'one explicit confirmation must send one local POST')
         await layout(send,width,'v104-confirm-360')
+        // V106: the finance scope is selected with Base UI, and rows are
+        // server-cursor pages. Verify there is no cross-Marketplace mixing.
+        mode='finance'
+        await evaluate(send,`(() => {const link=[...document.querySelectorAll('.nav-link')]
+          .find(x=>x.textContent.includes('财务与对账'));
+          if(!link)throw Error('Missing finance link');link.click()})()`)
+        await waitFor(send,
+          "document.querySelectorAll('.v106-finance-events-table tbody tr').length===50",
+          'V106 50-row first finance event page')
+        assert.equal(await evaluate(send,
+          "document.querySelectorAll('.v106-finance-events-table thead th').length"),
+          7,'V106 default finance columns')
+        await waitFor(send,
+          "document.querySelector('[aria-label=\\\"自动财务核对异常队列\\\"]')?.textContent?.includes('发现的问题数')",
+          'V106 typed local synthetic finance exception scan')
+        assert.equal(await evaluate(send,
+          "!!document.querySelector('[aria-label=\\\"自动财务核对异常队列\\\"] .setup-error')"),
+          false,'V106 finance QA should not render a raw Zod parser error')
+        assert.equal(await evaluate(send,
+          "document.querySelector('.v106-finance-events-table')?.textContent?.includes('FIN-V106-000')"),
+          true,'V106 initial finance events from scoped server endpoint')
+        assert.equal(await evaluate(send,
+          "document.querySelector('.v106-finance-events-table')?.textContent?.includes('人工未核验') && " +
+          "document.querySelector('.v106-finance-events-table')?.textContent?.includes('SP-API 来源')"),
+          true,'V106 manual and SP-API sources must remain distinct')
+        await evaluate(send,
+          "document.querySelector('.v106-column-picker summary')?.click()")
+        await waitFor(send,
+          "document.querySelectorAll('.v106-column-options input[type=\\\"checkbox\\\"]').length===3",
+          'V106 finance optional columns')
+        await evaluate(send,
+          "document.querySelector('.v106-column-options input[type=\\\"checkbox\\\"]')?.click()")
+        await waitFor(send,
+          "document.querySelectorAll('.v106-finance-events-table thead th').length===6",
+          'V106 category column toggled off without refetch')
+        assert.equal(await evaluate(send,
+          "document.querySelector('.v106-finance-events-table thead')?.textContent?.includes('来源') && " +
+          "document.querySelector('.v106-finance-events-table thead')?.textContent?.includes('原币金额')"),
+          true,'V106 mandatory financial provenance and amount remain visible')
+        await evaluate(send,
+          "document.querySelector('.v106-column-options input[type=\\\"checkbox\\\"]')?.click()")
+        await waitFor(send,
+          "document.querySelectorAll('.v106-finance-events-table thead th').length===7",
+          'V106 finance category column restored')
+        await evaluate(send,
+          "document.querySelector('.v106-column-picker summary')?.click()")
+        await evaluate(send,`(() => {const button=[...document.querySelectorAll('.v106-finance-pager button')]
+          .find(b=>b.textContent.includes('尝试下一页'));
+          if(!button)throw Error('Missing finance next page');button.click()})()`)
+        await waitFor(send,
+          "document.querySelectorAll('.v106-finance-events-table tbody tr').length===1 && " +
+          "document.querySelector('.v106-finance-events-table tbody tr')?.textContent?.includes('FIN-V106-050')",
+          'V106 second finance page is one record')
+        assert.ok(v106FinanceQueries.some(q=>
+          q.marketplaceId===market &&
+          q.beforeAt===v106FinanceRows[49].postedAt &&
+          q.beforeId===v106FinanceRows[49].id),
+          'V106 next page must use the last REAL UUID and time from server page one')
+        await evaluate(send,`(() => {const button=[...document.querySelectorAll('.v106-finance-pager button')]
+          .find(b=>b.textContent.includes('上一页'));
+          if(!button)throw Error('Missing finance previous page');button.click()})()`)
+        await waitFor(send,
+          "document.querySelectorAll('.v106-finance-events-table tbody tr').length===50 && " +
+          "document.querySelector('.v106-finance-pager')?.textContent?.includes('第 1 页')",
+          'V106 previous finance page restores correct 50-row dataset')
+        await evaluate(send,
+          "document.querySelector('.v106-market-trigger')?.scrollIntoView({block:'center'})")
+        await screenshot(send,'v106-finance-filter-360.png')
+        await evaluate(send,"document.querySelector('.v106-market-trigger')?.click()")
+        await waitFor(send,
+          `!!document.querySelector('.v105-filter-item[data-marketplace="${v106OtherMarket}"]')`,
+          'V106 authorized second Marketplace option available')
+        await screenshot(send,'v106-finance-filter-popup-360.png')
+        await evaluate(send,
+          `document.querySelector('.v105-filter-item[data-marketplace="${v106OtherMarket}"]')?.click()`)
+        await waitFor(send,
+          "document.querySelectorAll('.v106-finance-events-table tbody tr').length===1 && " +
+          "document.querySelector('.v106-finance-events-table tbody tr')?.textContent?.includes('FIN-V106-EU-ONLY')",
+          'V106 switching authorized Marketplace scopes finance events')
+        assert.equal(await evaluate(send,
+          "document.querySelector('.v106-finance-events-table')?.textContent?.includes('FIN-V106-000')"),
+          false,'V106 previous Marketplace rows must not leak into new scope')
+        assert.equal(await evaluate(send,
+          "document.querySelector('.v106-finance-pager')?.textContent?.includes('第 1 页')"),
+          true,'V106 marketplace change resets opaque cursor history')
+        assert.ok(v106FinanceQueries.some(q=>
+          q.marketplaceId===v106OtherMarket&&q.beforeAt===null&&q.beforeId===null),
+          'V106 second Marketplace must issue a distinct server request without stale cursor')
+        await layout(send,width,'v106-finance-360')
+        await evaluate(send,
+          "document.querySelector('.v106-finance-events-table')?.scrollIntoView({block:'center'})")
+        await screenshot(send,'v106-finance-table-360.png')
       }
       // Synthetic connected Marketplace must expose a LIVE-gated operations
       // panel outside the local Demo tools. This does not call Amazon.
