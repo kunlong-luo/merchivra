@@ -2,6 +2,7 @@ import {useEffect,useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchSkus} from './lib/catalog'
 import InternalSkuPicker from './InternalSkuPicker'
+import {useConfirmAction} from './components/useConfirmAction'
 import WarehouseAlertsPanel from './WarehouseAlertsPanel'
 import SupplierPurchasePlanningPanel from './SupplierPurchasePlanningPanel'
 import SupplierAsnPanel from './SupplierAsnPanel'
@@ -26,6 +27,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  tenantId:string;currentUserId:string
 }){
  const client=useQueryClient()
+ const confirmation=useConfirmAction()
  const [supplierCode,setSupplierCode]=useState(''),[supplierName,setSupplierName]=useState('')
  const [supplierId,setSupplierId]=useState(''),[currency,setCurrency]=useState('USD')
  const [notes,setNotes]=useState(''),[sku,setSku]=useState('')
@@ -110,13 +112,19 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  function submitStockOperation(e:FormEvent){
   e.preventDefault()
   if(!operationReady)return
-  if(!window.confirm('确认更新本地仓库库存流水？该操作不能通过删除记录撤销；不会同步 Amazon。'))return
-  stockOperation.mutate({requestKey:operationKey,type:operationType,
+  const body:StockOperationRequest={requestKey:operationKey,type:operationType,
    warehouseId:stockWarehouseId,destinationWarehouseId:operationType==='TRANSFER'
     ?operationDestination:null,productSkuId:operationSku,quantity:operationQuantity,
-   expectedOnHand:currentOnHand,reason:operationReason.trim()})
+   expectedOnHand:currentOnHand,reason:operationReason.trim()}
+  confirmation.request({
+   title:'确认写入本地库存流水',
+   description:'仓库余额变更将留下不可删除的审计记录。请核对仓库、SKU、数量与原因；本地操作不会同步 Amazon。',
+   confirmLabel:'确认写入流水',danger:true,
+   onConfirm:()=>stockOperation.mutate(body)
+  })
  }
  return <div className="core-workspace">
+  {confirmation.dialog}
   <div className="core-intro"><strong>采购与供应商 · 本地业务</strong><p>
    支持采购审批、真实收货待检批次、双人质检放行和不可覆盖的本地入库流水。
    本地累计入库不是可售库存，也不代表 Amazon FBA 已入仓；采购金额不等于平台结算。</p></div>
@@ -243,8 +251,12 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
           onClick={()=>action.mutate({id:o.id,kind:'approve'})}>审批通过</button>}
        {['DRAFT','SUBMITTED','APPROVED'].includes(o.status)&&
         <button className="text-button" type="button" disabled={action.isPending}
-         onClick={()=>{if(window.confirm('确认取消此采购单？'))
-          action.mutate({id:o.id,kind:'cancel'})}}>取消</button>}
+         onClick={()=>confirmation.request({
+          title:'确认取消采购单',
+          description:'采购单 '+o.orderNumber+' 将取消。此操作会改变本地采购审批状态，不会修改 Amazon 订单或 FBA 库存。',
+          confirmLabel:'取消此采购单',danger:true,
+          onConfirm:()=>action.mutate({id:o.id,kind:'cancel'})
+         })}>取消</button>}
       </div></td></tr>)}</tbody></table>
    </div>
    {selectedId&&<div className="core-tools">

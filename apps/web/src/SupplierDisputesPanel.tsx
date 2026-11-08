@@ -1,5 +1,6 @@
 import {useEffect,useState,type FormEvent} from 'react'
 import CursorPageControls from './CursorPageControls'
+import {useConfirmAction} from './components/useConfirmAction'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {PurchaseLine} from './lib/purchasing'
 import {fetchSupplierAsns} from './lib/supplier-asns'
@@ -29,6 +30,7 @@ export default function SupplierDisputesPanel({tenantId,orderId,lines,currentUse
  tenantId:string;orderId:string;lines:PurchaseLine[];currentUserId:string
 }){
  const client=useQueryClient()
+ const confirmation=useConfirmAction()
  const root=['purchasing',tenantId]
  const [varianceFilter,setVarianceFilter]=useState<CaseFilter>('ACTIONABLE')
  const [claimFilter,setClaimFilter]=useState<CaseFilter>('ACTIONABLE')
@@ -112,10 +114,15 @@ export default function SupplierDisputesPanel({tenantId,orderId,lines,currentUse
   (kind!=='OVERAGE_UNPOSTED'||(Number.isSafeInteger(excess)&&excess>0&&excess<=1000000))
  function report(e:FormEvent){
   e.preventDefault();if(!canReport)return
-  if(!window.confirm('保存当前人工观察的短装或溢装差异？不会自动修改入库、ASN 或财务。'))return
-  reported.mutate({requestKey:reportKey,lineId,kind,
+  const body:ReportVariance={requestKey:reportKey,lineId,kind,
    asnId:kind==='ASN_SHORTAGE'?asnId:null,
-   reportedExcessQuantity:kind==='OVERAGE_UNPOSTED'?excess:0,reason:reason.trim()})
+   reportedExcessQuantity:kind==='OVERAGE_UNPOSTED'?excess:0,reason:reason.trim()}
+  confirmation.request({
+   title:'确认记录人工采购差异',
+   description:'仅记录当前人工观察的短装或溢装差异，不会自动修改入库、ASN、FBA 或财务结算。',
+   confirmLabel:'保存差异观察',
+   onConfirm:()=>reported.mutate(body)
+  })
  }
  // Server computes eligibility across every reviewed variance and QC record,
  // excluding claims across ALL statuses, not just this visible page.
@@ -130,13 +137,21 @@ export default function SupplierDisputesPanel({tenantId,orderId,lines,currentUse
   !sources.isFetching&&!sources.isError&&!claimCreated.isPending
  function claim(e:FormEvent){
   e.preventDefault();if(!canClaim)return
-  if(!window.confirm('仅建立本地索赔草稿，随后需提交并由另一位 Owner 审批；不会自动对外发送。'))return
-  claimCreated.mutate({requestKey:claimKey,varianceId:claimSource.startsWith('v:')?
-   claimSource.slice(2):null,inspectionId:claimSource.startsWith('q:')?
-   claimSource.slice(2):null,requestedQuantity:claimQty,remedy,
-   reason:claimReason.trim()})
+  const body:CreateSupplierClaim={
+   requestKey:claimKey,varianceId:claimSource.startsWith('v:')?
+    claimSource.slice(2):null,inspectionId:claimSource.startsWith('q:')?
+    claimSource.slice(2):null,requestedQuantity:claimQty,remedy,
+    reason:claimReason.trim()
+  }
+  confirmation.request({
+   title:'确认建立本地索赔草稿',
+   description:'只创建内部草稿，之后必须单独提交并由另一名 Owner 审批；不会向供应商发送真实请求。',
+   confirmLabel:'建立内部草稿',
+   onConfirm:()=>claimCreated.mutate(body)
+  })
  }
  return <section className="panel full-panel" aria-label="采购差异与供应商索赔">
+  {confirmation.dialog}
   <div className="panel-heading"><div><h2>收货差异、供应商索赔与交付绩效</h2>
    <p>短装只代表当前观测点尚未收足，非最终损失；溢装报告为未入账的实物，
     绝不绕过采购单的收货上限。索赔审批是内部管理状态，不代表供应商接受、补发或退款到账。</p>
@@ -225,13 +240,21 @@ export default function SupplierDisputesPanel({tenantId,orderId,lines,currentUse
        {v.state==='OPEN'&&v.createdBy!==currentUserId&&
         <button type="button" className="primary-button"
          disabled={varianceAction.isPending}
-         onClick={()=>{if(window.confirm('确认复核此人工差异观测？不自动认定供应商责任。'))
-          varianceAction.mutate({id:v.id,action:'review'})}}>另一 Owner 复核</button>}
+         onClick={()=>confirmation.request({
+           title:'确认人工复核数量差异',
+           description:'仅将此观察标记为已复核，不自动认定供应商责任，也不修改库存或结算。',
+           confirmLabel:'确认复核',
+           onConfirm:()=>varianceAction.mutate({id:v.id,action:'review'})
+          })}>另一 Owner 复核</button>}
        {v.state==='REVIEWED'&&
         <button type="button" className="refresh-button"
          disabled={varianceAction.isPending}
-         onClick={()=>{if(window.confirm('确认关闭差异记录？不代表供应商已赔偿。'))
-          varianceAction.mutate({id:v.id,action:'close'})}}>关闭差异</button>}
+         onClick={()=>confirmation.request({
+           title:'确认关闭差异记录',
+           description:'关闭此内部观察记录不代表供应商已赔偿、已补发或退款到账。',
+           confirmLabel:'确认关闭',danger:true,
+           onConfirm:()=>varianceAction.mutate({id:v.id,action:'close'})
+          })}>关闭差异</button>}
        <button type="button" className="text-button"
         onClick={()=>{setEventCursors([null]);setViewEvent({id:v.id,type:'variances'})}}>审计记录</button>
       </div></td>
@@ -301,8 +324,12 @@ export default function SupplierDisputesPanel({tenantId,orderId,lines,currentUse
           onClick={()=>claimAction.mutate({id:c.id,action:'submit'})}>内部提交</button>}
         {c.status==='SUBMITTED'&&c.createdBy!==currentUserId&&
          <button type="button" className="primary-button" disabled={claimAction.isPending}
-          onClick={()=>{if(window.confirm('由第二位 Owner 内部审批？不自动发送供应商。'))
-           claimAction.mutate({id:c.id,action:'approve'})}}>第二 Owner 审批</button>}
+          onClick={()=>confirmation.request({
+            title:'确认第二 Owner 内部审批',
+            description:'仅审批本地索赔记录，不自动发给供应商；审批仍由后端核验为独立 Owner。',
+            confirmLabel:'内部审批通过',
+            onConfirm:()=>claimAction.mutate({id:c.id,action:'approve'})
+           })}>第二 Owner 审批</button>}
         {['DRAFT','SUBMITTED'].includes(c.status)&&
          <button type="button" className="text-button" disabled={claimAction.isPending}
           onClick={()=>claimAction.mutate({id:c.id,action:'cancel'})}>取消</button>}
@@ -313,8 +340,16 @@ export default function SupplierDisputesPanel({tenantId,orderId,lines,currentUse
           onChange={e=>setClosureNotes(s=>({...s,[c.id]:e.target.value}))}/>
          <button type="button" className="refresh-button" disabled={claimAction.isPending||
           (closureNotes[c.id]??'').trim().length<5}
-          onClick={()=>{if(window.confirm('仅关闭内部索赔记录，不能代表供应商承认或款项到账。'))
-           claimAction.mutate({id:c.id,action:'close',note:closureNotes[c.id].trim()})}}>
+          onClick={()=>{
+            const note=(closureNotes[c.id]??'').trim()
+            if(note.length<5)return
+            confirmation.request({
+             title:'确认人工关闭内部索赔',
+             description:'关闭记录不等于供应商承认、付款、退款或补发。当前关闭说明将保存到审计记录。',
+             confirmLabel:'确认关闭索赔',danger:true,
+             onConfirm:()=>claimAction.mutate({id:c.id,action:'close',note})
+            })
+           }}>
           人工关闭</button>
         </div>}
         <button type="button" className="text-button"

@@ -818,3 +818,20 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - Avoid reimplementing data-table internals. Evaluate TanStack Table for
   modules that actually need advanced sorting/column management; preserve
   backend cursor pagination, Source trust and UNKNOWN-versus-zero semantics.
+
+## V104 procurement confirmation and write-safety rule
+
+- For user-confirmed inventory, purchase, supplier dispute and claim
+  mutations, use `src/components/useConfirmAction.tsx` (Base UI
+  `AlertDialog`) instead of `window.confirm`. This component handles focus,
+  accessible title/description, cancellation and destructive-action styling.
+- Snapshot form values and idempotency keys before opening the dialog. No
+  mutation or remote side effect may occur on open, Escape or cancel.
+  Do not mark supplier approvals as external payments, Amazon receipts or
+  automatically sent claims.
+- Keep Spring RBAC, CSRF, optimistic stock balance checks, independent-owner
+  approvals and audit logs authoritative. Confirmation is only a user
+  interaction gate, never an authorization boundary.
+- For every destructive-action UI migration, add at least one synthetic
+  browser regression proving cancellation sends zero writes and explicit
+  confirmation sends exactly one request.

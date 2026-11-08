@@ -530,3 +530,72 @@ tbody tr:hover { background: #f8fbff; }
   .team-invite-form, .team-invite-secret { padding-inline: 15px; }
   .team-workspace .sandbox-actions { flex-wrap: wrap; }
 }
+
+/* V104: Base UI AlertDialog confirmation, shared by Next and Vite.
+ * The popup portals to <body>, so do not scope rules under .next-workbench.
+ * High-risk inventory/claim actions need a clearly labeled exit and focus.
+ */
+.v104-confirm-backdrop{
+ position:fixed;inset:0;z-index:130;
+ background:rgba(10,25,43,.56);
+}
+.v104-confirm-popup{
+ position:fixed;z-index:131;top:50%;left:50%;
+ width:min(480px,calc(100vw - 32px));box-sizing:border-box;
+ transform:translate(-50%,-50%);
+ max-height:calc(100dvh - 40px);overflow:auto;
+ background:#fff;color:#172a45;
+ border:1px solid #dce5ef;border-radius:16px;
+ padding:24px;box-shadow:0 24px 80px rgba(6,24,53,.24);
+ font-family:inherit;
+}
+.v104-confirm-heading{
+ display:flex;align-items:flex-start;gap:15px;
+}
+.v104-confirm-symbol{
+ display:grid;place-items:center;flex:0 0 40px;
+ width:40px;height:40px;border-radius:12px;
+ background:#fff3e9;color:#ad6500;
+}
+.v104-confirm-title{
+ margin:2px 0 0;font-size:17px;line-height:1.4;
+ font-weight:760;letter-spacing:-.01em;color:#14243b;
+}
+.v104-confirm-description{
+ margin:12px 0 0;color:#566880;
+ line-height:1.8;font-size:13px;
+ overflow-wrap:anywhere;
+}
+.v104-confirm-actions{
+ display:flex;align-items:center;justify-content:flex-end;
+ flex-wrap:wrap;gap:10px;margin-top:26px;
+}
+.v104-confirm-actions button{
+ min-height:42px;padding:10px 17px;
+ border-radius:9px;font-size:13px;font-weight:740;
+ cursor:pointer;
+}
+.v104-confirm-cancel{
+ color:#354c68;border:1px solid #d3ddeb;background:#fff;
+}
+.v104-confirm-approve{
+ border:1px solid #315fea;background:#315fea;color:white;
+}
+.v104-confirm-danger{
+ border-color:#b84049;background:#b84049;color:white;
+}
+.v104-confirm-actions button:hover{filter:brightness(.96)}
+.v104-confirm-actions button:focus-visible{
+ outline:3px solid #7eb5ff;outline-offset:3px;
+}
+@media(max-width:390px){
+ .v104-confirm-popup{padding:19px}
+ .v104-confirm-heading{gap:10px}
+ .v104-confirm-title{font-size:16px}
+ .v104-confirm-actions{gap:8px}
+}
+@media(prefers-reduced-motion:reduce){
+ .v104-confirm-popup,.v104-confirm-backdrop{
+  animation:none!important;transition:none!important;
+ }
+}
