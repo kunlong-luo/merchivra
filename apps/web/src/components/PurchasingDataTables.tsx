@@ -48,7 +48,7 @@ function ListFilter({label,value,options,onChange}:{
 }
 
 /** This table never sorts, paginates or searches beyond the API-returned rows. */
-function ScopedTable<T>({rows,columns,getRowId,label,hidden={},labels={}}:{
+export function ScopedTable<T>({rows,columns,getRowId,label,hidden={},labels={}}:{
  rows:T[];columns:ColumnDef<T>[];getRowId:(row:T)=>string
  label:string;hidden?:VisibilityState;labels?:Record<string,string>
 }){

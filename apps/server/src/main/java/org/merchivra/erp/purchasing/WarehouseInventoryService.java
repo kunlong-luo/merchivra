@@ -180,6 +180,123 @@ public class WarehouseInventoryService {
                 rs.getLong("on_hand_units")),
             tenant,warehouseId,tenant,warehouseId);
     }
+    /** V113: full local warehouse stock keys, filtered before expensive aggregates. */
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Stock> stockPage(UUID tenant,UUID warehouseId,
+        int requested,String search,String cursor) {
+        int limit=LocalKeysetPage.limit(requested);
+        if(warehouseId==null)throw bad("Warehouse ID is required");
+        String term=safeSearch(search);
+        String[] after=LocalKeysetPage.decode(cursor,6);
+        String lastSku=null;
+        UUID lastId=null;
+        if(after!=null) {
+            if(!"stock-v1".equals(after[0]) || !tenant.toString().equals(after[1])
+                || !warehouseId.toString().equals(after[2])
+                || !("q:"+term).equals(after[3]))
+                throw bad("Stock cursor does not match tenant, warehouse or search");
+            lastSku=after[4];
+            try { lastId=UUID.fromString(after[5]); }
+            catch(IllegalArgumentException e) { throw bad("Invalid stock cursor"); }
+        }
+        requireReadable(tenant,warehouseId);
+        StringBuilder sql=new StringBuilder("""
+            WITH sku_keys AS (
+                SELECT tenant_id,warehouse_id,product_sku_id
+                FROM erp_local_stock_movement
+                WHERE tenant_id=? AND warehouse_id=?
+                UNION
+                SELECT tenant_id,warehouse_id,product_sku_id
+                FROM erp_receipt_quality_batch
+                WHERE tenant_id=? AND warehouse_id=?
+            ), page_keys AS MATERIALIZED (
+                SELECT k.tenant_id,k.warehouse_id,k.product_sku_id,s.internal_sku
+                FROM sku_keys k
+                JOIN product_sku s
+                  ON s.tenant_id=k.tenant_id AND s.id=k.product_sku_id
+                WHERE 1=1
+            """);
+        List<Object> args=new ArrayList<>();
+        args.add(tenant);args.add(warehouseId);args.add(tenant);args.add(warehouseId);
+        if(!term.isEmpty()) {
+            sql.append(" AND POSITION(? IN UPPER(s.internal_sku))>0");
+            args.add(term);
+        }
+        if(lastSku!=null) {
+            sql.append(" AND (s.internal_sku,k.product_sku_id)>(?,?)");
+            args.add(lastSku);args.add(lastId);
+        }
+        sql.append("""
+                ORDER BY s.internal_sku ASC,k.product_sku_id ASC LIMIT ?
+            )
+            SELECT k.warehouse_id,k.product_sku_id,k.internal_sku,
+              COALESCE((
+                SELECT SUM(r.quantity) FROM erp_purchase_receipt r
+                JOIN erp_purchase_order_line l
+                  ON l.tenant_id=r.tenant_id AND l.id=r.purchase_order_line_id
+                WHERE r.tenant_id=k.tenant_id AND r.warehouse_id=k.warehouse_id
+                  AND l.product_sku_id=k.product_sku_id
+              ),0)::bigint AS received_units,
+              COALESCE((
+                SELECT SUM(m.quantity) FROM erp_local_stock_movement m
+                WHERE m.tenant_id=k.tenant_id AND m.warehouse_id=k.warehouse_id
+                  AND m.product_sku_id=k.product_sku_id
+              ),0)::bigint AS on_hand_units
+            FROM page_keys k
+            ORDER BY k.internal_sku ASC,k.product_sku_id ASC
+            """);
+        args.add(limit+1);
+        List<Stock> fetched=jdbc.query(sql.toString(),
+            WarehouseInventoryService::stockRow,args.toArray());
+        return LocalKeysetPage.pack(fetched,limit,x->LocalKeysetPage.encode(
+            "stock-v1",tenant.toString(),warehouseId.toString(),"q:"+term,
+            x.internalSku(),x.productSkuId()));
+    }
+
+    /** Exact known-SKU observation for stock operations. A verified zero is
+     * different from absence in a page or an inaccessible/unregistered SKU. */
+    @Transactional(readOnly=true)
+    public Stock stockItem(UUID tenant,UUID warehouseId,UUID productSkuId) {
+        requireReadable(tenant,warehouseId);
+        if(productSkuId==null)throw bad("SKU ID is required");
+        List<Stock> rows=jdbc.query("""
+            SELECT ?::uuid AS warehouse_id,s.id AS product_sku_id,s.internal_sku,
+              COALESCE((
+                SELECT SUM(r.quantity) FROM erp_purchase_receipt r
+                JOIN erp_purchase_order_line l
+                  ON l.tenant_id=r.tenant_id AND l.id=r.purchase_order_line_id
+                WHERE r.tenant_id=s.tenant_id AND r.warehouse_id=?
+                  AND l.product_sku_id=s.id
+              ),0)::bigint AS received_units,
+              COALESCE((
+                SELECT SUM(m.quantity) FROM erp_local_stock_movement m
+                WHERE m.tenant_id=s.tenant_id AND m.warehouse_id=?
+                  AND m.product_sku_id=s.id
+              ),0)::bigint AS on_hand_units
+            FROM product_sku s
+            WHERE s.tenant_id=? AND s.id=? AND s.status='ACTIVE'
+            """,WarehouseInventoryService::stockRow,
+            warehouseId,warehouseId,warehouseId,tenant,productSkuId);
+        if(rows.size()!=1)throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+            "Active SKU is unavailable within this tenant");
+        return rows.getFirst();
+    }
+
+    private static Stock stockRow(java.sql.ResultSet rs,int i)
+        throws java.sql.SQLException {
+        return new Stock(rs.getObject("warehouse_id",UUID.class).toString(),
+            rs.getObject("product_sku_id",UUID.class).toString(),
+            rs.getString("internal_sku"),rs.getLong("received_units"),
+            rs.getLong("on_hand_units"));
+    }
+
+    private static String safeSearch(String raw) {
+        String term=raw==null?"":raw.strip().toUpperCase(Locale.ROOT);
+        if(term.length()>80 || !term.matches("[A-Z0-9_-]*"))
+            throw bad("Search must be 0..80 safe literal characters");
+        return term;
+    }
+
     public List<Movement> ledger(UUID tenant,UUID warehouseId) {
         requireReadable(tenant,warehouseId);
         return jdbc.query("""
@@ -333,4 +450,85 @@ public class WarehouseInventoryService {
                     rs.getBigDecimal("unit_cost").toPlainString());
             },tenant);
     }
+    /** Full approved/receiving purchase line queue. HAVING is evaluated over
+     * every persisted receipt before keyset limiting; no vendor ETA implied. */
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<PendingReceipt> pendingReceiptsPage(UUID tenant,
+        int requested,String status,String search,String cursor) {
+        int limit=LocalKeysetPage.limit(requested);
+        String filter=status==null || status.isBlank()?"ALL":status;
+        if(!List.of("ALL","APPROVED","RECEIVING").contains(filter))
+            throw bad("Unknown pending receipt status");
+        String term=safeSearch(search);
+        String[] after=LocalKeysetPage.decode(cursor,6);
+        String lastNumber=null;
+        UUID lastLine=null;
+        if(after!=null) {
+            if(!"pending-v1".equals(after[0]) || !tenant.toString().equals(after[1])
+                || !filter.equals(after[2]) || !("q:"+term).equals(after[3]))
+                throw bad("Pending cursor does not match tenant or filters");
+            lastNumber=after[4];
+            try { lastLine=UUID.fromString(after[5]); }
+            catch(IllegalArgumentException e){ throw bad("Invalid pending cursor"); }
+        }
+        StringBuilder sql=new StringBuilder("""
+            SELECT o.id AS order_id,o.order_number,o.status,o.currency_code,
+                l.id AS line_id,l.product_sku_id,s.internal_sku,
+                l.ordered_quantity,l.unit_cost,
+                COALESCE(SUM(r.quantity),0)::bigint AS received_units
+            FROM erp_purchase_order o
+            JOIN erp_purchase_order_line l
+              ON l.tenant_id=o.tenant_id AND l.purchase_order_id=o.id
+            JOIN product_sku s
+              ON s.tenant_id=l.tenant_id AND s.id=l.product_sku_id
+            LEFT JOIN erp_purchase_receipt r
+              ON r.tenant_id=l.tenant_id AND r.purchase_order_id=o.id
+              AND r.purchase_order_line_id=l.id
+            WHERE o.tenant_id=? AND o.status IN ('APPROVED','RECEIVING')
+            """);
+        List<Object> args=new ArrayList<>();
+        args.add(tenant);
+        if(!"ALL".equals(filter)) {
+            sql.append(" AND o.status=?");
+            args.add(filter);
+        }
+        if(!term.isEmpty()) {
+            sql.append("""
+                AND (POSITION(? IN UPPER(o.order_number))>0
+                  OR POSITION(? IN UPPER(s.internal_sku))>0)
+                """);
+            args.add(term);args.add(term);
+        }
+        if(lastNumber!=null) {
+            sql.append(" AND (o.order_number,l.id)>(?,?)");
+            args.add(lastNumber);args.add(lastLine);
+        }
+        sql.append("""
+            GROUP BY o.id,o.order_number,o.status,o.currency_code,
+                l.id,l.product_sku_id,s.internal_sku,l.ordered_quantity,l.unit_cost
+            HAVING l.ordered_quantity>COALESCE(SUM(r.quantity),0)
+            ORDER BY o.order_number ASC,l.id ASC LIMIT ?
+            """);
+        args.add(limit+1);
+        List<PendingReceipt> fetched=jdbc.query(sql.toString(),
+            WarehouseInventoryService::pendingRow,args.toArray());
+        return LocalKeysetPage.pack(fetched,limit,x->LocalKeysetPage.encode(
+            "pending-v1",tenant.toString(),filter,"q:"+term,
+            x.orderNumber(),x.purchaseOrderLineId()));
+    }
+
+    private static PendingReceipt pendingRow(java.sql.ResultSet rs,int i)
+        throws java.sql.SQLException {
+        int ordered=rs.getInt("ordered_quantity");
+        long received=rs.getLong("received_units");
+        return new PendingReceipt(
+            rs.getObject("order_id",UUID.class).toString(),
+            rs.getString("order_number"),
+            rs.getObject("line_id",UUID.class).toString(),
+            rs.getObject("product_sku_id",UUID.class).toString(),
+            rs.getString("internal_sku"),rs.getString("status"),ordered,
+            received,ordered-received,rs.getString("currency_code").trim(),
+            rs.getBigDecimal("unit_cost").toPlainString());
+    }
+
 }

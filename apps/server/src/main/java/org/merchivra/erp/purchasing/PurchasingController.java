@@ -44,6 +44,26 @@ public class PurchasingController {
         HttpServletRequest req,@RequestParam UUID warehouseId) {
         return warehouses.stock(access.currentTenant(auth,req),warehouseId);
     }
+    /** V113 complete local stock; tenant is always authenticated. */
+    @GetMapping("/warehouse-stock/page")
+    public ResponseEntity<LocalKeysetPage.Page<WarehouseInventoryService.Stock>> stockPage(
+        Authentication auth,HttpServletRequest req,@RequestParam UUID warehouseId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(defaultValue="") String search,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(warehouses.stockPage(access.currentTenant(auth,req),
+                warehouseId,limit,search,cursor));
+    }
+    /** An exact read before inventory mutation; never infer zero from page omission. */
+    @GetMapping("/warehouse-stock/item")
+    public ResponseEntity<WarehouseInventoryService.Stock> stockItem(
+        Authentication auth,HttpServletRequest req,@RequestParam UUID warehouseId,
+        @RequestParam UUID productSkuId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(warehouses.stockItem(access.currentTenant(auth,req),
+                warehouseId,productSkuId));
+    }
     @GetMapping("/warehouse-ledger")
     public List<WarehouseInventoryService.Movement> ledger(Authentication auth,
         HttpServletRequest req,@RequestParam UUID warehouseId) {
@@ -65,6 +85,18 @@ public class PurchasingController {
     public List<WarehouseInventoryService.PendingReceipt> pendingReceipts(
         Authentication auth,HttpServletRequest req) {
         return warehouses.pendingReceipts(access.currentTenant(auth,req));
+    }
+    /** V113 complete local approved/receiving purchase lines. */
+    @GetMapping("/pending-receipts/page")
+    public ResponseEntity<LocalKeysetPage.Page<WarehouseInventoryService.PendingReceipt>>
+        pendingReceiptsPage(Authentication auth,HttpServletRequest req,
+            @RequestParam(defaultValue="50") int limit,
+            @RequestParam(defaultValue="ALL") String status,
+            @RequestParam(defaultValue="") String search,
+            @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(warehouses.pendingReceiptsPage(access.currentTenant(auth,req),
+                limit,status,search,cursor));
     }
     @GetMapping("/suppliers")
     public List<PurchasingService.Supplier> suppliers(Authentication auth,HttpServletRequest req){
