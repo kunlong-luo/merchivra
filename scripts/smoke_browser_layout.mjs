@@ -168,6 +168,18 @@ const server = createServer(async (req, res) => {
   if(url.pathname==='/api/v1/purchasing/warehouse-ledger' && req.method==='GET'
      && url.searchParams.get('warehouseId')===v107WarehouseId)
     return respond(res,v107Ledger)
+  // V110: purchase list status/search are handled by server, not client-side
+  // filtering of the first 100 records. Fake fixture is explicitly synthetic.
+  if(url.pathname==='/api/v1/purchasing/orders/page' && req.method==='GET'){
+    const status=url.searchParams.get('status')??'ALL'
+    const search=(url.searchParams.get('search')??'').toUpperCase()
+    const size=Number(url.searchParams.get('limit')??50)
+    const rows=[{...v104Order,status:v104Cancelled?'CANCELLED':'DRAFT'},
+      v107OtherOrder].filter(row=>(status==='ALL'||row.status===status) &&
+        row.orderNumber.toUpperCase().includes(search))
+    return respond(res,{items:rows.slice(0,size),
+      nextCursor:null,hasMore:false,pageSize:size})
+  }
   if(url.pathname==='/api/v1/purchasing/orders' && req.method==='GET')
     return respond(res,[{...v104Order,status:v104Cancelled?'CANCELLED':'DRAFT'},
       v107OtherOrder])
