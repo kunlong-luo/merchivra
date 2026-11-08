@@ -709,6 +709,11 @@ async function main() {
       await waitFor(send,
         "document.querySelectorAll('.v105-column-options input[type=\\\"checkbox\\\"]').length===3",
         'V105 hideable columns picker visible')
+      const pickerBounds=await evaluate(send,
+        "(() => {const r=document.querySelector('.v105-column-options').getBoundingClientRect();" +
+        "return {left:r.left,right:r.right,width:innerWidth}})()")
+      assert.ok(pickerBounds.left>=0&&pickerBounds.right<=width+2,
+        'V105 in-flow column options must not clip at 360px: '+JSON.stringify(pickerBounds))
       await evaluate(send,
         "document.querySelector('.v105-column-options input[type=\\\"checkbox\\\"]')?.click()")
       await waitFor(send,
