@@ -32,6 +32,24 @@ public class PurchasingController {
                                                                 HttpServletRequest req) {
         return warehouses.warehouses(access.currentTenant(auth,req));
     }
+    /** Complete warehouse directory; session tenant, not a request parameter. */
+    @GetMapping("/warehouses/page")
+    public ResponseEntity<LocalKeysetPage.Page<WarehouseInventoryService.Warehouse>>
+        warehousesPage(Authentication auth,HttpServletRequest req,
+            @RequestParam(defaultValue="50") int limit,
+            @RequestParam(defaultValue="ALL") String status,
+            @RequestParam(defaultValue="") String prefix,
+            @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(warehouses.warehousesPage(access.currentTenant(auth,req),
+                limit,status,prefix,cursor));
+    }
+    @GetMapping("/warehouses/item")
+    public ResponseEntity<WarehouseInventoryService.Warehouse> warehouseItem(
+        Authentication auth,HttpServletRequest req,@RequestParam UUID warehouseId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(warehouses.warehouseItem(access.currentTenant(auth,req),warehouseId));
+    }
     @PostMapping("/warehouses")
     @ResponseStatus(HttpStatus.CREATED)
     public WarehouseInventoryService.Warehouse createWarehouse(Authentication auth,
