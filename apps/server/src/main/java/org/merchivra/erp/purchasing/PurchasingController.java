@@ -4,7 +4,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.security.TenantAccessService;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -66,6 +68,18 @@ public class PurchasingController {
     @GetMapping("/orders")
     public List<PurchasingService.Order> orders(Authentication auth,HttpServletRequest req){
         return purchasing.orders(access.currentTenant(auth,req));
+    }
+    /** Full local order history; no user-controlled tenant parameter or HTTP caching. */
+    @GetMapping("/orders/page")
+    public ResponseEntity<LocalKeysetPage.Page<PurchasingService.Order>> ordersPage(
+        Authentication auth,HttpServletRequest req,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(defaultValue="ALL") String status,
+        @RequestParam(defaultValue="") String search,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(purchasing.ordersPage(access.currentTenant(auth,req),
+                limit,status,search,cursor));
     }
     @GetMapping("/orders/{id}")
     public PurchasingService.Detail detail(Authentication auth,HttpServletRequest req,
