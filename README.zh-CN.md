@@ -3,10 +3,11 @@
 > **V108 现行开发与上线计划：** 项目转入 **剩余 P0 功能收尾 → MVP 冻结 → 一键集中回归 → 维护者本地真实 Seller/Ads 联调 → Beta/正式生产验收**。常规 PR 只运行快速 CI；完整 PG18/Chromium/Compose 验收在里程碑集中触发，关键安全/金额/库存变更仍需即时检查。详见 [V108 执行计划](docs/roadmap/mvp-freeze-release-v108.md) 与 [分层测试政策](docs/testing/ci-policy.md)。GitHub Pages 仍仅为虚构数据只读展示。**现阶段不得向公网开放真实 ERP。**
 
 > **Next.js 16 迁移预览（V99）：** 已开始直接实现 Next.js App Router，复用现有会话保护的真实 ERP 页面；现阶段还**没有**替换线上 Vite/Nginx。可在 `apps/web` 中运行 `npm ci`、`npm run build:next`、`npm run dev:next`（端口 3001，须启动本地 Spring Boot 8080 后端）。[迁移验收门槛](docs/architecture/next16-ab-migration-v99.md)。GitHub Pages 仍只提供虚构数据静态演示。
-\n> **GitHub Pages 公开只读演示：** [查看虚构数据的静态 React 界面](https://kunlong-luo.github.io/merchivra/)（需要仓库先启用 GitHub Pages）。**它不是可登录的 ERP 服务**：没有数据库、真实 Amazon 授权或采购/财务写入。[部署与首次启用说明](docs/deployment/github-pages-public-demo-v98.md)。\n
+
+> **GitHub Pages 公开只读演示：** [查看虚构数据的静态 React 界面](https://kunlong-luo.github.io/merchivra/)（需要仓库先启用 GitHub Pages）。**它不是可登录的 ERP 服务**：没有数据库、真实 Amazon 授权或采购/财务写入。[部署与首次启用说明](docs/deployment/github-pages-public-demo-v98.md)。\n
 **开源、自托管的 Amazon Seller ERP。** 采用 Java 25 / Spring Boot 4.1、React 19 / TypeScript、PostgreSQL 18，优先把核心业务代码、模拟工作流与本地部署打通；真实 Amazon 授权留给使用者在功能开发完成后本地进行。
 
-[English](README.md) · [完整部署与卸载指南](docs/deployment/local-spark-db.md) · [架构设计](docs/architecture/overview.md) · [功能路线图](docs/roadmap.md) · [贡献指南](CONTRIBUTING.md) · [安全说明](SECURITY.md)
+[English](README.md) · [完整部署与卸载指南](docs/deployment/local-spark-db.md) · [架构设计](docs/architecture/overview.md) · [文档总入口](docs/README.md) · [当前 MVP 计划](docs/roadmap/mvp-freeze-release-v108.md) · [历史路线图](docs/roadmap.md) · [贡献指南](CONTRIBUTING.md) · [安全说明](SECURITY.md)
 
 > **当前为 pre-alpha，不适合直接对公网开放。** React 前端可构建、可登录并操作已经实现的本地业务模块；真实 Amazon OAuth/SP-API、外部供应商/承运商及生产安全尚未全链路验收。不要把 Mock 演示数据当成真实店铺交易数据。
 
@@ -178,7 +179,7 @@ docker compose --env-file .env -f deploy/compose.spark-db.yaml down --remove-orp
 
 **但尚不能称“全部前端功能和业务 API 都通过真实店铺验收”。** 真实 Amazon Seller OAuth、实时 Orders/FBA/Finances 账号联调、承运商与供应商外部回执、生产权限/文件安全和可靠性需要进一步测试。目前所有真实 Amazon 出站默认关闭，Mock 仅适合本地。
 
-最新确认的 [Java + React + 真正 PostgreSQL 18 / Flyway CI](https://github.com/kunlong-luo/merchivra/actions/runs/41270021997) 已通过；这不意味着已经实际访问过你个人的 spark-db。
+[V108 集中隔离验收 #42448160593](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593) 已在对应提交上通过 Java/Next/Vite、PostgreSQL 18/Flyway、Mock Compose 和浏览器检查。普通 PR 现只跑快速 CI。上述结果**不代表**验证过你的本地 spark-db、真实 Amazon Seller/Ads 授权或生产安全。请从[当前文档中心](docs/README.md)区分实施记录、历史设计和真正发布门槛。
 
 ## 七、常用诊断
 
