@@ -1,3 +1,8 @@
+import {
+ listWarehousesPage,getWarehouseItem,listSuppliersPage,listPurchaseOrdersPage,
+ listWarehouseStockPage,getWarehouseStockItem,listWarehouseLedgerPage,
+ listPendingReceiptsPage
+} from '../generated/purchasing-v114'
 import {z} from 'zod'
 import {csrfHeader} from './auth'
 
@@ -74,9 +79,8 @@ export type SupplierPage=z.infer<typeof supplierPage>
 export const fetchSuppliersPage=({limit=50,cursor=null,status='ALL',prefix=''}:{
  limit?:number;cursor?:string|null;status?:'ALL'|'ACTIVE'|'ARCHIVED';prefix?:string
 }={}):Promise<SupplierPage>=>{
- const params=new URLSearchParams({limit:String(limit),status,prefix})
- if(cursor)params.set('cursor',cursor)
- return call(base+'/suppliers/page?'+params.toString(),supplierPage)
+ return listSuppliersPage({limit,status,prefix,...(cursor?{cursor}:{})})
+  .then(r=>supplierPage.parse(r.data))
 }
 
 export const createSupplier=(supplierCode:string,displayName:string)=>
@@ -90,9 +94,10 @@ export type PurchaseOrdersPage=z.infer<typeof purchaseOrdersPage>
 export const fetchPurchaseOrdersPage=({limit=50,cursor=null,status='ALL',search=''}:{
  limit?:number;cursor?:string|null;status?:string;search?:string
 }={}):Promise<PurchaseOrdersPage>=>{
- const params=new URLSearchParams({limit:String(limit),status,search})
- if(cursor)params.set('cursor',cursor)
- return call(base+'/orders/page?'+params.toString(),purchaseOrdersPage)
+ return listPurchaseOrdersPage({
+  limit,status:status as 'ALL'|'DRAFT'|'SUBMITTED'|'APPROVED'|'RECEIVING'|'RECEIVED'|'CANCELLED',
+  search,...(cursor?{cursor}:{})
+ }).then(r=>purchaseOrdersPage.parse(r.data))
 }
 export const fetchPurchaseOrders=()=>call(base+'/orders',z.array(order))
 export const fetchPurchaseOrder=(id:string)=>call(base+'/orders/'+encodeURIComponent(id),detail)
@@ -111,12 +116,11 @@ export type WarehousePage=z.infer<typeof warehousePage>
 export const fetchWarehousesPage=({limit=50,status='ALL',prefix='',cursor=null}:{
  limit?:number;status?:'ALL'|'ACTIVE'|'ARCHIVED';prefix?:string;cursor?:string|null
 }={}):Promise<WarehousePage>=>{
- const params=new URLSearchParams({limit:String(limit),status,prefix})
- if(cursor)params.set('cursor',cursor)
- return call(base+'/warehouses/page?'+params.toString(),warehousePage)
+ return listWarehousesPage({limit,status,prefix,...(cursor?{cursor}:{})})
+  .then(r=>warehousePage.parse(r.data))
 }
 export const fetchWarehouseItem=(warehouseId:string)=>
- call(base+'/warehouses/item?'+new URLSearchParams({warehouseId}),warehouse)
+ getWarehouseItem({warehouseId}).then(r=>warehouse.parse(r.data))
 export const fetchWarehouses=()=>call(base+'/warehouses',z.array(warehouse))
 export const createWarehouse=(warehouseCode:string,displayName:string)=>
  call(base+'/warehouses',warehouse,'POST',{warehouseCode,displayName})
@@ -132,12 +136,11 @@ export type WarehouseStockPage=z.infer<typeof stockPage>
 export const fetchWarehouseStockPage=({warehouseId,limit=50,search='',cursor=null}:{
  warehouseId:string;limit?:number;search?:string;cursor?:string|null
 }):Promise<WarehouseStockPage>=>{
- const params=new URLSearchParams({warehouseId,limit:String(limit),search})
- if(cursor)params.set('cursor',cursor)
- return call(base+'/warehouse-stock/page?'+params.toString(),stockPage)
+ return listWarehouseStockPage({warehouseId,limit,search,...(cursor?{cursor}:{})})
+  .then(r=>stockPage.parse(r.data))
 }
 export const fetchWarehouseStockItem=(warehouseId:string,productSkuId:string)=>
- call(base+'/warehouse-stock/item?'+new URLSearchParams({warehouseId,productSkuId}),stock)
+ getWarehouseStockItem({warehouseId,productSkuId}).then(r=>stock.parse(r.data))
 const pendingPage=z.object({
  items:z.array(pending).max(100),nextCursor:z.string().min(1).nullable(),
  hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
@@ -148,9 +151,8 @@ export type PendingReceiptsPage=z.infer<typeof pendingPage>
 export const fetchPendingReceiptsPage=({limit=50,status='ALL',search='',cursor=null}:{
  limit?:number;status?:'ALL'|'APPROVED'|'RECEIVING';search?:string;cursor?:string|null
 }={}):Promise<PendingReceiptsPage>=>{
- const params=new URLSearchParams({limit:String(limit),status,search})
- if(cursor)params.set('cursor',cursor)
- return call(base+'/pending-receipts/page?'+params.toString(),pendingPage)
+ return listPendingReceiptsPage({limit,status,search,...(cursor?{cursor}:{})})
+  .then(r=>pendingPage.parse(r.data))
 }
 export const fetchWarehouseStock=(warehouseId:string)=>
  call(base+'/warehouse-stock?warehouseId='+encodeURIComponent(warehouseId),z.array(stock))
@@ -166,9 +168,12 @@ export const fetchWarehouseLedgerPage=({warehouseId,limit=50,movementType='ALL',
  search='',cursor=null}:{
  warehouseId:string;limit?:number;movementType?:string;search?:string;cursor?:string|null
 }):Promise<WarehouseLedgerPage>=>{
- const params=new URLSearchParams({warehouseId,limit:String(limit),movementType,search})
- if(cursor)params.set('cursor',cursor)
- return call(base+'/warehouse-ledger/page?'+params.toString(),warehouseLedgerPage)
+ return listWarehouseLedgerPage({
+  warehouseId,limit,
+  movementType:movementType as 'ALL'|'PURCHASE_RECEIPT'|'OUTBOUND'|'TRANSFER_OUT'|
+   'TRANSFER_IN'|'COUNT_ADJUSTMENT'|'QC_QUARANTINE'|'QC_RELEASE'|'LOT_QUARANTINE',
+  search,...(cursor?{cursor}:{})
+ }).then(r=>warehouseLedgerPage.parse(r.data))
 }
 export const fetchWarehouseLedger=(warehouseId:string)=>
  call(base+'/warehouse-ledger?warehouseId='+encodeURIComponent(warehouseId),z.array(movement))
