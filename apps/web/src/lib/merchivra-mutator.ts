@@ -31,16 +31,20 @@ export async function merchivraFetch<T>(url:string,options:RequestInit={}):Promi
  }
  if(response.status===204)return {data:undefined,status:204,headers:response.headers} as T
  const contentType=response.headers.get('content-type')??''
- // Some API test doubles omit Content-Type even when returning JSON.
- // For an absent header, parse valid JSON but preserve plain text fallbacks.
- // Explicit non-JSON media types remain text, avoiding hidden coercions.
- const data=contentType.includes('application/json')||contentType.includes('+json')
-  ?await response.json()
-  :contentType===''?await (async()=>{
-    const raw=await response.text()
-    try{return JSON.parse(raw) as unknown}catch{return raw}
-   })()
-  :await response.text()
+ // The API contract requests JSON. Some test doubles (and misconfigured
+ // gateways) label JSON payloads as text/plain; parse a valid JSON body
+ // instead of quietly handing a string to Zod. For actual application/json,
+ // malformed JSON still fails closed. Non-JSON text remains text.
+ const raw=await response.text()
+ let data:unknown=raw
+ if(contentType.includes('application/json')||contentType.includes('+json')
+    ||headers.get('Accept')?.includes('application/json')){
+  try{data=JSON.parse(raw) as unknown}
+  catch(e){
+   if(contentType.includes('application/json')||contentType.includes('+json'))
+    throw new Error('Invalid JSON API response',{cause:e})
+  }
+ }
  // Orval v8 custom Fetch response shape is {data,status,headers},
  // not the raw JSON body (otherwise typed callers silently receive wrong data).
  return {data,status:response.status,headers:response.headers} as T
