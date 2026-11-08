@@ -1,5 +1,5 @@
 import {useEffect,useState,type FormEvent} from 'react'
-import WarehousePicker from './WarehousePicker'
+import WarehousePicker,{WarehouseDirectoryTable} from './WarehousePicker'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchSkus} from './lib/catalog'
 import InternalSkuPicker from './InternalSkuPicker'
@@ -25,7 +25,7 @@ import LotDispositionProofPanel from './LotDispositionProofPanel'
 import LotEvidenceFilesPanel from './LotEvidenceFilesPanel'
 import SupplierDisputesPanel from './SupplierDisputesPanel'
 import {createSupplier,fetchSuppliersPage,createPurchaseOrder,
- fetchPurchaseOrder,purchaseAction,receivePurchase,fetchWarehouses,createWarehouse,
+ fetchPurchaseOrder,purchaseAction,receivePurchase,fetchWarehouses,fetchWarehouseItem,createWarehouse,
  fetchWarehouseStockItem,postStockOperation,
  type NewPurchaseLine,type StockOperationRequest} from './lib/purchasing'
 
@@ -55,6 +55,21 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  const [operationKey,setOperationKey]=useState(()=>crypto.randomUUID())
  const [message,setMessage]=useState(''),[failure,setFailure]=useState('')
  const warehouses=useQuery({queryKey:['purchasing',tenantId,'warehouses'],queryFn:fetchWarehouses})
+ const sourceWarehouse=useQuery({
+  queryKey:['purchasing',tenantId,'warehouse-item',stockWarehouseId],
+  queryFn:()=>fetchWarehouseItem(stockWarehouseId),
+  enabled:!!stockWarehouseId,retry:false
+ })
+ const destinationWarehouse=useQuery({
+  queryKey:['purchasing',tenantId,'warehouse-item',operationDestination],
+  queryFn:()=>fetchWarehouseItem(operationDestination),
+  enabled:operationType==='TRANSFER'&&!!operationDestination,retry:false
+ })
+ const receiptWarehouse=useQuery({
+  queryKey:['purchasing',tenantId,'warehouse-item',warehouseId],
+  queryFn:()=>fetchWarehouseItem(warehouseId),
+  enabled:!!warehouseId,retry:false
+ })
  const stockItem=useQuery({
   queryKey:['purchasing',tenantId,'stock-item',stockWarehouseId,operationSku],
   queryFn:()=>fetchWarehouseStockItem(stockWarehouseId,operationSku),
@@ -103,7 +118,6 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  const remaining=selected.data?.lines.filter(l=>l.receivedQuantity<l.orderedQuantity)??[]
  const supplierOptions=suppliers.data?.items.filter(s=>s.status==='ACTIVE')??[]
  const activeSkus=skus.data?.filter(s=>s.status==='ACTIVE')??[]
- const activeWarehouses=warehouses.data?.filter(w=>w.status==='ACTIVE')??[]
  // A missing SKU on the current list page is UNKNOWN, never zero.
  // Exact authenticated tenant/warehouse/SKU observation is required even for COUNT.
  const currentOnHand=stockItem.data?.onHandQuantity
@@ -112,11 +126,11 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
     &&operationQuantity!==currentOnHand):
    (operationQuantity>=1&&operationQuantity<=1000000&&operationQuantity<=currentOnHand))
  const operationReady=!!stockWarehouseId&&!!operationSku&&!!stockItem.data&&
-  // V91: SKU is verified by the scoped server-paged picker, not the first 100 rows.
-  
-  activeWarehouses.some(w=>w.id===stockWarehouseId)&&
-  (operationType!=='TRANSFER'||activeWarehouses.some(w=>w.id===operationDestination
-    &&w.id!==stockWarehouseId))&&quantityValid&&
+  sourceWarehouse.data?.id===stockWarehouseId&&
+  sourceWarehouse.data.status==='ACTIVE'&&
+  (operationType!=='TRANSFER'||(operationDestination!==stockWarehouseId&&
+    destinationWarehouse.data?.id===operationDestination&&
+    destinationWarehouse.data.status==='ACTIVE'))&&quantityValid&&
   operationReason.trim().length>=5&&operationReason.trim().length<=300&&
   !stockItem.isFetching&&!stockItem.isPending&&!stockOperation.isPending
  function submitStockOperation(e:FormEvent){
@@ -152,9 +166,9 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
     <button type="submit" className="primary-button"
      disabled={warehouseCreated.isPending}>建立本地仓库</button>
    </form>
-   {warehouses.isPending?<p className="empty-state">读取仓库中…</p>:
-    warehouses.isError?<p className="setup-error" role="alert">{String(warehouses.error)}</p>:
-    <p className="setup-hint">已创建 {warehouses.data?.length??0} 个仓库；请在采购收货时选择实际接收仓库。</p>}
+   <WarehouseDirectoryTable key={tenantId} tenantId={tenantId}/>
+   <p className="setup-hint">完整仓库目录可分页检索；部分辅助只读标签仍可能
+    使用旧接口的前 200 个名称，查不到时保留仓库 UUID，不代表没有该仓库。</p>
   </section>
   <section className="panel full-panel"><div className="panel-heading"><h2>供应商</h2></div>
    <form className="team-invite-form" onSubmit={addSupplier}>
@@ -273,7 +287,9 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
         <input id="receipt-qty" type="number" min={1}
           max={remaining.find(l=>l.id===receiveLine)?.orderedQuantity??1000000}
           value={receiveQty} onChange={e=>setReceiveQty(Number(e.target.value))}/>
-        <button className="primary-button" type="button" disabled={!warehouseId||!receiveLine||
+        <button className="primary-button" type="button" disabled={!warehouseId||
+          receiptWarehouse.data?.id!==warehouseId||
+          receiptWarehouse.data?.status!=='ACTIVE'||!receiveLine||
           !Number.isInteger(receiveQty)||receiveQty<1||
           receiveQty>(remaining.find(l=>l.id===receiveLine)?.orderedQuantity??0)-
             (remaining.find(l=>l.id===receiveLine)?.receivedQuantity??0)||receipt.isPending}
