@@ -23,6 +23,8 @@ ACTIVE_FILES = (
     "docs/README.md",
     "docs/development.md",
     "docs/architecture/overview.md",
+    "docs/architecture/open-source-erp-benchmark-2026-11-08.md",
+    "docs/purchasing/local-purchase-workflow.md",
     "docs/api/README.md",
     "docs/deployment/local-spark-db.md",
     "docs/roadmap.md",

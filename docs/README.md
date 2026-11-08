@@ -7,6 +7,7 @@
 | 想了解什么 | 当前权威文档 | 注意 |
 | --- | --- | --- |
 | 最新 P0 优先级、MVP 冻结与上线顺序 | [V108 MVP 收尾与集中验收计划](roadmap/mvp-freeze-release-v108.md) | **现行计划**，覆盖历史 roadmap 的“当前/下一步” |
+| 成熟开源 ERP 源码对标与复用决策 | [BENCH-001 · Wimoor / ERPNext / metasfresh / Amazon SDK](architecture/open-source-erp-benchmark-2026-11-08.md) | 以当前后端查询与权限事实作差距判断；不复制 GPL 源码、不盲目扩充 P0 |
 | 各模块代码/真实来源/验收状态 | [V109 文档审计与状态索引](governance/docs-audit-v109.md) · [V86 旧版功能审计](testing/core-coverage-audit-v86.md) | V86 是历史快照，不可当最新状态矩阵 |
 | 当前架构、模块与依赖 | [总体架构](architecture/overview.md) · [V99–V100 Next 迁移门槛](architecture/next16-ab-migration-v99.md) | Next 16 已有真实 App Router，但还没有取代默认 Vite/Nginx 部署 |
 | 本地运行、开发和环境变量 | [开发指南](development.md) · [Docker/PG18 部署](deployment/local-spark-db.md) | Java 25 / Gradle / PostgreSQL **18** / React 19 |
