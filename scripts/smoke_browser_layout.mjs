@@ -726,7 +726,12 @@ async function main() {
         "document.querySelectorAll('.v105-ops-table thead tr th').length===8",
         'V105 hidden source key column restored')
       await layout(send,width,'v105-ops-filter-table-360')
-      await screenshot(send,'v105-ops-filter-table-360.png')
+      await evaluate(send,
+        "document.querySelector('.v105-ops-filter')?.scrollIntoView({block:'center'})")
+      await screenshot(send,'v105-ops-filter-360.png')
+      await evaluate(send,
+        "document.querySelector('.v105-table-toolbar')?.scrollIntoView({block:'center'})")
+      await screenshot(send,'v105-ops-table-360.png')
       // V72: real React purchasing panel must preserve missing carrier ETA
       // instead of fabricating an arrival. This is a synthetic API fixture.
       await evaluate(send,
