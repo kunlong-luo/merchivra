@@ -104,6 +104,22 @@ export const createWarehouse=(warehouseCode:string,displayName:string)=>
  call(base+'/warehouses',warehouse,'POST',{warehouseCode,displayName})
 export const fetchWarehouseStock=(warehouseId:string)=>
  call(base+'/warehouse-stock?warehouseId='+encodeURIComponent(warehouseId),z.array(stock))
+// V112: page filters operate over the entire server-side warehouse history.
+const warehouseLedgerPage=z.object({
+ items:z.array(movement).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{
+ message:'Invalid warehouse ledger cursor contract'
+})
+export type WarehouseLedgerPage=z.infer<typeof warehouseLedgerPage>
+export const fetchWarehouseLedgerPage=({warehouseId,limit=50,movementType='ALL',
+ search='',cursor=null}:{
+ warehouseId:string;limit?:number;movementType?:string;search?:string;cursor?:string|null
+}):Promise<WarehouseLedgerPage>=>{
+ const params=new URLSearchParams({warehouseId,limit:String(limit),movementType,search})
+ if(cursor)params.set('cursor',cursor)
+ return call(base+'/warehouse-ledger/page?'+params.toString(),warehouseLedgerPage)
+}
 export const fetchWarehouseLedger=(warehouseId:string)=>
  call(base+'/warehouse-ledger?warehouseId='+encodeURIComponent(warehouseId),z.array(movement))
 export const fetchPendingReceipts=()=>call(base+'/pending-receipts',z.array(pending))
