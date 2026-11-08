@@ -1,0 +1,1252 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Merchivra local purchasing / warehouse read API (reviewed)",
+    "version": "114.0.0",
+    "description": "Source-reviewed Spring Session/CSRF local purchasing read paths V110-V114. Inventory is local only; Amazon writes disabled. Cursor pages are live scoped views, not audit snapshots."
+  },
+  "security": [
+    {
+      "sessionCookie": []
+    }
+  ],
+  "paths": {
+    "/api/v1/purchasing/warehouses/page": {
+      "get": {
+        "operationId": "listLocalWarehousesPage",
+        "summary": "listLocalWarehousesPage",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ALL",
+                "ACTIVE",
+                "ARCHIVED"
+              ],
+              "default": "ALL"
+            }
+          },
+          {
+            "in": "query",
+            "name": "prefix",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": ""
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authenticated tenant-scoped API data, never a complete frozen ledger snapshot",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageLocalWarehouse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination cursor or filters"
+          },
+          "401": {
+            "description": "Session authentication required"
+          },
+          "403": {
+            "description": "Insufficient permissions"
+          },
+          "404": {
+            "description": "Warehouse or local SKU is not accessible"
+          }
+        },
+        "tags": [
+          "Local purchasing"
+        ]
+      }
+    },
+    "/api/v1/purchasing/warehouses/item": {
+      "get": {
+        "operationId": "getLocalWarehouseItem",
+        "summary": "getLocalWarehouseItem",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "warehouseId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authenticated tenant-scoped API data, never a complete frozen ledger snapshot",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalWarehouse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination cursor or filters"
+          },
+          "401": {
+            "description": "Session authentication required"
+          },
+          "403": {
+            "description": "Insufficient permissions"
+          },
+          "404": {
+            "description": "Warehouse or local SKU is not accessible"
+          }
+        },
+        "tags": [
+          "Local purchasing"
+        ]
+      }
+    },
+    "/api/v1/purchasing/warehouses": {
+      "post": {
+        "operationId": "createLocalWarehouse",
+        "summary": "createLocalWarehouse",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewLocalWarehouse"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Authenticated tenant-scoped API data, never a complete frozen ledger snapshot",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalWarehouse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination cursor or filters"
+          },
+          "401": {
+            "description": "Session authentication required"
+          },
+          "403": {
+            "description": "Insufficient permissions"
+          },
+          "404": {
+            "description": "Warehouse or local SKU is not accessible"
+          }
+        },
+        "tags": [
+          "Local purchasing"
+        ]
+      }
+    },
+    "/api/v1/purchasing/suppliers/page": {
+      "get": {
+        "operationId": "listLocalSuppliersPage",
+        "summary": "listLocalSuppliersPage",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ALL",
+                "ACTIVE",
+                "ARCHIVED"
+              ],
+              "default": "ALL"
+            }
+          },
+          {
+            "in": "query",
+            "name": "prefix",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": ""
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authenticated tenant-scoped API data, never a complete frozen ledger snapshot",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageLocalSupplier"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination cursor or filters"
+          },
+          "401": {
+            "description": "Session authentication required"
+          },
+          "403": {
+            "description": "Insufficient permissions"
+          },
+          "404": {
+            "description": "Warehouse or local SKU is not accessible"
+          }
+        },
+        "tags": [
+          "Local purchasing"
+        ]
+      }
+    },
+    "/api/v1/purchasing/suppliers": {
+      "post": {
+        "operationId": "createLocalSupplier",
+        "summary": "createLocalSupplier",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewLocalSupplier"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Authenticated tenant-scoped API data, never a complete frozen ledger snapshot",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalSupplier"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination cursor or filters"
+          },
+          "401": {
+            "description": "Session authentication required"
+          },
+          "403": {
+            "description": "Insufficient permissions"
+          },
+          "404": {
+            "description": "Warehouse or local SKU is not accessible"
+          }
+        },
+        "tags": [
+          "Local purchasing"
+        ]
+      }
+    },
+    "/api/v1/purchasing/orders/page": {
+      "get": {
+        "operationId": "listLocalPurchaseOrdersPage",
+        "summary": "listLocalPurchaseOrdersPage",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ALL",
+                "DRAFT",
+                "SUBMITTED",
+                "APPROVED",
+                "RECEIVING",
+                "RECEIVED",
+                "CANCELLED"
+              ],
+              "default": "ALL"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": ""
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authenticated tenant-scoped API data, never a complete frozen ledger snapshot",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageLocalPurchaseOrder"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination cursor or filters"
+          },
+          "401": {
+            "description": "Session authentication required"
+          },
+          "403": {
+            "description": "Insufficient permissions"
+          },
+          "404": {
+            "description": "Warehouse or local SKU is not accessible"
+          }
+        },
+        "tags": [
+          "Local purchasing"
+        ]
+      }
+    },
+    "/api/v1/purchasing/warehouse-ledger/page": {
+      "get": {
+        "operationId": "listLocalWarehouseLedgerPage",
+        "summary": "listLocalWarehouseLedgerPage",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "warehouseId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "movementType",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ALL",
+                "PURCHASE_RECEIPT",
+                "OUTBOUND",
+                "TRANSFER_OUT",
+                "TRANSFER_IN",
+                "COUNT_ADJUSTMENT",
+                "QC_QUARANTINE",
+                "QC_RELEASE",
+                "LOT_QUARANTINE"
+              ],
+              "default": "ALL"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": ""
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authenticated tenant-scoped API data, never a complete frozen ledger snapshot",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageLocalMovement"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination cursor or filters"
+          },
+          "401": {
+            "description": "Session authentication required"
+          },
+          "403": {
+            "description": "Insufficient permissions"
+          },
+          "404": {
+            "description": "Warehouse or local SKU is not accessible"
+          }
+        },
+        "tags": [
+          "Local purchasing"
+        ]
+      }
+    },
+    "/api/v1/purchasing/warehouse-stock/page": {
+      "get": {
+        "operationId": "listLocalWarehouseStockPage",
+        "summary": "listLocalWarehouseStockPage",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "warehouseId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": ""
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authenticated tenant-scoped API data, never a complete frozen ledger snapshot",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageLocalWarehouseStock"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination cursor or filters"
+          },
+          "401": {
+            "description": "Session authentication required"
+          },
+          "403": {
+            "description": "Insufficient permissions"
+          },
+          "404": {
+            "description": "Warehouse or local SKU is not accessible"
+          }
+        },
+        "tags": [
+          "Local purchasing"
+        ]
+      }
+    },
+    "/api/v1/purchasing/warehouse-stock/item": {
+      "get": {
+        "operationId": "getLocalWarehouseStockItem",
+        "summary": "getLocalWarehouseStockItem",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "warehouseId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "productSkuId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authenticated tenant-scoped API data, never a complete frozen ledger snapshot",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalWarehouseStock"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination cursor or filters"
+          },
+          "401": {
+            "description": "Session authentication required"
+          },
+          "403": {
+            "description": "Insufficient permissions"
+          },
+          "404": {
+            "description": "Warehouse or local SKU is not accessible"
+          }
+        },
+        "tags": [
+          "Local purchasing"
+        ]
+      }
+    },
+    "/api/v1/purchasing/pending-receipts/page": {
+      "get": {
+        "operationId": "listLocalPendingReceiptsPage",
+        "summary": "listLocalPendingReceiptsPage",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ALL",
+                "APPROVED",
+                "RECEIVING"
+              ],
+              "default": "ALL"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": ""
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "in": "query",
+            "name": "cursor",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Authenticated tenant-scoped API data, never a complete frozen ledger snapshot",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PageLocalPendingReceipt"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid pagination cursor or filters"
+          },
+          "401": {
+            "description": "Session authentication required"
+          },
+          "403": {
+            "description": "Insufficient permissions"
+          },
+          "404": {
+            "description": "Warehouse or local SKU is not accessible"
+          }
+        },
+        "tags": [
+          "Local purchasing"
+        ]
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "SESSION"
+      }
+    },
+    "schemas": {
+      "LocalWarehouse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "status"
+        ]
+      },
+      "LocalSupplier": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "status"
+        ]
+      },
+      "LocalPurchaseOrder": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderNumber": {
+            "type": "string"
+          },
+          "supplierId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "APPROVED",
+              "RECEIVING",
+              "RECEIVED",
+              "CANCELLED"
+            ]
+          },
+          "currency": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "approvedBy": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true
+          },
+          "updatedAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "orderNumber",
+          "supplierId",
+          "status",
+          "currency",
+          "createdBy",
+          "approvedBy",
+          "notes",
+          "updatedAt"
+        ]
+      },
+      "LocalWarehouseStock": {
+        "type": "object",
+        "properties": {
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "internalSku": {
+            "type": "string"
+          },
+          "recordedReceivedQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "onHandQuantity": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "warehouseId",
+          "productSkuId",
+          "internalSku",
+          "recordedReceivedQuantity",
+          "onHandQuantity"
+        ]
+      },
+      "LocalPendingReceipt": {
+        "type": "object",
+        "properties": {
+          "purchaseOrderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderNumber": {
+            "type": "string"
+          },
+          "purchaseOrderLineId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "internalSku": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "APPROVED",
+              "RECEIVING"
+            ]
+          },
+          "orderedQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "receivedQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "remainingQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "unitCost": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "purchaseOrderId",
+          "orderNumber",
+          "purchaseOrderLineId",
+          "productSkuId",
+          "internalSku",
+          "status",
+          "orderedQuantity",
+          "receivedQuantity",
+          "remainingQuantity",
+          "currency",
+          "unitCost"
+        ]
+      },
+      "LocalMovement": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "internalSku": {
+            "type": "string"
+          },
+          "purchaseReceiptId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "operationId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "inspectionId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "lotActionId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "movementType": {
+            "type": "string",
+            "enum": [
+              "PURCHASE_RECEIPT",
+              "OUTBOUND",
+              "TRANSFER_OUT",
+              "TRANSFER_IN",
+              "COUNT_ADJUSTMENT",
+              "QC_QUARANTINE",
+              "QC_RELEASE",
+              "LOT_QUARANTINE"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "nullable": true
+          },
+          "createdAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "warehouseId",
+          "productSkuId",
+          "internalSku",
+          "purchaseReceiptId",
+          "operationId",
+          "inspectionId",
+          "lotActionId",
+          "quantity",
+          "movementType",
+          "reason",
+          "createdAt"
+        ]
+      },
+      "NewLocalWarehouse": {
+        "type": "object",
+        "properties": {
+          "warehouseCode": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "warehouseCode",
+          "displayName"
+        ]
+      },
+      "NewLocalSupplier": {
+        "type": "object",
+        "properties": {
+          "supplierCode": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "supplierCode",
+          "displayName"
+        ]
+      },
+      "PageLocalWarehouse": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LocalWarehouse"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "PageLocalSupplier": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LocalSupplier"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "PageLocalPurchaseOrder": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LocalPurchaseOrder"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "PageLocalWarehouseStock": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LocalWarehouseStock"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "PageLocalMovement": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LocalMovement"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "PageLocalPendingReceipt": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LocalPendingReceipt"
+            }
+          },
+          "nextCursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      }
+    }
+  }
+}
