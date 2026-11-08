@@ -315,7 +315,7 @@ export function WarehouseLedgerTable({tenantId,warehouseId}:{
    cell:({row})=>{
     const m=row.original
     return <span className="v107-ledger-source">
-     {m.purchaseReceiptId??m.operationId??m.inspectionId??'无来源记录'}
+     {m.purchaseReceiptId??m.operationId??m.inspectionId??m.lotActionId??'无来源记录'}
     </span>
    }},
   {accessorKey:'reason',header:'业务原因',enableHiding:false,
