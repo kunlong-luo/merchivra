@@ -872,3 +872,22 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
   the entire result set is loaded.
 - Demonstrate pagination across at least 51 synthetic rows plus another
   authorized Marketplace in Chromium before merging table changes.
+
+## V107 purchase and inventory list presentation boundaries
+
+- Purchase orders, suppliers and warehouse ledger currently expose legacy
+  list arrays. UI filtering or search must be explicitly described as
+  acting on the **currently API-loaded data**. Never imply server-wide
+  search, global pagination or a full historic warehouse balance from a
+  bounded recent-record list. Server cursor APIs should be introduced
+  before requiring true global filtering/large-scale pagination.
+- Prefer the pinned Base UI Select for controlled view filters and TanStack
+  Table 8 for stable UUID row keys and optional display fields. Preserve
+  semantic tables, keyboard-accessible scrolling, 360px interactions, and
+  never hide original purchase currency or warehouse movement sources.
+- Keep all Spring procurement role checks and V104 cancel AlertDialog
+  unchanged. No filter or column chooser can mutate a purchase, supplier
+  or warehouse ledger entry.
+- A browser regression must wait for the exact table under test before
+  checking its rows; generic ancestor tbody probes can race unrelated
+  panels, as happened after V106's main merge.

@@ -3,6 +3,9 @@ import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchSkus} from './lib/catalog'
 import InternalSkuPicker from './InternalSkuPicker'
 import {useConfirmAction} from './components/useConfirmAction'
+import {
+ SupplierDirectoryTable,PurchaseOrdersTable,WarehouseLedgerTable
+} from './components/PurchasingDataTables'
 import WarehouseAlertsPanel from './WarehouseAlertsPanel'
 import SupplierPurchasePlanningPanel from './SupplierPurchasePlanningPanel'
 import SupplierAsnPanel from './SupplierAsnPanel'
@@ -159,7 +162,8 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
       新建供应商</button>
    </form>
    {suppliers.isError&&<p className="setup-error">{String(suppliers.error)}</p>}
-   <p className="setup-hint">已登记供应商：{suppliers.data?.length??0}</p>
+   {suppliers.isPending?<p className="empty-state">加载供应商目录…</p>:
+    suppliers.isError?null:<SupplierDirectoryTable suppliers={suppliers.data??[]}/>}
   </section>
   <section className="panel full-panel"><div className="panel-heading"><h2>创建采购单草稿</h2></div>
    <div className="team-invite-form">
@@ -235,30 +239,18 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
    <p>批准人必须是另一名 Owner；收货可以分批，但不能超过每行订购数量。</p></div>
    <button className="refresh-button" onClick={refresh}>刷新</button></div>
    {orders.isError&&<p className="setup-error">{String(orders.error)}</p>}
-   <div className="table-scroll" role="region" tabIndex={0} aria-label="采购单列表">
-    <table><thead><tr><th scope="col">采购单号</th><th scope="col">状态</th>
-      <th scope="col">币种</th><th scope="col">操作</th></tr></thead>
-     <tbody>{(orders.data??[]).map(o=><tr key={o.id}><td>{o.orderNumber}</td>
-      <td>{o.status}</td><td>{o.currency}</td>
-      <td><div className="sandbox-actions">
-       <button className="refresh-button" type="button"
-        onClick={()=>setSelectedId(o.id)}>明细</button>
-       {o.status==='DRAFT'&&<button className="refresh-button" type="button"
-        disabled={action.isPending}
-        onClick={()=>action.mutate({id:o.id,kind:'submit'})}>提交审批</button>}
-       {o.status==='SUBMITTED'&&o.createdBy!==currentUserId&&
-        <button className="primary-button" type="button" disabled={action.isPending}
-          onClick={()=>action.mutate({id:o.id,kind:'approve'})}>审批通过</button>}
-       {['DRAFT','SUBMITTED','APPROVED'].includes(o.status)&&
-        <button className="text-button" type="button" disabled={action.isPending}
-         onClick={()=>confirmation.request({
-          title:'确认取消采购单',
-          description:'采购单 '+o.orderNumber+' 将取消。此操作会改变本地采购审批状态，不会修改 Amazon 订单或 FBA 库存。',
-          confirmLabel:'取消此采购单',danger:true,
-          onConfirm:()=>action.mutate({id:o.id,kind:'cancel'})
-         })}>取消</button>}
-      </div></td></tr>)}</tbody></table>
-   </div>
+   {orders.isPending?<p className="empty-state">读取采购单中…</p>:
+    orders.isError?null:
+    <PurchaseOrdersTable orders={orders.data??[]}
+     suppliers={suppliers.data??[]} currentUserId={currentUserId}
+     busy={action.isPending} onView={setSelectedId}
+     onAction={(id,kind)=>action.mutate({id,kind})}
+     onCancel={o=>confirmation.request({
+      title:'确认取消采购单',
+      description:'采购单 '+o.orderNumber+' 将取消。此操作会改变本地采购审批状态，不会修改 Amazon 订单或 FBA 库存。',
+      confirmLabel:'取消此采购单',danger:true,
+      onConfirm:()=>action.mutate({id:o.id,kind:'cancel'})
+     })}/>}
    {selectedId&&<div className="core-tools">
     <h3>采购明细 / 分批收货</h3>
     {selected.isPending?<p>读取中…</p>:selected.isError?
@@ -373,17 +365,9 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
     {movements.isPending?<p className="empty-state">加载流水中…</p>:
      movements.isError?<p className="setup-error" role="alert">{String(movements.error)}</p>:
      !movements.data?.length?<p className="empty-state">暂无入库流水。</p>:
-     <div className="table-scroll" role="region" tabIndex={0} aria-label="仓库完整库存流水">
-      <table><thead><tr><th scope="col">时间</th><th scope="col">内部 SKU</th>
-       <th scope="col">变动</th><th scope="col">来源</th><th scope="col">原因</th></tr></thead><tbody>
-       {movements.data.map(m=><tr key={m.id}>
-        <td>{new Date(m.createdAt).toLocaleString('zh-CN')}</td>
-        <td>{m.internalSku}</td><td>{m.quantity>0?'+':''}{m.quantity}</td>
-        <td>{m.movementType} · {m.purchaseReceiptId??m.operationId??m.inspectionId??'无来源'}</td>
-        <td>{m.reason??'采购已审批收货'}</td>
-       </tr>)}
-      </tbody></table>
-     </div>}
+     <WarehouseLedgerTable key={stockWarehouseId}
+      movements={movements.data}/>}
+
    </>}
   </section>
   <SupplierDisputesPanel key={'disputes-'+(selectedId||'no-order')}
