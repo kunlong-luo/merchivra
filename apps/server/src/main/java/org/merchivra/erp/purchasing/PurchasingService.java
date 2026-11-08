@@ -2,6 +2,10 @@ package org.merchivra.erp.purchasing;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Locale;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -100,6 +104,66 @@ public class PurchasingService {
             ORDER BY updated_at DESC,id DESC LIMIT 100
             """,PurchasingService::order,tenant);
     }
+    /**
+     * V110 server-scoped purchase history. The previous /orders endpoint remains
+     * compatible but its first-100 result is not a complete tenant directory.
+     * A cursor binds the tenant AND filters and uses updated_at+UUID to break ties.
+     * Results are a live list, not a transactionally frozen audit snapshot.
+     */
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Order> ordersPage(UUID tenant,int requested,
+                                                   String status,String search,String cursor) {
+        int limit=LocalKeysetPage.limit(requested);
+        String filter=(status==null || status.isBlank())?"ALL":status;
+        if(!List.of("ALL","DRAFT","SUBMITTED","APPROVED","RECEIVING",
+                    "RECEIVED","CANCELLED").contains(filter))
+            throw bad("Unknown purchase order status filter");
+        String term=search==null?"":search.strip().toUpperCase(Locale.ROOT);
+        if(term.length()>80 || !term.matches("[A-Z0-9_-]*"))
+            throw bad("Purchase order search must be 0..80 safe literal characters");
+        String[] after=LocalKeysetPage.decode(cursor,6);
+        OffsetDateTime beforeTime=null;
+        UUID beforeId=null;
+        if(after!=null) {
+            if(!"po-v1".equals(after[0]) || !tenant.toString().equals(after[1])
+               || !filter.equals(after[2]) || !("q:"+term).equals(after[3]))
+                throw bad("Purchase pagination cursor does not match tenant or filters");
+            try {
+                beforeTime=OffsetDateTime.ofInstant(Instant.parse(after[4]),ZoneOffset.UTC);
+                beforeId=UUID.fromString(after[5]);
+            } catch(IllegalArgumentException e) {
+                throw bad("Invalid purchase pagination cursor");
+            }
+        }
+        StringBuilder sql=new StringBuilder("""
+            SELECT id,order_number,supplier_id,status,currency_code,
+              created_by,approved_by,notes,updated_at
+            FROM erp_purchase_order
+            WHERE tenant_id=?
+            """);
+        List<Object> params=new ArrayList<>();
+        params.add(tenant);
+        if(!"ALL".equals(filter)) {
+            sql.append(" AND status=?");
+            params.add(filter);
+        }
+        if(!term.isEmpty()) {
+            // POSITION treats % and _ literally, unlike an unescaped LIKE pattern.
+            sql.append(" AND POSITION(? IN UPPER(order_number))>0");
+            params.add(term);
+        }
+        if(beforeTime!=null) {
+            sql.append(" AND (updated_at,id) < (?,?)");
+            params.add(beforeTime);
+            params.add(beforeId);
+        }
+        sql.append(" ORDER BY updated_at DESC,id DESC LIMIT ?");
+        params.add(limit+1);
+        List<Order> fetched=jdbc.query(sql.toString(),PurchasingService::order,params.toArray());
+        return LocalKeysetPage.pack(fetched,limit,o->LocalKeysetPage.encode(
+            "po-v1",tenant.toString(),filter,"q:"+term,o.updatedAt(),o.id()));
+    }
+
     private Order requireOrder(UUID tenant,UUID id,boolean lock) {
         List<Order> rows=jdbc.query("""
             SELECT id,order_number,supplier_id,status,currency_code,
