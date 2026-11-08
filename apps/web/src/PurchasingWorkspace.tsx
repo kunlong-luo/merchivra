@@ -21,7 +21,7 @@ import LotExceptionPanel from './LotExceptionPanel'
 import LotDispositionProofPanel from './LotDispositionProofPanel'
 import LotEvidenceFilesPanel from './LotEvidenceFilesPanel'
 import SupplierDisputesPanel from './SupplierDisputesPanel'
-import {createSupplier,fetchSuppliers,createPurchaseOrder,fetchPurchaseOrders,
+import {createSupplier,fetchSuppliers,createPurchaseOrder,
  fetchPurchaseOrder,purchaseAction,receivePurchase,fetchWarehouses,createWarehouse,
  fetchWarehouseStock,fetchWarehouseLedger,fetchPendingReceipts,postStockOperation,
  type NewPurchaseLine,type StockOperationRequest} from './lib/purchasing'
@@ -59,7 +59,6 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  const pending=useQuery({queryKey:['purchasing',tenantId,'pending'],
   queryFn:fetchPendingReceipts,retry:false})
  const suppliers=useQuery({queryKey:['purchasing',tenantId,'suppliers'],queryFn:fetchSuppliers})
- const orders=useQuery({queryKey:['purchasing',tenantId,'orders'],queryFn:fetchPurchaseOrders})
  const skus=useQuery({queryKey:['catalog',tenantId,'for-purchase'],queryFn:()=>fetchSkus()})
  const selected=useQuery({queryKey:['purchasing',tenantId,'detail',selectedId],
   queryFn:()=>fetchPurchaseOrder(selectedId),enabled:!!selectedId})
@@ -238,10 +237,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
   <section className="panel full-panel"><div className="panel-heading"><div><h2>采购单列表与流程</h2>
    <p>批准人必须是另一名 Owner；收货可以分批，但不能超过每行订购数量。</p></div>
    <button className="refresh-button" onClick={refresh}>刷新</button></div>
-   {orders.isError&&<p className="setup-error">{String(orders.error)}</p>}
-   {orders.isPending?<p className="empty-state">读取采购单中…</p>:
-    orders.isError?null:
-    <PurchaseOrdersTable orders={orders.data??[]}
+   <PurchaseOrdersTable key={tenantId} tenantId={tenantId}
      suppliers={suppliers.data??[]} currentUserId={currentUserId}
      busy={action.isPending} onView={setSelectedId}
      onAction={(id,kind)=>action.mutate({id,kind})}
@@ -250,7 +246,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
       description:'采购单 '+o.orderNumber+' 将取消。此操作会改变本地采购审批状态，不会修改 Amazon 订单或 FBA 库存。',
       confirmLabel:'取消此采购单',danger:true,
       onConfirm:()=>action.mutate({id:o.id,kind:'cancel'})
-     })}/>}
+     })}/>
    {selectedId&&<div className="core-tools">
     <h3>采购明细 / 分批收货</h3>
     {selected.isPending?<p>读取中…</p>:selected.isError?
