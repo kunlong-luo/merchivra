@@ -18,6 +18,17 @@ const tenant = '11111111-1111-4111-8111-111111111111'
 const account = '22222222-2222-4222-8222-222222222222'
 const market = '33333333-3333-4333-8333-333333333333'
 let mode = 'guest'
+// V104: mutable synthetic local PO for cancel/confirm without live operations.
+const v104Order={
+  id:'84222222-2222-4222-8222-222222222222',
+  orderNumber:'PO-V104-CONFIRM-SYNTHETIC',
+  supplierId:'22222222-2222-4222-8222-222222222222',
+  status:'DRAFT',currency:'USD',
+  createdBy:'11111111-1111-4111-8111-111111111111',
+  approvedBy:null,notes:null,updatedAt:'2026-11-08T00:00:00Z'
+}
+let v104CancelWrites=0
+let v104Cancelled=false
 const respond = (res, value, code = 200) => {
   res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
   res.end(JSON.stringify(value))
@@ -60,6 +71,14 @@ const server = createServer(async (req, res) => {
   const emptyCursorPage = items => ({
     items:items.slice(0,limit), nextCursor:null, hasMore:false, pageSize:limit
   })
+  if(url.pathname==='/api/v1/purchasing/orders' && req.method==='GET')
+    return respond(res,[{...v104Order,status:v104Cancelled?'CANCELLED':'DRAFT'}])
+  if(url.pathname===`/api/v1/purchasing/orders/${v104Order.id}/cancel`
+     && req.method==='POST'){
+    v104CancelWrites++
+    v104Cancelled=true
+    return respond(res,{order:{...v104Order,status:'CANCELLED'},lines:[]})
+  }
   if (url.pathname === '/api/v1/seller-marketplaces/' + market + '/listings/page') {
     const field = url.searchParams.get('field') ?? 'SELLER_SKU'
     const mappingStatus = url.searchParams.get('status') ?? 'ALL'
@@ -697,6 +716,44 @@ async function main() {
         true,'V15 invite UI should exist')
       await layout(send,width,'team-owner-360')
       await screenshot(send,'team-owner-360.png')
+      if(nextTarget){
+        // V104: Base UI requires explicit approval and returns keyboard focus.
+        // A cancelled purchase action must not issue even a local synthetic POST.
+        await evaluate(send,`(() => {const link=[...document.querySelectorAll('.nav-link')]
+          .find(x=>x.textContent.includes('采购与供应商'));if(!link)throw Error('Missing purchasing link');link.click()})()`)
+        await waitFor(send,
+          "document.querySelector('[aria-label=\\\"采购单列表\\\"] tbody tr')?.textContent?.includes('PO-V104-CONFIRM-SYNTHETIC')",
+          'V104 synthetic purchase order ready')
+        const openCancel=`(() => {const row=[...document.querySelectorAll('[aria-label="采购单列表"] tbody tr')]
+          .find(r=>r.textContent.includes('PO-V104-CONFIRM-SYNTHETIC'));
+          const button=[...row.querySelectorAll('button')]
+            .find(b=>b.textContent.trim()==='取消');
+          if(!button)throw Error('No cancellable PO');button.click()})()`
+        await evaluate(send,openCancel)
+        await waitFor(send,
+          "document.querySelector('[role=\\\"alertdialog\\\"]')?.textContent?.includes('确认取消采购单')",
+          'V104 Base UI alert dialog visible')
+        assert.equal(v104CancelWrites,0,'opening a dialog must not mutate purchase orders')
+        assert.equal(await evaluate(send,
+          "!!document.activeElement?.closest('.v104-confirm-popup')"),
+          true,'V104 action dialog should capture keyboard focus')
+        await screenshot(send,'v104-purchase-confirm-360.png')
+        await evaluate(send,"document.querySelector('.v104-confirm-cancel')?.click()")
+        await waitFor(send,
+          "!document.querySelector('[role=\\\"alertdialog\\\"]')",
+          'V104 dismissal returns to purchase order')
+        assert.equal(v104CancelWrites,0,'cancel action must never write')
+        await evaluate(send,openCancel)
+        await waitFor(send,
+          "!!document.querySelector('.v104-confirm-approve')",
+          'V104 confirmation reopen')
+        await evaluate(send,"document.querySelector('.v104-confirm-approve')?.click()")
+        await waitFor(send,
+          "document.querySelector('.core-workspace')?.textContent?.includes('采购单状态已更新：CANCELLED')",
+          'V104 confirmed local PO cancel updates status')
+        assert.equal(v104CancelWrites,1,'one explicit confirmation must send one local POST')
+        await layout(send,width,'v104-confirm-360')
+      }
       // Synthetic connected Marketplace must expose a LIVE-gated operations
       // panel outside the local Demo tools. This does not call Amazon.
       mode='connected'
