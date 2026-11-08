@@ -34,7 +34,7 @@
 
 ### 仅里程碑、显式手动和高风险变更时做完整回归
 
-- `.github/workflows/milestone-validation.yml` 提供**单次人工点击**集中执行：完整 CI（含 Next 生产 build/HTTP、PG18/Flyway 与一次性 Mock/恢复/HTTP 安全）、Docker Compose 真三服务+重启、Chromium Vite 与 Next 合成屏幕回归。
+- `.github/workflows/milestone-validation.yml` 提供**单次人工点击**集中执行；**该工作流首次合并到 main 时，仅因自身 YAML 文件发生变化自动启动一次 V108 合成数据基线验证，后续普通功能提交不会自动启动**：完整 CI（含 Next 生产 build/HTTP、PG18/Flyway 与一次性 Mock/恢复/HTTP 安全）、Docker Compose 真三服务+重启、Chromium Vite 与 Next 合成屏幕回归。
 - `.github/workflows/ci.yml` 的 `workflow_dispatch(full_suite=true)` 允许单独完整 CI；完整浏览器/Compose 测试也可独立手动启动。
 - 非里程碑不因每一次 TSX/CSS/测试脚本修改自动触发独立 PG18/浏览器/全容器构建。代码在开发期可能缺乏完整 Mock 端到端验证，**明确保留风险并且必须在 A3 统一补测**。
 - 以下**不能延迟**到最终阶段：租户/店铺越权、Session/CSRF、危险采购/库存写入、幂等与并发、金额守恒/币种、退款双计、UNKNOWN/NULL 安全语义、授权撤销。相关业务改动必须立刻运行针对性单测/必要的 scoped 集成检查；若涉及跨进程或数据库不变量，维护者要手动触发全量 PG18 或验证专项用例，不能只靠前端绿色构建。
