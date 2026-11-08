@@ -692,3 +692,48 @@ tbody tr:hover { background: #f8fbff; }
 @media(prefers-reduced-motion:reduce){
  .v105-filter-popup{transition:none!important;animation:none!important}
 }
+
+/* V106: finance scoped Marketplace Select and TanStack Table.
+ * The popup uses the pinned Base UI Select and global V105 popup primitives.
+ * Keep important money / provenance columns visible even when optional
+ * columns are hidden, and keep scrolling within the table on mobile.
+ */
+.v106-finance-filter{
+ display:flex;flex-direction:column;gap:7px;
+ min-width:min(290px,100%);max-width:min(100%,460px);
+}
+.v106-market-trigger{
+ min-height:44px;max-width:100%;font-size:12px;
+ overflow-wrap:anywhere;
+}
+.v106-market-trigger [data-slot="select-value"]{
+ overflow:hidden;text-overflow:ellipsis;
+}
+.v106-finance-toolbar{margin-top:12px}
+.v106-finance-events-table table{min-width:805px}
+.v106-finance-events-table th{
+ white-space:nowrap;
+}
+.v106-finance-events-table td{
+ vertical-align:middle;
+}
+.v106-finance-events-table td.strong-cell{
+ max-width:260px;overflow-wrap:anywhere;
+}
+.v106-finance-amount{
+ font-variant-numeric:tabular-nums;
+ white-space:nowrap;font-weight:710;
+}
+.v106-finance-pager{
+ align-items:center;gap:12px;
+ padding:12px 20px;
+}
+.v106-finance-pager .setup-hint{
+ font-size:12px;flex:1 1 170px;
+}
+@media(max-width:760px){
+ .v106-finance-filter{width:100%;max-width:none;min-width:0}
+ .v106-finance-events-table table{min-width:805px}
+ .v106-finance-pager{padding:12px 15px}
+ .v106-finance-pager .setup-hint{flex-basis:100%}
+}
