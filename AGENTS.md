@@ -835,3 +835,22 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - For every destructive-action UI migration, add at least one synthetic
   browser regression proving cancellation sends zero writes and explicit
   confirmation sends exactly one request.
+
+## V105 server-paged grid and Base UI filter rules
+
+- For operational lists with meaningful column requirements, use stable
+  TanStack Table v8 with `getRowId` from the persisted UUID and explicit
+  `manualPagination/manualSorting/manualFiltering` when the backend owns
+  filtering and priority. The table displays only the already-returned
+  authorized server page; never invent a global count or client-side
+  multi-page sort.
+- For small predefined interactive filters, use Base UI Select; when
+  changed, reset opaque server cursor state and issue a new server query.
+  A real date range UI requires a real backend date filter, never
+  post-filtering the first page.
+- Preserve MOCK/UNVERIFIED/LIVE provenance, FBA grants and action buttons
+  when customizing optional columns. These are security/trust constraints,
+  not mere table display defaults.
+- Add a Chromium synthetic test proving filter parameters reach the local
+  server, optional columns do not hide provenance, and mobile viewports do
+  not overflow.
