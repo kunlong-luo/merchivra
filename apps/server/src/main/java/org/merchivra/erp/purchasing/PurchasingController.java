@@ -49,6 +49,18 @@ public class PurchasingController {
         HttpServletRequest req,@RequestParam UUID warehouseId) {
         return warehouses.ledger(access.currentTenant(auth,req),warehouseId);
     }
+    /** V112 full local warehouse movement history; never read a client tenant id. */
+    @GetMapping("/warehouse-ledger/page")
+    public ResponseEntity<LocalKeysetPage.Page<WarehouseInventoryService.Movement>> ledgerPage(
+        Authentication auth,HttpServletRequest req,@RequestParam UUID warehouseId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(defaultValue="ALL") String movementType,
+        @RequestParam(defaultValue="") String search,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(warehouses.ledgerPage(access.currentTenant(auth,req),warehouseId,
+                limit,movementType,search,cursor));
+    }
     @GetMapping("/pending-receipts")
     public List<WarehouseInventoryService.PendingReceipt> pendingReceipts(
         Authentication auth,HttpServletRequest req) {
