@@ -71,10 +71,17 @@ const server = createServer(async (req, res) => {
   const emptyCursorPage = items => ({
     items:items.slice(0,limit), nextCursor:null, hasMore:false, pageSize:limit
   })
+  // Synthetic CSRF token exists only in this disposable localhost server.
+  // V101 tests the real Spring Session/CSRF behavior separately.
+  if(url.pathname==='/api/v1/auth/csrf')
+    return respond(res,{token:'V104_DISPOSABLE_BROWSER_CSRF_ONLY_12345',
+      headerName:'X-CSRF-TOKEN'})
   if(url.pathname==='/api/v1/purchasing/orders' && req.method==='GET')
     return respond(res,[{...v104Order,status:v104Cancelled?'CANCELLED':'DRAFT'}])
   if(url.pathname===`/api/v1/purchasing/orders/${v104Order.id}/cancel`
      && req.method==='POST'){
+    if(mode==='guest'||req.headers['x-csrf-token']!=='V104_DISPOSABLE_BROWSER_CSRF_ONLY_12345')
+      return respond(res,{error:'synthetic CSRF guard rejected write'},403)
     v104CancelWrites++
     v104Cancelled=true
     return respond(res,{order:{...v104Order,status:'CANCELLED'},lines:[]})
