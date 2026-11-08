@@ -881,6 +881,12 @@ async function main() {
         assert.equal(await evaluate(send,
           "document.querySelectorAll('.v106-finance-events-table thead th').length"),
           7,'V106 default finance columns')
+        await waitFor(send,
+          "document.querySelector('[aria-label=\\\"自动财务核对异常队列\\\"]')?.textContent?.includes('发现的问题数')",
+          'V106 typed local synthetic finance exception scan')
+        assert.equal(await evaluate(send,
+          "!!document.querySelector('[aria-label=\\\"自动财务核对异常队列\\\"] .setup-error')"),
+          false,'V106 finance QA should not render a raw Zod parser error')
         assert.equal(await evaluate(send,
           "document.querySelector('.v106-finance-events-table')?.textContent?.includes('FIN-V106-000')"),
           true,'V106 initial finance events from scoped server endpoint')
