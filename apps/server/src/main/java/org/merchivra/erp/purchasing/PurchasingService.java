@@ -3,6 +3,7 @@ package org.merchivra.erp.purchasing;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.Instant;
+import java.time.DateTimeException;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Locale;
@@ -131,7 +132,7 @@ public class PurchasingService {
             try {
                 beforeTime=OffsetDateTime.ofInstant(Instant.parse(after[4]),ZoneOffset.UTC);
                 beforeId=UUID.fromString(after[5]);
-            } catch(IllegalArgumentException e) {
+            } catch(DateTimeException | IllegalArgumentException e) {
                 throw bad("Invalid purchase pagination cursor");
             }
         }
