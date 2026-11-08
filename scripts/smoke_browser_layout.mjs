@@ -859,6 +859,91 @@ async function main() {
         true,'V73 human-only follow-up workflow must be visible')
       await layout(send,width,'supplier-delivery-360')
       await screenshot(send,'v72-local-supplier-delivery-360.png')
+      // V107: loaded-record scope, visible provenance and no mutation.
+      await waitFor(send,
+        "document.querySelectorAll('[aria-label=\\\"供应商目录\\\"] tbody tr').length===2",
+        'V107 supplier directory')
+      await waitFor(send,
+        "document.querySelectorAll('[aria-label=\\\"采购单列表\\\"] tbody tr').length===2",
+        'V107 two local purchase states')
+      assert.equal(await evaluate(send,
+        "document.querySelectorAll('[aria-label=\\\"采购单列表\\\"] thead th').length"),
+        4,'V107 table starts with four indispensable purchase columns')
+      await evaluate(send,
+        "document.querySelector('[aria-label=\\\"筛选采购单状态\\\"]')?.click()")
+      await waitFor(send,
+        "[...document.querySelectorAll('.v105-filter-item')].some(x=>x.textContent.includes('已审批 APPROVED'))",
+        'V107 purchase Select options')
+      await evaluate(send,
+        "([...document.querySelectorAll('.v105-filter-item')].find(x=>" +
+        "x.textContent.includes('已审批 APPROVED')))?.click()")
+      await waitFor(send,
+        "document.querySelectorAll('[aria-label=\\\"采购单列表\\\"] tbody tr').length===1 && " +
+        "document.querySelector('[aria-label=\\\"采购单列表\\\"] tbody tr')?.textContent?.includes('PO-V107-APPROVED-LOCAL')",
+        'V107 filtered locally loaded purchase rows')
+      await evaluate(send,
+        "document.querySelector('[aria-label=\\\"筛选采购单状态\\\"]')?.click()")
+      await waitFor(send,
+        "[...document.querySelectorAll('.v105-filter-item')].some(x=>x.textContent.includes('全部采购状态'))",
+        'V107 purchase filter reopens')
+      await evaluate(send,
+        "([...document.querySelectorAll('.v105-filter-item')].find(x=>" +
+        "x.textContent.includes('全部采购状态')))?.click()")
+      await waitFor(send,
+        "document.querySelectorAll('[aria-label=\\\"采购单列表\\\"] tbody tr').length===2",
+        'V107 full loaded purchase rows')
+      await evaluate(send,
+        "document.querySelector('.v107-table-toolbar summary')?.click()")
+      await waitFor(send,
+        "document.querySelectorAll('.v107-table-toolbar .v105-column-options input').length===2",
+        'V107 optional supplier and timestamp columns')
+      await evaluate(send,
+        "document.querySelector('.v107-table-toolbar .v105-column-options input')?.click()")
+      await waitFor(send,
+        "document.querySelectorAll('[aria-label=\\\"采购单列表\\\"] thead th').length===5",
+        'V107 supplier column visible')
+      assert.equal(await evaluate(send,
+        "document.querySelector('[aria-label=\\\"采购单列表\\\"] thead')?.textContent?.includes('原币币种')"),
+        true,'V107 currency remains visible')
+      await evaluate(send,
+        "document.querySelector('.v107-table-toolbar .v105-column-options input')?.click()")
+      await evaluate(send,
+        "document.querySelector('.v107-table-toolbar summary')?.click()")
+      await evaluate(send,
+        "document.querySelector('[aria-label=\\\"采购单列表\\\"]')?.scrollIntoView({block:'center'})")
+      await layout(send,width,'v107-purchase-360')
+      await screenshot(send,'v107-purchase-360.png')
+      await evaluate(send,`(() => {const el=document.getElementById('warehouse-stock-select');
+        if(!el)throw Error('Missing warehouse selection');
+        const set=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set;
+        set.call(el,'${v107WarehouseId}');
+        el.dispatchEvent(new Event('change',{bubbles:true}))})()`)
+      await waitFor(send,
+        "document.querySelectorAll('[aria-label=\\\"仓库完整库存流水\\\"] tbody tr').length===2",
+        'V107 two synthetic local audit movements')
+      assert.equal(await evaluate(send,
+        "document.querySelector('[aria-label=\\\"仓库完整库存流水\\\"]')?.textContent?.includes('86868686-8686-4686-8686-868686868686')"),
+        true,'V107 original inventory operation ID is retained')
+      await evaluate(send,
+        "document.querySelector('[aria-label=\\\"筛选本地库存流水类型\\\"]')?.click()")
+      await waitFor(send,
+        "[...document.querySelectorAll('.v105-filter-item')].some(x=>x.textContent.includes('调拨转出'))",
+        'V107 local warehouse type Select')
+      await evaluate(send,
+        "([...document.querySelectorAll('.v105-filter-item')].find(x=>" +
+        "x.textContent.includes('调拨转出')))?.click()")
+      await waitFor(send,
+        "document.querySelectorAll('[aria-label=\\\"仓库完整库存流水\\\"] tbody tr').length===1 && " +
+        "document.querySelector('[aria-label=\\\"仓库完整库存流水\\\"] tbody tr')?.textContent?.includes('调拨转出')",
+        'V107 filtered local ledger rows')
+      assert.equal(await evaluate(send,
+        "document.querySelector('[aria-label=\\\"仓库完整库存流水\\\"] tbody tr')?.textContent?.includes('V107 synthetic transfer audit')"),
+        true,'V107 immutable warehouse business reason retained')
+      await evaluate(send,
+        "document.querySelector('[aria-label=\\\"仓库完整库存流水\\\"]')?.scrollIntoView({block:'center'})")
+      await layout(send,width,'v107-warehouse-360')
+      await screenshot(send,'v107-warehouse-360.png')
+      assert.equal(v104CancelWrites,0,'V107 view filters cannot write to purchasing')
       // V15 Owner-only management surface must render independent reviewers,
       // never an invitation token in the list response.
       await evaluate(send,
