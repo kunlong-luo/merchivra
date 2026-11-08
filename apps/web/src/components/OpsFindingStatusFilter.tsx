@@ -2,11 +2,11 @@ import {Select} from '@base-ui/react/select'
 import {Check,ChevronDown} from 'lucide-react'
 import type {FindingFilter} from '../lib/operations'
 
-const options=[
+const options:Array<{value:FindingFilter;label:string}>=[
  {value:'ACTIVE',label:'所有活跃（含暂缓）'},
  {value:'ACTIONABLE',label:'当前需要处理（不含暂缓）'},
  {value:'ALL',label:'全部状态'}
-] as const satisfies ReadonlyArray<{value:FindingFilter;label:string}>
+]
 
 export default function OpsFindingStatusFilter({value,onChange}:{
  value:FindingFilter
