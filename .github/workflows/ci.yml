@@ -334,6 +334,8 @@ jobs:
       MERCHIVRA_DB_PASSWORD: ci_disposable_not_an_actual_secret
     steps:
       - uses: actions/checkout@v5
+      - name: Verify V108 quick versus full workflow cadence
+        run: python3 scripts/check_ci_cadence_v108.py
       - name: Validate both documented deployment modes without using real databases
         shell: bash
         run: |
