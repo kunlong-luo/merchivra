@@ -100,6 +100,24 @@ export const createPurchaseOrder=(supplierId:string,currency:string,notes:string
  lines:NewPurchaseLine[])=>call(base+'/orders',detail,'POST',{supplierId,currency,notes,lines})
 export const purchaseAction=(id:string,action:'submit'|'approve'|'cancel')=>
  call(base+'/orders/'+encodeURIComponent(id)+'/'+action,detail,'POST')
+// V114: every warehouse picker searches the authenticated full directory,
+// not a first-200 compatibility list. Page cursors are server scoped.
+const warehousesPage=z.object({
+ items:z.array(warehouse).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{
+ message:'Invalid warehouses page cursor contract'
+})
+export type WarehousesPage=z.infer<typeof warehousesPage>
+export const fetchWarehousesPage=({limit=50,cursor=null,status='ALL',prefix=''}:{
+ limit?:number;cursor?:string|null;status?:'ALL'|'ACTIVE'|'ARCHIVED';prefix?:string
+}={}):Promise<WarehousesPage>=>{
+ const params=new URLSearchParams({limit:String(limit),status,prefix})
+ if(cursor)params.set('cursor',cursor)
+ return call(base+'/warehouses/page?'+params.toString(),warehousesPage)
+}
+export const fetchWarehouseItem=(warehouseId:string)=>
+ call(base+'/warehouses/item?'+new URLSearchParams({warehouseId}),warehouse)
 export const fetchWarehouses=()=>call(base+'/warehouses',z.array(warehouse))
 export const createWarehouse=(warehouseCode:string,displayName:string)=>
  call(base+'/warehouses',warehouse,'POST',{warehouseCode,displayName})
