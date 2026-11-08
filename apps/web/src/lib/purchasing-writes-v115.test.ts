@@ -30,7 +30,7 @@ function stubResponse(data:unknown,status=200){
  vi.stubGlobal('fetch',vi.fn(async(url:string,options?:RequestInit)=>{
   const method=options?.method??'GET'
   if(url.endsWith('/auth/csrf'))
-   return new Response(JSON.stringify({token:'v115-csrf',headerName:'X-CSRF-TOKEN'}),
+   return new Response(JSON.stringify({token:'v115-csrf-valid',headerName:'X-CSRF-TOKEN'}),
     {status:200,headers:{'Content-Type':'application/json'}})
   seen.push({url,method,headers:new Headers(options?.headers),
    body:options?.body===undefined?undefined:String(options.body)})
@@ -43,7 +43,7 @@ function assertMutation(path:string,body?:unknown){
  const post=seen.at(-1)!
  expect(post.method).toBe('POST')
  expect(post.url).toBe(path)
- expect(post.headers.get('X-CSRF-TOKEN')).toBe('v115-csrf')
+ expect(post.headers.get('X-CSRF-TOKEN')).toBe('v115-csrf-valid')
  expect(post.headers.get('Content-Type')).toBe(body===undefined?null:'application/json')
  if(body!==undefined)expect(JSON.parse(post.body!)).toEqual(body)
 }
@@ -101,7 +101,7 @@ describe('V115 generated purchasing write functions with Spring Session CSRF',()
  it('rejects server conflicts rather than treating a failed write as success',async()=>{
   vi.stubGlobal('fetch',vi.fn(async(url:string)=>{
    if(url.endsWith('/auth/csrf'))
-    return new Response(JSON.stringify({token:'csrf',headerName:'X-CSRF-TOKEN'}))
+    return new Response(JSON.stringify({token:'v115-csrf-valid',headerName:'X-CSRF-TOKEN'}))
    return new Response(JSON.stringify({message:'Inventory changed'}),{status:409})
   }))
   await expect(postStockOperation({requestKey,type:'TRANSFER',
