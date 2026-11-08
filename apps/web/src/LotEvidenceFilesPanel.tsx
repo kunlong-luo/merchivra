@@ -1,4 +1,5 @@
 import {useState,type FormEvent} from 'react'
+import WarehousePicker from './WarehousePicker'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
 import {fetchDispositionProofs} from './lib/lot-disposition-proofs'
@@ -74,13 +75,9 @@ export default function LotEvidenceFilesPanel({tenantId,currentUserId,warehouses
     如与 V51 已登记的摘要不符便拒绝保存。人工报告发运和供应商实收
     不是外部物流 API 回执，也不重复改变库存。</p>
   </div><button className="refresh-button" type="button" onClick={refresh}>刷新</button></div>
-  <label htmlFor="v52-warehouse">本地仓库</label>
-  <select id="v52-warehouse" value={warehouse} onChange={e=>{
-   setWarehouse(e.target.value);setProofId('');setDispositionId('');setTraceId('')}}>
-   <option value="">选择仓库</option>
-   {warehouses.filter(w=>w.status==='ACTIVE').map(w=>
-    <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}
-  </select>
+  <WarehousePicker tenantId={tenantId} id="v52-warehouse"
+   label="本地仓库" value={warehouse} onChange={id=>{
+    setWarehouse(id);setProofId('');setDispositionId('');setTraceId('')}}/>
   {!!warehouse&&<>
    <h3>1. 私有凭据原件</h3>
    <form className="team-invite-form" onSubmit={submitUpload}>
