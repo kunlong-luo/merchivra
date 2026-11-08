@@ -24,6 +24,7 @@ const stock=z.object({warehouseId:z.string().uuid(),productSkuId:z.string().uuid
 const movement=z.object({id:z.string().uuid(),warehouseId:z.string().uuid(),
  productSkuId:z.string().uuid(),internalSku:z.string(),purchaseReceiptId:z.string().uuid().nullable(),
  operationId:z.string().uuid().nullable(),inspectionId:z.string().uuid().nullable().optional(),
+  lotActionId:z.string().uuid().nullable().optional(),
  quantity:z.number().int(),
  movementType:z.enum(['PURCHASE_RECEIPT','OUTBOUND','TRANSFER_OUT','TRANSFER_IN','COUNT_ADJUSTMENT','QC_QUARANTINE','QC_RELEASE','LOT_QUARANTINE']),
  reason:z.string().nullable(),createdAt:z.string()})
