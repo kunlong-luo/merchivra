@@ -50,6 +50,39 @@ const v104Order={
 }
 let v104CancelWrites=0
 let v104Cancelled=false
+// V107: isolated procurement + warehouse ledger test records; these do NOT
+// represent a production order, stock movement or Amazon inventory.
+const v107WarehouseId='81818181-8181-4181-8181-818181818181'
+const v107SkuId='82828282-8282-4282-8282-828282828282'
+const v107OtherOrder={
+ id:'83838383-8383-4383-8383-838383838383',
+ orderNumber:'PO-V107-APPROVED-LOCAL',
+ supplierId:'22222222-2222-4222-8222-222222222222',
+ status:'APPROVED',currency:'USD',
+ createdBy:'22222222-2222-4222-8222-222222222222',
+ approvedBy:'11111111-1111-4111-8111-111111111111',
+ notes:null,updatedAt:'2026-11-07T23:00:00Z'
+}
+const v107Suppliers=[
+ {id:'22222222-2222-4222-8222-222222222222',
+  code:'SUP-V107',name:'V107 Synthetic Supplier',status:'ACTIVE'},
+ {id:'84848484-8484-4484-8484-848484848484',
+  code:'SUP-V107-ARCHIVE',name:'V107 Archived Synthetic Supplier',status:'ARCHIVED'}
+]
+const v107Ledger=[
+ {id:'85858585-8585-4585-8585-858585858585',
+  warehouseId:v107WarehouseId,productSkuId:v107SkuId,
+  internalSku:'V107-LOCAL-SKU',purchaseReceiptId:null,
+  operationId:'86868686-8686-4686-8686-868686868686',
+  inspectionId:null,quantity:-1,movementType:'TRANSFER_OUT',
+  reason:'V107 synthetic transfer audit',createdAt:'2026-11-08T04:05:00Z'},
+ {id:'87878787-8787-4787-8787-878787878787',
+  warehouseId:v107WarehouseId,productSkuId:v107SkuId,
+  internalSku:'V107-LOCAL-SKU',purchaseReceiptId:'88888888-8888-4888-8888-888888888888',
+  operationId:null,inspectionId:null,quantity:3,
+  movementType:'PURCHASE_RECEIPT',reason:null,
+  createdAt:'2026-11-08T04:00:00Z'}
+]
 let v105RequestedOpsFilter=null
 const respond = (res, value, code = 200) => {
   res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
@@ -122,8 +155,22 @@ const server = createServer(async (req, res) => {
       beforeId:url.searchParams.get('beforeId')})
     return respond(res,[v106OtherEvent])
   }
+  if(url.pathname==='/api/v1/purchasing/suppliers' && req.method==='GET')
+    return respond(res,v107Suppliers)
+  if(url.pathname==='/api/v1/purchasing/warehouses' && req.method==='GET')
+    return respond(res,[{id:v107WarehouseId,code:'WH-V107',
+      name:'V107 Local Warehouse',status:'ACTIVE'}])
+  if(url.pathname==='/api/v1/purchasing/warehouse-stock' && req.method==='GET'
+     && url.searchParams.get('warehouseId')===v107WarehouseId)
+    return respond(res,[{warehouseId:v107WarehouseId,
+      productSkuId:v107SkuId,internalSku:'V107-LOCAL-SKU',
+      recordedReceivedQuantity:3,onHandQuantity:2}])
+  if(url.pathname==='/api/v1/purchasing/warehouse-ledger' && req.method==='GET'
+     && url.searchParams.get('warehouseId')===v107WarehouseId)
+    return respond(res,v107Ledger)
   if(url.pathname==='/api/v1/purchasing/orders' && req.method==='GET')
-    return respond(res,[{...v104Order,status:v104Cancelled?'CANCELLED':'DRAFT'}])
+    return respond(res,[{...v104Order,status:v104Cancelled?'CANCELLED':'DRAFT'},
+      v107OtherOrder])
   if(url.pathname===`/api/v1/purchasing/orders/${v104Order.id}/cancel`
      && req.method==='POST'){
     if(mode==='guest'||req.headers['x-csrf-token']!=='V104_DISPOSABLE_BROWSER_CSRF_ONLY_12345')
