@@ -52,6 +52,8 @@
 
 > **A1 源码对标补充（2026-11-08）**：已对 Wimoor、ERPNext、metasfresh 及 Amazon 官方 SDK/示例的实际源码完成 [BENCH-001 对照](../architecture/open-source-erp-benchmark-2026-11-08.md)。结论是保持现有业务状态机、Gradle/PG18/React/官方 SDK，不因竞品有更多界面而增加新 P0。**先做 Issue #62 的真实全库分页/历史入口，再做 #63 Next 正式切换**；供应商应付/采购付款、库存历史可视化等仅为需 G1 评审的 P1 候选。
 
+> **A1 / V110 实施进展**：采购订单 `/orders/page` 的服务端状态/单号检索、租户/过滤器绑定 keyset 和 Next/React 采购表格翻页已经作为第一批代码变更提交；范围与 [专项单测、尚待执行的 PG18 HTTP 里程碑冒烟](../purchasing/purchase-order-pages-v110.md) 在此记录。**Issue #62 其他供应商、仓库库存/待收货、流水截断仍未修复，Next 正式部署 #63 仍未实施。** 本表记录最初断点，不因新增兼容接口而改写历史证据。
+
 ## 第一批可执行 P0 核查清单
 
 | 核查对象 | 当前有证据的缺口 | 下一步 |

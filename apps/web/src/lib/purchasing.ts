@@ -63,6 +63,19 @@ async function call<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown
 export const fetchSuppliers=()=>call(base+'/suppliers',z.array(supplier))
 export const createSupplier=(supplierCode:string,displayName:string)=>
  call(base+'/suppliers',supplier,'POST',{supplierCode,displayName})
+// V110: a page is an API-scoped view, never a full-tenant count or audit snapshot.
+const purchaseOrdersPage=z.object({
+ items:z.array(order),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+})
+export type PurchaseOrdersPage=z.infer<typeof purchaseOrdersPage>
+export const fetchPurchaseOrdersPage=({limit=50,cursor=null,status='ALL',search=''}:{
+ limit?:number;cursor?:string|null;status?:string;search?:string
+}={}):Promise<PurchaseOrdersPage>=>{
+ const params=new URLSearchParams({limit:String(limit),status,search})
+ if(cursor)params.set('cursor',cursor)
+ return call(base+'/orders/page?'+params.toString(),purchaseOrdersPage)
+}
 export const fetchPurchaseOrders=()=>call(base+'/orders',z.array(order))
 export const fetchPurchaseOrder=(id:string)=>call(base+'/orders/'+encodeURIComponent(id),detail)
 export const createPurchaseOrder=(supplierId:string,currency:string,notes:string,

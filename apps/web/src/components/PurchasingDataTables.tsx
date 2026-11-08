@@ -1,13 +1,13 @@
-import {useMemo,useState} from 'react'
+import {useMemo,useState,type FormEvent} from 'react'
+import {useQuery} from '@tanstack/react-query'
 import {Select} from '@base-ui/react/select'
 import {Check,ChevronDown,Columns3} from 'lucide-react'
 import {
  flexRender,getCoreRowModel,useReactTable,
  type ColumnDef,type VisibilityState
 } from '@tanstack/react-table'
-import type {
- Supplier,PurchaseOrder,LocalStockMovement
-} from '../lib/purchasing'
+import {fetchPurchaseOrdersPage,type Supplier,type PurchaseOrder,
+ type LocalStockMovement} from '../lib/purchasing'
 
 type Option={value:string;label:string}
 
@@ -120,22 +120,43 @@ const statusOptions:Option[]=[
  {value:'RECEIVED',label:'已收货 RECEIVED'},
  {value:'CANCELLED',label:'已取消 CANCELLED'}
 ]
+/**
+ * V110: filters and cursor are server-side. Never derive a global search from
+ * the first 100 /orders records. Cache keys include tenant+filters+cursor.
+ */
 export function PurchaseOrdersTable({
- orders,suppliers,currentUserId,busy,onView,onAction,onCancel
+ tenantId,suppliers,currentUserId,busy,onView,onAction,onCancel
 }:{
- orders:PurchaseOrder[];suppliers:Supplier[]
+ tenantId:string;suppliers:Supplier[]
  currentUserId:string;busy:boolean
  onView:(id:string)=>void
  onAction:(id:string,kind:'submit'|'approve')=>void
  onCancel:(order:PurchaseOrder)=>void
 }){
  const [status,setStatus]=useState('ALL')
+ const [draftSearch,setDraftSearch]=useState('')
  const [search,setSearch]=useState('')
+ const [cursorStack,setCursorStack]=useState<(string|null)[]>([null])
+ const cursor=cursorStack[cursorStack.length-1]
+ const orders=useQuery({
+  queryKey:['purchasing',tenantId,'orders-page',status,search,cursor],
+  queryFn:()=>fetchPurchaseOrdersPage({limit:50,status,search,cursor}),
+  retry:false
+ })
+ const rows=orders.data?.items??[]
+ const hasMore=orders.data?.hasMore===true && !!orders.data.nextCursor
+ const pageNumber=cursorStack.length
  const supplierNames=useMemo(()=>new Map(suppliers.map(s=>[s.id,
   s.code+' · '+s.name])),[suppliers])
- const rows=orders.filter(o=>
-  (status==='ALL'||o.status===status)&&
-  o.orderNumber.toLocaleLowerCase().includes(search.trim().toLocaleLowerCase()))
+ function changeStatus(next:string){
+  setStatus(next);setCursorStack([null])
+ }
+ function applySearch(e:FormEvent){
+  e.preventDefault()
+  const normalized=draftSearch.trim().toUpperCase()
+  if(!/^[A-Z0-9_-]{0,80}$/.test(normalized))return
+  setSearch(normalized);setCursorStack([null])
+ }
  const columns:ColumnDef<PurchaseOrder>[]=[
   {accessorKey:'orderNumber',header:'采购单号',enableHiding:false},
   {accessorKey:'status',header:'状态',enableHiding:false,
@@ -170,24 +191,46 @@ export function PurchaseOrdersTable({
  ]
  return <>
   <div className="v107-list-toolbar">
-   <label className="v107-search-label" htmlFor="v107-po-search">
-    <span>采购单号（当前列表内检索）</span>
-    <input id="v107-po-search" type="search"
-     value={search} onChange={e=>setSearch(e.target.value)}
-     placeholder="输入采购单号" autoComplete="off"/>
-   </label>
+   <form className="v110-order-search" onSubmit={applySearch}>
+    <label className="v107-search-label" htmlFor="v107-po-search">
+     <span>采购单号（服务器全库检索）</span>
+     <input id="v107-po-search" type="search" maxLength={80}
+      pattern="[A-Za-z0-9_-]*"
+      value={draftSearch} onChange={e=>setDraftSearch(e.target.value)}
+      placeholder="输入单号，回车或点查询" autoComplete="off"/>
+    </label>
+    <button type="submit" className="refresh-button">查询</button>
+   </form>
    <ListFilter label="筛选采购单状态" value={status}
-    options={statusOptions} onChange={setStatus}/>
+    options={statusOptions} onChange={changeStatus}/>
   </div>
   <p className="setup-hint v107-loaded-scope">
-   已加载 {orders.length} 条采购单，当前条件显示 {rows.length} 条。
-   本地筛选仅作用于当前 API 返回的数据，不代表服务器全库搜索。
+   服务器按最新更新时间排序 · 第 {pageNumber} 页（每页至多 50 条）。
+   当前页 {rows.length} 条；状态和单号条件由服务器查询整个租户，
+   不把当前页当作全部采购单或审计快照。
   </p>
-  {rows.length===0?<p className="empty-state">当前条件下无采购单；可以清除搜索或切换状态。</p>:
+  {orders.isPending?<p className="empty-state" role="status">读取采购单第 {pageNumber} 页…</p>:
+   orders.isError?<div role="alert" className="setup-error">
+    读取采购单失败：{String(orders.error)}
+    <button type="button" className="refresh-button"
+     onClick={()=>void orders.refetch()}>重试</button>
+   </div>:
+   rows.length===0?<p className="empty-state">当前条件下没有匹配的采购单。</p>:
    <ScopedTable rows={rows} columns={columns}
     getRowId={row=>row.id} label="采购单列表"
     hidden={{supplierId:false,updatedAt:false}}
     labels={{supplierId:'供应商',updatedAt:'本地更新时间'}}/>}
+  <div className="v110-page-actions" role="group" aria-label="采购单历史翻页">
+   <button type="button" className="refresh-button"
+    disabled={cursorStack.length===1||orders.isFetching}
+    onClick={()=>setCursorStack(p=>p.slice(0,-1))}>上一页</button>
+   <span aria-live="polite">第 {pageNumber} 页</span>
+   <button type="button" className="refresh-button"
+    disabled={!hasMore||orders.isFetching}
+    onClick={()=>{if(orders.data?.nextCursor)setCursorStack(p=>[...p,orders.data!.nextCursor])}}>
+    下一页
+   </button>
+  </div>
  </>
 }
 

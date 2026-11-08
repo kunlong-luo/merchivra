@@ -2,6 +2,8 @@
 
 > 此文档是 **代码级静态审计结果**，不是“修复完成”或 PG18/真实 Amazon 验收报告。维护者批准按 [V108 上线计划](../roadmap/mvp-freeze-release-v108.md) 先完成 P0，再集中回归。本清单按对完整业务操作和审计造成的遗漏风险排序。
 
+> **V110 增量实现说明（2026-11-08）**：已新增 [本地采购单全库游标接口与查询 UI](../purchasing/purchase-order-pages-v110.md)（`GET /api/v1/purchasing/orders/page`），原 `/orders` 的 `LIMIT 100` **仅保留兼容**，新表格已不再使用旧数组；本表反映 **V108 审计时的旧接口真实断点**，不应把这一行称为 V110 新页面仍未修复。供应商、仓库余额、待收货和流水的真实 LIMIT 问题仍是 P0；本次新 PG18 HTTP 脚本只有里程碑运行后才能称为通过。切勿据此关闭整个 [Issue #62](https://github.com/kunlong-luo/merchivra/issues/62)。
+
 ## 已核实的后端查询
 
 | 模块 / URI | 代码证据 | 实际当前行为 | 优先级 |
