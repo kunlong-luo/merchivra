@@ -44,7 +44,8 @@ class PurchaseOrdersPageTest {
                 assertTrue(query.contains("(updated_at,id) < (?,?)") ||
                     !query.contains("AND (updated_at,id)"));
                 assertTrue(query.contains("ORDER BY updated_at DESC,id DESC LIMIT ?"));
-                Object[] args=inv.getArgument(2,Object[].class);
+                // Mockito expands varargs in getArguments(); raw retains the JDBC Object[].
+                Object[] args=(Object[])inv.getRawArguments()[2];
                 assertEquals(tenant,args[0]);
                 assertEquals(51,args[args.length-1]);
                 int start=0;
