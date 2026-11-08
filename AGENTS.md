@@ -854,3 +854,21 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - Add a Chromium synthetic test proving filter parameters reach the local
   server, optional columns do not hide provenance, and mobile viewports do
   not overflow.
+
+## V106 source-preserving finance table and cursor boundaries
+
+- All finance event tables must retain original signed
+  `currency + amount`, event identity, `MANUAL_UNVERIFIED/LIVE` source,
+  review state and explicit human review action. Optional columns may
+  hide secondary fields only, never audit or provenance essentials.
+- Finance Marketplace filtering is an authenticated server-scope choice,
+  not client-side tenant authorization. On changing the Marketplace,
+  reset finance cursor and order matching state; never reuse a previous
+  site's ID or cursor in the new site's query.
+- The existing finance GET returns up to 50 events as an array with
+  `beforeAt/beforeId`. Exactly 50 means *potentially* more pages;
+  it is not a server-issued `hasMore`. Offer a next-page attempt and
+  maintain an opaque previous-page cursor stack rather than pretending
+  the entire result set is loaded.
+- Demonstrate pagination across at least 51 synthetic rows plus another
+  authorized Marketplace in Chromium before merging table changes.
