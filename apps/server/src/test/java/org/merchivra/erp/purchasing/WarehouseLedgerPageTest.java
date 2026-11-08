@@ -87,7 +87,7 @@ class WarehouseLedgerPageTest {
         String valid=LocalKeysetPage.encode("ledger-v1",tenant.toString(),
             warehouse.toString(),"OUTBOUND","q:V112",
             "2026-11-08T12:00:00Z",new UUID(0,12).toString());
-        bad(()->service.ledgerPage(foreign,foreignWarehouse(),50,"OUTBOUND","V112",valid));
+        bad(()->service.ledgerPage(foreign,warehouse,50,"OUTBOUND","V112",valid));
         bad(()->service.ledgerPage(tenant,otherWarehouse,50,"OUTBOUND","V112",valid));
         bad(()->service.ledgerPage(tenant,warehouse,50,"ALL","V112",valid));
         bad(()->service.ledgerPage(tenant,warehouse,50,"OUTBOUND","V113",valid));
@@ -105,8 +105,6 @@ class WarehouseLedgerPageTest {
         bad(()->service.ledgerPage(tenant,null,50,"ALL","",null));
         verifyNoInteractions(jdbc);
     }
-    private UUID foreignWarehouse(){return warehouse;}
-
     @Test void parameterizedServerSearchIsLiteralAndWarehouseIsChecked() {
         when(jdbc.queryForObject(contains("erp_local_warehouse"),
             eq(Integer.class),eq(tenant),eq(warehouse))).thenReturn(1);
