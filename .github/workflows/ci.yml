@@ -72,18 +72,6 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Ensure React-only frontend
         run: node ../../scripts/check_frontend_stack.mjs
-      # V114 temporary codegen review transport; removed after generated sources are committed.
-      - name: V114 materialize Orval generated purchasing models (temporary)
-        shell: bash
-        run: |
-          npm run api:generate:purchasing
-          for f in src/generated/purchasing-pages.ts src/generated/purchasing-models/*.ts; do
-            echo "V114_BEGIN:${f}"
-            base64 -w 180 "$f" | while IFS= read -r chunk; do
-              echo "V114_CHUNK:${chunk}"
-            done
-            echo "V114_END:${f}"
-          done
       - name: Ensure Orval generated hooks match the reviewed OpenAPI
         run: npm run api:check
       - name: Typecheck
@@ -272,6 +260,7 @@ jobs:
           python3 scripts/smoke_supplier_pages_v111.py
           python3 scripts/smoke_warehouse_ledger_pages_v112.py
           python3 scripts/smoke_warehouse_read_pages_v113.py
+          python3 scripts/smoke_warehouse_directory_v114.py
           python3 scripts/smoke_receipt_operational_pages_v93.py
           python3 scripts/smoke_quality_returns_findings_v94.py
           python3 scripts/smoke_ops_lot_pagination_v95.py
