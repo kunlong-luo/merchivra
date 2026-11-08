@@ -3,7 +3,7 @@ import WarehousePicker from './WarehousePicker'
 import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
-import {fetchWarehouseStock} from './lib/purchasing'
+import {fetchWarehouseStockItem} from './lib/purchasing'
 import {fetchStockBins} from './lib/lot-locations'
 import {fetchLotPositions} from './lib/released-lots'
 import {actLotPosition,fetchLotActionHistory,fetchLotExpiryAlerts,fetchLotLineage,
@@ -33,8 +33,6 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
  const [success,setSuccess]=useState(''),[error,setError]=useState('')
  const positions=useQuery({queryKey:[...root,'lot-positions',warehouseId],
   queryFn:()=>fetchLotPositions(warehouseId),enabled:!!warehouseId,retry:false})
- const stock=useQuery({queryKey:[...root,'stock',warehouseId],
-  queryFn:()=>fetchWarehouseStock(warehouseId),enabled:!!warehouseId,retry:false})
  const alerts=useQuery({queryKey:[...root,'expiry-alerts',warehouseId],
   queryFn:()=>fetchLotExpiryAlerts(warehouseId),enabled:!!warehouseId,retry:false})
  const chosen=positions.data?.find(p=>p.id===positionId)
@@ -47,8 +45,13 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
   queryFn:()=>fetchLotLineage(historyId),enabled:!!historyId,retry:false})
  const warehouseLabels=useWarehouseLabelMap(tenantId,
   ancestry.data?.map(a=>a.warehouseId)??[],warehouses).labels
- const usable=chosen?(stock.data?.find(s=>s.productSkuId===chosen.productSkuId)
-  ?.onHandQuantity??0):0
+ const stockItem=useQuery({
+  queryKey:[...root,'stock-item-exact',warehouseId,chosen?.productSkuId],
+  queryFn:()=>fetchWarehouseStockItem(warehouseId,chosen!.productSkuId),
+  enabled:!!warehouseId&&!!chosen,retry:false
+ })
+ // An SKU absent from old first-500 rows is UNKNOWN, never zero.
+ const usable=stockItem.data?.onHandQuantity
  const chosenBinAllowed=bins.data?.some(b=>b.id===destBin&&
   b.status==='ACTIVE'&&b.purpose==='STORAGE')??false
  const expiryExceeded=!!chosen?.expiryDate&&
@@ -64,15 +67,16 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
       :'已将人工确认的过期商品从可用仓库台账扣除，保存隔离审计')
    setError('');setReason('');setDestBin('');setRequestKey(crypto.randomUUID());refresh()
   },onError:(e:Error)=>setError(e.message)})
- const canPost=!!chosen&&!positions.isFetching&&!stock.isFetching&&
+ const canPost=!!chosen&&!positions.isFetching&&!stockItem.isFetching&&
+  !stockItem.isError&&
   reason.trim().length>=5&&reason.trim().length<=300&&
   (type==='MOVE'?chosen.remainingQuantity>0&&chosenBinAllowed&&destBin!==chosen.binId:
    type==='TRANSFER'?!!destWarehouse&&destWarehouse!==warehouseId&&chosenBinAllowed&&
     !expiryExceeded&&Number.isSafeInteger(quantity)&&quantity>=1&&
-    quantity<=Math.min(chosen.remainingQuantity,usable):
+    quantity<=Math.min(chosen.remainingQuantity,usable??-1):
    type==='EXPIRED_QUARANTINE'?expiryExceeded&&
     Number.isSafeInteger(quantity)&&quantity>=1&&
-    quantity<=Math.min(chosen.remainingQuantity,usable):
+    quantity<=Math.min(chosen.remainingQuantity,usable??-1):
     Number.isSafeInteger(observed)&&observed>=0&&observed<=1000000)&&
   !action.isPending
  const refresh=()=>void client.invalidateQueries({queryKey:root})
@@ -93,7 +97,7 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
    destinationBinId:['MOVE','TRANSFER'].includes(type)?destBin:null,
    quantity:['TRANSFER','EXPIRED_QUARANTINE'].includes(type)?quantity:0,
    expectedRemaining:chosen.remainingQuantity,
-   expectedOnHand:['TRANSFER','EXPIRED_QUARANTINE'].includes(type)?usable:null,
+   expectedOnHand:['TRANSFER','EXPIRED_QUARANTINE'].includes(type)?usable??null:null,
    observedQuantity:type==='COUNT_OBSERVATION'?observed:null,
    reason:reason.trim()})
  }
@@ -136,7 +140,7 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
    </select>
    {!!chosen&&<>
     <p className="setup-hint">原始实收来源 {chosen.receiptId.slice(0,8)}；
-     当前库位 {chosen.remainingQuantity} 件；SKU 仓库签名可用 {usable} 件；
+     当前库位 {chosen.remainingQuantity} 件；SKU 仓库签名可用 {usable===undefined?'未知（未取得精确余额）':usable} 件；
      有效期 {chosen.expiryDate??'未登记'}。</p>
     <form className="team-invite-form" onSubmit={submit}>
      <label htmlFor="v49-action">实际操作类型</label>
@@ -163,7 +167,7 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
      {['TRANSFER','EXPIRED_QUARANTINE'].includes(type)&&<>
       <label htmlFor="v49-qty">真实操作件数</label>
       <input id="v49-qty" type="number" min={1}
-       max={Math.min(chosen.remainingQuantity,usable)} value={quantity}
+       max={Math.min(chosen.remainingQuantity,usable??0)} value={quantity}
        onChange={e=>{setQuantity(Number(e.target.value));change()}}/>
      </>}
      {type==='COUNT_OBSERVATION'&&<>
