@@ -1,0 +1,62 @@
+# V108: one-click, disposable, complete release-candidate regression.
+# Run from Actions > MVP milestone full validation > Run workflow (main).
+# This contains ONLY existing synthetic/PG18/Compose suites and never
+# requests real Amazon Seller, Ads, bank credentials or production databases.
+name: MVP milestone full validation
+run-name: "MVP gate · ${{ inputs.milestone }} · ${{ github.sha }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      milestone:
+        description: 'Select the release validation point (not production approval)'
+        type: choice
+        required: true
+        default: MVP-freeze
+        options:
+          - MVP-freeze
+          - pre-Beta
+          - release-candidate
+          - security-regression
+
+permissions:
+  contents: read
+
+concurrency:
+  group: merchivra-milestone-full-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  require-main:
+    name: Verify main and immutable commit baseline
+    runs-on: ubuntu-latest
+    steps:
+      - name: Disallow unreviewed feature branches and log test scope
+        env:
+          GITHUB_REF_NAME: ${{ github.ref_name }}
+          GITHUB_SHA: ${{ github.sha }}
+          MILESTONE: ${{ inputs.milestone }}
+        run: |
+          test "$GITHUB_REF_NAME" = "main" || {
+            echo "::error::Milestone full test must run on main, not a feature branch"
+            exit 1
+          }
+          printf 'Milestone: %s\nCommit: %s\n' "$MILESTONE" "$GITHUB_SHA"
+          echo "Full suites use disposable synthetic data only."
+
+  full-ci:
+    name: Full Java / React / Next / PG18 / Security / Flyway / Recovery
+    needs: require-main
+    uses: ./.github/workflows/ci.yml
+    with:
+      full_suite: true
+
+  browser:
+    name: Vite and Next Chromium synthetic user journeys
+    needs: require-main
+    uses: ./.github/workflows/browser-layout-smoke.yml
+
+  compose:
+    name: Disposable full HTTP and PostgreSQL 18 Compose chain
+    needs: require-main
+    uses: ./.github/workflows/mock-full-chain.yml
