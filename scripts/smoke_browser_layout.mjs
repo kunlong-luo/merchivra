@@ -861,6 +861,92 @@ async function main() {
           'V104 confirmed local PO cancel updates status')
         assert.equal(v104CancelWrites,1,'one explicit confirmation must send one local POST')
         await layout(send,width,'v104-confirm-360')
+        // V106: the finance scope is selected with Base UI, and rows are
+        // server-cursor pages. Verify there is no cross-Marketplace mixing.
+        mode='finance'
+        await evaluate(send,`(() => {const link=[...document.querySelectorAll('.nav-link')]
+          .find(x=>x.textContent.includes('财务与对账'));
+          if(!link)throw Error('Missing finance link');link.click()})()`)
+        await waitFor(send,
+          "document.querySelectorAll('.v106-finance-events-table tbody tr').length===50",
+          'V106 50-row first finance event page')
+        assert.equal(await evaluate(send,
+          "document.querySelectorAll('.v106-finance-events-table thead th').length"),
+          7,'V106 default finance columns')
+        assert.equal(await evaluate(send,
+          "document.querySelector('.v106-finance-events-table')?.textContent?.includes('FIN-V106-000')"),
+          true,'V106 initial finance events from scoped server endpoint')
+        assert.equal(await evaluate(send,
+          "document.querySelector('.v106-finance-events-table')?.textContent?.includes('人工未核验') && " +
+          "document.querySelector('.v106-finance-events-table')?.textContent?.includes('SP-API 来源')"),
+          true,'V106 manual and SP-API sources must remain distinct')
+        await evaluate(send,
+          "document.querySelector('.v106-column-picker summary')?.click()")
+        await waitFor(send,
+          "document.querySelectorAll('.v106-column-options input[type=\\\"checkbox\\\"]').length===3",
+          'V106 finance optional columns')
+        await evaluate(send,
+          "document.querySelector('.v106-column-options input[type=\\\"checkbox\\\"]')?.click()")
+        await waitFor(send,
+          "document.querySelectorAll('.v106-finance-events-table thead th').length===6",
+          'V106 category column toggled off without refetch')
+        assert.equal(await evaluate(send,
+          "document.querySelector('.v106-finance-events-table thead')?.textContent?.includes('来源') && " +
+          "document.querySelector('.v106-finance-events-table thead')?.textContent?.includes('原币金额')"),
+          true,'V106 mandatory financial provenance and amount remain visible')
+        await evaluate(send,
+          "document.querySelector('.v106-column-options input[type=\\\"checkbox\\\"]')?.click()")
+        await waitFor(send,
+          "document.querySelectorAll('.v106-finance-events-table thead th').length===7",
+          'V106 finance category column restored')
+        await evaluate(send,
+          "document.querySelector('.v106-column-picker summary')?.click()")
+        await evaluate(send,`(() => {const button=[...document.querySelectorAll('.v106-finance-pager button')]
+          .find(b=>b.textContent.includes('尝试下一页'));
+          if(!button)throw Error('Missing finance next page');button.click()})()`)
+        await waitFor(send,
+          "document.querySelectorAll('.v106-finance-events-table tbody tr').length===1 && " +
+          "document.querySelector('.v106-finance-events-table tbody tr')?.textContent?.includes('FIN-V106-050')",
+          'V106 second finance page is one record')
+        assert.ok(v106FinanceQueries.some(q=>
+          q.marketplaceId===market &&
+          q.beforeAt===v106FinanceRows[49].postedAt &&
+          q.beforeId===v106FinanceRows[49].id),
+          'V106 next page must use the last REAL UUID and time from server page one')
+        await evaluate(send,`(() => {const button=[...document.querySelectorAll('.v106-finance-pager button')]
+          .find(b=>b.textContent.includes('上一页'));
+          if(!button)throw Error('Missing finance previous page');button.click()})()`)
+        await waitFor(send,
+          "document.querySelectorAll('.v106-finance-events-table tbody tr').length===50 && " +
+          "document.querySelector('.v106-finance-pager')?.textContent?.includes('第 1 页')",
+          'V106 previous finance page restores correct 50-row dataset')
+        await evaluate(send,
+          "document.querySelector('.v106-market-trigger')?.scrollIntoView({block:'center'})")
+        await screenshot(send,'v106-finance-filter-360.png')
+        await evaluate(send,"document.querySelector('.v106-market-trigger')?.click()")
+        await waitFor(send,
+          `!!document.querySelector('.v105-filter-item[data-marketplace="${v106OtherMarket}"]')`,
+          'V106 authorized second Marketplace option available')
+        await screenshot(send,'v106-finance-filter-popup-360.png')
+        await evaluate(send,
+          `document.querySelector('.v105-filter-item[data-marketplace="${v106OtherMarket}"]')?.click()`)
+        await waitFor(send,
+          "document.querySelectorAll('.v106-finance-events-table tbody tr').length===1 && " +
+          "document.querySelector('.v106-finance-events-table tbody tr')?.textContent?.includes('FIN-V106-EU-ONLY')",
+          'V106 switching authorized Marketplace scopes finance events')
+        assert.equal(await evaluate(send,
+          "document.querySelector('.v106-finance-events-table')?.textContent?.includes('FIN-V106-000')"),
+          false,'V106 previous Marketplace rows must not leak into new scope')
+        assert.equal(await evaluate(send,
+          "document.querySelector('.v106-finance-pager')?.textContent?.includes('第 1 页')"),
+          true,'V106 marketplace change resets opaque cursor history')
+        assert.ok(v106FinanceQueries.some(q=>
+          q.marketplaceId===v106OtherMarket&&q.beforeAt===null&&q.beforeId===null),
+          'V106 second Marketplace must issue a distinct server request without stale cursor')
+        await layout(send,width,'v106-finance-360')
+        await evaluate(send,
+          "document.querySelector('.v106-finance-events-table')?.scrollIntoView({block:'center'})")
+        await screenshot(send,'v106-finance-table-360.png')
       }
       // Synthetic connected Marketplace must expose a LIVE-gated operations
       // panel outside the local Demo tools. This does not call Amazon.
