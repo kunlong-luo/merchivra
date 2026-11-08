@@ -16,6 +16,7 @@ from urllib.request import Request, HTTPCookieProcessor, build_opener
 from uuid import uuid4
 
 assert os.getenv("DB_HOST")=="127.0.0.1" and os.getenv("DB_NAME")=="merchivra"
+assert os.getenv("GITHUB_ACTIONS")=="true" or os.getenv("MERCHIVRA_DISPOSABLE_TEST_DB")=="true", "Refuse non-disposable PG18 test seed"
 assert os.getenv("MERCHIVRA_DEMO_ENABLED")=="true"
 assert os.getenv("MERCHIVRA_SPAPI_ENABLED")=="false"
 assert os.getenv("MERCHIVRA_SPAPI_OAUTH_ENABLED")=="false"
