@@ -1,5 +1,7 @@
 # TEST-004 · 纯虚构 SP-API 全链路模拟联调
 
+> **现行基线（V109 / 2026-11-08）**：下述 2026-10-30 PostgreSQL 17 运行记录只属于**历史首次验证**。目前唯一数据库要求是 **PostgreSQL 18**，V108 主分支[集中 Mock/PG18/Compose 回归已通过](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593)；普通 PR 仅跑快速 CI，完整容器链由 [里程碑工作流](https://github.com/kunlong-luo/merchivra/actions/workflows/milestone-validation.yml) 或手动触发。这不是 Live Seller OAuth 或真实 Finances 证据。
+
 > **2026-10-30 / Pre-alpha。仅开发环境、只使用虚构事实。** [Compose 全链路成功运行（2026-10-30）](https://github.com/kunlong-luo/merchivra/actions/runs/41061679196)：真实 Docker Compose（Nginx + Java 25/Spring Boot 4.1.2 + PostgreSQL 17）已成功启动并实际执行本页列出的全部 Python HTTP 验证；后端重启后重新登录，记录仍持久，退出后 401。没有连接 Amazon。 这是对 [INT-002 操作矩阵](../integrations/sp-api-operation-matrix.md)、[INT-003 Canonical Contract](../integrations/amazon-data-contract.md) 和 [SYNC-002 同步流设计](../architecture/sync-stream-contract.md) 中可安全模拟的部分做纵向联调；不是正式 Amazon SDK/HTTP 响应测试，也不证明权限已批准。
 
 ## 为什么需要这条链
