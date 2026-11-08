@@ -2,6 +2,8 @@
 
 **状态：Proposed**｜架构风格：模块化单体 + 异步任务 Worker（逻辑分离、初期可同一进程/部署）
 
+> **现行里程碑（V108 / 2026-11-08）**：见 [MVP 冻结与集中验收计划](../roadmap/mvp-freeze-release-v108.md)。本文 C4 图是架构概念图而非生产部署证明；正式 Next 切换、真实 Amazon/Ads 与 G1/G2/G3 仍待验收。
+
 ## 1. 系统上下文（C4 / L1）
 
 ```mermaid
@@ -20,7 +22,7 @@ ERP --> Store["自有对象存储"]
 
 ```mermaid
 flowchart TB
-Browser["浏览器"] --> Web["Web / Vue 3 + TypeScript"]
+Browser["浏览器"] --> Web["Web / React 19 + TypeScript（Next.js 16 候选 / Vite 回退）"]
 Web --> API["API / Spring Boot 4.1"]
 API --> Identity["授权/租户上下文"]
 API --> Domain["领域模块"]
@@ -29,7 +31,7 @@ Worker --> Domain
 Worker --> Adapter["Marketplace Gateway + Amazon Adapter"]
 Adapter --> SPAPI["Amazon SP-API"]
 Domain --> PG[("PostgreSQL")]
-Domain --> Redis[("Redis（预留缓存）")]
+Domain --> Redis[("Redis 8（可选 Session / 限流）")]
 Domain --> Files[("S3-compatible 对象存储（按需）")]
 Worker --> PG
 ```
@@ -38,7 +40,7 @@ Worker --> PG
 
 ## 3. 约束与边界
 
-- 已实施的基础技术版本：**Java 25 LTS、Spring Boot 4.1.2（Spring Security 7 / Jackson 3）、Maven、PostgreSQL 17、Flyway、Vue 3.5 / TypeScript 6.0.3 / Vite 8.3.5 / Node 24**、Docker Compose。架构业务选择仍待 G1/G2 正式确认。
+- **当前工程实际技术基线（V108）**：Java 25 LTS、Spring Boot 4.1.2（Spring Security 7 / Jackson 3）、**Gradle Wrapper 9.2.1（Maven 已淘汰）**、**PostgreSQL 18**、Flyway、React 19 / TypeScript 6 / Node 24、Vite 8 回退构建及 Next.js 16.4.5 App Router 正式切换候选、TanStack Query/Table、Orval、Zod、Base UI、Docker Compose。**已完全弃用 Vue。** Redis 8 可选且默认关闭。Next.js 当前仍是待完成生产迁移的候选，不把 Preview 当生产切换完成。架构业务选择仍待 G1/G2 正式确认。
 - 领域模型不可直接依赖 Amazon HTTP DTO，必须经过适配器标准化。
 - Controller 只做协议与输入验证；应用服务编排；领域处理规则；存储层落实租户与事务约束。
 - 命令/查询分离是代码组织原则而非必须实现 CQRS 基建。
