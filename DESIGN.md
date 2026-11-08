@@ -1,5 +1,7 @@
 # Merchivra · UI Design System
 
+> **Current design baseline (V109 / 2026-11-08):** A+B is the approved design direction. Actual workbenches use React 19, Base UI and TanStack Table; Next.js 16.4.5 App Router is implemented but has not replaced Vite/Nginx as the default runtime. Refer to the [active MVP plan](docs/roadmap/mvp-freeze-release-v108.md), [document hub](docs/README.md) and [V108 isolated Chromium evidence](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593). The 2026-10-30/31 iteration notes below are **historical**; Vue wording is not a current build gate. Manual WCAG/assistive technology and real-seller visual acceptance remain outstanding.
+
 Status: 2026-10-31 manual implementation of public design-review methods (Impeccable-inspired). **Impeccable is not installed or executed.** Reference: https://impeccable.style/docs/audit/ and https://impeccable.style/docs/polish/.
 
 ## Product and users
@@ -54,11 +56,11 @@ Second manual code audit using the public Impeccable audit/polish criteria (no I
 - P1 · Core Orders had seven table headers but only six body cells: the **Source** cell was missing and timestamps appeared under the wrong header. Fixed the column alignment and explicit MOCK/UNVERIFIED provenance.
 - P1 · "No connected Marketplace" wrongly described an initial **unconfigured** tenant. The onboarding state now asks for local shop and Marketplace configuration, while explicitly noting that this is not Amazon authorization.
 - P2 · Local shop form and Mock replay overshadowed the read-only data task. Data is now first when a site exists, with setup/replay in native keyboard-accessible `details`. Initial tenant onboarding continues to show the setup form directly.
-- P2 · Introduced on-page-only search for loaded Listing / Order / FBA rows with visible `filtered / loaded` counts. Filtering is client-side and **does not claim to search beyond the first 50 server rows**. Query resets on Marketplace or category change.
+- P2 · Introduced on-page-only search for loaded Listing / Order / FBA rows with visible `filtered / loaded` counts. At that 2026-10-30 stage, filtering was client-side over the first 50 server rows. This is **historical**; current Core Orders/Listing/FBA use server-side keyset retrieval. Query resets on Marketplace or category change.
 - P2 · Loading, empty, no-match, error/retry feedback now distinguishes upstream availability from missing records. Unknown FBA quantity remains unknown; statuses retain unrecognized upstream codes rather than inventing meanings.
 - P2 · Added table-local keyboard scroll, text status labels, FBA mock-page progress, semantic column headers, and a proper setup audit loading state. Tests cover pure filtering and provenance/time formatting.
 
-Acceptance evidence must include the actual GitHub Actions Vue typecheck/Vitest/Vite result. Manual responsive/browser screenshots, keyboard traversal, real ARIA screen-reader and WCAG evaluation are still pending.
+**Historical iteration-2 acceptance note (superseded):** current quick CI uses React 19, TypeScript/Vitest/Vite and Next typecheck; [V108 full milestone](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593) runs both React/Vite and Next Chromium synthetic screenshots. Manual keyboard, screen-reader and WCAG acceptance are still pending.
 
 
 ## Iteration 3 · Responsive CSS and Chromium smoke (2026-10-31)
@@ -82,7 +84,7 @@ Acceptance evidence must include the actual GitHub Actions Vue typecheck/Vitest/
 ## Verified acceptance · Responsive Chromium smoke, 2026-10-31
 
 The [TEST-005 browser smoke](docs/testing/browser-ui.md) successfully ran
-against the Vue build under Chrome 156 on GitHub Actions
+against the then-current frontend build under Chrome 156 on GitHub Actions
 ([Chrome run](https://github.com/kunlong-luo/merchivra/actions/runs/41150873626) /
 [fast CI](https://github.com/kunlong-luo/merchivra/actions/runs/41150873629)).
 Generated 360/390/768/1280 synthetic UI captures were saved as workflow
