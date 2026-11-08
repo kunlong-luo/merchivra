@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Merchivra local purchasing read pages",
-    "version": "115.0.0",
+    "version": "115.1.0",
     "description": "Tenant-scoped core purchasing reads and authenticated CSRF-protected local writes; no Amazon LIVE remote writes. APIs always recheck permissions, status, balance, currency and transaction safety on server."
   },
   "servers": [
@@ -963,6 +963,51 @@
           },
           "409": {
             "description": "State, balance, idempotency, concurrency, or approval conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/warehouses/resolve": {
+      "get": {
+        "operationId": "resolveLocalWarehouseLabels",
+        "summary": "Batch resolve up to 100 tenant-owned historical warehouse IDs, including archived labels",
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "required": true,
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "minItems": 1,
+              "maxItems": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Only warehouses belonging to authenticated tenant; missing IDs omitted; no-store",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Warehouse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Empty/oversized or malformed batch"
+          },
+          "401": {
+            "description": "Authentication required"
           }
         }
       }
