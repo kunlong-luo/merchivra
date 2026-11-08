@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -61,7 +61,7 @@ jobs:
       run:
         working-directory: apps/web
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v5
         with:
           node-version: '24'
@@ -147,7 +147,7 @@ jobs:
       MERCHIVRA_BOOTSTRAP_PASSWORD: 'ci-disposable-v65-only-secret-0000'
       MERCHIVRA_CONTRACT_EXPORT_ENABLED: 'true'
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
@@ -333,7 +333,7 @@ jobs:
     env:
       MERCHIVRA_DB_PASSWORD: ci_disposable_not_an_actual_secret
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Verify V108 quick versus full workflow cadence
         run: python3 scripts/check_ci_cadence_v108.py
       - name: Verify V109 active documentation links and runtime status
