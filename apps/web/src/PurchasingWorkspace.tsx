@@ -1,4 +1,5 @@
 import {useEffect,useState,type FormEvent} from 'react'
+import WarehousePicker from './WarehousePicker'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchSkus} from './lib/catalog'
 import InternalSkuPicker from './InternalSkuPicker'
@@ -252,13 +253,9 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
       </div>
       {['APPROVED','RECEIVING'].includes(selected.data.order.status)&&
        <div className="team-invite-form">
-        <label htmlFor="receipt-warehouse">实际收货仓库（必选）</label>
-        <select id="receipt-warehouse" value={warehouseId}
-         onChange={e=>{setWarehouseId(e.target.value);setReceiveAsnId('')}}>
-         <option value="">选择本地仓库</option>
-         {activeWarehouses.map(w=><option value={w.id} key={w.id}>
-          {w.code} · {w.name}</option>)}
-        </select>
+        <WarehousePicker tenantId={tenantId} id="receipt-warehouse"
+          label="实际收货仓库（必选）" value={warehouseId}
+          onChange={id=>{setWarehouseId(id);setReceiveAsnId('')}}/>
         <label htmlFor="receipt-line">待收货明细</label>
         <select id="receipt-line" value={receiveLine} onChange={e=>{setReceiveLine(e.target.value);setReceiveAsnId('')}}>
          <option value="">选择未收完的行</option>
@@ -289,14 +286,10 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
    <div className="panel-heading"><div><h2>本地仓库库存台账</h2>
     <p>只统计明确分配仓库的采购入库、人工出库、仓间调拨与盘点差异。
      台账余额不含未知历史收货、未记录的损耗、预留或 Amazon FBA 库存。</p></div></div>
-   <label htmlFor="warehouse-stock-select">选择仓库查看</label>
-   <select id="warehouse-stock-select" value={stockWarehouseId}
-    onChange={e=>{setStockWarehouseId(e.target.value);setOperationSku('');
-     setOperationDestination('');setOperationKey(crypto.randomUUID())}}>
-    <option value="">选择仓库</option>
-    {(warehouses.data??[]).map(w=><option key={w.id} value={w.id}>
-     {w.code} · {w.name}</option>)}
-   </select>
+   <WarehousePicker tenantId={tenantId} id="warehouse-stock-select"
+     label="选择仓库查看" value={stockWarehouseId}
+     onChange={id=>{setStockWarehouseId(id);setOperationSku('');
+      setOperationDestination('');setOperationKey(crypto.randomUUID())}}/>
    {stockWarehouseId&&<>
     <WarehouseStockPagePanel key={tenantId+':'+stockWarehouseId}
      tenantId={tenantId} warehouseId={stockWarehouseId}/>
@@ -321,13 +314,9 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
       当前列表页没有此 SKU 不代表库存为 0；写入时服务器仍锁仓并重新核对余额，
       变化则要求刷新。</p>
      {operationType==='TRANSFER'&&<>
-      <label htmlFor="stock-op-dest">目标仓库</label>
-      <select id="stock-op-dest" value={operationDestination}
-       onChange={e=>{setOperationDestination(e.target.value);setOperationKey(crypto.randomUUID())}}>
-       <option value="">选择目标仓库</option>
-       {activeWarehouses.filter(w=>w.id!==stockWarehouseId).map(w=>
-        <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}
-      </select>
+      <WarehousePicker tenantId={tenantId} id="stock-op-dest"
+       label="目标仓库" value={operationDestination} excludeId={stockWarehouseId}
+       onChange={id=>{setOperationDestination(id);setOperationKey(crypto.randomUUID())}}/>
      </>}
      <label htmlFor="stock-op-quantity">
       {operationType==='COUNT'?'盘点实数（允许 0）':'本次操作件数'}
