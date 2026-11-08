@@ -1,3 +1,5 @@
+# V108: build public synthetic-only Pages after main updates or manual dispatch;
+# no duplicate Pages build for each PR (quick CI already builds the web). 
 # Public, read-only GitHub Pages SHOWCASE. Not the private ERP deployment.
 # No Spring Boot, PostgreSQL, credentials, Amazon calls or remote writes.
 name: Publish read-only React GitHub Pages showcase
@@ -5,11 +7,6 @@ name: Publish read-only React GitHub Pages showcase
 on:
   push:
     branches: [main]
-    paths:
-      - '.github/workflows/github-pages.yml'
-      - 'apps/web/**'
-      - 'scripts/check_pages_dist.mjs'
-  pull_request:
     paths:
       - '.github/workflows/github-pages.yml'
       - 'apps/web/**'

@@ -1,12 +1,14 @@
 # Merchivra · Agent 开发策略
 
+> **现行策略更新（2026-11-08 / V108）：** MVP P0 功能收尾优先；常规 PR 用快速测试；在功能冻结、真实联调前以及 Beta/Release 候选使用 `.github/workflows/milestone-validation.yml` 统一运行完整 PostgreSQL 18、Next.js、Chromium 和 Compose 模拟回归。任何跨租户、认证、金额、库存并发、正式 OAuth 及敏感文件变更仍必须即时执行必要的针对性安全检查。此规则覆盖文件中旧的“每次提交全套回归”描述；G1/G2/G3 业务签署和生产准入不能由测试绿色代替。详见 [现行执行计划](docs/roadmap/mvp-freeze-release-v108.md)。
+
 > 本文件是本仓库的长期开发约定，适用于自动化 Agent 和人工贡献者。
 > 与根目录 `AGENTS.md` 保持一致。用户明确的新指示优先于本文；产品 G1/G2 待签署的业务方案不得因本文自动视为批准。
 
 ## 目标与协作
 
 - 维护 **Merchivra（麦奇维拉）**：Apache-2.0、开源、自托管、Amazon Seller ERP；优先交付能运行的业务纵向闭环。
-- 按维护者现行指示：**直接在 `main` 开发、逐步提交并验证 CI**；不再创建长寿命分支或 Draft PR，除非维护者更改要求。更新相关文档与 GitHub Issue，报告确切提交/检查结果。
+- **V108 最新协作指示：** 使用短命功能 PR（避免长寿命分支），先补剩余 P0、再冻结并集中验收；普通提交只执行快速 CI，关键安全/金额/库存/授权变化立即运行专项检查。不要每次普通 TSX/CSS 改动都等待完整 PG18/Chromium/容器链；合并前仍需所有实际触发的检查通过。见 [V108 计划](docs/roadmap/mvp-freeze-release-v108.md)、[CI 政策](docs/testing/ci-policy.md)。
 - Amazon SP-API 接入**优先使用官方 Java SDK `software.amazon.spapi:spapi-sdk:1.13.0` 与官方 OpenAPI 模型**；已有 `SpApiOfficialSdkFactory` / `SpApiOfficialModules` 和保守 Core Read Adapter。未来新增模块不应优先手写无类型的 URL 接口，须按操作审查 DTO/角色/速率/权限。见 [INT-004](docs/integrations/sp-api-code-integration.md)。
 - 优先使用经过广泛验证的官方 Starter/成熟库；不要重复实现基础设施，不因新潮就加入 Kafka、微服务、重型前端框架或与业务无关的依赖。
 - **V74 解释性补货纪律**：仅 V22 新鲜完整 FBA 与 V70 完整 28 天订单数据的 MOCK/LIVE 来源一致时才计算示意覆盖天数；未知或零订单不得伪造未来断货日期。V42 lead time 是人工条款，V37/V71 明确来源的本地 PO 不能当 Amazon FBA 在途。V24 LIVE Catalog/FBA 的来源 CHECK 使用 V72 前向迁移显式允许 LIVE，仍拒绝未知来源。重复草稿前必须重新查询并人工确认，失败则阻断。见 [INV-074](docs/inventory/replenishment-priorities-v74.md)。

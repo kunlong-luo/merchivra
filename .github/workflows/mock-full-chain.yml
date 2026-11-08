@@ -1,52 +1,11 @@
-# Regression focus: V7-V16 schemas migrate without enabling real Amazon credentials.
-# V6 page-one durable commit survives container restart before page two.
-# Shared US/DE internal SKU remains tenant-scoped.
+# V108: disposable PostgreSQL18 + Compose full-chain run only during
+# explicit milestone or high-risk/manual verification. Never live credentials.
 name: Mock full-chain Compose validation
+
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - .github/workflows/mock-full-chain.yml
-      - apps/server/src/main/resources/db/migration/V10__ops_automation_findings.sql
-      - scripts/smoke_ops.py
-      - scripts/smoke_orders_sync.py
-      - apps/server/src/main/resources/db/migration/V11__orders_sync_checkpoint.sql
-      - 'apps/server/src/main/java/org/merchivra/erp/orderssync/**'
-      - 'apps/server/src/test/java/org/merchivra/erp/orderssync/**'
-      - apps/web/src/OrdersSyncPanel.tsx
-      - apps/web/src/lib/order-sync.ts
-      - apps/server/src/main/resources/db/migration/V12__orders_read_role_evidence.sql
-      - 'apps/server/src/main/java/org/merchivra/erp/spapi/**'
-      - 'apps/server/src/test/java/org/merchivra/erp/spapi/**'
-      - apps/server/src/main/resources/db/migration/V13__ops_live_order_origin.sql
-      - apps/server/src/main/resources/db/migration/V14__orders_role_dual_review.sql
-      - apps/server/src/main/resources/db/migration/V15__local_team_and_invitations.sql
-      - apps/server/src/main/resources/db/migration/V16__scoped_staff_read_roles.sql
-      - apps/server/src/main/java/org/merchivra/erp/catalog/MarketplaceReadController.java
-      - apps/web/src/CoreWorkspace.tsx
-      - 'apps/server/src/main/java/org/merchivra/erp/security/**'
-      - 'apps/server/src/test/java/org/merchivra/erp/security/**'
-      - scripts/smoke_team.py
-      - apps/web/src/TeamWorkspace.tsx
-      - apps/web/src/lib/team.ts
-      - apps/web/src/Root.tsx
-      - apps/web/src/App.tsx
-      - 'apps/web/src/**/*.tsx'
-      - apps/web/package.json
-      - apps/web/package-lock.json
-      - apps/web/vite.config.ts
-      - apps/web/tsconfig.json
-      - apps/web/index.html
-      - deploy/compose.yaml
-      - apps/server/Dockerfile
-      - apps/server/build.gradle
-      - apps/server/settings.gradle
-      - apps/server/gradle.properties
-      - apps/server/gradlew
-      - apps/server/gradlew.bat
-      - 'apps/server/gradle/wrapper/**'
-      - apps/server/src/main/resources/db/migration/V52__proof_binary_and_supplier_trace.sql
+  workflow_call:
+
 jobs:
   mock-chain:
     runs-on: ubuntu-latest

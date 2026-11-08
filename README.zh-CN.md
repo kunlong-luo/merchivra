@@ -1,5 +1,7 @@
 # Merchivra ERP（麦奇维拉）
 
+> **V108 现行开发与上线计划：** 项目转入 **剩余 P0 功能收尾 → MVP 冻结 → 一键集中回归 → 维护者本地真实 Seller/Ads 联调 → Beta/正式生产验收**。常规 PR 只运行快速 CI；完整 PG18/Chromium/Compose 验收在里程碑集中触发，关键安全/金额/库存变更仍需即时检查。详见 [V108 执行计划](docs/roadmap/mvp-freeze-release-v108.md) 与 [分层测试政策](docs/testing/ci-policy.md)。GitHub Pages 仍仅为虚构数据只读展示。**现阶段不得向公网开放真实 ERP。**
+
 > **Next.js 16 迁移预览（V99）：** 已开始直接实现 Next.js App Router，复用现有会话保护的真实 ERP 页面；现阶段还**没有**替换线上 Vite/Nginx。可在 `apps/web` 中运行 `npm ci`、`npm run build:next`、`npm run dev:next`（端口 3001，须启动本地 Spring Boot 8080 后端）。[迁移验收门槛](docs/architecture/next16-ab-migration-v99.md)。GitHub Pages 仍只提供虚构数据静态演示。
 \n> **GitHub Pages 公开只读演示：** [查看虚构数据的静态 React 界面](https://kunlong-luo.github.io/merchivra/)（需要仓库先启用 GitHub Pages）。**它不是可登录的 ERP 服务**：没有数据库、真实 Amazon 授权或采购/财务写入。[部署与首次启用说明](docs/deployment/github-pages-public-demo-v98.md)。\n
 **开源、自托管的 Amazon Seller ERP。** 采用 Java 25 / Spring Boot 4.1、React 19 / TypeScript、PostgreSQL 18，优先把核心业务代码、模拟工作流与本地部署打通；真实 Amazon 授权留给使用者在功能开发完成后本地进行。

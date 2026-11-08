@@ -1,4 +1,26 @@
-# TEST-003 · 分阶段轻量 CI 策略（2026-10-30）
+# TEST-003 · 分层 CI 与集中里程碑测试（V108 / 2026-11-08）
+
+**这是现行策略**；详细阶段与验收边界以 [V108 MVP 冻结计划](../roadmap/mvp-freeze-release-v108.md) 为准。文档后半部分仅作历史参考。用户决定先完成剩余 P0，再集中执行完整 Mock 集成与上线测试；不是不测试，也不是正式 Amazon 生产验收已通过。
+
+## 实际 GitHub Actions 触发
+
+| 场景 | 自动运行 | 有意不自动运行 |
+| --- | --- | --- |
+| 每个 PR / main push | `ci.yml`：Gradle test、React/Orval/typecheck/Vitest/Vite build/Next TS、Compose 静态部署检查 | PG18 完整 Mock HTTP/备份恢复、Next 生产 build/HTTP、Chromium 双前端和真 Compose 容器链 |
+| 普通 PR | **不**再额外运行 public Pages build（除主 CI） | 公开展示部署与截图套餐 |
+| main 更新前端 | GitHub Pages 合成只读展示构建/发布（非 ERP 部署） | 不因此触发浏览器/真 Compose |
+| A3 MVP 冻结或 Beta/Release 候选、重要安全/数据库变更 | 在 main 上人工启动 `milestone-validation.yml`，一次调度完整 CI + 双前端 Chromium + 真 Compose；首次新增该工作流时触发一次隔离基线验证 | 无真实 Amazon Token、无生产 PG/银行数据 |
+| 单项故障定位 | 独立手工启动 `ci.yml` 的 `full_suite`，或独立 Chromium/Compose；必要时只重跑失败 job | 不强制对与改动无关的模块再跑所有回归 |
+
+在 `ci.yml` 选择 `workflow_dispatch: full_suite=true` 会包括真实一次性 PG18/Flyway + HTTP/安全/恢复，以及 Next production build/HTTP；常规 PR 会**跳过**上述重型阶段。集中 workflow 调用相同已有工作流，避免复制测试脚本和网络环境逻辑。
+
+**不能推迟的安全底线：** 改动租户/Marketplace 鉴权、Session/CSRF、Seller Vault/OAuth、采购审批、库存原子写、财务币种/金额与重复入账、同步幂等或租约时，必须在同批开发执行对应测试；若跨数据库/跨进程高风险，人工运行专项 PG18/Compose 检查后才能认为该项完成。业务数据上线前仍需真授权、恢复、性能、G1/G2/G3 审批。
+
+**合并标准**：普通 PR 通过快速 CI + 受影响的高价值单测；集中里程碑使用最终 commit 跑全部工作流全绿，留存 Actions URL。降低成本不得用先前成功的 commit 冒充当前候选已验收。生产准入仍以 `release-readiness-v68.md` 和新的 V108 放行条件为准。
+
+---
+
+## 早期阶段政策（历史归档，不再代表 V108 的触发逻辑）
 
 **状态：项目当前开发策略。** 遵照项目负责人决策：前期不追求严格 CI 和 E2E 覆盖率，以能持续编译、及时发现简单回归为主；在核心业务接近完整时，再补自动化端到端与发布质量门禁。
 

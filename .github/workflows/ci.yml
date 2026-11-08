@@ -1,3 +1,6 @@
+# V108: fast automatic checks on PR/main; full PG18 + Next runtime checks
+# via workflow_dispatch(full_suite=true) or milestone-validation.yml.
+# High-risk auth, stock, finance and tenant changes still require targeted tests.
 name: CI
 
 on:
@@ -6,13 +9,25 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      full_suite:
+        description: 'Run full PostgreSQL 18, Next production and security regression (milestone only)'
+        type: boolean
+        required: true
+        default: true
+  workflow_call:
+    inputs:
+      full_suite:
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
 
 concurrency:
-  group: merchivra-ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  group: merchivra-ci-${{ github.workflow }}-${{ github.ref }}-${{ inputs.full_suite && 'full' || 'quick' }}
+  cancel-in-progress: ${{ inputs.full_suite != true }}
 
 jobs:
   backend:
@@ -32,8 +47,11 @@ jobs:
           test -x apps/server/gradlew
           printf '%s  %s\n' 423cb469ccc0ecc31f0e4e1c309976198ccb734cdcbb7029d4bda0f18f57e8d9 apps/server/gradle/wrapper/gradle-wrapper.jar | sha256sum -c -
           grep -F 'distributionSha256Sum=72f44c9f8ebcb1af43838f45ee5c4aa9c5444898b3468ab3f4af7b6076c5bc3f' apps/server/gradle/wrapper/gradle-wrapper.properties
-      - name: Gradle Wrapper test and JaCoCo report
-        run: ./apps/server/gradlew -p apps/server --no-daemon --console plain test jacocoTestReport
+      - name: Gradle Wrapper tests (fast on every PR and main push)
+        run: ./apps/server/gradlew -p apps/server --no-daemon --console plain test
+      - name: JaCoCo report (full milestone only)
+        if: inputs.full_suite == true
+        run: ./apps/server/gradlew -p apps/server --no-daemon --console plain jacocoTestReport
 
   frontend:
     name: React 19 / Vite baseline + Next.js 16 preview
@@ -64,9 +82,11 @@ jobs:
         run: npm run build
       - name: Next 16 App Router TS gate
         run: npm run typecheck:next
-      - name: Next 16 App Router production build preview
+      - name: Next 16 App Router production build (full milestone only)
+        if: inputs.full_suite == true
         run: npm run build:next
-      - name: Next 16 standalone App Router HTTP smoke (no Seller/API auth)
+      - name: Next 16 standalone App Router HTTP smoke (full milestone only)
+        if: inputs.full_suite == true
         shell: bash
         run: |
           set -euo pipefail
@@ -97,6 +117,7 @@ jobs:
 
   pg18-migrations:
     name: PostgreSQL 18 / real Flyway migrations
+    if: inputs.full_suite == true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -313,6 +334,8 @@ jobs:
       MERCHIVRA_DB_PASSWORD: ci_disposable_not_an_actual_secret
     steps:
       - uses: actions/checkout@v5
+      - name: Verify V108 quick versus full workflow cadence
+        run: python3 scripts/check_ci_cadence_v108.py
       - name: Validate both documented deployment modes without using real databases
         shell: bash
         run: |
