@@ -66,7 +66,7 @@ const statuses=[
  {value:'ALL',label:'全部待收货状态'},
  {value:'APPROVED',label:'已审批'},
  {value:'RECEIVING',label:'部分收货'}
-] as const
+]
 
 export function PendingReceiptPages({tenantId,onOpen}:{
  tenantId:string;onOpen:(orderId:string,lineId:string)=>void
