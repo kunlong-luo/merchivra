@@ -1,4 +1,5 @@
 import {useState,type FormEvent} from 'react'
+import WarehousePicker from './WarehousePicker'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
 import {fetchWarehouseStock} from './lib/purchasing'
@@ -109,14 +110,10 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
     审批放行；放行后的合格件才允许标记到 STORAGE 库位。拣货同时扣减批次库位
     与本地仓库的签名库存流水，不能自动操作 Amazon。</p>
   </div><button className="refresh-button" type="button" onClick={refresh}>刷新</button></div>
-  <label htmlFor="v48-warehouse">本地仓库</label>
-  <select id="v48-warehouse" value={warehouse}
-   onChange={e=>{setWarehouse(e.target.value);setReceipt('');setPiece('');
-    setStorageBin('');setSku('');setPickKey(crypto.randomUUID())}}>
-   <option value="">选择仓库</option>
-   {warehouses.filter(w=>w.status==='ACTIVE').map(w=>
-    <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}
-  </select>
+  <WarehousePicker tenantId={tenantId} id="v48-warehouse"
+   label="本地仓库" value={warehouse}
+   onChange={id=>{setWarehouse(id);setReceipt('');setPiece('');
+    setStorageBin('');setSku('');setPickKey(crypto.randomUUID())}}/>
   {!!warehouse&&!!orderId&&<>
    <h3>真实收货分段质检与上架</h3>
    <label htmlFor="v48-receipt">V46+ 收货批次</label>
