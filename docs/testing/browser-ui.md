@@ -1,6 +1,8 @@
 
 # TEST-005 · Optional responsive Chromium UI smoke (synthetic data)
 
+> **现行执行状态（2026-11-08 / V109）**：这是 React 19 / Vite 8 与 Next.js 16 App Router **双前端**的合成数据 Chromium/CDP 冒烟（不是 Vue 测试）。自 V108 起，独立工作流不再在普通 PR / main TSX 推送时自动运行，而是 [集中里程碑回归](https://github.com/kunlong-luo/merchivra/actions/workflows/milestone-validation.yml) 调用或人工运行；[V108 已通过的基线](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593)。下文旧的页面路径和截图示例为历史阶段信息；不等于真实 Amazon/浏览器无障碍认证。
+
 Status: lightweight browser-based **layout smoke**, **not** production end-to-end
 testing, browser accessibility certification, or a real Amazon integration.
 
@@ -13,7 +15,7 @@ client to drive Chrome's DevTools Protocol. It does **not** install Impeccable,
 Playwright, Selenium, a browser npm dependency, or a dedicated server library.
 
 The script [`scripts/smoke_browser_layout.mjs`](../../scripts/smoke_browser_layout.mjs)
-builds its own localhost-only HTTP stub and serves the compiled Vue frontend.
+builds its own localhost-only HTTP stub and exercises the built **React/Vite** frontend; the milestone workflow also starts **Next 16** and reruns the synthetic fixture there.
 It returns explicit synthetic Session tenant, marketplace, Listing, Orders and
 FBA responses. No actual login, SP-API, Seller OAuth, real secrets, external
 browser target or production data is involved.
