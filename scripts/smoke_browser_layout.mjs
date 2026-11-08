@@ -722,10 +722,10 @@ async function main() {
       await evaluate(send, "(() => {const btn=[...document.querySelectorAll('.nav-link')]" +
         ".find(b=>b.textContent.includes('运营自动化'));if(!btn)throw Error('Missing operations navigation');btn.click();})()")
       await waitFor(send,
-        "document.querySelector('.ops-workspace tbody tr')?.textContent?.includes('模拟测试')",
+        "document.querySelector('.v105-ops-table tbody tr')?.textContent?.includes('模拟测试')",
         'operations triage')
       assert.equal(await evaluate(send,
-        "document.querySelector('.ops-workspace tbody tr')?.textContent?.includes('FBA 库存数据不完整')"),
+        "document.querySelector('.v105-ops-table tbody tr')?.textContent?.includes('FBA 库存数据不完整')"),
         true, 'operations rule label')
       await waitFor(send,
         "[...document.querySelectorAll('[aria-label=\"站点异常规则表\"] tbody tr')].some(x=>x.textContent.includes('库存'))",
