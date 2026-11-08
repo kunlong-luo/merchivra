@@ -103,6 +103,38 @@ export const purchaseAction=(id:string,action:'submit'|'approve'|'cancel')=>
 export const fetchWarehouses=()=>call(base+'/warehouses',z.array(warehouse))
 export const createWarehouse=(warehouseCode:string,displayName:string)=>
  call(base+'/warehouses',warehouse,'POST',{warehouseCode,displayName})
+// V113: paged warehouse balances and pending purchase lines are read-only,
+// tenant-scoped API views; an unseen SKU is NEVER treated as zero.
+const stockPage=z.object({
+ items:z.array(stock).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{
+ message:'Invalid warehouse stock cursor contract'
+})
+export type WarehouseStockPage=z.infer<typeof stockPage>
+export const fetchWarehouseStockPage=({warehouseId,limit=50,search='',cursor=null}:{
+ warehouseId:string;limit?:number;search?:string;cursor?:string|null
+}):Promise<WarehouseStockPage>=>{
+ const params=new URLSearchParams({warehouseId,limit:String(limit),search})
+ if(cursor)params.set('cursor',cursor)
+ return call(base+'/warehouse-stock/page?'+params.toString(),stockPage)
+}
+export const fetchWarehouseStockItem=(warehouseId:string,productSkuId:string)=>
+ call(base+'/warehouse-stock/item?'+new URLSearchParams({warehouseId,productSkuId}),stock)
+const pendingPage=z.object({
+ items:z.array(pending).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{
+ message:'Invalid pending receipt cursor contract'
+})
+export type PendingReceiptsPage=z.infer<typeof pendingPage>
+export const fetchPendingReceiptsPage=({limit=50,status='ALL',search='',cursor=null}:{
+ limit?:number;status?:'ALL'|'APPROVED'|'RECEIVING';search?:string;cursor?:string|null
+}={}):Promise<PendingReceiptsPage>=>{
+ const params=new URLSearchParams({limit:String(limit),status,search})
+ if(cursor)params.set('cursor',cursor)
+ return call(base+'/pending-receipts/page?'+params.toString(),pendingPage)
+}
 export const fetchWarehouseStock=(warehouseId:string)=>
  call(base+'/warehouse-stock?warehouseId='+encodeURIComponent(warehouseId),z.array(stock))
 // V112: page filters operate over the entire server-side warehouse history.
