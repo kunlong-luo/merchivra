@@ -119,6 +119,29 @@ public class WarehouseInventoryService {
             "warehouse-v1",tenant.toString(),filter,"q:"+term,w.code(),w.id()));
     }
 
+    /**
+     * V115 read-only label resolver: one bounded tenant-scoped query for
+     * a page of historical warehouse IDs, including archived warehouses.
+     * Missing IDs are omitted, never resolved across tenants or guessed.
+     */
+    @Transactional(readOnly=true)
+    public List<Warehouse> resolveWarehouses(UUID tenant,List<UUID> requested) {
+        if(requested==null || requested.isEmpty() || requested.size()>100
+            || requested.stream().anyMatch(java.util.Objects::isNull))
+            throw bad("Select 1..100 warehouse IDs for labels");
+        List<UUID> ids=new ArrayList<>(new java.util.LinkedHashSet<>(requested));
+        String placeholders=String.join(",",java.util.Collections.nCopies(ids.size(),"?"));
+        List<Object> args=new ArrayList<>();
+        args.add(tenant);
+        args.addAll(ids);
+        return jdbc.query("""
+            SELECT id,warehouse_code,display_name,status
+            FROM erp_local_warehouse WHERE tenant_id=?
+            AND id IN ("""+placeholders+"""
+            ) ORDER BY warehouse_code ASC,id ASC
+            """,WarehouseInventoryService::warehouse,args.toArray());
+    }
+
     /** Exact lookup for deep-linked or previously saved selections. */
     @Transactional(readOnly=true)
     public Warehouse warehouseItem(UUID tenant,UUID warehouseId) {
