@@ -97,7 +97,7 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
       setMarketplaceId(id);setCursorStack([undefined])
       setSelectedEvent('');setSelectedOrder('')
      }}/>
-   </div>
+   </div>}
   {currentId&&<FinanceExceptionQueuePanel key={currentId}
       tenantId={tenantId} marketplaceId={currentId}/>}
   {currentId&&markets.data?.find(m=>m.id===currentId)?.connectionStatus==='CONNECTED'&&
