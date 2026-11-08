@@ -29,6 +29,7 @@ const v104Order={
 }
 let v104CancelWrites=0
 let v104Cancelled=false
+let v105RequestedOpsFilter=null
 const respond = (res, value, code = 200) => {
   res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
   res.end(JSON.stringify(value))
@@ -298,6 +299,7 @@ const server = createServer(async (req, res) => {
     }]
     if (url.pathname.endsWith('/page')) {
       const filter=url.searchParams.get('filter')??'ACTIVE'
+      v105RequestedOpsFilter=filter
       // V95 page is priority-ordered, permission-filtered, cursor-based.
       // This fixture has one visible, unsnoozed MOCK finding on the first page.
       return respond(res,emptyCursorPage(findings.filter(x=>filter==='ALL'
@@ -679,6 +681,62 @@ async function main() {
         'V69 Marketplace rule settings')
       await layout(send,width,'operations-360')
       await screenshot(send,'operations-360.png')
+      // V105: Base UI Select must change the SERVER filter, not client-side
+      // re-sort the currently fetched 50 rows. Column hiding is view-only.
+      assert.equal(await evaluate(send,
+        "document.querySelector('.v105-filter-trigger')?.getAttribute('aria-label')"),
+        '筛选运营待办状态','V105 Select has an accessible name')
+      assert.equal(await evaluate(send,
+        "document.querySelectorAll('.v105-ops-table thead tr th').length"),
+        8,'V105 all eight finding columns are visible by default')
+      await evaluate(send,"document.querySelector('.v105-filter-trigger')?.click()")
+      await waitFor(send,
+        "!!document.querySelector('.v105-filter-item[data-filter=\\\"ACTIONABLE\\\"]')",
+        'V105 Base UI select popup opens')
+      await evaluate(send,
+        "document.querySelector('.v105-filter-item[data-filter=\\\"ACTIONABLE\\\"]')?.click()")
+      await waitFor(send,
+        "document.querySelector('.v105-filter-trigger')?.textContent?.includes('当前需要处理')",
+        'V105 controlled status filter updates its trigger')
+      for(let i=0;i<35&&v105RequestedOpsFilter!=='ACTIONABLE';i++)await sleep(100)
+      assert.equal(v105RequestedOpsFilter,'ACTIONABLE',
+        'V105 filter change must query server with ACTIONABLE')
+      await waitFor(send,
+        "document.querySelector('.v105-ops-table tbody tr')?.textContent?.includes('模拟测试')",
+        'V105 filtered row retains MOCK provenance')
+      await evaluate(send,
+        "document.querySelector('.v105-column-picker summary')?.click()")
+      await waitFor(send,
+        "document.querySelectorAll('.v105-column-options input[type=\\\"checkbox\\\"]').length===3",
+        'V105 hideable columns picker visible')
+      const pickerBounds=await evaluate(send,
+        "(() => {const r=document.querySelector('.v105-column-options').getBoundingClientRect();" +
+        "return {left:r.left,right:r.right,width:innerWidth}})()")
+      assert.ok(pickerBounds.left>=0&&pickerBounds.right<=width+2,
+        'V105 in-flow column options must not clip at 360px: '+JSON.stringify(pickerBounds))
+      await evaluate(send,
+        "document.querySelector('.v105-column-options input[type=\\\"checkbox\\\"]')?.click()")
+      await waitFor(send,
+        "document.querySelectorAll('.v105-ops-table thead tr th').length===7",
+        'V105 optional source key column hidden')
+      assert.equal(await evaluate(send,
+        "document.querySelector('.v105-ops-table thead')?.textContent?.includes('关联来源')"),
+        false,'V105 source key header hidden only in view')
+      assert.equal(await evaluate(send,
+        "document.querySelector('.v105-ops-table tbody tr')?.textContent?.includes('模拟测试')"),
+        true,'V105 data provenance must remain visible with optional column hidden')
+      await evaluate(send,
+        "document.querySelector('.v105-column-options input[type=\\\"checkbox\\\"]')?.click()")
+      await waitFor(send,
+        "document.querySelectorAll('.v105-ops-table thead tr th').length===8",
+        'V105 hidden source key column restored')
+      await layout(send,width,'v105-ops-filter-table-360')
+      await evaluate(send,
+        "document.querySelector('.v105-ops-filter')?.scrollIntoView({block:'center'})")
+      await screenshot(send,'v105-ops-filter-360.png')
+      await evaluate(send,
+        "document.querySelector('.v105-table-toolbar')?.scrollIntoView({block:'center'})")
+      await screenshot(send,'v105-ops-table-360.png')
       // V72: real React purchasing panel must preserve missing carrier ETA
       // instead of fabricating an arrival. This is a synthetic API fixture.
       await evaluate(send,
@@ -741,9 +799,9 @@ async function main() {
           "document.querySelector('[role=\\\"alertdialog\\\"]')?.textContent?.includes('确认取消采购单')",
           'V104 Base UI alert dialog visible')
         assert.equal(v104CancelWrites,0,'opening a dialog must not mutate purchase orders')
-        assert.equal(await evaluate(send,
-          "!!document.activeElement?.closest('.v104-confirm-popup')"),
-          true,'V104 action dialog should capture keyboard focus')
+        await waitFor(send,
+          "!!document.activeElement?.closest('.v104-confirm-popup')",
+          'V104 action dialog should capture keyboard focus after mounting')
         await screenshot(send,'v104-purchase-confirm-360.png')
         await evaluate(send,"document.querySelector('.v104-confirm-cancel')?.click()")
         await waitFor(send,
