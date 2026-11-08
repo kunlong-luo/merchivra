@@ -106,4 +106,31 @@ class WarehouseDirectoryPageTest {
         assertEquals(HttpStatus.NOT_FOUND,assertThrows(ResponseStatusException.class,
             ()->service.warehouseItem(foreign,id)).getStatusCode());
     }
+    @Test void boundedTenantScopedWarehouseLabelBatchNeverInventsUnknownOrForeignIds() {
+        UUID known=new UUID(0,201);
+        UUID unknown=new UUID(0,202);
+        when(jdbc.query(anyString(),org.mockito.ArgumentMatchers
+            .<RowMapper<WarehouseInventoryService.Warehouse>>any(),any(Object[].class)))
+            .thenAnswer(inv->{
+                String sql=inv.getArgument(0);
+                Object[] args=(Object[])inv.getRawArguments()[2];
+                assertTrue(sql.contains("FROM erp_local_warehouse WHERE tenant_id=?"));
+                assertTrue(sql.contains("id IN (?,?)"));
+                assertTrue(sql.contains("ORDER BY warehouse_code ASC,id ASC"));
+                assertArrayEquals(new Object[]{tenant,known,unknown},args);
+                return List.of(warehouse(201));
+            });
+        var result=service.resolveWarehouses(tenant,List.of(known,unknown,known));
+        assertEquals(List.of(warehouse(201)),result);
+        assertFalse(result.stream().anyMatch(w->w.id().equals(unknown.toString())));
+        verify(jdbc,times(1)).query(anyString(),any(RowMapper.class),any(Object[].class));
+        bad(()->service.resolveWarehouses(tenant,List.of()));
+        bad(()->service.resolveWarehouses(tenant,null));
+        var tooMany=new ArrayList<UUID>();
+        for(int i=1;i<=101;i++)tooMany.add(new UUID(0,i));
+        bad(()->service.resolveWarehouses(tenant,tooMany));
+        bad(()->service.resolveWarehouses(tenant,java.util.Arrays.asList(known,null)));
+        verifyNoMoreInteractions(jdbc);
+    }
+
 }
