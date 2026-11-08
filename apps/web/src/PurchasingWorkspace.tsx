@@ -256,7 +256,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
           description:'采购单 '+o.orderNumber+' 将取消。此操作会改变本地采购审批状态，不会修改 Amazon 订单或 FBA 库存。',
           confirmLabel:'取消此采购单',danger:true,
           onConfirm:()=>action.mutate({id:o.id,kind:'cancel'})
-         })}>取消</button>
+         })}>取消</button>}
       </div></td></tr>)}</tbody></table>
    </div>
    {selectedId&&<div className="core-tools">
