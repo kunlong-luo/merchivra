@@ -12,6 +12,8 @@ import SkuProfitPanel from './SkuProfitPanel'
 import PeriodProfitReportPanel from './PeriodProfitReportPanel'
 import ItemAllocationPanel from './ItemAllocationPanel'
 import FinanceExceptionQueuePanel from './FinanceExceptionQueuePanel'
+import FinanceEventsTable from './components/FinanceEventsTable'
+import FinanceMarketplaceFilter from './components/FinanceMarketplaceFilter'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchCoreMarketplaces} from './lib/core'
 import CoreMarketplacePicker from './CoreMarketplacePicker'
@@ -25,12 +27,13 @@ const categories={
 function displayCategory(value:string){return categories[value as keyof typeof categories]??value}
 function displayOrigin(value:string){return value==='LIVE'?'SP-API 来源（待独立授权验证）':
  '人工录入，未经过 Amazon 核验'}
-function showTime(iso:string){return new Date(iso).toLocaleString('zh-CN',{hour12:false})}
+type FinanceCursor={beforeAt:string;beforeId:string}
 
 export default function FinanceWorkspace({tenantId}:{tenantId:string}){
  const client=useQueryClient()
  const [marketplaceId,setMarketplaceId]=useState('')
- const [cursor,setCursor]=useState<{beforeAt:string;beforeId:string}|undefined>(undefined)
+ const [cursorStack,setCursorStack]=useState<Array<FinanceCursor|undefined>>([undefined])
+ const cursor=cursorStack.at(-1)
  const [eventKey,setEventKey]=useState(''),[category,setCategory]=useState('UNCLASSIFIED')
  const [amount,setAmount]=useState(''),[currency,setCurrency]=useState('USD')
  const [postedAt,setPostedAt]=useState(''),[sourceType,setSourceType]=useState('MANUAL_ENTRY')
@@ -49,7 +52,7 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
  const breakdowns=useQuery({queryKey:['finance','breakdowns',tenantId,currentId,selectedEvent],
   queryFn:()=>fetchFinanceBreakdowns(currentId,selectedEvent),
   enabled:!!currentId&&!!selectedEvent,retry:false})
- useEffect(()=>{setCursor(undefined);setSelectedEvent('');setSelectedOrder('');setSelectedCostOrder('')},[currentId])
+ useEffect(()=>{setCursorStack([undefined]);setSelectedEvent('');setSelectedOrder('');setSelectedCostOrder('')},[currentId])
  const refresh=()=>{
   void client.invalidateQueries({queryKey:['finance','events',tenantId,currentId]})
   void client.invalidateQueries({queryKey:['finance','buckets',tenantId,currentId]})
@@ -59,7 +62,7 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
   postedAt:new Date(postedAt).toISOString(),externalOrderId:orderRef.trim()||null,sourceType
  }),onSuccess:()=>{
   setMessage('财务事件已存为人工未核验来源；不代表 Amazon 已入账')
-  setFailure('');setEventKey('');setAmount('');setOrderRef('');setCursor(undefined);refresh()
+  setFailure('');setEventKey('');setAmount('');setOrderRef('');setCursorStack([undefined]);refresh()
  },onError:(e:Error)=>setFailure(e.message)})
  const reviewed=useMutation({mutationFn:(orderId:string|null)=>
   reviewFinanceEvent(selectedEvent,currentId,orderId),onSuccess:r=>{
@@ -71,7 +74,16 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
  const current:FinanceEvent|undefined=events.data?.find(e=>e.id===selectedEvent)
  const last=events.data?.at(-1)
  const next=()=>{
-  if(last){setCursor({beforeAt:last.postedAt,beforeId:last.id});setSelectedEvent('');setSelectedOrder('')}
+  // The legacy finance endpoint returns an array, not a hasMore cursor page.
+  // Exactly 50 rows means a *possible* next page; never claim one exists.
+  if(!events.isFetching&&events.data?.length===50&&last){
+   setCursorStack(stack=>[...stack,{beforeAt:last.postedAt,beforeId:last.id}])
+   setSelectedEvent('');setSelectedOrder('')
+  }
+ }
+ const previous=()=>{
+  setCursorStack(stack=>stack.length>1?stack.slice(0,-1):stack)
+  setSelectedEvent('');setSelectedOrder('')
  }
  const isValid=/^-?[0-9]{1,14}(\.[0-9]{1,6})?$/.test(amount)
  return <div className="core-workspace">
@@ -79,12 +91,13 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
     <p>订单预计销售、平台财务交易及最终结算是不同事实。这一页不会自动合并或把人工录入视为已入账；不计算虚假净利润。</p></div>
   {markets.isError?<p className="setup-error" role="alert">{String(markets.error)}</p>:
    !markets.data?.length?<p className="empty-state">暂无可访问 Marketplace，请先创建本地店铺及站点。</p>:
-   <div className="core-controls"><label className="shop-filter" htmlFor="finance-marketplace">
-    <span>Marketplace</span><select id="finance-marketplace" value={currentId}
-      onChange={e=>{setMarketplaceId(e.target.value);setCursor(undefined)}}>
-     {markets.data.map(m=><option key={m.id} value={m.id}>
-      {m.marketplaceId} · {m.region} · {m.currency}</option>)}
-    </select></label></div>}
+   <div className="core-controls">
+    <FinanceMarketplaceFilter options={markets.data} value={currentId}
+     onChange={id=>{
+      setMarketplaceId(id);setCursorStack([undefined])
+      setSelectedEvent('');setSelectedOrder('')
+     }}/>
+   </div>
   {currentId&&<FinanceExceptionQueuePanel key={currentId}
       tenantId={tenantId} marketplaceId={currentId}/>}
   {currentId&&markets.data?.find(m=>m.id===currentId)?.connectionStatus==='CONNECTED'&&
@@ -156,23 +169,20 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
    {events.isError?<p className="setup-error">{String(events.error)}</p>:
     events.isPending?<p className="empty-state">加载事件…</p>:
     !events.data?.length?<p className="empty-state">当前页无更多事件。</p>:
-    <div className="table-scroll" role="region" tabIndex={0} aria-label="财务事件">
-     <table><thead><tr><th scope="col">事件编号</th><th scope="col">来源</th>
-      <th scope="col">类别</th><th scope="col">金额</th>
-      <th scope="col">时间</th><th scope="col">关联状态</th><th scope="col">操作</th></tr></thead>
-     <tbody>{events.data.map(e=><tr key={e.id}>
-       <td>{e.eventKey}</td><td>{e.dataOrigin==='LIVE'?'SP-API':'人工未核验'}</td>
-       <td>{displayCategory(e.category)}</td><td>{e.currency} {e.amount}</td>
-       <td>{showTime(e.postedAt)}</td><td>{e.reviewStatus}</td>
-       <td><button type="button" className="text-button"
-        onClick={()=>{setSelectedEvent(e.id);setSelectedOrder('')}}>
-        关联审核</button></td></tr>)}</tbody></table>
-    </div>}
-   <div className="sandbox-actions">
-    {cursor&&<button type="button" className="refresh-button"
-     onClick={()=>setCursor(undefined)}>返回第一页</button>}
+    <FinanceEventsTable events={events.data} onReview={id=>{
+     setSelectedEvent(id);setSelectedOrder('')
+    }}/>} 
+   <div className="sandbox-actions v106-finance-pager" role="navigation"
+    aria-label="财务事件分页">
+    <span className="setup-hint">第 {cursorStack.length} 页 · 当前页 {events.data?.length??0} 条（最多 50 条）</span>
+    {cursorStack.length>1&&<button type="button" className="refresh-button"
+     onClick={previous}>上一页</button>}
+    {cursorStack.length>1&&<button type="button" className="text-button"
+     onClick={()=>{
+      setCursorStack([undefined]);setSelectedEvent('');setSelectedOrder('')
+     }}>返回第一页</button>}
     {events.data?.length===50&&<button type="button" className="refresh-button"
-     onClick={next}>下一页</button>}
+     disabled={events.isFetching} onClick={next}>尝试下一页</button>}
    </div>
    {currentId&&<section className="panel full-panel">
     <div className="panel-heading"><div><h2>订单历史成本覆盖率</h2>
