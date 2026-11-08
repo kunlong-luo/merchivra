@@ -1,5 +1,7 @@
 # Merchivra · Agent 开发策略
 
+> **V109 文档治理规则（2026-11-08）：** 先核对 [当前文档中心](docs/README.md) 和 [P0/历史矛盾审计](docs/governance/docs-audit-v109.md)。维护 README / 开发/部署/安全/CI 文档时，必须与实际 Gradle Java25/Spring Boot4.1.2、PostgreSQL18、React19、Next16 迁移候选、V108 快速 CI + 集中 Mock 里程碑策略一致；早期 PG17/Vue/Maven/未实现声明加历史标签，不能作为当前执行准则。前端/后端/安全或接口改动应更新相关现行文档，并运行 `python3 scripts/check_docs_consistency_v109.py`；该静态检查不代替生产 G1/G2/G3 或真实 Seller 授权。
+
 > **现行策略更新（2026-11-08 / V108）：** MVP P0 功能收尾优先；常规 PR 用快速测试；在功能冻结、真实联调前以及 Beta/Release 候选使用 `.github/workflows/milestone-validation.yml` 统一运行完整 PostgreSQL 18、Next.js、Chromium 和 Compose 模拟回归。任何跨租户、认证、金额、库存并发、正式 OAuth 及敏感文件变更仍必须即时执行必要的针对性安全检查。此规则覆盖文件中旧的“每次提交全套回归”描述；G1/G2/G3 业务签署和生产准入不能由测试绿色代替。详见 [现行执行计划](docs/roadmap/mvp-freeze-release-v108.md)。
 
 > 本文件是本仓库的长期开发约定，适用于自动化 Agent 和人工贡献者。
