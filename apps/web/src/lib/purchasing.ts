@@ -1,5 +1,14 @@
 import {z} from 'zod'
 import {csrfHeader} from './auth'
+import {
+ listLocalWarehousesPage,getLocalWarehouseItem,createLocalWarehouse,
+ listLocalSuppliersPage,createLocalSupplier,listLocalPurchaseOrdersPage,
+ listLocalWarehouseStockPage,getLocalWarehouseStockItem,
+ listLocalWarehouseLedgerPage,listLocalPendingReceiptsPage
+} from '../generated/purchasing-pages'
+import type {
+ ListLocalPurchaseOrdersPageStatus,ListLocalWarehouseLedgerPageMovementType
+} from '../generated/purchasing-models'
 
 const base='/api/v1/purchasing'
 const supplier=z.object({id:z.string().uuid(),code:z.string(),name:z.string(),status:z.string()})
@@ -71,28 +80,30 @@ const supplierPage=z.object({
  message:'Invalid supplier page cursor contract'
 })
 export type SupplierPage=z.infer<typeof supplierPage>
-export const fetchSuppliersPage=({limit=50,cursor=null,status='ALL',prefix=''}:{
+export const fetchSuppliersPage=async ({limit=50,cursor=null,status='ALL',prefix=''}:{
  limit?:number;cursor?:string|null;status?:'ALL'|'ACTIVE'|'ARCHIVED';prefix?:string
 }={}):Promise<SupplierPage>=>{
- const params=new URLSearchParams({limit:String(limit),status,prefix})
- if(cursor)params.set('cursor',cursor)
- return call(base+'/suppliers/page?'+params.toString(),supplierPage)
+ const response=await listLocalSuppliersPage({limit,status,prefix,cursor:cursor??undefined})
+ return supplierPage.parse(response.data)
 }
 
-export const createSupplier=(supplierCode:string,displayName:string)=>
- call(base+'/suppliers',supplier,'POST',{supplierCode,displayName})
+export const createSupplier=async (supplierCode:string,displayName:string)=>{
+ const response=await createLocalSupplier({supplierCode,displayName})
+ return supplier.parse(response.data)
+}
 // V110: a page is an API-scoped view, never a full-tenant count or audit snapshot.
 const purchaseOrdersPage=z.object({
  items:z.array(order),nextCursor:z.string().min(1).nullable(),
  hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
 })
 export type PurchaseOrdersPage=z.infer<typeof purchaseOrdersPage>
-export const fetchPurchaseOrdersPage=({limit=50,cursor=null,status='ALL',search=''}:{
+export const fetchPurchaseOrdersPage=async ({limit=50,cursor=null,status='ALL',search=''}:{
  limit?:number;cursor?:string|null;status?:string;search?:string
 }={}):Promise<PurchaseOrdersPage>=>{
- const params=new URLSearchParams({limit:String(limit),status,search})
- if(cursor)params.set('cursor',cursor)
- return call(base+'/orders/page?'+params.toString(),purchaseOrdersPage)
+ const response=await listLocalPurchaseOrdersPage({
+  limit,status:status as ListLocalPurchaseOrdersPageStatus,search,cursor:cursor??undefined
+ })
+ return purchaseOrdersPage.parse(response.data)
 }
 export const fetchPurchaseOrders=()=>call(base+'/orders',z.array(order))
 export const fetchPurchaseOrder=(id:string)=>call(base+'/orders/'+encodeURIComponent(id),detail)
@@ -109,18 +120,21 @@ const warehousesPage=z.object({
  message:'Invalid warehouses page cursor contract'
 })
 export type WarehousesPage=z.infer<typeof warehousesPage>
-export const fetchWarehousesPage=({limit=50,cursor=null,status='ALL',prefix=''}:{
+export const fetchWarehousesPage=async ({limit=50,cursor=null,status='ALL',prefix=''}:{
  limit?:number;cursor?:string|null;status?:'ALL'|'ACTIVE'|'ARCHIVED';prefix?:string
 }={}):Promise<WarehousesPage>=>{
- const params=new URLSearchParams({limit:String(limit),status,prefix})
- if(cursor)params.set('cursor',cursor)
- return call(base+'/warehouses/page?'+params.toString(),warehousesPage)
+ const response=await listLocalWarehousesPage({limit,status,prefix,cursor:cursor??undefined})
+ return warehousesPage.parse(response.data)
 }
-export const fetchWarehouseItem=(warehouseId:string)=>
- call(base+'/warehouses/item?'+new URLSearchParams({warehouseId}),warehouse)
+export const fetchWarehouseItem=async (warehouseId:string)=>{
+ const response=await getLocalWarehouseItem({warehouseId})
+ return warehouse.parse(response.data)
+}
 export const fetchWarehouses=()=>call(base+'/warehouses',z.array(warehouse))
-export const createWarehouse=(warehouseCode:string,displayName:string)=>
- call(base+'/warehouses',warehouse,'POST',{warehouseCode,displayName})
+export const createWarehouse=async (warehouseCode:string,displayName:string)=>{
+ const response=await createLocalWarehouse({warehouseCode,displayName})
+ return warehouse.parse(response.data)
+}
 // V113: paged warehouse balances and pending purchase lines are read-only,
 // tenant-scoped API views; an unseen SKU is NEVER treated as zero.
 const stockPage=z.object({
@@ -130,15 +144,16 @@ const stockPage=z.object({
  message:'Invalid warehouse stock cursor contract'
 })
 export type WarehouseStockPage=z.infer<typeof stockPage>
-export const fetchWarehouseStockPage=({warehouseId,limit=50,search='',cursor=null}:{
+export const fetchWarehouseStockPage=async ({warehouseId,limit=50,search='',cursor=null}:{
  warehouseId:string;limit?:number;search?:string;cursor?:string|null
 }):Promise<WarehouseStockPage>=>{
- const params=new URLSearchParams({warehouseId,limit:String(limit),search})
- if(cursor)params.set('cursor',cursor)
- return call(base+'/warehouse-stock/page?'+params.toString(),stockPage)
+ const response=await listLocalWarehouseStockPage({warehouseId,limit,search,cursor:cursor??undefined})
+ return stockPage.parse(response.data)
 }
-export const fetchWarehouseStockItem=(warehouseId:string,productSkuId:string)=>
- call(base+'/warehouse-stock/item?'+new URLSearchParams({warehouseId,productSkuId}),stock)
+export const fetchWarehouseStockItem=async (warehouseId:string,productSkuId:string)=>{
+ const response=await getLocalWarehouseStockItem({warehouseId,productSkuId})
+ return stock.parse(response.data)
+}
 const pendingPage=z.object({
  items:z.array(pending).max(100),nextCursor:z.string().min(1).nullable(),
  hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
@@ -146,12 +161,11 @@ const pendingPage=z.object({
  message:'Invalid pending receipt cursor contract'
 })
 export type PendingReceiptsPage=z.infer<typeof pendingPage>
-export const fetchPendingReceiptsPage=({limit=50,status='ALL',search='',cursor=null}:{
+export const fetchPendingReceiptsPage=async ({limit=50,status='ALL',search='',cursor=null}:{
  limit?:number;status?:'ALL'|'APPROVED'|'RECEIVING';search?:string;cursor?:string|null
 }={}):Promise<PendingReceiptsPage>=>{
- const params=new URLSearchParams({limit:String(limit),status,search})
- if(cursor)params.set('cursor',cursor)
- return call(base+'/pending-receipts/page?'+params.toString(),pendingPage)
+ const response=await listLocalPendingReceiptsPage({limit,status,search,cursor:cursor??undefined})
+ return pendingPage.parse(response.data)
 }
 export const fetchWarehouseStock=(warehouseId:string)=>
  call(base+'/warehouse-stock?warehouseId='+encodeURIComponent(warehouseId),z.array(stock))
@@ -163,13 +177,14 @@ const warehouseLedgerPage=z.object({
  message:'Invalid warehouse ledger cursor contract'
 })
 export type WarehouseLedgerPage=z.infer<typeof warehouseLedgerPage>
-export const fetchWarehouseLedgerPage=({warehouseId,limit=50,movementType='ALL',
+export const fetchWarehouseLedgerPage=async ({warehouseId,limit=50,movementType='ALL',
  search='',cursor=null}:{
  warehouseId:string;limit?:number;movementType?:string;search?:string;cursor?:string|null
 }):Promise<WarehouseLedgerPage>=>{
- const params=new URLSearchParams({warehouseId,limit:String(limit),movementType,search})
- if(cursor)params.set('cursor',cursor)
- return call(base+'/warehouse-ledger/page?'+params.toString(),warehouseLedgerPage)
+ const response=await listLocalWarehouseLedgerPage({warehouseId,limit,
+  movementType:movementType as ListLocalWarehouseLedgerPageMovementType,
+  search,cursor:cursor??undefined})
+ return warehouseLedgerPage.parse(response.data)
 }
 export const fetchWarehouseLedger=(warehouseId:string)=>
  call(base+'/warehouse-ledger?warehouseId='+encodeURIComponent(warehouseId),z.array(movement))
