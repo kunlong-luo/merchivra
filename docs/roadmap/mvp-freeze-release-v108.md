@@ -58,6 +58,8 @@
 
 > **A1 / V112 实施进展（2026-11-08）**：本地仓库库存流水新增 `/warehouse-ledger/page`，支持按仓库+租户隔离的时间戳/UUID 倒序游标、服务器流水类型与 SKU 字面搜索，保留签名数量、收货/操作/质检/批次来源 ID 和业务原因。仓库工作台已替换“最近 100 条”局部视图，保留兼容旧接口。索引使用 Flyway V82。专项 Java/Vitest 及完整 PG18 HTTP 脚本详见 [V112](../purchasing/warehouse-ledger-pages-v112.md)；PG18 仅在 `full_suite` / A3 运行，尚未验证通过。**Issue #62 仍需解决库存余额/待收货的 500 条上限及分页契约迁移，Issue #63 Next 正式切换未完成。**
 
+> **A1 / V113 实施进展（2026-11-08）**：仓库库存余额与已审批/部分收货明细新增全库游标接口 `/warehouse-stock/page`、`/pending-receipts/page`，工作台接入服务端按 SKU、采购单号及状态搜索；旧 500 条兼容接口保留。新增 `/warehouse-stock/item` 在人工库存操作前精确查询 tenant+warehouse+ACTIVE SKU，**未加载或请求失败不是零库存**，现有事务内 expected-on-hand 与 lot-position 校验不变。Flyway V83 索引及 [V113 专项单测/待运行 PG18 HTTP 冒烟](../purchasing/warehouse-stock-pending-pages-v113.md) 已纳入开发分支；普通 PR 快速 CI 与集中 PG18 证据独立记录。**Issue #62 中的仓库目录旧 200 条上限、OpenAPI/Orval 统一与 A3 PG18 全链验收仍然未完成，Issue #63 Next 正式切换未完成。**
+
 ## 第一批可执行 P0 核查清单
 
 | 核查对象 | 当前有证据的缺口 | 下一步 |
