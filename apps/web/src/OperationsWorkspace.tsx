@@ -2,14 +2,14 @@ import {useState} from 'react'
 import SyncTaskMonitorPanel from './SyncTaskMonitorPanel'
 import OpsRulesPanel from './OpsRulesPanel'
 import CursorPageControls from './CursorPageControls'
-import OpsAttentionControls from './OpsAttentionControls'
+import OpsFindingStatusFilter from './components/OpsFindingStatusFilter'
+import OpsFindingsTable from './components/OpsFindingsTable'
 import OpsExceptionInsightsPanel from './OpsExceptionInsightsPanel'
 import {fetchViewer} from './lib/auth'
 import {useMutation,useQueries,useQuery,useQueryClient} from '@tanstack/react-query'
 import {getMyExceptionGrants} from './lib/exception-capabilities-v84'
 import {fetchFindingsPage,fetchOpsSummary,scanOperations,changeFindingState,ruleNames,severityNames,stateNames} from './lib/operations'
 import type {FindingFilter,FindingState} from './lib/operations'
-import {formatSourceTime,sourceLabel} from './lib/core-view'
 export default function OperationsWorkspace({tenantId,onOpenFbaException}:{
  tenantId:string;onOpenFbaException:(marketplaceId:string,lineId:string)=>void
 }){
@@ -45,34 +45,22 @@ export default function OperationsWorkspace({tenantId,onOpenFbaException}:{
  <div className="ops-summary" aria-label="异常待办状态统计">{([{title:'待处理',value:summary.data?.open},{title:'处理中',value:summary.data?.acknowledged},{title:'已处理',value:summary.data?.done},{title:'条件已消失',value:summary.data?.cleared},{title:'暂缓提醒中',value:summary.data?.snoozed}]).map(v=><div key={v.title}><span>{v.title}</span><strong>{summary.isPending||summary.isError?'—':v.value??0}</strong></div>)}</div>
  <section className="panel" aria-label="运营巡检与待办">
  <div className="panel-heading"><div><h2>智能运营待办</h2><p>复用 V10 队列，识别 SKU 映射、库存、退款、FBA 货件复核、Ads 日报待审核及 V77 本地处理证据变化/超期；同一来源不重复生成待办。</p></div><span className="status-chip chip-muted">仅建议 · 不自动改动业务事实</span></div>
- <div className="ops-toolbar"><label className="shop-filter"><span>查看范围</span><select aria-label="筛选运营待办状态" value={filter} onChange={e=>{setFilter(e.target.value as FindingFilter);setCursors([null])}}><option value="ACTIVE">所有活跃（含暂缓）</option><option value="ACTIONABLE">当前需要处理（不含暂缓）</option><option value="ALL">全部状态</option></select></label>
+ <div className="ops-toolbar">
+  <div className="v105-ops-filter">
+   <OpsFindingStatusFilter value={filter} onChange={next=>{
+    setFilter(next);setCursors([null])
+   }}/>
+  </div>
  <button className="primary-button" disabled={scan.isPending} onClick={()=>scan.mutate()}>{scan.isPending?'巡检中…':'立即巡检当前租户'}</button>
  <button className="refresh-button" onClick={refresh}>刷新待办</button></div>
  <div className="ops-rule-note">规则：待映射 Listing、FBA 数据不完整、可售库存 ≤ 部署阈值（默认 3）、部分/全部退款订单、FBA 本地货件复核、Ads 未授权日报待审核、采购/FBA 人工处理超期与证据重新核对。新规则由站点配置控制，定时巡检需部署者显式开启。</div>
  {message&&<div className="panel-caption" role="status">{message}</div>}{failure&&<div className="setup-error" role="alert">{failure}</div>}
  {findings.isPending?<div className="empty-state" role="status">正在读取运营待办…</div>:findings.isError?<div className="core-query-error" role="alert"><strong>读取运营待办失败</strong><p>{findings.error instanceof Error?findings.error.message:'服务端暂不可用'}</p><button className="refresh-button" onClick={refresh}>重试</button></div>:
  !findings.data?.items.length?<div className="empty-state">当前条件下没有待办。首次使用点击“立即巡检”；没有记录不等于真实 Amazon 经营无异常。</div>:
- <div className="table-scroll" role="region" tabIndex={0} aria-label="可水平滚动的运营待办列表"><table><thead><tr>{['级别','异常类型','关联来源','来源','状态','上次发现','Owner / 提醒','操作'].map(h=><th key={h}>{h}</th>)}</tr></thead>
- <tbody>{findings.data.items.map(i=><tr key={i.id}>
- <td><span className={`status-chip ${i.severity==='CRITICAL'?'chip-amber':'chip-muted'}`}>{severityNames[i.severity]}</span></td>
- <td className="strong-cell">{ruleNames[i.ruleCode]}</td><td className="small-cell">{i.sourceKey}</td>
- <td><span className={`status-chip ${i.dataOrigin==='MOCK'?'chip-amber':'chip-muted'}`}>{sourceLabel(i.dataOrigin)}</span></td>
- <td>{stateNames[i.state]}</td><td className="small-cell">{formatSourceTime(i.lastSeenAt)}</td>
- <td><OpsAttentionControls finding={i} tenantId={tenantId}
-  userId={viewer.data?.userId??''}
-  canAssign={!isFba(i.ruleCode)||fbaCan(i.marketplaceId,'assign')}
-  canReview={!isFba(i.ruleCode)||fbaCan(i.marketplaceId,'review')}/></td>
- <td><div className="ops-row-actions">
- {(i.ruleCode==='FBA_PO_EVIDENCE_CHANGED'||
-   i.ruleCode==='FBA_PO_EXCEPTION_OVERDUE')&&
-  <button type="button" className="text-button"
-   onClick={()=>onOpenFbaException(i.marketplaceId,i.sourceKey)}>
-   查看 FBA 原处理单</button>}
- {(i.state==='OPEN'||i.state==='ACKNOWLEDGED')&&<button className="text-button" disabled={!!editing||(isFba(i.ruleCode)&&!fbaCan(i.marketplaceId,'resolve'))}
-  onClick={()=>change.mutate({id:i.id,state:'DONE'})}>标记已处理</button>}
- {(i.state==='DONE'||i.state==='ACKNOWLEDGED')&&<button className="text-button" disabled={!!editing||(isFba(i.ruleCode)&&!fbaCan(i.marketplaceId,'review'))}
-  onClick={()=>change.mutate({id:i.id,state:'OPEN'})}>重新打开</button>}
- </div></td></tr>)}</tbody></table></div>}
+ <OpsFindingsTable items={findings.data.items}
+  tenantId={tenantId} userId={viewer.data?.userId??''} editing={!!editing}
+  canFba={fbaCan} onOpenFbaException={onOpenFbaException}
+  onChangeState={(id,state)=>change.mutate({id,state})}/>} 
  {!!findings.data&&<CursorPageControls label="运营异常待办" page={cursors.length}
   hasMore={findings.data.hasMore} nextCursor={findings.data.nextCursor}
   busy={findings.isFetching}
