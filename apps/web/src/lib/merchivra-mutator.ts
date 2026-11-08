@@ -31,8 +31,16 @@ export async function merchivraFetch<T>(url:string,options:RequestInit={}):Promi
  }
  if(response.status===204)return {data:undefined,status:204,headers:response.headers} as T
  const contentType=response.headers.get('content-type')??''
- const data=contentType.includes('application/json')
-  ?await response.json():await response.text()
+ // Some API test doubles omit Content-Type even when returning JSON.
+ // For an absent header, parse valid JSON but preserve plain text fallbacks.
+ // Explicit non-JSON media types remain text, avoiding hidden coercions.
+ const data=contentType.includes('application/json')||contentType.includes('+json')
+  ?await response.json()
+  :contentType===''?await (async()=>{
+    const raw=await response.text()
+    try{return JSON.parse(raw) as unknown}catch{return raw}
+   })()
+  :await response.text()
  // Orval v8 custom Fetch response shape is {data,status,headers},
  // not the raw JSON body (otherwise typed callers silently receive wrong data).
  return {data,status:response.status,headers:response.headers} as T
