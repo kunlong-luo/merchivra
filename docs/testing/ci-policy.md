@@ -1,6 +1,6 @@
 # TEST-003 · 分层 CI 与集中里程碑测试（V108 / 2026-11-08）
 
-**这是现行策略**；详细阶段与验收边界以 [V108 MVP 冻结计划](../roadmap/mvp-freeze-release-v108.md) 为准。文档后半部分仅作历史参考。用户决定先完成剩余 P0，再集中执行完整 Mock 集成与上线测试；不是不测试，也不是正式 Amazon 生产验收已通过。
+**这是现行策略（V108 已实际落地，V109 文档核对）**；首次 [集中合成基线 #42448160593](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593) 已通过；常规 PR 快速 CI 不自动代表新的业务代码通过 PG18/Chromium。详细阶段与验收边界以 [V108 MVP 冻结计划](../roadmap/mvp-freeze-release-v108.md) 为准。文档后半部分仅作历史参考。用户决定先完成剩余 P0，再集中执行完整 Mock 集成与上线测试；不是不测试，也不是正式 Amazon 生产验收已通过。
 
 ## 实际 GitHub Actions 触发
 

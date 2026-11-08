@@ -2,7 +2,7 @@
 
 > **现行执行基线：V108 / 2026-11-08。** 项目维护者已决定转向 **补齐 P0 → 功能冻结 → 集中回归 → 本地真实 Seller/Ads 验收 → Beta/正式发布**，并缩减每次代码提交的重复重型测试。权威路线及上线准入见 **[V108 MVP 收尾与集中验收计划](roadmap/mvp-freeze-release-v108.md)**；下面 V92 及更早声称“当前”的内容均是**历史快照**，不作为当前 P0 清单。当前 main 基线为合并的 V107；Amazon 生产授权/写入仍关闭，GitHub Pages 是合成数据演示。
 >
-> **现在执行 A0**：把文档/CI/一键里程碑验证落地；**下一批 A1**：从采购单、供应商和本地仓库流水的历史页与数据容量断点入手，随后收敛 Next.js 16 正式迁移。**任何 Mock CI 绿灯都不等于真实 Amazon/银行或生产批准。**
+> **A0 已落地（V108 PR #64）**：完成快速 CI 与单独的里程碑回归工作流，首次 [V108 隔离基线](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593) 已通过。**当前 A1**：优先 [P0 #62](https://github.com/kunlong-luo/merchivra/issues/62) 采购/供应商/仓库完整历史与服务端游标，然后 [P0 #63](https://github.com/kunlong-luo/merchivra/issues/63) Next.js 16 正式切换。此后的文档现况由 [V109 文档审计](governance/docs-audit-v109.md) 统一索引；**Mock CI 不等于真实 Amazon/银行或生产批准**。
 
 ---
 

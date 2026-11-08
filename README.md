@@ -3,10 +3,12 @@
 > **V108 active release plan (Nov 8, 2026):** finish remaining P0 workflows, freeze MVP, run one-click consolidated PostgreSQL/Chromium/Compose regression, then maintainer-local real Seller/Ads read-only integration before Beta/security release approval. Ordinary PRs run fast checks; high-risk authorization, money and stock mutations retain focused immediate tests. See [V108 plan](docs/roadmap/mvp-freeze-release-v108.md) and [current CI policy](docs/testing/ci-policy.md). Public Pages remains synthetic-only; the ERP is not approved for production.
 
 > **Next.js 16 preview (V99):** A real App Router bridge is being validated against the existing authenticated ERP modules without replacing the current Vite/Nginx production deployment. In `apps/web`, use `npm ci`, `npm run build:next`, and `npm run dev:next` (port 3001; requires the Spring Boot backend running on 8080). [Migration gates](docs/architecture/next16-ab-migration-v99.md). GitHub Pages remains a separate synthetic-only static site.
-\n> **Public static GitHub Pages showcase:** [view read-only synthetic UI](https://kunlong-luo.github.io/merchivra/) (available only once Pages is enabled). This is **not** a hosted ERP: no login, database, Amazon OAuth, bank integration or writes. [Deployment and activation guide](docs/deployment/github-pages-public-demo-v98.md).\n
+
+> **Public static GitHub Pages showcase:** [view read-only synthetic UI](https://kunlong-luo.github.io/merchivra/) (available only once Pages is enabled). This is **not** a hosted ERP: no login, database, Amazon OAuth, bank integration or writes. [Deployment and activation guide](docs/deployment/github-pages-public-demo-v98.md).
+
 **Open-source, self-hosted Amazon Seller ERP** — a Java 25 / Spring Boot 4.1 backend, React 19 / TypeScript frontend, and PostgreSQL 18 database.
 
-[简体中文](README.zh-CN.md) · [Detailed installation, deployment & removal guide (中文)](docs/deployment/local-spark-db.md) · [Architecture](docs/architecture/overview.md) · [Roadmap](docs/roadmap.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+[简体中文](README.zh-CN.md) · [Detailed installation, deployment & removal guide (中文)](docs/deployment/local-spark-db.md) · [Architecture](docs/architecture/overview.md) · [Documentation hub](docs/README.md) · [Current MVP plan](docs/roadmap/mvp-freeze-release-v108.md) · [Roadmap history](docs/roadmap.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
 
 > **Pre-alpha — localhost/testing only, not production-ready.** The actual React frontend, authenticated local business workflows, and isolated PostgreSQL 18 migrations are implemented and tested. Live Amazon Seller OAuth/SP-API is **disabled by default and not yet validated with real seller credentials**. Mock data is never presented as live Amazon data.
 
@@ -141,7 +143,7 @@ docker compose --env-file .env -f deploy/compose.spark-db.yaml down --remove-orp
 
 **However, the full ERP is not production complete**: live Seller authorization, real Amazon Seller data, third-party logistics/supplier confirmation, production file security and full cross-tenant/business E2E require additional validation. Code and API screens are not evidence of a completed real-seller integration.
 
-Recent **Java 25 tests, React/Vitest/typecheck/build, real PostgreSQL 18 Flyway migrations and Spring Boot startup** all succeeded in [GitHub Actions run 41270021997](https://github.com/kunlong-luo/merchivra/actions/runs/41270021997). This does not imply the user's particular spark-db stack was accessed or changed.
+The [V108 consolidated synthetic validation run 42448160593](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593) passed the Java/Next/Vite, PostgreSQL 18/Flyway, Mock Compose and browser gates for its particular commit. Ordinary PRs now run **fast checks only**. Neither result verifies private spark-db data, real Amazon OAuth or a production release. See the [documentation hub](docs/README.md) for authoritative and archived references.
 
 ## Tests and troubleshooting
 

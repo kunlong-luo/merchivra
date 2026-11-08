@@ -1,5 +1,7 @@
 # Development guide
 
+> **Current developer guide (V109, 2026-11-08).** Default private web runtime remains React/Vite/Nginx; Next.js 16.4.5 App Router is implemented but not yet production cut over. See the [current MVP plan](roadmap/mvp-freeze-release-v108.md), [current CI policy](testing/ci-policy.md) and [documentation hub](README.md). Java 25 / Spring Boot 4.1.2 / **Gradle**, PostgreSQL **18**, Node 24 and React 19 are the authoritative versions. Do not use the 2026-10-30 PostgreSQL 17 or Vue-era test notes below as current requirements. Seller/Ads live authorization and writes remain disabled.
+
 ## Prerequisites
 **Java 25 LTS**, Gradle 9.2.1（项目内 Gradle Wrapper）, **Node.js 24.11+ (24.x)**, npm, Docker Compose. Frontend local Node selection: `cd apps/web && nvm use`. The same major versions are used in GitHub Actions and the Docker multi-stage builds.
 
@@ -16,7 +18,9 @@ The web now requires local Session login; see [first-run authentication](securit
 ## Run independently
 ```bash
 # Start PostgreSQL/Redis using docker compose if desired
-docker compose --env-file .env -f deploy/compose.yaml up -d postgres redis
+docker compose --env-file .env -f deploy/compose.yaml up -d postgres
+# Redis is OPTIONAL; start it only when actively testing Redis-backed Session/limits:
+# docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache up -d redis
 
 # Shell 1: these environment variables must be inherited by the Java process.
 export DB_HOST=127.0.0.1 DB_PORT=5432 DB_NAME=merchivra DB_USER=merchivra
@@ -34,9 +38,9 @@ npm run dev
 
 Vite proxies `/api` to the local Spring Boot API. The API reads `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` from environment (the Compose server receives the appropriate values).
 
-## Fast tests during M0–M2
+## V108 development cadence: fast PR tests, centralized milestone regression
 
-Current CI deliberately remains lightweight: backend unit tests, frontend typecheck, Vitest and build. Playwright/E2E, multi-browser testing, CI Docker stack and coverage gates are deferred until the core ERP flows are mostly built. See [CI policy](testing/ci-policy.md).
+The current `ci.yml` automatically runs Gradle tests, Orval contract drift detection, TypeScript, Vitest, Vite build, Next.js typecheck and static Compose security configuration checks. It **skips** the full PostgreSQL 18/HTTP/recovery job and Next production build/HTTP for ordinary pushes and PRs. Full Java/Next/PG18, Chromium (Vite+Next) and disposable Compose tests run together using [MVP milestone full validation](https://github.com/kunlong-luo/merchivra/actions/workflows/milestone-validation.yml) on the selected `main` commit. [Current policy](testing/ci-policy.md) still demands **immediate focused tests** for tenant/auth, Seller secrets, CSRF, money, stock movements, approvals, idempotency and other high-risk mutations. The [V108 baseline](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593) passed against disposable fixtures, not a live account.
 
 ## Tests
 ```bash
@@ -44,32 +48,32 @@ Current CI deliberately remains lightweight: backend unit tests, frontend typech
 cd apps/web && npm ci && npm run typecheck && npm run test && npm run build
 ```
 
-The real npm-registry-resolved `apps/web/package-lock.json` is checked in (lockfile v3). CI and the Node 24 Docker build both use **`npm ci`** rather than resolving dependencies afresh. This improves dependency repeatability but does not guarantee production readiness; Gradle's managed Spring Boot dependency BOM remains pinned by Spring Boot 4.1.2. No new E2E/coverage gates were added. See [toolchain upgrade record](architecture/stack-upgrade-2026-10-30.md).
+The real npm-registry-resolved `apps/web/package-lock.json` is checked in (lockfile v3). CI and the Node 24 Docker build both use **`npm ci`** rather than resolving dependencies afresh. This improves dependency repeatability but does not guarantee production readiness; Gradle's managed Spring Boot dependency BOM remains pinned by Spring Boot 4.1.2. Existing Chromium/CDP, PG18/restore and Compose suites are **milestone/manual**, not automatically required on every PR. See [current CI policy](testing/ci-policy.md) and [historical toolchain upgrade](architecture/stack-upgrade-2026-10-30.md).
 
 ## Warnings
-The M0/M1 application exposes health and ping endpoints plus an opt-in synthetic read-only demo. The demo endpoint is OFF by default and Compose enables it locally. There is now an initial **local Session/CSRF and OWNER tenant scope**, but no comprehensive production IAM or Amazon credential policy. It remains intended only for localhost development. Do not expose it to the internet or supply real Amazon credentials.
+The application now has multiple local business workbenches, tenant-/Marketplace-scoped Session/CSRF APIs, staff/read roles and audited local purchasing/finance operations in addition to an opt-in synthetic demo. Demo is OFF by default; only explicitly disposable local Compose fixtures may enable it. Production IAM, real Seller OAuth/Ads permissions and live data have **not** been approved. Use localhost/disposable infrastructure only; do not publicly expose an authenticated instance or provide live Amazon credentials.
 
-## Authenticated core read workspace (2026-10-30)
+## Authenticated core workspaces (current) and historical M2 origin
 
 After logging in, the default page is **核心业务数据**. It reads normalized PostgreSQL `seller_marketplace`, `marketplace_listing`, `sales_order` and `fba_inventory_observation` with the active tenant resolved by the backend Session. Initially, a newly bootstrapped Owner typically has **no marketplaces**, so the empty state is correct. The old tabs continue to display synthetic Mock data only. See [implemented read APIs](api/core-read-api.md) and [Agent policy](../Agent.md).
 
-The core queries are intentionally read-only and limited to the first 50 (up to 100 on API) records; cursor pagination, authenticated Seller connection and real Amazon/SP-API ingestion are pending. Do not use the local demo as evidence that a multi-tenant production system is validated.
+This paragraph originally described an M2 **2026-10-30 snapshot** and is superseded: after V86–V92 the core Orders, Listing and FBA views include tenant/Marketplace scoped server keyset search/pagination, while other local purchasing reads still contain real `LIMIT 100/200/500` truncation problems. Those P0 gaps are tracked in [the audited source list](testing/p0-purchasing-read-cap-audit-v108.md) and [Issue #62](https://github.com/kunlong-luo/merchivra/issues/62). No pagination capability is evidence of authorized live Amazon ingestion. The Next.js 16 workbenches remain a pre-production migration until [Issue #63](https://github.com/kunlong-luo/merchivra/issues/63) is complete.
 
 ## Local Seller setup (not Amazon authorization)
 
 The default authenticated **核心业务数据** workspace now includes a local Seller Account setup form and a small audit list. Creates a server-generated `UNCONFIGURED` placeholder and selected Marketplace metadata, never a real Seller authorization or token. All writes require Session + CSRF. PostgreSQL Flyway V4 adds setup labels, request idempotency and tenant-scoped local audit. See [local setup API](api/local-seller-setup.md).
 
-**Verification update (2026-10-30):** [一次性 PostgreSQL 17 冒烟验证](https://github.com/kunlong-luo/merchivra/actions/runs/41059134533) successfully launched Java 25 / Spring Boot 4 against a disposable PostgreSQL 17 service, applied Flyway V1–V4 and exercised the session/CSRF/account/marketplace/audit/404 path. This one-shot workflow deleted itself on success. **Still not verified:** concurrent transaction races, real Docker Compose stack and browser flows. Early CI remains Java unit tests + TypeScript/Vitest/Vite only.
+**Archived Oct 30 historical test (NOT the current database requirement):** [early disposable PG17 run](https://github.com/kunlong-luo/merchivra/actions/runs/41059134533) applied Flyway V1–V4. Since that historical test, the active database target is **PostgreSQL 18** and full isolated Flyway/Compose/Chromium tests have run; the current [V108 complete synthetic baseline](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593) passed. Neither result verifies the maintainer's real spark-db or Amazon credentials.
 
 **Compose root dotenv:** when invoking a Compose file under `deploy/` from the repository root, always pass `--env-file .env`. Without this explicit flag, Compose may search for `.env` in the Compose project directory rather than reading the repo-root file shown in these docs.
 
 ## Full simulated source-to-query chain
 
-The explicit [TEST-004 simulated SP-API smoke](testing/mock-full-chain.md) exercises login, local setup, mocked paginated Orders/Listing/FBA, tenant-scoped SQL reads, audit/idempotency and backend restart through the Nginx proxy. Run the separate manual Compose workflow or the localhost-only Python script against disposable data. The daily CI remains lightweight. No live Amazon Seller/Finances credentials are used.
+The explicit [TEST-004 simulated SP-API smoke](testing/mock-full-chain.md) exercises login, local setup, mocked paginated Orders/Listing/FBA, tenant-scoped SQL reads, audit/idempotency and backend restart through the Nginx proxy. Run the separate manual Compose workflow or the localhost-only Python script against disposable data. The full disposable Compose workflow is now a manual or [milestone-called](testing/ci-policy.md) workflow, not automatic for every feature PR. No live Amazon Seller/Finances credentials are used.
 
 ### Verified Compose mock integration
 
-[Compose 全链路成功运行（2026-10-30）](https://github.com/kunlong-luo/merchivra/actions/runs/41061679196) built and ran the full Nginx + Java 25/Spring Boot 4 + PostgreSQL 17 Compose stack using ephemeral credentials, exercised authenticated US/DE Mock operations and tenant-scoped Listing/Order/FBA queries, and verified persistence across a backend restart plus logout/session invalidation. The standalone workflow is manual/on-workflow-file change only, not part of the regular CI gate. Follow [TEST-004](testing/mock-full-chain.md); live Amazon OAuth/Finances, multi-user ACL and production readiness are **not** verified.
+**Historical 2026-10-30 PG17-only evidence:** [early Compose run](https://github.com/kunlong-luo/merchivra/actions/runs/41061679196) built a disposable Nginx/Java/PG17 stack and validated initial US/DE Mock flows. **Current** CI Compose runs use **PostgreSQL 18** and include additional workflows; [V108 full milestone run](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593) is the latest confirmed synthetic end-to-end reference. Follow [TEST-004](testing/mock-full-chain.md); live Amazon OAuth/Finances, actual third-party data and production readiness are **not** verified.
 
 ### V6 restart-resumable Mock page validation
 
@@ -112,7 +116,7 @@ cd apps/server
 ./gradlew -PstrictCoverage check  # optional strict >=83% total LINE coverage target
 ```
 
-On Windows use `gradlew.bat`. Wrapper Gradle distribution is checksum-pinned in `gradle/wrapper/gradle-wrapper.properties`. The CI runs the equivalent Gradle 9.2.1 tasks under Temurin 25, plus real PostgreSQL 18/Flyway and React checks. The strict coverage target is a **future quality gate**: enable it when the test suite has reached the required baseline, do not claim it has passed unless the specific command did. No Maven files are needed to build the backend.
+On Windows use `gradlew.bat`. Wrapper Gradle distribution is checksum-pinned in `gradle/wrapper/gradle-wrapper.properties`. The automatic CI runs Gradle tests under Temurin 25 and frontend checks; full disposable PostgreSQL 18/Flyway is run using the V108 manual/milestone workflow, not on every PR. The strict coverage target is a **future quality gate**: enable it when the test suite has reached the required baseline, do not claim it has passed unless the specific command did. No Maven files are needed to build the backend.
 
 ## Optional Redis 8 (2026-11-01)
 
