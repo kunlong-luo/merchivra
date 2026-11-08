@@ -62,6 +62,8 @@
 
 > **A1 / V114 实施进展（2026-11-08）**：新增可搜索、租户/过滤绑定 `/warehouses/page` 和精确 `/warehouses/item`，采购收货、调拨、ASN/批次/异常等仓库下拉选择改为全库游标组件，不再被旧 `LIMIT 200` 阻断。另新增 [采购读取域 OpenAPI/Orval V114](../purchasing/warehouse-directory-orval-v114.md)：V110–V114 八项读取 API 采用 Orval v8 生成客户端 + Zod 响应验证，按构建/测试前置钩子生成而非手工签入；采购写入及附属子模块尚未全部迁移，不能视为整个采购域 Orval 工作完成。225 仓库专项 JUnit/Vitest 与一次性 PG18 HTTP（含第 201 仓人工库存 COUNT）已列入 `full_suite`，**未执行的 PG18 不记为通过**；Next 正式切换与真实 Amazon 授权仍未放行。
 
+> **A1 / V115 实施进展（2026-11-08）**：完成 V114 采购 OpenAPI 的核心写入扩展：供应商/仓库/PO DRAFT、提交/审批/取消、真实收货、仓库库存操作及采购明细查询改由 Orval 生成客户端发送，原币金额字符串与 Session-CSRF/后端审批和库存事务锁保持不变。只读仓库标签新增最多 100 个 ID 的租户作用域批量解析，解决第 201 个仓库在 ASN、QC、收货与批次来源链中只显示 UUID；V48 FIFO/FEFO 与 V49 批次操作继续补齐精确 SKU 余额查询，UNKNOWN **不得**被当作零库存。详见 [V115 变更、专项测试和未执行项](../purchasing/core-writes-orval-warehouse-labels-v115.md)。独立采购附属模块尚未全部迁移，A3 PG18 验收仍需明确执行，Next 正式切换 #63 与真实 Seller 授权继续保持关闭。
+
 ## 第一批可执行 P0 核查清单
 
 | 核查对象 | 当前有证据的缺口 | 下一步 |
