@@ -39,6 +39,17 @@ export default defineConfig({
       override:{mutator:{path:'./src/lib/merchivra-mutator.ts',name:'merchivraFetch'}}
     }
   },
+  purchasingPages:{
+    input:{target:'./openapi/purchasing-pages.json'},
+    output:{
+      target:'./src/generated/purchasing-pages.ts',
+      schemas:'./src/generated/purchasing-models',
+      client:'react-query',
+      httpClient:'fetch',
+      mode:'single',
+      override:{mutator:{path:'./src/lib/merchivra-mutator.ts',name:'merchivraFetch'}}
+    }
+  },
   operations:{
     input:{target:'./openapi/operations-v67.json'},
     output:{
