@@ -1,5 +1,7 @@
 # V99 — Next.js 16.4.5 A+B implementation bridge
 
+> **状态修订（V109 / 2026-11-08）**：本页记录 V99 初期 Next App Router 技术桥接及 V100 增量，**不应被误读为 Next 已正式切流**。目前项目继续以 Vite/Nginx 作为默认私有 ERP Web 交付，Next 16.4.5 的真实 App Router 可编译并通过合成 Chromium，但真实同源 Session/CSRF/敏感 OAuth 代理、Docker Node runtime、TLS 与 Vite 回退必须完成 [P0 #63](https://github.com/kunlong-luo/merchivra/issues/63) 后才允许正式切换。现行优先级见 [V108 MVP 计划](../roadmap/mvp-freeze-release-v108.md)。
+
 The production V98 React/Vite/Nginx application remains unchanged and fully
 operational while the Next.js App Router migration is validated.
 
