@@ -789,9 +789,9 @@ async function main() {
           "document.querySelector('[role=\\\"alertdialog\\\"]')?.textContent?.includes('确认取消采购单')",
           'V104 Base UI alert dialog visible')
         assert.equal(v104CancelWrites,0,'opening a dialog must not mutate purchase orders')
-        assert.equal(await evaluate(send,
-          "!!document.activeElement?.closest('.v104-confirm-popup')"),
-          true,'V104 action dialog should capture keyboard focus')
+        await waitFor(send,
+          "!!document.activeElement?.closest('.v104-confirm-popup')",
+          'V104 action dialog should capture keyboard focus after mounting')
         await screenshot(send,'v104-purchase-confirm-360.png')
         await evaluate(send,"document.querySelector('.v104-confirm-cancel')?.click()")
         await waitFor(send,
