@@ -1,6 +1,6 @@
 # 部署与卸载指南：内置 PostgreSQL 18 或复用 spark-db
 
-> 最后核对：2026-11-01。Merchivra 仍为 **pre-alpha**，请先在本机或隔离的测试环境使用。Amazon Seller OAuth / 真实 SP-API 默认关闭，真实卖家授权由使用者在所有核心功能开发完成后自行在本地测试。
+> **文档基线核对：2026-11-08（V109）。** 下述 `deploy/compose.yaml` 与 `deploy/compose.spark-db.yaml` 目前部署的是 **React/Vite 静态构建 + Nginx**、Spring Boot 和 PostgreSQL 18；已实现的 Next.js 16 App Router 尚未正式替换 Web 容器（[Next 正式切换 P0 #63](https://github.com/kunlong-luo/merchivra/issues/63)）。仓库仍为 **pre-alpha**，只在本机或隔离测试环境使用。Amazon Seller/Ads 真实 OAuth、SP-API 出站与写入默认关闭。**`compose.production.yaml` 只是配置 overlay，不提供 TLS、外部凭据管理、自动备份或公网发布批准。** [现行 MVP 计划](../roadmap/mvp-freeze-release-v108.md) · [生产安全阻塞项](../testing/release-readiness-v68.md)。
 
 ## 一、架构与运行服务数
 
@@ -12,7 +12,7 @@ Merchivra 目前是 **三层服务**，而不是三个必须独立采购的数�
 | 后端 | `server`（Java 25 / Spring Boot 4.1.2） | 登录、业务 API、Flyway、模拟工作流 | `127.0.0.1:8080` |
 | 数据库 | `postgres` **或**现有 `spark-postgres` | PostgreSQL **18**，库存、订单、审计和证明文件 | 内置不发布端口；spark-db 原有 `127.0.0.1:5432` |
 
-当前仓库的 Redis 只作为可选的未来缓存预留，**业务代码无需 Redis 才能启动**，内置 Compose 通过 `--profile optional-cache` 才会启动它。用户 `spark-db` 内的 `spark-redis`（Redis 8）、InfluxDB 3、InfluxDB Explorer **不需要**启动给 Merchivra 使用，也不要在 Merchivra 的卸载过程中管理或删除。
+当前仓库**已经实现可选 Redis 8 集成**：经配置可用于共享 Spring Security Session/CSRF 与分布式 SP-API 额度准入，而不是仅仅“未来缓存预留”；默认关闭，单实例本地开发无需 Redis 也能启动。内置 Compose 仅在 `--profile optional-cache` 时启动 Redis。复用 spark-db 的 `spark-redis` 时需显式配置，且现有 `allkeys-lru` 不适合作为生产 Session/限流的可靠存储，必须评审 noeviction 或独立实例；不能误将 Redis 缓存作为 PostgreSQL 的业务事实。详见 [Redis 8 已实现功能与风险](redis-session-spapi-v53.md)。用户原有 InfluxDB/Explorer 不由 Merchivra 启停或删除。
 
 ## 二、方式 A：一条命令启动三个独立容器（内置数据库）
 
