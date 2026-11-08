@@ -98,6 +98,14 @@ const server = createServer(async (req, res) => {
   if(url.pathname==='/api/v1/auth/csrf')
     return respond(res,{token:'V104_DISPOSABLE_BROWSER_CSRF_ONLY_12345',
       headerName:'X-CSRF-TOKEN'})
+  // V106 synthetic finance exception scan has a valid read-only response,
+  // not a generic [] that falsely renders a Zod parse error on screenshot.
+  if([market,v106OtherMarket].some(id=>
+    url.pathname===`/api/v1/finance/marketplaces/${id}/exceptions`))
+    return respond(res,{
+      scannedSourceTransactions:0,scannedSettlements:0,scannedOrders:0,
+      partialScan:false,issueCount:0,findings:[]
+    })
   // Finance: real 50-row server cursor shape, not a fake client paginator.
   // Every row and Marketplace is synthetic; no Amazon credentials or calls.
   if(url.pathname===`/api/v1/finance/marketplaces/${market}/events`){
