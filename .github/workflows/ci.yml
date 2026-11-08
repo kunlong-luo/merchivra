@@ -259,6 +259,7 @@ jobs:
           python3 scripts/smoke_purchase_orders_page_v110.py
           python3 scripts/smoke_supplier_pages_v111.py
           python3 scripts/smoke_warehouse_ledger_pages_v112.py
+          python3 scripts/smoke_warehouse_read_pages_v113.py
           python3 scripts/smoke_receipt_operational_pages_v93.py
           python3 scripts/smoke_quality_returns_findings_v94.py
           python3 scripts/smoke_ops_lot_pagination_v95.py
