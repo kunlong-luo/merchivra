@@ -134,12 +134,10 @@ public class WarehouseInventoryService {
         List<Object> args=new ArrayList<>();
         args.add(tenant);
         args.addAll(ids);
-        return jdbc.query("""
-            SELECT id,warehouse_code,display_name,status
-            FROM erp_local_warehouse WHERE tenant_id=?
-            AND id IN ("""+placeholders+"""
-            ) ORDER BY warehouse_code ASC,id ASC
-            """,WarehouseInventoryService::warehouse,args.toArray());
+        String sql="SELECT id,warehouse_code,display_name,status "
+            +"FROM erp_local_warehouse WHERE tenant_id=? AND id IN ("
+            +placeholders+") ORDER BY warehouse_code ASC,id ASC";
+        return jdbc.query(sql,WarehouseInventoryService::warehouse,args.toArray());
     }
 
     /** Exact lookup for deep-linked or previously saved selections. */
