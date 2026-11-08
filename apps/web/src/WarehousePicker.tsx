@@ -35,8 +35,7 @@ export default function WarehousePicker({tenantId,id,label,value,onChange,exclud
   if(value&&(value===excludeId||exact.isError||
     (exact.isSuccess&&!known)))onChange('')
  },[value,excludeId,exact.isError,exact.isSuccess,known,onChange])
- function apply(e:FormEvent){
-  e.preventDefault()
+ function apply(){
   const next=draft.trim().toUpperCase()
   if(!/^[A-Z0-9_-]{0,60}$/.test(next))return
   setPrefix(next);setCursors([null]);onChange('')
@@ -45,16 +44,17 @@ export default function WarehousePicker({tenantId,id,label,value,onChange,exclud
   setDraft('');setPrefix('');setCursors([null]);onChange('')
  }
  return <div className="core-tools" aria-label={label+' 全库仓库选择'}>
-  <form onSubmit={apply} className="v107-search-form">
+  <div className="v107-search-form">
    <label htmlFor={id+'-search'}>仓库编号前缀（服务器全库）</label>
    <input id={id+'-search'} type="search" value={draft}
     maxLength={60} pattern="[A-Za-z0-9_-]*" autoComplete="off"
-    placeholder="例如 WH-" onChange={e=>setDraft(e.target.value)}/>
-   <button type="submit" className="refresh-button"
-    disabled={page.isFetching}>查询</button>
+    placeholder="例如 WH-" onChange={e=>setDraft(e.target.value)}
+    onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();apply()}}}/>
+   <button type="button" className="refresh-button"
+    onClick={apply} disabled={page.isFetching}>查询</button>
    {(draft||prefix)&&<button type="button" className="text-button"
     onClick={clear}>清除筛选</button>}
-  </form>
+  </div>
   <label htmlFor={id}>{label}</label>
   <select id={id} value={value}
    disabled={page.isPending||page.isFetching||page.isError||
