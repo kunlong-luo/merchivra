@@ -4,6 +4,8 @@
 
 ## 基线与状态口径
 
+> **V109 进度核对（2026-11-08）**：本计划在 V108 PR #64 已合并，A0 的 CI/文档策略已经实施；[首次完整合成回归 #42448160593](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593) 已通过。当前进入 A1 的审计/实现排期，尚未把 [采购完整分页 #62](https://github.com/kunlong-luo/merchivra/issues/62) 或 [Next 正式切换 #63](https://github.com/kunlong-luo/merchivra/issues/63) 标记为完成。文档问题修订与后续缺口见 [V109 文档审计](../governance/docs-audit-v109.md)。此补充不改变 V108 当时 V107 代码基线的历史含义。
+
 - 基线为 **V107 合并后的 main**：Java 25 / Spring Boot 4.1.x / Gradle Wrapper / PostgreSQL 18 / React 19 / Next.js 16.4.5 App Router（仍是待切换的正式部署候选）/ Vite+Nginx（仍作为当前正式打包方案）/ TanStack Query / Orval / Zod / Base UI / TanStack Table。
 - 已有代码覆盖经营总览、Listing/SKU、Orders/FBA、采购/供应商/仓储、财务来源与估算报表、运营异常和本地用户权限；大部分是本地数据与 Mock 业务链上的功能，不等于真实 Amazon/Ads/银行验收。
 - 必须区分五种证据：**代码实现** → **快速 CI** → **集中 PG18/Compose/Chromium Mock 回归** → **真实 Seller/Ads 联调** → **安全/业务正式发布批准**。不得用一个绿灯冒充后面几个阶段。
