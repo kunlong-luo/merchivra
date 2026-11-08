@@ -62,6 +62,76 @@ public class WarehouseInventoryService {
             ORDER BY warehouse_code LIMIT 200
             """,WarehouseInventoryService::warehouse,tenant);
     }
+    /**
+     * V114: tenant-scoped warehouse directory. Codes are unique within a tenant;
+     * UUID breaks ties. Search/status filters are bound to the opaque cursor,
+     * and filtering happens before the 1..100 limit+1 keyset window.
+     */
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Warehouse> warehousesPage(UUID tenant,
+        int requested,String status,String prefix,String cursor) {
+        int limit=LocalKeysetPage.limit(requested);
+        String filter=status==null||status.isBlank()?"ALL":status;
+        if(!List.of("ALL","ACTIVE","ARCHIVED").contains(filter))
+            throw bad("Unknown warehouse status filter");
+        String term=prefix==null?"":prefix.strip().toUpperCase(Locale.ROOT);
+        if(term.length()>60 || !term.matches("[A-Z0-9_-]*"))
+            throw bad("Warehouse prefix must be 0..60 safe literal characters");
+        String[] after=LocalKeysetPage.decode(cursor,6);
+        String lastCode=null;
+        UUID lastId=null;
+        if(after!=null) {
+            if(!"warehouse-v1".equals(after[0]) || !tenant.toString().equals(after[1])
+                || !filter.equals(after[2]) || !("q:"+term).equals(after[3]))
+                throw bad("Warehouse cursor does not match tenant or filters");
+            if(!after[4].matches("[A-Z0-9][A-Z0-9_-]{1,59}"))
+                throw bad("Invalid warehouse cursor code");
+            lastCode=after[4];
+            try { lastId=UUID.fromString(after[5]); }
+            catch(IllegalArgumentException e) { throw bad("Invalid warehouse cursor"); }
+        }
+        StringBuilder sql=new StringBuilder("""
+            SELECT id,warehouse_code,display_name,status
+            FROM erp_local_warehouse WHERE tenant_id=?
+            """);
+        List<Object> args=new ArrayList<>();
+        args.add(tenant);
+        if(!"ALL".equals(filter)) {
+            sql.append(" AND status=?");
+            args.add(filter);
+        }
+        if(!term.isEmpty()) {
+            // LEFT treats underscores literally; do not use unescaped LIKE.
+            sql.append(" AND LEFT(warehouse_code,LENGTH(?))=?");
+            args.add(term);
+            args.add(term);
+        }
+        if(lastCode!=null) {
+            sql.append(" AND (warehouse_code,id)>(?,?)");
+            args.add(lastCode);
+            args.add(lastId);
+        }
+        sql.append(" ORDER BY warehouse_code ASC,id ASC LIMIT ?");
+        args.add(limit+1);
+        List<Warehouse> fetched=jdbc.query(sql.toString(),
+            WarehouseInventoryService::warehouse,args.toArray());
+        return LocalKeysetPage.pack(fetched,limit,w->LocalKeysetPage.encode(
+            "warehouse-v1",tenant.toString(),filter,"q:"+term,w.code(),w.id()));
+    }
+
+    /** Exact lookup for deep-linked or previously saved selections. */
+    @Transactional(readOnly=true)
+    public Warehouse warehouseItem(UUID tenant,UUID warehouseId) {
+        if(warehouseId==null)throw bad("Warehouse ID is required");
+        List<Warehouse> found=jdbc.query("""
+            SELECT id,warehouse_code,display_name,status FROM erp_local_warehouse
+            WHERE tenant_id=? AND id=?
+            """,WarehouseInventoryService::warehouse,tenant,warehouseId);
+        if(found.size()!=1)throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+            "Warehouse not found in active tenant");
+        return found.getFirst();
+    }
+
     @Transactional
     public Warehouse create(UUID tenant,UUID actor,String code,String name) {
         code=validCode(code);
