@@ -61,6 +61,23 @@ async function call<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown
  return schema.parse(await res.json())
 }
 export const fetchSuppliers=()=>call(base+'/suppliers',z.array(supplier))
+// V111: supplier search and selection is tenant-scoped on the server, not the
+// first 200 suppliers returned by the legacy compatibility endpoint.
+const supplierPage=z.object({
+ items:z.array(supplier).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{
+ message:'Invalid supplier page cursor contract'
+})
+export type SupplierPage=z.infer<typeof supplierPage>
+export const fetchSuppliersPage=({limit=50,cursor=null,status='ALL',prefix=''}:{
+ limit?:number;cursor?:string|null;status?:'ALL'|'ACTIVE'|'ARCHIVED';prefix?:string
+}={}):Promise<SupplierPage>=>{
+ const params=new URLSearchParams({limit:String(limit),status,prefix})
+ if(cursor)params.set('cursor',cursor)
+ return call(base+'/suppliers/page?'+params.toString(),supplierPage)
+}
+
 export const createSupplier=(supplierCode:string,displayName:string)=>
  call(base+'/suppliers',supplier,'POST',{supplierCode,displayName})
 // V110: a page is an API-scoped view, never a full-tenant count or audit snapshot.
