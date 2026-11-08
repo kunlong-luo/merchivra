@@ -737,3 +737,62 @@ tbody tr:hover { background: #f8fbff; }
  .v106-finance-pager{padding:12px 15px}
  .v106-finance-pager .setup-hint{flex-basis:100%}
 }
+
+/* V107: purchaser and local warehouse audit grids.
+ * Table core owns columns and stable rows; native form controls stay native.
+ */
+.v107-list-toolbar{
+ display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap;
+ padding:15px 20px 8px;
+}
+.v107-list-filter{
+ display:flex;flex-direction:column;gap:7px;
+ width:min(100%,255px);min-width:200px;
+}
+.v107-search-label{
+ display:flex;flex-direction:column;gap:7px;
+ min-width:0;width:min(100%,290px);
+ font-size:11px;font-weight:700;color:var(--ui-secondary);
+}
+.v107-search-label input{
+ box-sizing:border-box;width:100%;min-height:43px;padding:10px 13px;
+ border:1px solid #d6e1ef;border-radius:9px;
+ background:#fff;color:#243650;font:inherit;
+}
+.v107-search-label input:focus-visible{
+ outline:3px solid #7eb5ff;outline-offset:2px;
+}
+.v107-loaded-scope{
+ padding:0 20px 12px;margin:0;
+ font-size:11px;line-height:1.7;
+}
+.v107-table-toolbar{margin-top:2px}
+.v107-data-table table{min-width:725px}
+.v107-data-table td{
+ vertical-align:middle;overflow-wrap:anywhere;
+}
+.v107-data-table th{white-space:nowrap}
+.v107-data-table .v107-order-actions{
+ display:flex;align-items:center;gap:8px;flex-wrap:wrap;
+}
+.v107-data-table .v107-order-actions button{min-height:36px}
+.v107-ledger-amount{
+ white-space:nowrap;font-variant-numeric:tabular-nums;
+}
+.v107-ledger-source{
+ font-size:11px;font-family:ui-monospace,monospace;
+ overflow-wrap:anywhere;
+}
+.v107-supplier-directory .setup-hint{
+ padding:0 20px;margin:9px 0;
+}
+.v107-supplier-directory .v107-data-table table{min-width:470px}
+@media(max-width:760px){
+ .v107-list-toolbar{padding:13px 15px;gap:10px}
+ .v107-list-filter,.v107-search-label{
+  min-width:0;width:100%;
+ }
+ .v107-loaded-scope{padding-inline:15px}
+ .v107-supplier-directory .setup-hint{padding-inline:15px}
+ .v107-data-table table{min-width:725px}
+}
