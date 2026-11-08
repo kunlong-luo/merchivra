@@ -9,7 +9,7 @@
 | 每个 PR / main push | `ci.yml`：Gradle test、React/Orval/typecheck/Vitest/Vite build/Next TS、Compose 静态部署检查 | PG18 完整 Mock HTTP/备份恢复、Next 生产 build/HTTP、Chromium 双前端和真 Compose 容器链 |
 | 普通 PR | **不**再额外运行 public Pages build（除主 CI） | 公开展示部署与截图套餐 |
 | main 更新前端 | GitHub Pages 合成只读展示构建/发布（非 ERP 部署） | 不因此触发浏览器/真 Compose |
-| A3 MVP 冻结或 Beta/Release 候选、重要安全/数据库变更 | 在 main 上人工启动 `milestone-validation.yml`，一次调度完整 CI + 双前端 Chromium + 真 Compose | 无真实 Amazon Token、无生产 PG/银行数据 |
+| A3 MVP 冻结或 Beta/Release 候选、重要安全/数据库变更 | 在 main 上人工启动 `milestone-validation.yml`，一次调度完整 CI + 双前端 Chromium + 真 Compose；首次新增该工作流时触发一次隔离基线验证 | 无真实 Amazon Token、无生产 PG/银行数据 |
 | 单项故障定位 | 独立手工启动 `ci.yml` 的 `full_suite`，或独立 Chromium/Compose；必要时只重跑失败 job | 不强制对与改动无关的模块再跑所有回归 |
 
 在 `ci.yml` 选择 `workflow_dispatch: full_suite=true` 会包括真实一次性 PG18/Flyway + HTTP/安全/恢复，以及 Next production build/HTTP；常规 PR 会**跳过**上述重型阶段。集中 workflow 调用相同已有工作流，避免复制测试脚本和网络环境逻辑。
