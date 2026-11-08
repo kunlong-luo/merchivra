@@ -7,7 +7,7 @@ import {
  flexRender,getCoreRowModel,useReactTable,
  type ColumnDef,type VisibilityState
 } from '@tanstack/react-table'
-import {fetchPurchaseOrdersPage,fetchSuppliersPage,type Supplier,type PurchaseOrder,
+import {fetchPurchaseOrdersPage,fetchSuppliersPage,fetchWarehouseLedgerPage,type Supplier,type PurchaseOrder,
  type LocalStockMovement} from '../lib/purchasing'
 
 type Option={value:string;label:string}
@@ -286,11 +286,21 @@ const movementOptions:Option[]=[
  {value:'ALL',label:'全部流水类型'},
  ...Object.entries(movementLabels).map(([value,label])=>({value,label}))
 ]
-export function WarehouseLedgerTable({movements}:{
- movements:LocalStockMovement[]
+export function WarehouseLedgerTable({tenantId,warehouseId}:{
+ tenantId:string;warehouseId:string
 }){
  const [type,setType]=useState('ALL')
- const rows=movements.filter(m=>type==='ALL'||m.movementType===type)
+ const [draftSearch,setDraftSearch]=useState('')
+ const [search,setSearch]=useState('')
+ const [cursors,setCursors]=useState<(string|null)[]>([null])
+ const cursor=cursors.at(-1)??null
+ const movements=useQuery({
+  queryKey:['purchasing',tenantId,'ledger-page',warehouseId,type,search,cursor],
+  queryFn:()=>fetchWarehouseLedgerPage({warehouseId,limit:50,
+   movementType:type,search,cursor}),
+  enabled:!!warehouseId,retry:false
+ })
+ const rows=movements.data?.items??[]
  const columns:ColumnDef<LocalStockMovement>[]=[
   {accessorKey:'createdAt',header:'时间',enableHiding:false,
    cell:({row})=>new Date(row.original.createdAt).toLocaleString('zh-CN')},
@@ -305,24 +315,51 @@ export function WarehouseLedgerTable({movements}:{
    cell:({row})=>{
     const m=row.original
     return <span className="v107-ledger-source">
-     {m.purchaseReceiptId??m.operationId??m.inspectionId??'无来源记录'}
+     {m.purchaseReceiptId??m.operationId??m.inspectionId??m.lotActionId??'无来源记录'}
     </span>
    }},
   {accessorKey:'reason',header:'业务原因',enableHiding:false,
    cell:({row})=>row.original.reason??'采购已审批收货'}
  ]
+ function applySearch(e:FormEvent){
+  e.preventDefault()
+  const next=draftSearch.trim().toUpperCase()
+  if(next.length>80 || /[\x00-\x1f\x7f]/.test(next))return
+  setSearch(next);setCursors([null])
+ }
  return <>
   <div className="v107-list-toolbar">
+   <form onSubmit={applySearch} className="v107-search-form">
+    <label htmlFor="v112-ledger-search" className="v107-search-label">
+     <span>内部 SKU 包含（服务器全历史检索）</span>
+     <input id="v112-ledger-search" type="search" value={draftSearch}
+      maxLength={80} autoComplete="off"
+      onChange={e=>setDraftSearch(e.target.value)} placeholder="例如 SKU-"/>
+    </label>
+    <button type="submit" className="refresh-button">查询</button>
+   </form>
    <ListFilter label="筛选本地库存流水类型" value={type}
-    options={movementOptions} onChange={setType}/>
+    options={movementOptions} onChange={next=>{
+     setType(next);setCursors([null])
+    }}/>
   </div>
   <p className="setup-hint v107-loaded-scope">
-   最近 {movements.length} 条服务器返回的本地流水中，当前显示 {rows.length} 条。
-   类型筛选仅作用于本次加载的记录，不代表完整历史；
-   每条流水保留来源 ID 与业务原因。
+   服务端按时间与流水 ID 倒序 · 第 {cursors.length} 页，
+   本页 {rows.length} 条（最多 50 条），不是仓库完整流水总数。
+   每条流水保留原始带符号数量、来源 ID 与业务原因。
   </p>
-  {rows.length===0?<p className="empty-state">本次加载的流水中没有此类型记录。</p>:
+  {movements.isPending?<p className="empty-state">加载仓库流水…</p>:
+   movements.isError?<p className="setup-error" role="alert">
+    仓库流水读取失败：{String(movements.error)}
+    <button type="button" className="refresh-button"
+     onClick={()=>void movements.refetch()}>重试</button></p>:
+   rows.length===0?<p className="empty-state">当前条件下没有本地流水。</p>:
    <ScopedTable rows={rows} columns={columns}
-    getRowId={row=>row.id} label="仓库完整库存流水"/>}
+    getRowId={row=>row.id} label="仓库本地库存流水"/>}
+  {!!movements.data&&<CursorPageControls label="仓库本地库存流水"
+   page={cursors.length} hasMore={movements.data.hasMore}
+   nextCursor={movements.data.nextCursor} busy={movements.isFetching}
+   onPrev={()=>setCursors(v=>v.length>1?v.slice(0,-1):v)}
+   onNext={next=>setCursors(v=>[...v,next])}/>}
  </>
 }

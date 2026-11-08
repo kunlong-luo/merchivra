@@ -24,7 +24,7 @@ import LotEvidenceFilesPanel from './LotEvidenceFilesPanel'
 import SupplierDisputesPanel from './SupplierDisputesPanel'
 import {createSupplier,fetchSuppliersPage,createPurchaseOrder,
  fetchPurchaseOrder,purchaseAction,receivePurchase,fetchWarehouses,createWarehouse,
- fetchWarehouseStock,fetchWarehouseLedger,fetchPendingReceipts,postStockOperation,
+ fetchWarehouseStock,fetchPendingReceipts,postStockOperation,
  type NewPurchaseLine,type StockOperationRequest} from './lib/purchasing'
 
 export default function PurchasingWorkspace({tenantId,currentUserId}:{
@@ -55,8 +55,6 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  const warehouses=useQuery({queryKey:['purchasing',tenantId,'warehouses'],queryFn:fetchWarehouses})
  const stock=useQuery({queryKey:['purchasing',tenantId,'stock',stockWarehouseId],
   queryFn:()=>fetchWarehouseStock(stockWarehouseId),enabled:!!stockWarehouseId,retry:false})
- const movements=useQuery({queryKey:['purchasing',tenantId,'ledger',stockWarehouseId],
-  queryFn:()=>fetchWarehouseLedger(stockWarehouseId),enabled:!!stockWarehouseId,retry:false})
  const pending=useQuery({queryKey:['purchasing',tenantId,'pending'],
   queryFn:fetchPendingReceipts,retry:false})
  const suppliers=useQuery({
@@ -356,12 +354,9 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
      <button type="submit" className="primary-button" disabled={!operationReady}>
       确认写入本地库存流水</button>
     </form>
-    <h3>最近 100 条本地库存流水</h3>
-    {movements.isPending?<p className="empty-state">加载流水中…</p>:
-     movements.isError?<p className="setup-error" role="alert">{String(movements.error)}</p>:
-     !movements.data?.length?<p className="empty-state">暂无入库流水。</p>:
-     <WarehouseLedgerTable key={stockWarehouseId}
-      movements={movements.data}/>}
+    <h3>本地库存流水（可翻阅全历史）</h3>
+    <WarehouseLedgerTable key={tenantId+':'+stockWarehouseId}
+     tenantId={tenantId} warehouseId={stockWarehouseId}/>
 
    </>}
   </section>

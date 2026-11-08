@@ -1,6 +1,10 @@
 package org.merchivra.erp.purchasing;
 
 import java.time.OffsetDateTime;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Locale;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -23,7 +27,7 @@ public class WarehouseInventoryService {
                         long recordedReceivedQuantity,long onHandQuantity) {}
     public record Movement(String id,String warehouseId,String productSkuId,
                            String internalSku,String purchaseReceiptId,String operationId,
-                           String inspectionId,int quantity,String movementType,String reason,
+                           String inspectionId,String lotActionId,int quantity,String movementType,String reason,
                            String createdAt) {}
     public record PendingReceipt(String purchaseOrderId,String orderNumber,
                                  String purchaseOrderLineId,String productSkuId,
@@ -180,7 +184,7 @@ public class WarehouseInventoryService {
         requireReadable(tenant,warehouseId);
         return jdbc.query("""
             SELECT m.id,m.warehouse_id,m.product_sku_id,s.internal_sku,
-                   m.purchase_receipt_id,m.operation_id,m.inspection_id,
+                   m.purchase_receipt_id,m.operation_id,m.inspection_id,m.lot_action_id,
                    m.quantity,m.movement_type,COALESCE(o.reason,q.reason,a.reason) AS reason,m.created_at
             FROM erp_local_stock_movement m
             JOIN product_sku s ON s.tenant_id=m.tenant_id AND s.id=m.product_sku_id
@@ -192,22 +196,105 @@ public class WarehouseInventoryService {
               ON a.tenant_id=m.tenant_id AND a.id=m.lot_action_id
             WHERE m.tenant_id=? AND m.warehouse_id=?
             ORDER BY m.created_at DESC,m.id DESC LIMIT 100
-            """,(rs,i)->{
-                UUID receipt=rs.getObject("purchase_receipt_id",UUID.class);
-                UUID operation=rs.getObject("operation_id",UUID.class);
-                UUID inspection=rs.getObject("inspection_id",UUID.class);
-                return new Movement(
-                    rs.getObject("id",UUID.class).toString(),
-                    rs.getObject("warehouse_id",UUID.class).toString(),
-                    rs.getObject("product_sku_id",UUID.class).toString(),
-                    rs.getString("internal_sku"),
-                    receipt==null?null:receipt.toString(),
-                    operation==null?null:operation.toString(),
-                    inspection==null?null:inspection.toString(),
-                    rs.getInt("quantity"),rs.getString("movement_type"),rs.getString("reason"),
-                    rs.getObject("created_at",OffsetDateTime.class).toInstant().toString());
-            },
-            tenant,warehouseId);
+            """,WarehouseInventoryService::movement,tenant,warehouseId);
+    }
+
+    /**
+     * V112: full tenant+warehouse-scoped local movement history. A live cursor
+     * binds the warehouse, movement type and literal SKU substring. Rows
+     * are ordered by timestamp and UUID to handle identical commit times.
+     * No totals or immutable ledger snapshot are implied by a page.
+     */
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Movement> ledgerPage(UUID tenant,UUID warehouseId,
+        int requested,String movementType,String search,String cursor) {
+        int limit=LocalKeysetPage.limit(requested);
+        if(warehouseId==null)throw bad("Warehouse ID is required");
+        String filter=movementType==null || movementType.isBlank()?"ALL":movementType;
+        if(!List.of("ALL","PURCHASE_RECEIPT","OUTBOUND","TRANSFER_OUT",
+            "TRANSFER_IN","COUNT_ADJUSTMENT","QC_QUARANTINE","QC_RELEASE",
+            "LOT_QUARANTINE").contains(filter))
+            throw bad("Unknown local movement type filter");
+        String term=search==null?"":search.strip().toUpperCase(Locale.ROOT);
+        if(term.length()>80 || term.chars().anyMatch(Character::isISOControl))
+            throw bad("SKU search must contain at most 80 printable characters");
+        String[] after=LocalKeysetPage.decode(cursor,7);
+        OffsetDateTime lastAt=null;
+        UUID lastId=null;
+        if(after!=null) {
+            if(!"ledger-v1".equals(after[0]) || !tenant.toString().equals(after[1])
+                || !warehouseId.toString().equals(after[2])
+                || !filter.equals(after[3]) || !("q:"+term).equals(after[4]))
+                throw bad("Ledger cursor does not match tenant, warehouse or filters");
+            try {
+                Instant created=Instant.parse(after[5]);
+                if(!created.toString().equals(after[5]))
+                    throw bad("Invalid ledger pagination cursor");
+                lastAt=OffsetDateTime.ofInstant(created,ZoneOffset.UTC);
+                lastId=UUID.fromString(after[6]);
+            } catch(java.time.format.DateTimeParseException | IllegalArgumentException e) {
+                throw bad("Invalid ledger pagination cursor");
+            }
+        }
+        // Reject cross-tenant, deleted or unknown warehouses even on empty pages.
+        requireReadable(tenant,warehouseId);
+        StringBuilder sql=new StringBuilder("""
+            SELECT m.id,m.warehouse_id,m.product_sku_id,s.internal_sku,
+                   m.purchase_receipt_id,m.operation_id,m.inspection_id,m.lot_action_id,
+                   m.quantity,m.movement_type,COALESCE(o.reason,q.reason,a.reason) AS reason,m.created_at
+            FROM erp_local_stock_movement m
+            JOIN product_sku s ON s.tenant_id=m.tenant_id AND s.id=m.product_sku_id
+            LEFT JOIN erp_local_stock_operation o
+              ON o.tenant_id=m.tenant_id AND o.id=m.operation_id
+            LEFT JOIN erp_purchase_receipt_qc q
+              ON q.tenant_id=m.tenant_id AND q.id=m.inspection_id
+            LEFT JOIN erp_local_lot_action a
+              ON a.tenant_id=m.tenant_id AND a.id=m.lot_action_id
+            WHERE m.tenant_id=? AND m.warehouse_id=?
+            """);
+        List<Object> args=new ArrayList<>();
+        args.add(tenant);
+        args.add(warehouseId);
+        if(!"ALL".equals(filter)) {
+            sql.append(" AND m.movement_type=?");
+            args.add(filter);
+        }
+        if(!term.isEmpty()) {
+            // POSITION is literal, unlike LIKE's percentage/underscore wildcards.
+            sql.append(" AND POSITION(LOWER(?) IN LOWER(s.internal_sku))>0");
+            args.add(term);
+        }
+        if(lastAt!=null) {
+            sql.append(" AND (m.created_at,m.id)<(?,?)");
+            args.add(lastAt);
+            args.add(lastId);
+        }
+        sql.append(" ORDER BY m.created_at DESC,m.id DESC LIMIT ?");
+        args.add(limit+1);
+        List<Movement> fetched=jdbc.query(sql.toString(),
+            WarehouseInventoryService::movement,args.toArray());
+        return LocalKeysetPage.pack(fetched,limit,m->LocalKeysetPage.encode(
+            "ledger-v1",tenant.toString(),warehouseId.toString(),filter,
+            "q:"+term,m.createdAt(),m.id()));
+    }
+
+    private static Movement movement(java.sql.ResultSet rs,int i)
+        throws java.sql.SQLException {
+        UUID receipt=rs.getObject("purchase_receipt_id",UUID.class);
+        UUID operation=rs.getObject("operation_id",UUID.class);
+        UUID inspection=rs.getObject("inspection_id",UUID.class);
+        UUID lotAction=rs.getObject("lot_action_id",UUID.class);
+        return new Movement(
+            rs.getObject("id",UUID.class).toString(),
+            rs.getObject("warehouse_id",UUID.class).toString(),
+            rs.getObject("product_sku_id",UUID.class).toString(),
+            rs.getString("internal_sku"),
+            receipt==null?null:receipt.toString(),
+            operation==null?null:operation.toString(),
+            inspection==null?null:inspection.toString(),
+            lotAction==null?null:lotAction.toString(),
+            rs.getInt("quantity"),rs.getString("movement_type"),rs.getString("reason"),
+            rs.getObject("created_at",OffsetDateTime.class).toInstant().toString());
     }
 
     /**
