@@ -2,6 +2,7 @@ import {useEffect,useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {fetchSkus} from './lib/catalog'
 import InternalSkuPicker from './InternalSkuPicker'
+import SupplierPicker from './SupplierPicker'
 import {useConfirmAction} from './components/useConfirmAction'
 import {
  SupplierDirectoryTable,PurchaseOrdersTable,WarehouseLedgerTable
@@ -21,7 +22,7 @@ import LotExceptionPanel from './LotExceptionPanel'
 import LotDispositionProofPanel from './LotDispositionProofPanel'
 import LotEvidenceFilesPanel from './LotEvidenceFilesPanel'
 import SupplierDisputesPanel from './SupplierDisputesPanel'
-import {createSupplier,fetchSuppliers,createPurchaseOrder,
+import {createSupplier,fetchSuppliersPage,createPurchaseOrder,
  fetchPurchaseOrder,purchaseAction,receivePurchase,fetchWarehouses,createWarehouse,
  fetchWarehouseStock,fetchWarehouseLedger,fetchPendingReceipts,postStockOperation,
  type NewPurchaseLine,type StockOperationRequest} from './lib/purchasing'
@@ -58,7 +59,10 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
   queryFn:()=>fetchWarehouseLedger(stockWarehouseId),enabled:!!stockWarehouseId,retry:false})
  const pending=useQuery({queryKey:['purchasing',tenantId,'pending'],
   queryFn:fetchPendingReceipts,retry:false})
- const suppliers=useQuery({queryKey:['purchasing',tenantId,'suppliers'],queryFn:fetchSuppliers})
+ const suppliers=useQuery({
+  queryKey:['purchasing',tenantId,'suppliers-page','ALL','',null],
+  queryFn:()=>fetchSuppliersPage({limit:50,status:'ALL'}),retry:false
+ })
  const skus=useQuery({queryKey:['catalog',tenantId,'for-purchase'],queryFn:()=>fetchSkus()})
  const selected=useQuery({queryKey:['purchasing',tenantId,'detail',selectedId],
   queryFn:()=>fetchPurchaseOrder(selectedId),enabled:!!selectedId})
@@ -94,8 +98,9 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
  function addSupplier(e:FormEvent){e.preventDefault();supplier.mutate()}
  function addWarehouse(e:FormEvent){e.preventDefault();warehouseCreated.mutate()}
  function create(e:FormEvent){e.preventDefault();if(draft.length&&supplierId)created.mutate()}
+ useEffect(()=>setSupplierId(''),[tenantId])
  const remaining=selected.data?.lines.filter(l=>l.receivedQuantity<l.orderedQuantity)??[]
- const supplierOptions=suppliers.data?.filter(s=>s.status==='ACTIVE')??[]
+ const supplierOptions=suppliers.data?.items.filter(s=>s.status==='ACTIVE')??[]
  const activeSkus=skus.data?.filter(s=>s.status==='ACTIVE')??[]
  const activeWarehouses=warehouses.data?.filter(w=>w.status==='ACTIVE')??[]
  const currentOnHand=stock.data?.find(s=>s.productSkuId===operationSku)?.onHandQuantity??0
@@ -160,18 +165,12 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
     <button className="primary-button" type="submit" disabled={supplier.isPending}>
       新建供应商</button>
    </form>
-   {suppliers.isError&&<p className="setup-error">{String(suppliers.error)}</p>}
-   {suppliers.isPending?<p className="empty-state">加载供应商目录…</p>:
-    suppliers.isError?null:<SupplierDirectoryTable suppliers={suppliers.data??[]}/>}
+   <SupplierDirectoryTable key={tenantId} tenantId={tenantId}/>
   </section>
   <section className="panel full-panel"><div className="panel-heading"><h2>创建采购单草稿</h2></div>
    <div className="team-invite-form">
-    <label htmlFor="purchase-supplier">供应商</label>
-    <select id="purchase-supplier" value={supplierId}
-      onChange={e=>setSupplierId(e.target.value)}>
-     <option value="">选择供应商</option>
-     {supplierOptions.map(s=><option value={s.id} key={s.id}>{s.code} · {s.name}</option>)}
-    </select>
+    <SupplierPicker key={tenantId} tenantId={tenantId} id="purchase-supplier"
+     label="采购草稿供应商" value={supplierId} onChange={setSupplierId}/>
     <label htmlFor="purchase-currency">币种</label>
     <select id="purchase-currency" value={currency} onChange={e=>setCurrency(e.target.value)}>
      {['USD','EUR','GBP','JPY','CNY','CAD','AUD'].map(c=><option value={c} key={c}>{c}</option>)}
@@ -238,7 +237,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
    <p>批准人必须是另一名 Owner；收货可以分批，但不能超过每行订购数量。</p></div>
    <button className="refresh-button" onClick={refresh}>刷新</button></div>
    <PurchaseOrdersTable key={tenantId} tenantId={tenantId}
-     suppliers={suppliers.data??[]} currentUserId={currentUserId}
+     suppliers={suppliers.data?.items??[]} currentUserId={currentUserId}
      busy={action.isPending} onView={setSelectedId}
      onAction={(id,kind)=>action.mutate({id,kind})}
      onCancel={o=>confirmation.request({
@@ -398,7 +397,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
     setMessage('已选择 ASN '+v.asnId.slice(0,8)+'；请核对实物收货件数后提交。')}}/>
   {stockWarehouseId&&<WarehouseAlertsPanel key={stockWarehouseId}
    tenantId={tenantId} warehouseId={stockWarehouseId} skus={activeSkus}/>}
-  <SupplierPurchasePlanningPanel tenantId={tenantId} warehouseId={stockWarehouseId}
+  <SupplierPurchasePlanningPanel key={tenantId} tenantId={tenantId} warehouseId={stockWarehouseId}
    skus={activeSkus} suppliers={supplierOptions}
    onConverted={purchaseOrderId=>{setSelectedId(purchaseOrderId);refresh()}}/>
   {message&&<p className="panel-caption" role="status">{message}</p>}
