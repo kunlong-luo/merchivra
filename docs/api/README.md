@@ -1,6 +1,14 @@
-# API-002 · 可机读 OpenAPI 3.1.1 候选草案
+# API-002 · G2 OpenAPI 设计草案与真实后端契约（2026-11-08）
 
-**状态 Proposed，不代表已实现全部真实业务 API。** 已实现的另一组只读路由是 [API-003 当前 Session 租户范围下的核心查询](core-read-api.md)，读取 PostgreSQL 结构化 Listing/订单/FBA（若没有已授权的 Seller 数据则返回空列表），与下面的 G2 OpenAPI 设计草案不等同。 现有已实现的 Mock 演示接口位于独立命名空间 `/api/v1/demo/*`，包含只读店铺/订单/Listing/FBA 查询以及只对纯虚构数据生效的 POST 模拟同步，详见 [Mock 演示指南](../demo.md)；它与下文尚未实现的安全业务资源 API 分开管理。 [查看 OpenAPI JSON](openapi.json)（10 条路径、11 个 HTTP operation、19 个 Schema）。它用于架构审查和未来契约测试，不是部署在服务器的接口。
+**本页的 [候选 OpenAPI JSON](openapi.json) 只用于早期 G2 设计评审**（10 条路径、11 个 HTTP operation、19 个 Schema），不是现行所有后端接口的实时目录。其中历史 Bearer/JWT 方案未部署为当前业务认证，不应据此实现新客户端。
+
+## 当前已实现的 API 与代码生成
+
+- Spring Boot 4.1.2 MVC 已有 Session/CSRF、租户与 Marketplace 范围的实际业务接口，涉及 Seller/店铺、SKU/Listing、订单、FBA、采购/供应商/仓储、财务、运营异常和员工权限。代码从 `apps/server/src/main/java/org/merchivra/erp/` 的 Controller 与服务实现核查；现有 [核心 API 历史说明](core-read-api.md) 是 V3 的设计/实现记录，不是完整现行列表。
+- **真实 Controller/OpenAPI/Orval 契约已经部分落地**：`apps/web/openapi/finance-profits.json`、`fba-inbound.json`、`ads-reports.json`、`operations-v67.json`；与 `apps/web/orval*.config.ts`、`apps/web/src/generated/` 配套。详见 [Springdoc / Orval 渐进接入方案](../architecture/mature-tool-first-api-client-2026-11-01.md)。这些 JSON 只覆盖对应模块，不能误称“所有 REST API 都已迁移至 Orval”。
+- 实际运行时为 **Spring Security Session + HttpOnly Cookie + CSRF**，不是历史候选 JSON 的 JWT `bearerAuth`；所有请求的服务端权限和原币/来源数据校验仍不可仅依靠 TypeScript 类型。
+- **真实 Amazon Seller/Ads 生产出站与写入依旧默认关闭**；`/api/v1/demo/*` 是单独的合成 Mock 命名空间，见 [Mock 演示指南](../demo.md)。已有 OAuth/Worker 代码不代表真实 Amazon 授权完成。
+- 功能冻结前应按 [V108 MVP 计划](../roadmap/mvp-freeze-release-v108.md) 与 [P0 采购容量审计](../testing/p0-purchasing-read-cap-audit-v108.md) 检查每个实际 Controller/Orval 约束；G1/G2/G3 仍需审批。
 
 ## 契约设计原则
 
