@@ -1,4 +1,5 @@
 import {useState,type FormEvent} from 'react'
+import WarehousePicker from './WarehousePicker'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
 import {fetchLotPositions} from './lib/released-lots'
@@ -125,14 +126,10 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
     盘盈仅标记为需要补充来源凭据。跨仓收货复核与已隔离品处置
     只追加证据，绝不重复增加或扣减本地可用库存。</p>
   </div><button type="button" className="refresh-button" onClick={reload}>刷新全部</button></div>
-  <label htmlFor="v50-wh">本地仓库</label>
-  <select id="v50-wh" value={warehouse} onChange={e=>{
-   setWarehouse(e.target.value);setPositionId('');setObservationId('');
-   setAckAction('');setQuarantineId('')}}>
-   <option value="">选择仓库</option>
-   {warehouses.filter(w=>w.status==='ACTIVE').map(w=>
-    <option value={w.id} key={w.id}>{w.code} · {w.name}</option>)}
-  </select>
+  <WarehousePicker tenantId={tenantId} id="v50-wh"
+   label="本地仓库" value={warehouse} onChange={id=>{
+    setWarehouse(id);setPositionId('');setObservationId('');
+    setAckAction('');setQuarantineId('')}}/>
   {!!warehouse&&<>
    <h3>1. 盘点观察 → 独立复核 → 仅盘亏安全调账</h3>
    <p className="setup-hint">选择在 V49 已记录的库位盘点观察。审核人不得是观察者或提交人。
