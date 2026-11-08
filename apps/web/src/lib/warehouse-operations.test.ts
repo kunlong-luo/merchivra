@@ -30,7 +30,7 @@ describe('warehouse stock mutations',()=>{
   const post=requests.find(r=>r.options?.method==='POST')
   expect(post?.url).toBe('/api/v1/purchasing/warehouse-operations')
   expect(JSON.parse(String(post?.options?.body))).toEqual(input)
-  expect(post?.options?.headers).toMatchObject({'X-CSRF-TOKEN':'test-csrf-token'})
+  expect(new Headers(post?.options?.headers).get('X-CSRF-TOKEN')).toBe('test-csrf-token')
  })
  it('parses signed movements separately from historical purchase receipts',async()=>{
   vi.stubGlobal('fetch',vi.fn(async(url:string)=>{

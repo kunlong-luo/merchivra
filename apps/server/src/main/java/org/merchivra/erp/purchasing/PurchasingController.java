@@ -44,6 +44,13 @@ public class PurchasingController {
             .body(warehouses.warehousesPage(access.currentTenant(auth,req),
                 limit,status,prefix,cursor));
     }
+    /** V115 batch resolution for historical rows outside the legacy 200. */
+    @GetMapping("/warehouses/resolve")
+    public ResponseEntity<List<WarehouseInventoryService.Warehouse>> warehouseLabels(
+        Authentication auth,HttpServletRequest req,@RequestParam List<UUID> ids) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(warehouses.resolveWarehouses(access.currentTenant(auth,req),ids));
+    }
     /** Exact warehouse identity, including archived rows for read-only labels. */
     @GetMapping("/warehouses/item")
     public ResponseEntity<WarehouseInventoryService.Warehouse> warehouseItem(

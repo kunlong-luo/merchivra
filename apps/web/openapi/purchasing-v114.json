@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Merchivra local purchasing read pages",
-    "version": "114.0.0",
-    "description": "Owner/authenticated tenant scoped; read-only local purchasing list and exact lookups. No Amazon live source, no remote write."
+    "version": "115.1.0",
+    "description": "Tenant-scoped core purchasing reads and authenticated CSRF-protected local writes; no Amazon LIVE remote writes. APIs always recheck permissions, status, balance, currency and transaction safety on server."
   },
   "servers": [
     {
@@ -573,6 +573,444 @@
           }
         }
       }
+    },
+    "/api/v1/purchasing/suppliers": {
+      "post": {
+        "operationId": "createLocalSupplier",
+        "summary": "Create tenant ACTIVE supplier",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewLocalSupplier"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tenant-scoped mutation result; CSRF and role checked by server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Supplier"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation rejected, no mutation committed"
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "403": {
+            "description": "Insufficient role or CSRF"
+          },
+          "404": {
+            "description": "Tenant-scoped resource missing"
+          },
+          "409": {
+            "description": "State, balance, idempotency, concurrency, or approval conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/warehouses": {
+      "post": {
+        "operationId": "createLocalWarehouse",
+        "summary": "Create tenant ACTIVE warehouse with QC HOLD bin",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewLocalWarehouse"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tenant-scoped mutation result; CSRF and role checked by server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Warehouse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation rejected, no mutation committed"
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "403": {
+            "description": "Insufficient role or CSRF"
+          },
+          "404": {
+            "description": "Tenant-scoped resource missing"
+          },
+          "409": {
+            "description": "State, balance, idempotency, concurrency, or approval conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/orders": {
+      "post": {
+        "operationId": "createLocalPurchaseOrder",
+        "summary": "Create local DRAFT; prices are original currency strings and must be reverified on approval",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewLocalPurchaseOrder"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tenant-scoped mutation result; CSRF and role checked by server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation rejected, no mutation committed"
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "403": {
+            "description": "Insufficient role or CSRF"
+          },
+          "404": {
+            "description": "Tenant-scoped resource missing"
+          },
+          "409": {
+            "description": "State, balance, idempotency, concurrency, or approval conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/orders/{id}": {
+      "get": {
+        "operationId": "getLocalPurchaseOrder",
+        "summary": "Exact tenant-scoped local PO and line detail",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete PO detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "404": {
+            "description": "Tenant-scoped resource missing"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/orders/{id}/submit": {
+      "post": {
+        "operationId": "submitLocalPurchaseOrder",
+        "summary": "submit local purchase order with existing server role/state checks",
+        "responses": {
+          "200": {
+            "description": "Tenant-scoped mutation result; CSRF and role checked by server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation rejected, no mutation committed"
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "403": {
+            "description": "Insufficient role or CSRF"
+          },
+          "404": {
+            "description": "Tenant-scoped resource missing"
+          },
+          "409": {
+            "description": "State, balance, idempotency, concurrency, or approval conflict"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/purchasing/orders/{id}/approve": {
+      "post": {
+        "operationId": "approveLocalPurchaseOrder",
+        "summary": "approve local purchase order with existing server role/state checks",
+        "responses": {
+          "200": {
+            "description": "Tenant-scoped mutation result; CSRF and role checked by server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation rejected, no mutation committed"
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "403": {
+            "description": "Insufficient role or CSRF"
+          },
+          "404": {
+            "description": "Tenant-scoped resource missing"
+          },
+          "409": {
+            "description": "State, balance, idempotency, concurrency, or approval conflict"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/purchasing/orders/{id}/cancel": {
+      "post": {
+        "operationId": "cancelLocalPurchaseOrder",
+        "summary": "cancel local purchase order with existing server role/state checks",
+        "responses": {
+          "200": {
+            "description": "Tenant-scoped mutation result; CSRF and role checked by server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation rejected, no mutation committed"
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "403": {
+            "description": "Insufficient role or CSRF"
+          },
+          "404": {
+            "description": "Tenant-scoped resource missing"
+          },
+          "409": {
+            "description": "State, balance, idempotency, concurrency, or approval conflict"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/purchasing/orders/{id}/receive": {
+      "post": {
+        "operationId": "receiveLocalPurchaseOrder",
+        "summary": "Record physically received quantity into assigned local warehouse QC, not FBA",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiveLocalPurchase"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Tenant-scoped mutation result; CSRF and role checked by server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseDetail"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation rejected, no mutation committed"
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "403": {
+            "description": "Insufficient role or CSRF"
+          },
+          "404": {
+            "description": "Tenant-scoped resource missing"
+          },
+          "409": {
+            "description": "State, balance, idempotency, concurrency, or approval conflict"
+          }
+        },
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ]
+      }
+    },
+    "/api/v1/purchasing/warehouse-operations": {
+      "post": {
+        "operationId": "createLocalStockOperation",
+        "summary": "Explicit tenant-scoped auditable and idempotent local COUNT/OUTBOUND/TRANSFER",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewLocalStockOperation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tenant-scoped mutation result; CSRF and role checked by server",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalStockOperation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation rejected, no mutation committed"
+          },
+          "401": {
+            "description": "Login required"
+          },
+          "403": {
+            "description": "Insufficient role or CSRF"
+          },
+          "404": {
+            "description": "Tenant-scoped resource missing"
+          },
+          "409": {
+            "description": "State, balance, idempotency, concurrency, or approval conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/warehouses/resolve": {
+      "get": {
+        "operationId": "resolveLocalWarehouseLabels",
+        "summary": "Batch resolve up to 100 tenant-owned historical warehouse IDs, including archived labels",
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "required": true,
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "minItems": 1,
+              "maxItems": 100
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Only warehouses belonging to authenticated tenant; missing IDs omitted; no-store",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Warehouse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Empty/oversized or malformed batch"
+          },
+          "401": {
+            "description": "Authentication required"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1103,6 +1541,319 @@
           "pageSize": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "PurchaseLine": {
+        "type": "object",
+        "required": [
+          "id",
+          "productSkuId",
+          "orderedQuantity",
+          "receivedQuantity",
+          "unitCost"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "receivedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unitCost": {
+            "type": "string"
+          }
+        }
+      },
+      "PurchaseDetail": {
+        "type": "object",
+        "required": [
+          "order",
+          "lines"
+        ],
+        "properties": {
+          "order": {
+            "$ref": "#/components/schemas/PurchaseOrder"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PurchaseLine"
+            }
+          }
+        }
+      },
+      "NewLocalSupplier": {
+        "type": "object",
+        "required": [
+          "supplierCode",
+          "displayName"
+        ],
+        "properties": {
+          "supplierCode": {
+            "type": "string",
+            "pattern": "^[A-Z0-9][A-Z0-9_-]{1,59}$"
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          }
+        }
+      },
+      "NewLocalWarehouse": {
+        "type": "object",
+        "required": [
+          "warehouseCode",
+          "displayName"
+        ],
+        "properties": {
+          "warehouseCode": {
+            "type": "string",
+            "pattern": "^[A-Z0-9][A-Z0-9_-]{1,59}$"
+          },
+          "displayName": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 200
+          }
+        }
+      },
+      "NewLocalOrderLine": {
+        "type": "object",
+        "required": [
+          "productSkuId",
+          "quantity",
+          "unitCost"
+        ],
+        "properties": {
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "unitCost": {
+            "type": "string",
+            "pattern": "^[0-9]{1,14}(\\.[0-9]{1,6})?$"
+          }
+        }
+      },
+      "NewLocalPurchaseOrder": {
+        "type": "object",
+        "required": [
+          "supplierId",
+          "currency",
+          "notes",
+          "lines"
+        ],
+        "properties": {
+          "supplierId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NewLocalOrderLine"
+            },
+            "minItems": 1
+          }
+        }
+      },
+      "ReceiveLocalPurchase": {
+        "type": "object",
+        "required": [
+          "lineId",
+          "quantity",
+          "warehouseId"
+        ],
+        "properties": {
+          "lineId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "asnId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      },
+      "NewLocalStockOperation": {
+        "type": "object",
+        "required": [
+          "requestKey",
+          "type",
+          "warehouseId",
+          "destinationWarehouseId",
+          "productSkuId",
+          "quantity",
+          "expectedOnHand",
+          "reason"
+        ],
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "OUTBOUND",
+              "TRANSFER",
+              "COUNT"
+            ]
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "destinationWarehouseId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 10000000
+          },
+          "expectedOnHand": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        }
+      },
+      "LocalStockOperation": {
+        "type": "object",
+        "required": [
+          "id",
+          "type",
+          "warehouseId",
+          "destinationWarehouseId",
+          "productSkuId",
+          "requestedQuantity",
+          "expectedOnHand",
+          "appliedDelta",
+          "afterQuantity",
+          "reason",
+          "createdBy",
+          "createdAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "OUTBOUND",
+              "TRANSFER",
+              "COUNT"
+            ]
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "destinationWarehouseId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requestedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "expectedOnHand": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "appliedDelta": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "afterQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string"
           }
         }
       }

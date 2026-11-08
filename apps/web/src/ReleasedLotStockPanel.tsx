@@ -2,7 +2,8 @@ import WarehousePicker from './WarehousePicker'
 import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
-import {fetchWarehouseStock} from './lib/purchasing'
+import {fetchWarehouseStockItem} from './lib/purchasing'
+import InternalSkuPicker from './InternalSkuPicker'
 import {fetchReceiptBatches} from './lib/receipt-batches'
 import {fetchReceiptLotPieces,fetchStockBins} from './lib/lot-locations'
 import {fetchPieceGrades,gradePiece,finalizePieceGrades,
@@ -43,8 +44,11 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
   queryFn:()=>fetchStockBins(warehouse),enabled:!!warehouse,retry:false})
  const positions=useQuery({queryKey:[...root,'lot-positions',warehouse],
   queryFn:()=>fetchLotPositions(warehouse),enabled:!!warehouse,retry:false})
- const stock=useQuery({queryKey:[...root,'stock',warehouse],
-  queryFn:()=>fetchWarehouseStock(warehouse),enabled:!!warehouse,retry:false})
+ const stockItem=useQuery({
+  queryKey:[...root,'stock-item-exact',warehouse,sku],
+  queryFn:()=>fetchWarehouseStockItem(warehouse,sku),
+  enabled:!!warehouse&&!!sku,retry:false
+ })
  const preview=useQuery({queryKey:[...root,'lot-pick-preview',warehouse,sku,policy],
   queryFn:()=>previewLotPick(warehouse,sku,policy),
   enabled:!!warehouse&&!!sku,retry:false})
@@ -68,9 +72,12 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
   onSuccess:()=>{setMessage('已标记合格品库位，不重复增加仓库可用库存');
    setFailure('');setPutawayKey(crypto.randomUUID());setPutawayReason('');refresh()},
   onError:(e:Error)=>setFailure(e.message)})
- const pick=useMutation({mutationFn:()=>pickReleasedLots({requestKey:pickKey,
-  warehouseId:warehouse,productSkuId:sku,policy,
-  quantity:pickQty,expectedOnHand:usable,reason:pickReason.trim()}),
+ const pick=useMutation({mutationFn:()=>{
+  if(usable===undefined)throw new Error('库存精确余额未知，禁止拣货')
+  return pickReleasedLots({requestKey:pickKey,warehouseId:warehouse,
+   productSkuId:sku,policy,quantity:pickQty,
+   expectedOnHand:usable,reason:pickReason.trim()})
+ },
   onSuccess:r=>{setMessage('已按 '+r.policy+' 从 '+r.allocations.length+
    ' 个批次库位拣货 '+r.quantity+' 件，并在同一事务登记仓库出库');
    setFailure('');setPickKey(crypto.randomUUID());setPickReason('');refresh()},
@@ -87,8 +94,8 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
  const remainingToPlace=Math.max(0,(selectedBatch?.acceptedQuantity??0)-
   (positions.data?.filter(p=>p.receiptId===receipt)
    .reduce((sum,p)=>sum+p.placedQuantity,0)??0))
- const skus=stock.data??[]
- const usable=skus.find(s=>s.productSkuId===sku)?.onHandQuantity??0
+ // A SKU absent from the legacy 500-stock array must not be guessed as zero.
+ const usable=stockItem.data?.onHandQuantity
  const availablePositioned=preview.data?.reduce((n,p)=>n+p.remainingQuantity,0)??0
  const canGrade=!!selectedBatch&&selectedBatch.status==='PENDING_QC'&&
   !!selectedPiece&&!gradeMap.has(selectedPiece.id)&&
@@ -99,10 +106,11 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
   availableBins.some(b=>b.id===storageBin)&&
   Number.isSafeInteger(putawayQty)&&putawayQty>0&&putawayQty<=remainingToPlace&&
   putawayReason.trim().length>=5&&putawayReason.trim().length<=300&&!putaway.isPending
- const canPick=!!sku&&!!warehouse&&Number.isSafeInteger(pickQty)&&
-  pickQty>=1&&pickQty<=Math.min(usable,availablePositioned)&&
+ const canPick=!!sku&&!!warehouse&&usable!==undefined&&
+  Number.isSafeInteger(pickQty)&&pickQty>=1&&
+  pickQty<=Math.min(usable,availablePositioned)&&
   pickReason.trim().length>=5&&pickReason.trim().length<=300&&
-  !stock.isFetching&&!preview.isFetching&&!pick.isPending
+  !stockItem.isFetching&&!stockItem.isError&&!preview.isFetching&&!pick.isPending
  return <section className="panel full-panel" aria-label="V48 分段质检与批次库位拣货">
   <div className="panel-heading"><div>
    <h2>V48 · 分段质检、合格品上架与 FIFO/FEFO 拣货</h2>
@@ -238,14 +246,9 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
     if(window.confirm('确认从指定批次/库位实际拣货并扣减本地仓库库存 '+pickQty+
        ' 件？无法自动撤回，且不调用 Amazon。'))pick.mutate()
    }}>
-    <label htmlFor="v48-pick-sku">拣货 SKU</label>
-    <select id="v48-pick-sku" value={sku}
-     onChange={e=>{setSku(e.target.value);setPickKey(crypto.randomUUID())}}>
-     <option value="">选择已存在的 SKU</option>
-     {skus.filter(x=>x.onHandQuantity>0).map(s=>
-      <option key={s.productSkuId} value={s.productSkuId}>
-       {s.internalSku} · 当前可用 {s.onHandQuantity}</option>)}
-    </select>
+    <InternalSkuPicker tenantId={tenantId} id="v48-pick-sku"
+     label="拣货 SKU（全租户 SKU，精确核验仓库余额）" value={sku}
+     onChange={id=>{setSku(id);setPickKey(crypto.randomUUID())}}/>
     <label htmlFor="v48-policy">拣货策略</label>
     <select id="v48-policy" value={policy}
      onChange={e=>{setPolicy(e.target.value as LotPolicy);setPickKey(crypto.randomUUID())}}>
@@ -253,7 +256,7 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
      <option value="FEFO">FEFO · 优先较早有效期</option>
     </select>
     <p className="setup-hint">符合策略的非过期已上架批次余量：
-     {availablePositioned} 件；仓库总可用 {usable} 件。</p>
+     {availablePositioned} 件；仓库总可用 {usable===undefined?'未知（精确读取未完成或失败）':usable} 件。</p>
     {!!preview.data?.length&&<div className="table-scroll" role="region" tabIndex={0}>
      <table><thead><tr><th scope="col">预计拣货顺序</th><th scope="col">批次/库位</th>
       <th scope="col">余量</th><th scope="col">有效期</th></tr></thead><tbody>
@@ -264,7 +267,7 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
     </div>}
     <label htmlFor="v48-pick-qty">确认实际拣货件数</label>
     <input id="v48-pick-qty" type="number" min={1}
-     max={Math.min(usable,availablePositioned)} value={pickQty}
+     max={Math.min(usable??0,availablePositioned)} value={pickQty}
      onChange={e=>{setPickQty(Number(e.target.value));setPickKey(crypto.randomUUID())}}/>
     <label htmlFor="v48-pick-reason">实际出库原因</label>
     <input id="v48-pick-reason" minLength={5} maxLength={300}

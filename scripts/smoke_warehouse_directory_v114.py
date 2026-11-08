@@ -94,6 +94,13 @@ assert rows==sorted(rows,key=lambda w:(w["code"],w["id"]))
 assert all(w["status"]=="ACTIVE" for w in rows)
 late=rows[200]
 assert get(item,warehouseId=late["id"])==late
+# V115: batch resolve historical labels (including the 201st warehouse)
+# without per-row N+1 calls. Unknown/foreign IDs must not be fabricated.
+ids=late["id"]+","+str(uuid4())
+assert get("/api/v1/purchasing/warehouses/resolve",ids=ids)==[late]
+assert get("/api/v1/purchasing/warehouses/resolve",ids=str(uuid4()))==[]
+request("/api/v1/purchasing/warehouses/resolve?ids=",expected=400)
+request("/api/v1/purchasing/warehouses/resolve?ids=bad-uuid",expected=400)
 assert get(base,limit=50,status="ACTIVE",prefix="V114-WH-0201")["items"]==[late]
 assert get(base,limit=50,status="ACTIVE",prefix="V114_WH_")["items"]==[]
 assert len(request("/api/v1/purchasing/warehouses"))<=200
