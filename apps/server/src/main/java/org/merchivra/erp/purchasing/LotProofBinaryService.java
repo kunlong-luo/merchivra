@@ -83,8 +83,12 @@ public class LotProofBinaryService {
     public FileInfo metadata(UUID tenant,UUID proofId){
         return info(tenant,proofId);
     }
-    @Transactional(readOnly=true)
-    public Download download(UUID tenant,UUID proofId){
+    // V129: the file must NOT leave this transaction without a durable
+    // tenant/actor/file/sha access record. Audit failure rolls the request back.
+    // Never record the binary payload, bearer/session tokens, or filenames.
+    @Transactional
+    public Download download(UUID tenant,UUID actor,UUID proofId){
+        if(actor==null || proofId==null)throw bad("Owner and proof required");
         FileInfo meta=info(tenant,proofId);
         byte[] bytes=jdbc.query("""
             SELECT bytes FROM erp_local_lot_disposition_proof_file
@@ -93,6 +97,12 @@ public class LotProofBinaryService {
             .stream().findFirst().orElseThrow(LotProofBinaryService::missing);
         if(bytes.length!=meta.sizeBytes() || !digest(bytes).equals(meta.sha256()))
             throw conflict("Private original-file digest/length check failed");
+        int recorded=jdbc.update("""
+            INSERT INTO erp_local_lot_proof_file_download_audit
+              (id,tenant_id,proof_id,file_id,downloaded_by,sha256)
+            VALUES (?,?,?,?,?,?)
+            """,UUID.randomUUID(),tenant,proofId,UUID.fromString(meta.id()),actor,meta.sha256());
+        if(recorded!=1)throw conflict("Private proof download audit unavailable");
         return new Download(meta,bytes);
     }
     @Transactional
