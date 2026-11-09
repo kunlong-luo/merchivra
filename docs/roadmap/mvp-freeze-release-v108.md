@@ -74,6 +74,8 @@
 
 > **A1 / V120 实施进展（2026-11-09）**：复用 V73 已有的供应商本地履约 90 天证据分数和人工催办真实分页，把 6 条 GET/POST 接入 OpenAPI/Orval；V52 已执行供应商退货新增仓库+租户绑定的 `/lot-supplier-returns/warehouses/{warehouseId}/page` 全库 keyset，连同旧兼容读/人工发运/独立收货报告 4 条一起纳入生成合同（本阶段 +10，采购规范累计 **112 个唯一操作**）。现有 V50 处置工作台加入独立 Owner 报告发运和人工收货及可翻页历史；保留 VOID/UNKNOWN、隔离库存**不二次扣减**、发运/收货仅本地声明非第三方核验、样本不足不评分的安全语义。详见 [V120 说明](../purchasing/supplier-followup-return-traces-v120.md)。V50 处置候选的旧定额、V51/52 原件字节与源证据链、A3 PG18 真实安全回归及 #63 Next 正式运行继续未完成，Amazon 真实授权保持关闭。
 
+> **A1 / V121 实施进展（2026-11-09）**：V50 盘点复核、跨仓目的仓 ACK、已隔离处置历史和未规划隔离来源均新增 Session tenant+warehouse+domain 绑定的全库 keyset（每页 50），React 工作台不再以旧 `LIMIT 200` 截断审批/来源候选。V51 盘盈/少收来源选择也使用 V50 服务器分页，原有 V51 纠正审批 `PENDING/ALL` 页保留。V50/V51 共 **18 条 GET/POST** 纳入 OpenAPI/Orval v8，采购规范累计 **130 个唯一 operationId**；Java/Vitest 模拟 225 条每类 5 页、跨租户/跨仓库/跨记录类型游标拒绝以及 CSRF/库存来源/409 校验。旧兼容接口保留但主工作台不依赖旧历史定额。详见 [V121 记录](../purchasing/lot-reconciliation-pages-v121.md)。**PG18 全量真实 Flyway/HTTP、并发+权限+库存、Next runtime #63、Amazon 本地生产授权仍未验收或开启。**
+
 ## 第一批可执行 P0 核查清单
 
 | 核查对象 | 当前有证据的缺口 | 下一步 |
