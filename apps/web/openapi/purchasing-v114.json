@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Merchivra local purchasing read pages",
-    "version": "117.0.0",
-    "description": "Local purchasing, supplier ASN + complete audit pages, QC, released V48 and V49 lot stock operations, Session+CSRF. No Amazon live calls."
+    "version": "118.0.0",
+    "description": "Tenant-local purchasing plan and source-bound claims, metadata proof reviews, and previously generated ASN/QC/lot. Session/CSRF, never supplier, Amazon, FBA, or carrier verifications."
   },
   "servers": [
     {
@@ -3789,6 +3789,1495 @@
           }
         }
       }
+    },
+    "/api/v1/purchasing/planning/supplier-rules": {
+      "get": {
+        "operationId": "listSupplierSkuRulesLegacy",
+        "summary": "Legacy first 500 price and carton policies",
+        "responses": {
+          "200": {
+            "description": "Legacy first 500 price and carton policies",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SupplierSkuPriceRule"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      },
+      "post": {
+        "operationId": "upsertSupplierSkuRule",
+        "summary": "Owner creates/updates price with original-currency decimal string",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupplierSkuPriceRuleUpsert"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Owner creates/updates price with original-currency decimal string",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierSkuPriceRule"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/planning/supplier-rules/page": {
+      "get": {
+        "operationId": "listSupplierSkuRulesPage",
+        "summary": "Full tenant supplier-price rules by server cursor",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full tenant supplier-price rules by server cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierSkuPriceRulePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/planning/supplier-rules/{supplierId}/{skuId}": {
+      "delete": {
+        "operationId": "deleteSupplierSkuRule",
+        "summary": "Explicit owner removal; no automatic purchase",
+        "parameters": [
+          {
+            "name": "supplierId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "skuId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Idempotent deletion complete"
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/planning/warehouses/{warehouseId}/recommendations": {
+      "get": {
+        "operationId": "listLocalPurchaseRecommendationsLegacy",
+        "summary": "Capped local recommendation list; unknown ledger is NOT zero",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Capped local recommendation list; unknown ledger is NOT zero",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocalPurchaseRecommendation"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/planning/warehouses/{warehouseId}/recommendations/page": {
+      "get": {
+        "operationId": "listLocalPurchaseRecommendationsPage",
+        "summary": "Full warehouse local recommendation keyset",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full warehouse local recommendation keyset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalPurchaseRecommendationPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/planning/warehouses/{warehouseId}/plans": {
+      "get": {
+        "operationId": "listLocalPurchasePlansLegacy",
+        "summary": "Capped local draft plans",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Capped local draft plans",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocalSupplierPurchasePlan"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/planning/warehouses/{warehouseId}/plans/page": {
+      "get": {
+        "operationId": "listLocalPurchasePlansPage",
+        "summary": "Full local purchase plans by warehouse keyset",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full local purchase plans by warehouse keyset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalSupplierPurchasePlanPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/planning/plans": {
+      "post": {
+        "operationId": "createLocalPurchasePlanProposal",
+        "summary": "Idempotent evidence-bound plan proposal; no supplier order",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalPurchasePlanProposal"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Idempotent evidence-bound plan proposal; no supplier order",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalSupplierPurchasePlan"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/planning/plans/{id}/convert": {
+      "post": {
+        "operationId": "convertLocalPurchasePlan",
+        "summary": "Explicit owner conversion to PO draft; not ordered with supplier",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Explicit owner conversion to PO draft; not ordered with supplier",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalSupplierPurchasePlan"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/planning/plans/{id}/cancel": {
+      "post": {
+        "operationId": "cancelLocalPurchasePlan",
+        "summary": "Explicit local cancellation",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Explicit local cancellation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalSupplierPurchasePlan"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/disputes/orders/{orderId}/variances": {
+      "get": {
+        "operationId": "listPurchaseVariancesLegacy",
+        "summary": "Capped local source discrepancies, no stock posting",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Capped local source discrepancies, no stock posting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SupplierPurchaseVariance"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      },
+      "post": {
+        "operationId": "reportPurchaseVariance",
+        "summary": "Idempotent human shortage/overage observation, not stock posting",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupplierVarianceReport"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Idempotent human shortage/overage observation, not stock posting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierPurchaseVariance"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/disputes/orders/{orderId}/variances/page": {
+      "get": {
+        "operationId": "listPurchaseVariancesPage",
+        "summary": "Full tenant/PO/filter-bound variance keyset",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIONABLE",
+                "ALL"
+              ],
+              "default": "ACTIONABLE"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full tenant/PO/filter-bound variance keyset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierPurchaseVariancePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/disputes/variances/{id}/{action}": {
+      "post": {
+        "operationId": "changePurchaseVariance",
+        "summary": "Human review or closure, not supplier response",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "action",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "review",
+                "close"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Human review or closure, not supplier response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierPurchaseVariance"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/disputes/orders/{orderId}/claims": {
+      "get": {
+        "operationId": "listSupplierClaimsLegacy",
+        "summary": "Capped local claims, no external supplier approval",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Capped local claims, no external supplier approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SupplierClaim"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/disputes/orders/{orderId}/claims/page": {
+      "get": {
+        "operationId": "listSupplierClaimsPage",
+        "summary": "Full local claim status keyset",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIONABLE",
+                "ALL"
+              ],
+              "default": "ACTIONABLE"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full local claim status keyset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierClaimPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/disputes/orders/{orderId}/claim-sources/page": {
+      "get": {
+        "operationId": "listSupplierClaimSourcesPage",
+        "summary": "Unclaimed sources across entire tenant including cancelled references",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unclaimed sources across entire tenant including cancelled references",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierClaimSourcePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/disputes/claims": {
+      "post": {
+        "operationId": "createLocalSupplierClaim",
+        "summary": "Idempotent source-bound local claim draft",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewSupplierClaim"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Idempotent source-bound local claim draft",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierClaim"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/disputes/claims/{id}/{action}": {
+      "post": {
+        "operationId": "changeLocalSupplierClaim",
+        "summary": "Explicit owner two-person claim action, optional note only on close",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "action",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "submit",
+                "approve",
+                "close",
+                "cancel"
+              ]
+            }
+          }
+        ],
+        "requestBody": {
+          "required": false,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupplierCaseActionNote"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Explicit owner two-person claim action, optional note only on close",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierClaim"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/disputes/variances/{id}/events": {
+      "get": {
+        "operationId": "listSupplierVarianceEventsLegacy",
+        "summary": "Capped immutable local case events",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Capped immutable local case events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SupplierCaseEvent"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/disputes/variances/{id}/events/page": {
+      "get": {
+        "operationId": "listSupplierVarianceEventsPage",
+        "summary": "Full supplier case event history by id and cursor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full supplier case event history by id and cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierCaseEventPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/disputes/claims/{id}/events": {
+      "get": {
+        "operationId": "listSupplierClaimEventsLegacy",
+        "summary": "Capped immutable local case events",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Capped immutable local case events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SupplierCaseEvent"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/disputes/claims/{id}/events/page": {
+      "get": {
+        "operationId": "listSupplierClaimEventsPage",
+        "summary": "Full supplier case event history by id and cursor",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full supplier case event history by id and cursor",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierCaseEventPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/disputes/supplier-performance": {
+      "get": {
+        "operationId": "listSupplierDisputePerformance",
+        "summary": "Local historical count scoreboard, not a verified supplier rating",
+        "responses": {
+          "200": {
+            "description": "Local historical count scoreboard, not a verified supplier rating",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SupplierCasePerformance"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-disposition-proofs/warehouses/{warehouseId}": {
+      "get": {
+        "operationId": "listLocalDispositionProofs",
+        "summary": "Tenant warehouse local proof metadata; no attached binary",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant warehouse local proof metadata; no attached binary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocalDispositionProof"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-disposition-proofs": {
+      "post": {
+        "operationId": "submitLocalDispositionProof",
+        "summary": "Immutable local metadata submission with reference and optional SHA256",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewLocalDispositionProof"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Immutable local metadata submission with reference and optional SHA256",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalDispositionProof"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-disposition-proofs/{id}/decision": {
+      "post": {
+        "operationId": "decideLocalDispositionProof",
+        "summary": "Independent reviewer, only local metadata acknowledgement",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalDispositionDecision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Independent reviewer, only local metadata acknowledgement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalDispositionProof"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/delivery/overview": {
+      "get": {
+        "operationId": "getLocalPurchaseDeliveryOverview",
+        "summary": "Read-only 300-row-capped local delivery view; do not claim full tenant",
+        "responses": {
+          "200": {
+            "description": "Read-only 300-row-capped local delivery view; do not claim full tenant",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseDeliveryOverview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "Role/CSRF denied"
+          },
+          "404": {
+            "description": "No resource in active tenant"
+          },
+          "409": {
+            "description": "Price evidence, state, concurrency or dual-owner conflict"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -6823,6 +8312,1474 @@
           "pageSize": {
             "type": "integer",
             "format": "int32"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "SupplierSkuPriceRule": {
+        "type": "object",
+        "properties": {
+          "supplierId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minimumOrderQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "packMultiple": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "leadTimeDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "unitCost": {
+            "type": "string"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "supplierId",
+          "productSkuId",
+          "minimumOrderQuantity",
+          "packMultiple",
+          "leadTimeDays",
+          "currency",
+          "unitCost",
+          "updatedAt"
+        ]
+      },
+      "SupplierSkuPriceRuleUpsert": {
+        "type": "object",
+        "properties": {
+          "supplierId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minimumOrderQuantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "packMultiple": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "leadTimeDays": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 365
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "unitCost": {
+            "type": "string",
+            "pattern": "^[0-9]{1,14}(\\.[0-9]{1,6})?$"
+          }
+        },
+        "required": [
+          "supplierId",
+          "productSkuId",
+          "minimumOrderQuantity",
+          "packMultiple",
+          "leadTimeDays",
+          "currency",
+          "unitCost"
+        ]
+      },
+      "LocalPurchaseRecommendation": {
+        "type": "object",
+        "properties": {
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "supplierId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "supplierName": {
+            "type": "string"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "internalSku": {
+            "type": "string"
+          },
+          "sourceMovementId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "policyUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ruleUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "onHandQuantity": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int64"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reorderPoint": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "targetStock": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "minimumOrderQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "packMultiple": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "leadTimeDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "unitCost": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "NO_LEDGER",
+              "LEDGER_ANOMALY",
+              "HEALTHY",
+              "LOW_STOCK",
+              "LIMIT_EXCEEDED"
+            ]
+          },
+          "suggestedQuantity": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int64"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "orderQuantity": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int64"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "warehouseId",
+          "supplierId",
+          "supplierName",
+          "productSkuId",
+          "internalSku",
+          "sourceMovementId",
+          "policyUpdatedAt",
+          "ruleUpdatedAt",
+          "onHandQuantity",
+          "reorderPoint",
+          "targetStock",
+          "minimumOrderQuantity",
+          "packMultiple",
+          "leadTimeDays",
+          "currency",
+          "unitCost",
+          "state",
+          "suggestedQuantity",
+          "orderQuantity"
+        ]
+      },
+      "LocalSupplierPurchasePlan": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "supplierId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceMovementId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "policyUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ruleUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "onHandQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reorderPoint": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "targetStock": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "suggestedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "minimumOrderQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "packMultiple": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "leadTimeDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "orderedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "unitCost": {
+            "type": "string"
+          },
+          "estimatedArrivalDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PROPOSED",
+              "CONVERTED",
+              "CANCELLED"
+            ]
+          },
+          "purchaseOrderId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "warehouseId",
+          "supplierId",
+          "productSkuId",
+          "sourceMovementId",
+          "policyUpdatedAt",
+          "ruleUpdatedAt",
+          "onHandQuantity",
+          "reorderPoint",
+          "targetStock",
+          "suggestedQuantity",
+          "minimumOrderQuantity",
+          "packMultiple",
+          "leadTimeDays",
+          "orderedQuantity",
+          "currency",
+          "unitCost",
+          "estimatedArrivalDate",
+          "status",
+          "purchaseOrderId",
+          "createdBy",
+          "createdAt"
+        ]
+      },
+      "LocalPurchasePlanProposal": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "supplierId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedLastMovementId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedPolicyUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expectedRuleUpdatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "expectedOnHand": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "expectedOrderQuantity": {
+            "type": "integer",
+            "minimum": 1
+          }
+        },
+        "required": [
+          "requestKey",
+          "warehouseId",
+          "supplierId",
+          "productSkuId",
+          "expectedLastMovementId",
+          "expectedPolicyUpdatedAt",
+          "expectedRuleUpdatedAt",
+          "expectedOnHand",
+          "expectedOrderQuantity"
+        ]
+      },
+      "SupplierPurchaseVariance": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lineId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "asnId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "PO_SHORTAGE",
+              "ASN_SHORTAGE",
+              "OVERAGE_UNPOSTED"
+            ]
+          },
+          "expectedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "observedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "varianceQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "REVIEWED",
+              "CLOSED"
+            ]
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reviewedBy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "orderId",
+          "lineId",
+          "asnId",
+          "kind",
+          "expectedQuantity",
+          "observedQuantity",
+          "varianceQuantity",
+          "reason",
+          "state",
+          "createdBy",
+          "reviewedBy",
+          "createdAt"
+        ]
+      },
+      "SupplierVarianceReport": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lineId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "PO_SHORTAGE",
+              "ASN_SHORTAGE",
+              "OVERAGE_UNPOSTED"
+            ]
+          },
+          "asnId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reportedExcessQuantity": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "requestKey",
+          "lineId",
+          "kind",
+          "asnId",
+          "reportedExcessQuantity",
+          "reason"
+        ]
+      },
+      "SupplierClaim": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "supplierId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "varianceId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inspectionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "remedy": {
+            "type": "string",
+            "enum": [
+              "REPLACEMENT",
+              "CREDIT_REQUEST"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SUBMITTED",
+              "APPROVED",
+              "CLOSED",
+              "CANCELLED"
+            ]
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "approvedBy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "resolutionNote": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "orderId",
+          "supplierId",
+          "varianceId",
+          "inspectionId",
+          "requestedQuantity",
+          "remedy",
+          "reason",
+          "status",
+          "createdBy",
+          "approvedBy",
+          "resolutionNote",
+          "createdAt"
+        ]
+      },
+      "NewSupplierClaim": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "varianceId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inspectionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requestedQuantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "remedy": {
+            "type": "string",
+            "enum": [
+              "REPLACEMENT",
+              "CREDIT_REQUEST"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "requestKey",
+          "varianceId",
+          "inspectionId",
+          "requestedQuantity",
+          "remedy",
+          "reason"
+        ]
+      },
+      "SupplierCaseActionNote": {
+        "type": "object",
+        "properties": {
+          "note": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ]
+      },
+      "SupplierClaimSource": {
+        "type": "object",
+        "properties": {
+          "sourceType": {
+            "type": "string",
+            "enum": [
+              "VARIANCE",
+              "QC"
+            ]
+          },
+          "sourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "maxQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "sourceType",
+          "sourceId",
+          "maxQuantity",
+          "createdAt"
+        ]
+      },
+      "SupplierCaseEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventType": {
+            "type": "string"
+          },
+          "actorUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "eventType",
+          "actorUserId",
+          "note",
+          "createdAt"
+        ]
+      },
+      "SupplierCasePerformance": {
+        "type": "object",
+        "properties": {
+          "supplierId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "supplierName": {
+            "type": "string"
+          },
+          "orderCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "orderedUnits": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "receivedUnits": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rejectedUnits": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "openDiscrepancies": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "openClaims": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "overdueAsns": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "supplierId",
+          "supplierName",
+          "orderCount",
+          "orderedUnits",
+          "receivedUnits",
+          "rejectedUnits",
+          "openDiscrepancies",
+          "openClaims",
+          "overdueAsns"
+        ]
+      },
+      "LocalDispositionProof": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dispositionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "proofKind": {
+            "type": "string",
+            "enum": [
+              "DISPOSAL_CERTIFICATE",
+              "SUPPLIER_RETURN_RECEIPT"
+            ]
+          },
+          "evidenceReference": {
+            "type": "string"
+          },
+          "documentSha256": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "explanation": {
+            "type": "string"
+          },
+          "submittedBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING_REVIEW",
+              "METADATA_REVIEWED",
+              "REJECTED"
+            ]
+          },
+          "reviewedBy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reviewReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "dispositionId",
+          "proofKind",
+          "evidenceReference",
+          "documentSha256",
+          "explanation",
+          "submittedBy",
+          "status",
+          "reviewedBy",
+          "reviewReason"
+        ]
+      },
+      "NewLocalDispositionProof": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dispositionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "proofKind": {
+            "type": "string",
+            "enum": [
+              "DISPOSAL_CERTIFICATE",
+              "SUPPLIER_RETURN_RECEIPT"
+            ]
+          },
+          "evidenceReference": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 120
+          },
+          "documentSha256": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "explanation": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "requestKey",
+          "dispositionId",
+          "proofKind",
+          "evidenceReference",
+          "documentSha256",
+          "explanation"
+        ]
+      },
+      "LocalDispositionDecision": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "REVIEW",
+              "REJECT"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "decision",
+          "reason"
+        ]
+      },
+      "PurchaseDeliveryLine": {
+        "type": "object",
+        "properties": {
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderNumber": {
+            "type": "string"
+          },
+          "orderStatus": {
+            "type": "string",
+            "enum": [
+              "APPROVED",
+              "RECEIVING",
+              "RECEIVED"
+            ]
+          },
+          "supplierId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "supplierName": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "lineId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "internalSku": {
+            "type": "string"
+          },
+          "orderedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "receivedQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "remainingQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "draftAsnQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "shippedAsnQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reportedUnreceivedQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "unlinkedReceiptQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "awaitingQcReleaseQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "releasedQcAcceptedQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "qcUnknownQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "unresolvedVarianceCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "earliestReportedEta": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "latestReportedEta": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "replenishmentSellerSku": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "replenishmentPricingSource": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "MANUAL",
+                  "V42_RULE"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "deliveryState": {
+            "type": "string",
+            "enum": [
+              "DISCREPANCY_REVIEW",
+              "AWAITING_QC_RELEASE",
+              "QC_EVIDENCE_UNKNOWN",
+              "LOCAL_RECEIVED",
+              "REPORTED_ETA_OVERDUE",
+              "REPORTED_ETA_DUE_SOON",
+              "SHIPMENT_REPORTED",
+              "ASN_AWAITING_DISPATCH",
+              "NO_ASN_RECORDED"
+            ]
+          }
+        },
+        "required": [
+          "orderId",
+          "orderNumber",
+          "orderStatus",
+          "supplierId",
+          "supplierName",
+          "currency",
+          "lineId",
+          "productSkuId",
+          "internalSku",
+          "orderedQuantity",
+          "receivedQuantity",
+          "remainingQuantity",
+          "draftAsnQuantity",
+          "shippedAsnQuantity",
+          "reportedUnreceivedQuantity",
+          "unlinkedReceiptQuantity",
+          "awaitingQcReleaseQuantity",
+          "releasedQcAcceptedQuantity",
+          "qcUnknownQuantity",
+          "unresolvedVarianceCount",
+          "earliestReportedEta",
+          "latestReportedEta",
+          "replenishmentSellerSku",
+          "replenishmentPricingSource",
+          "deliveryState"
+        ]
+      },
+      "PurchaseDeliveryTotals": {
+        "type": "object",
+        "properties": {
+          "lineCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pendingQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reportedUnreceivedQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "awaitingQcReleaseQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "warningLines": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "overdueLines": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "unresolvedVarianceLines": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "lineCount",
+          "pendingQuantity",
+          "reportedUnreceivedQuantity",
+          "awaitingQcReleaseQuantity",
+          "warningLines",
+          "overdueLines",
+          "unresolvedVarianceLines"
+        ]
+      },
+      "PurchaseDeliveryOverview": {
+        "type": "object",
+        "properties": {
+          "asOfDateUtc": {
+            "type": "string",
+            "format": "date"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/PurchaseDeliveryTotals"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PurchaseDeliveryLine"
+            },
+            "maxItems": 300
+          }
+        },
+        "required": [
+          "asOfDateUtc",
+          "totals",
+          "lines"
+        ]
+      },
+      "SupplierSkuPriceRulePage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierSkuPriceRule"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "LocalPurchaseRecommendationPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LocalPurchaseRecommendation"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "LocalSupplierPurchasePlanPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LocalSupplierPurchasePlan"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "SupplierPurchaseVariancePage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierPurchaseVariance"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "SupplierClaimPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierClaim"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "SupplierClaimSourcePage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierClaimSource"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "SupplierCaseEventPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierCaseEvent"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
           }
         },
         "required": [

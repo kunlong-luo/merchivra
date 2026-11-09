@@ -25,7 +25,8 @@ export default function PurchaseDeliveryPanel({tenantId,onOpenOrder}:{
    <button type="button" className="refresh-button" disabled={overview.isFetching}
     onClick={()=>void overview.refetch()}>刷新交付进度</button></div>
   {overview.data&&<p className="setup-hint">
-   截至 {overview.data.asOfDateUtc} UTC · {overview.data.totals.lineCount} 条已批准采购明细 ·
+   截至 {overview.data.asOfDateUtc} UTC · 当前返回 {overview.data.totals.lineCount} 条已批准采购明细
+   （最多 300 条；本行统计只基于这批返回明细，不代表所有采购单） ·
    尚未本地收货 {overview.data.totals.pendingQuantity} 件 ·
    供应商申报已发未关联收货 {overview.data.totals.reportedUnreceivedQuantity} 件 ·
    待质检放行 {overview.data.totals.awaitingQcReleaseQuantity} 件 ·
@@ -68,7 +69,7 @@ export default function PurchaseDeliveryPanel({tenantId,onOpenOrder}:{
     </tbody></table>
    </div>}
   {items.length===300&&<p className="setup-hint">
-   本次显示最多 300 条已批准采购明细，请按采购单查看完整原始记录。</p>}
+   已达到本接口 300 条上限，可能还有未展示的采购明细；上方所有件数和异常计数均只按当前 300 条计算，不可用作全租户汇总。请按采购单逐项核查。</p>}
   <p className="panel-caption">到货逾期提醒沿用 V43 供应商 ASN 待办与手动扫描；
    本看板只读取已有业务记录，不创建另一套告警任务，不发邮件或操作 Amazon。
    无 ASN/草稿未发货为待跟进事项，绝不推断已经逾期或已经发运。</p>

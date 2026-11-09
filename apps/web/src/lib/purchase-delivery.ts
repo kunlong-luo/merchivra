@@ -1,4 +1,5 @@
 import {z} from 'zod'
+import {getLocalPurchaseDeliveryOverview} from '../generated/purchasing-v114'
 
 const line=z.object({
  orderId:z.string().uuid(),orderNumber:z.string(),
@@ -35,15 +36,8 @@ export const deliveryOverviewSchema=z.object({
 export type PurchaseDeliveryOverview=z.infer<typeof deliveryOverviewSchema>
 export type PurchaseDeliveryLine=z.infer<typeof line>
 
-/** Local records only; browser never sends tenantId. Session controls the scope. */
-export async function fetchPurchaseDeliveryOverview():Promise<PurchaseDeliveryOverview> {
- const response=await fetch('/api/v1/purchasing/delivery/overview',{
-  method:'GET',credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}
- })
- if(!response.ok) {
-  if(response.status===403)throw Error('仅当前租户 Owner 可查看采购交付')
-  if(response.status===401)throw Error('会话已过期，请重新登录')
-  throw Error('读取本地采购交付状态失败：HTTP '+response.status)
- }
- return deliveryOverviewSchema.parse(await response.json())
-}
+/** V118: Local records only. Session controls scope; response remains capped
+ * at 300 lines in the existing backend. Do not present this as an all-tenant
+ * overview when total lineCount exceeds the returned 300 rows. */
+export const fetchPurchaseDeliveryOverview=():Promise<PurchaseDeliveryOverview>=>
+ getLocalPurchaseDeliveryOverview().then(r=>deliveryOverviewSchema.parse(r.data))
