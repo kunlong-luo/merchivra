@@ -37,8 +37,8 @@ describe('V51 manual document metadata review',()=>{
    proofKind:'DISPOSAL_CERTIFICATE',evidenceReference:'DIS-2026-001',
    documentSha256:'a'.repeat(64),explanation:'Recorded disposal paperwork metadata'})
   const post=calls.find(x=>x.options.method==='POST')
-  expect(post?.options.headers).toMatchObject({
-   'X-CSRF-TOKEN':'valid-disposition-csrf-token'})
+  expect(new Headers(post?.options.headers).get('X-CSRF-TOKEN'))
+   .toBe('valid-disposition-csrf-token')
   expect(JSON.parse(String(post?.options.body))).toMatchObject({
    requestKey:key,dispositionId:disposition,documentSha256:'a'.repeat(64)})
  })
