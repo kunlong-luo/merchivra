@@ -161,4 +161,27 @@ old_asn=sql(f"""SELECT id FROM erp_purchase_asn
 # Completed POs forbid V43 ETA mutation, so the historical score is frozen.
 assert old_asn
 assert score()["evidenceScore"]=="77.3"
+# V120 PG18 full_suite extension: followup and scorecard keysets reuse
+# existing actual source data; supplier return traces are separate V52 local
+# human reports and this scoped GET must remain safe even with zero records.
+scored=call(root+"/scorecards/page?limit=50")
+assert scored["pageSize"]==50 and isinstance(scored["items"],list)
+assert any(x["supplierId"]==supplier["id"] and x["evidenceScore"]=="77.3"
+ for x in scored["items"]),"V120 scorecard page did not include synthetic scored supplier"
+followed=call(root+"/followups/page?filter=ALL&limit=50")
+assert followed["pageSize"]==50 and isinstance(followed["items"],list)
+assert all(x["ruleCode"] in ("ASN_COVERAGE_GAP","ASN_NOT_DISPATCHED")
+ for x in followed["items"])
+traces=f"/api/v1/purchasing/lot-supplier-returns/warehouses/{warehouse['id']}/page"
+trace_page=call(traces+"?limit=50")
+assert trace_page["pageSize"]==50 and isinstance(trace_page["items"],list)
+assert trace_page["hasMore"]==(trace_page["nextCursor"] is not None)
+call(traces+"?limit=0",expected=400)
+call(traces+"?limit=101",expected=400)
+call(traces+"?limit=50&cursor=invalid%25",expected=400)
+call("/api/v1/purchasing/lot-supplier-returns/warehouses/"+
+ str(uuid4())+"/page?limit=50&cursor=invalid%25",expected=400)
+print("PASS V120: real PG18 scorecard/followup pages and local return trace"+
+ " page scope/cursor/limit validation; no carrier or inventory writes")
+
 print("PASS V73: PG18 session & two Owners, 7d missing/partial ASN, no-dispatch switch, audit/clear, 3 full ASN receipts + 3 actual QC samples, provisional 77.3 score and safe source labels")
