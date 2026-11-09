@@ -64,6 +64,8 @@
 
 > **A1 / V115 实施进展（2026-11-08）**：完成 V114 采购 OpenAPI 的核心写入扩展：供应商/仓库/PO DRAFT、提交/审批/取消、真实收货、仓库库存操作及采购明细查询改由 Orval 生成客户端发送，原币金额字符串与 Session-CSRF/后端审批和库存事务锁保持不变。只读仓库标签新增最多 100 个 ID 的租户作用域批量解析，解决第 201 个仓库在 ASN、QC、收货与批次来源链中只显示 UUID；V48 FIFO/FEFO 与 V49 批次操作继续补齐精确 SKU 余额查询，UNKNOWN **不得**被当作零库存。详见 [V115 变更、专项测试和未执行项](../purchasing/core-writes-orval-warehouse-labels-v115.md)。独立采购附属模块尚未全部迁移，A3 PG18 验收仍需明确执行，Next 正式切换 #63 与真实 Seller 授权继续保持关闭。
 
+> **A1 / V116 实施进展（2026-11-09）**：按现有 Java Controller 真实合同，供应商 ASN（9）、采购 QC/退货（13）、V46 收货批次（9）、V47 待检库位/分件（9）共 **40 条附属采购读写 API** 纳入同一 OpenAPI/Orval，采购源规范现累计 58 个唯一操作。已有前端业务函数签名、TanStack Query 与 Zod 校验不变，POST 统一使用 Session/CSRF 安全 transport；动态路径 UUID 校验避免生成 URL 直接插入非法字符串。详见 [V116 范围、测试与剩余缺口](../purchasing/asn-qc-receipt-bins-orval-v116.md)。底层审核、批次隔离、实际收货证据和 Spring 事务锁未改。**旧 ASN/事件等 LIMIT 200 不因 Orval 生成消失；V48/V49、供应商采购计划等附属域及集中 PG18 验收继续保留未完成，Next 正式部署 Issue #63 仍未放行。**
+
 ## 第一批可执行 P0 核查清单
 
 | 核查对象 | 当前有证据的缺口 | 下一步 |
