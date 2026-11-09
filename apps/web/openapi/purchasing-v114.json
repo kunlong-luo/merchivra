@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Merchivra local purchasing read pages",
-    "version": "118.0.0",
-    "description": "Tenant-local purchasing plan and source-bound claims, metadata proof reviews, and previously generated ASN/QC/lot. Session/CSRF, never supplier, Amazon, FBA, or carrier verifications."
+    "version": "119.0.0",
+    "description": "Tenant-local purchases with true delivery all-row aggregates and complete keyset line pages; legacy 300-row overview remains compatibility only; no Amazon live writes."
   },
   "servers": [
     {
@@ -5278,6 +5278,81 @@
           }
         }
       }
+    },
+    "/api/v1/purchasing/delivery/summary": {
+      "get": {
+        "operationId": "getFullLocalPurchaseDeliverySummary",
+        "summary": "True full-tenant delivery aggregate without 300-line cap",
+        "responses": {
+          "200": {
+            "description": "Tenant-session-local only, no-store",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseDeliveryFullSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid page cursor or limit"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Access denied"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/delivery/lines/page": {
+      "get": {
+        "operationId": "listFullLocalPurchaseDeliveryLinesPage",
+        "summary": "Complete tenant delivery line facts by order timestamp and stable UUID keyset",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-session-local only, no-store",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseDeliveryLinePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid page cursor or limit"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "Access denied"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -9788,6 +9863,58 @@
           "hasMore",
           "pageSize"
         ]
+      },
+      "PurchaseDeliveryFullSummary": {
+        "type": "object",
+        "required": [
+          "asOfDateUtc",
+          "totals"
+        ],
+        "properties": {
+          "asOfDateUtc": {
+            "type": "string",
+            "format": "date"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/PurchaseDeliveryTotals"
+          }
+        }
+      },
+      "PurchaseDeliveryLinePage": {
+        "type": "object",
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ],
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PurchaseDeliveryLine"
+            },
+            "maxItems": 100
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        }
       }
     }
   }
