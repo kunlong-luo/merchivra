@@ -47,6 +47,7 @@ public class PurchaseDeliveryService {
                          long awaitingQcReleaseQuantity,long warningLines,
                          long overdueLines,long unresolvedVarianceLines) {}
     public record Overview(String asOfDateUtc,Totals totals,List<LineProgress> lines) {}
+    public record FullSummary(String asOfDateUtc,Totals totals) {}
 
     /** "Shipped" only means locally entered supplier claim, not carrier proof. */
     static String classify(long remaining,long draft,long shippedOutstanding,
@@ -74,16 +75,10 @@ public class PurchaseDeliveryService {
     private static String state(LineProgress p) {
         return p.deliveryState();
     }
-    @Transactional(readOnly=true)
-    public Overview overview(UUID tenant) {
-        Integer active=jdbc.queryForObject("""
-            SELECT COUNT(*) FROM tenant WHERE id=? AND status='ACTIVE'
-            """,Integer.class,tenant);
-        if(active==null || active!=1)
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Tenant unavailable");
-        LocalDate today=LocalDate.now(clock.withZone(ZoneOffset.UTC));
-        List<LineProgress> lines=jdbc.query("""
-            SELECT o.id AS order_id,o.order_number,o.status AS order_status,
+    /** One source-of-truth fact query for legacy view, full keyset and global SQL totals.
+     * Rows are local observations, not carrier-confirmed deliveries or Amazon FBA. */
+    private static final String DELIVERY_SQL="""
+            SELECT o.updated_at AS cursor_updated_at,o.id AS order_id,o.order_number,o.status AS order_status,
               o.supplier_id,sup.display_name AS supplier_name,o.currency_code,
               l.id AS line_id,l.product_sku_id,sku.internal_sku,l.ordered_quantity,
               receipt.received_units,receipt.unlinked_units,
@@ -150,9 +145,12 @@ public class PurchaseDeliveryService {
                 AND v.state IN ('OPEN','REVIEWED')
             ) variance ON TRUE
             WHERE o.tenant_id=? AND o.status IN ('APPROVED','RECEIVING','RECEIVED')
-            ORDER BY o.updated_at DESC,o.id DESC,l.id DESC
-            LIMIT 300
-            """,(rs,i)->{
+            """;
+
+    private record ScannedLine(LineProgress line,OffsetDateTime updatedAt) {}
+
+    private static LineProgress mapLine(ResultSet rs,int index,LocalDate today)
+        throws SQLException {
                 long ordered=rs.getLong("ordered_quantity");
                 long received=rs.getLong("received_units");
                 long remaining=Math.max(0,ordered-received);
@@ -175,7 +173,107 @@ public class PurchaseDeliveryService {
                     date(rs,"earliest_eta"),date(rs,"latest_eta"),
                     rs.getString("replenishment_seller_sku"),
                     rs.getString("replenishment_pricing_source"),status);
-            },tenant);
+    }
+
+    private void requireActiveTenant(UUID tenant) {
+        Integer active=jdbc.queryForObject("""
+            SELECT COUNT(*) FROM tenant WHERE id=? AND status='ACTIVE'
+            """,Integer.class,tenant);
+        if(active==null || active!=1)
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Tenant unavailable");
+    }
+
+    /** V119: complete approved lines under a tenant-bound keyset cursor. */
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<LineProgress> page(UUID tenant,int requested,String cursor) {
+        int limit=LocalKeysetPage.limit(requested);
+        String[] c=LocalKeysetPage.decode(cursor,5);
+        OffsetDateTime afterTime=null;UUID afterOrder=null,afterLine=null;
+        if(c!=null){
+            if(!"delivery-v119".equals(c[0]) || !tenant.toString().equals(c[1]))
+                throw LocalKeysetPage.bad("Delivery page cursor scope mismatch");
+            try {
+                afterTime=OffsetDateTime.parse(c[2]);
+                afterOrder=UUID.fromString(c[3]);
+                afterLine=UUID.fromString(c[4]);
+            } catch(java.time.format.DateTimeParseException|IllegalArgumentException ex) {
+                throw LocalKeysetPage.bad("Invalid delivery page cursor");
+            }
+        }
+        requireActiveTenant(tenant);
+        LocalDate today=LocalDate.now(clock.withZone(ZoneOffset.UTC));
+        String q=DELIVERY_SQL
+            +(c==null?"":" AND (o.updated_at,o.id,l.id)<(?,?,?)")
+            +" ORDER BY o.updated_at DESC,o.id DESC,l.id DESC LIMIT ?";
+        List<ScannedLine> fetched=c==null
+            ?jdbc.query(q,(rs,i)->new ScannedLine(mapLine(rs,i,today),
+                rs.getObject("cursor_updated_at",OffsetDateTime.class)),tenant,limit+1)
+            :jdbc.query(q,(rs,i)->new ScannedLine(mapLine(rs,i,today),
+                rs.getObject("cursor_updated_at",OffsetDateTime.class)),
+                tenant,afterTime,afterOrder,afterLine,limit+1);
+        var p=LocalKeysetPage.pack(fetched,limit,row->LocalKeysetPage.encode(
+            "delivery-v119",tenant.toString(),row.updatedAt().toString(),
+            row.line().orderId(),row.line().lineId()));
+        return new LocalKeysetPage.Page<>(p.items().stream()
+            .map(ScannedLine::line).toList(),p.nextCursor(),p.hasMore(),p.pageSize());
+    }
+
+    /** V119: PostgreSQL aggregates over all approved tenant lines, not LIMIT 300. */
+    @Transactional(readOnly=true)
+    public FullSummary globalSummary(UUID tenant) {
+        requireActiveTenant(tenant);
+        LocalDate today=LocalDate.now(clock.withZone(ZoneOffset.UTC));
+        String q="""
+            WITH delivery AS (
+            """+DELIVERY_SQL+"""
+            ), classified AS (
+              SELECT d.*, CASE
+                WHEN unresolved_count>0 THEN 'DISCREPANCY_REVIEW'
+                WHEN GREATEST(ordered_quantity-received_units,0)=0
+                     AND qc_awaiting_units>0 THEN 'AWAITING_QC_RELEASE'
+                WHEN GREATEST(ordered_quantity-received_units,0)=0
+                     AND qc_unknown_units>0 THEN 'QC_EVIDENCE_UNKNOWN'
+                WHEN GREATEST(ordered_quantity-received_units,0)=0 THEN 'LOCAL_RECEIVED'
+                WHEN shipped_outstanding>0 AND earliest_eta IS NOT NULL
+                     AND earliest_eta<? THEN 'REPORTED_ETA_OVERDUE'
+                WHEN shipped_outstanding>0 AND earliest_eta IS NOT NULL
+                     AND earliest_eta<=(CAST(? AS date)+3) THEN 'REPORTED_ETA_DUE_SOON'
+                WHEN shipped_outstanding>0 THEN 'SHIPMENT_REPORTED'
+                WHEN draft_units>0 THEN 'ASN_AWAITING_DISPATCH'
+                ELSE 'NO_ASN_RECORDED'
+              END AS delivery_state FROM delivery d
+            )
+            SELECT COUNT(*) AS line_count,
+              COALESCE(SUM(GREATEST(ordered_quantity-received_units,0)),0)
+                AS pending_quantity,
+              COALESCE(SUM(shipped_outstanding),0) AS reported_unreceived_quantity,
+              COALESCE(SUM(qc_awaiting_units),0) AS awaiting_qc_release_quantity,
+              COALESCE(SUM(CASE WHEN delivery_state NOT IN
+                ('LOCAL_RECEIVED','SHIPMENT_REPORTED') THEN 1 ELSE 0 END),0)
+                AS warning_lines,
+              COALESCE(SUM(CASE WHEN delivery_state='REPORTED_ETA_OVERDUE'
+                THEN 1 ELSE 0 END),0) AS overdue_lines,
+              COALESCE(SUM(CASE WHEN unresolved_count>0
+                THEN 1 ELSE 0 END),0) AS unresolved_variance_lines
+            FROM classified
+            """;
+        Totals totals=jdbc.queryForObject(q,(rs,i)->new Totals(
+            Math.toIntExact(rs.getLong("line_count")),
+            rs.getLong("pending_quantity"),
+            rs.getLong("reported_unreceived_quantity"),
+            rs.getLong("awaiting_qc_release_quantity"),
+            rs.getLong("warning_lines"),rs.getLong("overdue_lines"),
+            rs.getLong("unresolved_variance_lines")),tenant,today,today);
+        return new FullSummary(today.toString(),totals);
+    }
+
+    @Transactional(readOnly=true)
+    public Overview overview(UUID tenant) {
+        requireActiveTenant(tenant);
+        LocalDate today=LocalDate.now(clock.withZone(ZoneOffset.UTC));
+        List<LineProgress> lines=jdbc.query(DELIVERY_SQL
+            +" ORDER BY o.updated_at DESC,o.id DESC,l.id DESC LIMIT 300",
+            (rs,i)->mapLine(rs,i,today),tenant);
         long pending=0,reported=0,awaiting=0,warnings=0,overdue=0,varianceLines=0;
         for(LineProgress p:lines) {
             pending+=p.remainingQuantity();

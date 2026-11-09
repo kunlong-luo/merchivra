@@ -1,5 +1,7 @@
 import {z} from 'zod'
-import {getLocalPurchaseDeliveryOverview} from '../generated/purchasing-v114'
+import {getLocalPurchaseDeliveryOverview,
+ getFullLocalPurchaseDeliverySummary,listFullLocalPurchaseDeliveryLinesPage
+} from '../generated/purchasing-v114'
 
 const line=z.object({
  orderId:z.string().uuid(),orderNumber:z.string(),
@@ -41,3 +43,22 @@ export type PurchaseDeliveryLine=z.infer<typeof line>
  * overview when total lineCount exceeds the returned 300 rows. */
 export const fetchPurchaseDeliveryOverview=():Promise<PurchaseDeliveryOverview>=>
  getLocalPurchaseDeliveryOverview().then(r=>deliveryOverviewSchema.parse(r.data))
+
+/** V119: complete approved-PO totals computed by PostgreSQL over the tenant,
+ * not derived by summing only currently displayed keyset page rows. */
+export const deliverySummarySchema=z.object({asOfDateUtc:z.string(),totals})
+export const deliveryLinePageSchema=z.object({
+ items:z.array(line).max(100),
+ nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{
+ message:'Invalid delivery keyset cursor envelope'
+})
+export type PurchaseDeliveryFullSummary=z.infer<typeof deliverySummarySchema>
+export type PurchaseDeliveryLinePage=z.infer<typeof deliveryLinePageSchema>
+export const fetchPurchaseDeliveryFullSummary=():Promise<PurchaseDeliveryFullSummary>=>
+ getFullLocalPurchaseDeliverySummary().then(r=>deliverySummarySchema.parse(r.data))
+export const fetchPurchaseDeliveryLinesPage=(cursor:string|null=null):
+ Promise<PurchaseDeliveryLinePage>=>
+ listFullLocalPurchaseDeliveryLinesPage({limit:50,...(cursor?{cursor}:{})})
+  .then(r=>deliveryLinePageSchema.parse(r.data))

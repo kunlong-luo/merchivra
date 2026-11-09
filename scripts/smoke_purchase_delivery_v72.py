@@ -175,4 +175,35 @@ assert done["deliveryState"]=="AWAITING_QC_RELEASE",done
 assert done["releasedQcAcceptedQuantity"]==0,done
 assert done["unresolvedVarianceCount"]==0
 assert sql(f"SELECT COUNT(*) FROM erp_receipt_quality_batch WHERE tenant_id='{tenant}' AND status='PENDING_QC' AND receipt_id IN (SELECT id FROM erp_purchase_receipt WHERE tenant_id='{tenant}' AND purchase_order_id='{order_id}')")=="3"
+# V119: disposable PG18 / Session HTTP verifies new global SQL aggregation and
+# page cursor are built over the *same* local receipt/ASN/QC source, not the
+# legacy 300-row UI response. This test does not exercise production data.
+full=call("/api/v1/purchasing/delivery/summary")
+assert full["asOfDateUtc"]==today.isoformat(),full
+assert full["totals"]["lineCount"]>=1,full
+assert full["totals"]["awaitingQcReleaseQuantity"]>=36,full
+assert full["totals"]["unresolvedVarianceLines"]>=0,full
+cursor=None
+seen=set()
+for page_no in range(100):
+    query="?limit=50"+(("&cursor="+urlencode({"c":cursor})[2:]) if cursor else "")
+    pg=call("/api/v1/purchasing/delivery/lines/page"+query)
+    assert pg["pageSize"]==50 and len(pg["items"])<=50,pg
+    for x in pg["items"]:
+        assert x["lineId"] not in seen,"Delivery cursor repeated a line"
+        seen.add(x["lineId"])
+        if x["orderId"]==order_id:
+            assert x["receivedQuantity"]==36 and x["remainingQuantity"]==0,x
+            assert x["deliveryState"]=="AWAITING_QC_RELEASE",x
+    assert pg["hasMore"]==(pg["nextCursor"] is not None),pg
+    if not pg["hasMore"]:break
+    cursor=pg["nextCursor"]
+else:
+    raise AssertionError("Unexpected >5000 approved lines in isolated V72 fixture")
+assert line_id in seen, "Synthetic PO must appear in full delivery pages"
+assert full["totals"]["lineCount"]==len(seen),full
+call("/api/v1/purchasing/delivery/lines/page?limit=101",expected=400)
+call("/api/v1/purchasing/delivery/lines/page?limit=50&cursor=invalid%25",expected=400)
+print("PASS V119: PG18 aggregate all approved rows and scoped complete delivery keyset HTTP")
+
 print("PASS V72: real PG18 dual Owner approval, no ASN, draft, reported due/late, V43 alert reuse, linked receipts, discrepancy, QC hold and no FBA changes")
