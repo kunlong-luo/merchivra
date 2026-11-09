@@ -1,5 +1,11 @@
 import {z} from 'zod'
-import {csrfHeader} from './auth'
+import {
+ listQualityReceiptsLegacy,listQualityReceiptsPage,inspectQualityReceipt as requestInspect,
+ listQualityReturnsLegacy,listQualityReturnsPage,getQualityReturnSummary,
+ createQualitySupplierReturn,dispatchQualitySupplierReturn,cancelQualitySupplierReturn,
+ listQualityFindingsLegacy,listQualityFindingsPage,
+ scanQualityFindings as requestScan,changeQualityFindingState
+} from '../generated/purchasing-v114'
 
 const base='/api/v1/purchasing/quality'
 const receipt=z.object({id:z.string().uuid(),orderId:z.string().uuid(),
@@ -29,34 +35,10 @@ export type QualitySupplierReturn=z.infer<typeof supplierReturn>
 export type QualityFinding=z.infer<typeof finding>
 export type QualityFindingState='OPEN'|'ACKNOWLEDGED'|'DONE'
 
-async function api<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown):Promise<T>{
- const response=await fetch(url,{method,credentials:'same-origin',cache:'no-store',
-  headers:{Accept:'application/json',...(method==='GET'?{}:await csrfHeader()),
-   ...(body===undefined?{}:{'Content-Type':'application/json'})},
-  ...(body===undefined?{}:{body:JSON.stringify(body)})})
- if(!response.ok){
-  if(response.status===403)throw Error('仅 Owner 可以记录本地采购质检与供应商退货')
-  if(response.status===404)throw Error('收货、质检或退货记录不存在或不属于当前租户')
-  if(response.status===409)throw Error('库存、质检状态或可退数量已变化，请刷新核对')
-  throw Error('本地采购质检 API HTTP '+response.status)
- }
- return schema.parse(await response.json())
-}
-const receiptPage=z.object({
- items:z.array(receipt).max(100),nextCursor:z.string().min(1).nullable(),
- hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
-}).refine(p=>p.hasMore===(p.nextCursor!==null),{message:'Invalid QC receipt page cursor'})
-export const fetchQualityReceiptsPage=(orderId:string,cursor:string|null=null)=>{
- const params=new URLSearchParams({limit:'50'})
- if(cursor)params.set('cursor',cursor)
- return api(base+'/orders/'+encodeURIComponent(orderId)+'/receipts/page?'+params.toString(),
-  receiptPage)
-}
-export const fetchQualityReceipts=(orderId:string)=>api(
- base+'/orders/'+encodeURIComponent(orderId)+'/receipts',z.array(receipt))
-export const inspectQualityReceipt=(receiptId:string,body:{
- requestKey:string;acceptedQuantity:number;rejectedQuantity:number;reason:string})=>api(
- base+'/receipts/'+encodeURIComponent(receiptId)+'/inspect',inspection,'POST',body)
+// Orval V116 owns transport (same-origin Session, CSRF, no-store).
+// Keep Zod DTO validation and keyset cursor invariants.
+const decode=<T>(promise:Promise<{data:unknown}>,schema:z.ZodType<T>):Promise<T>=>
+ promise.then(r=>schema.parse(r.data))
 const cursorPage=<T extends z.ZodTypeAny>(item:T)=>z.object({
  items:z.array(item).max(100),nextCursor:z.string().min(1).nullable(),
  hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
@@ -64,31 +46,33 @@ const cursorPage=<T extends z.ZodTypeAny>(item:T)=>z.object({
 const returnSummary=z.object({rejectedUnits:z.number().int().nonnegative(),
  draftedUnits:z.number().int().nonnegative(),dispatchedUnits:z.number().int().nonnegative(),
  unallocatedUnits:z.number().int().nonnegative()})
-function pageQuery(cursor:string|null,other:Record<string,string>={}){
- const params=new URLSearchParams({limit:'50',...other})
- if(cursor)params.set('cursor',cursor)
- return params.toString()
-}
-export const fetchQualityReturnsPage=(inspectionId:string,cursor:string|null=null)=>api(
- base+'/inspections/'+encodeURIComponent(inspectionId)+'/returns/page?'+pageQuery(cursor),
- cursorPage(supplierReturn))
-export const fetchQualityReturnSummary=(inspectionId:string)=>api(
- base+'/inspections/'+encodeURIComponent(inspectionId)+'/returns/summary',returnSummary)
-export const fetchQualityFindingsPage=(filter:'ACTIVE'|'ALL',cursor:string|null=null)=>api(
- base+'/findings/page?'+pageQuery(cursor,{filter}),cursorPage(finding))
-export const fetchQualityReturns=(inspectionId:string)=>api(
- base+'/inspections/'+encodeURIComponent(inspectionId)+'/returns',
- z.array(supplierReturn))
+export const fetchQualityReceiptsPage=(orderId:string,cursor:string|null=null)=>
+ decode(listQualityReceiptsPage(orderId,{limit:50,...(cursor?{cursor}:{})}),
+  cursorPage(receipt))
+export const fetchQualityReceipts=(orderId:string)=>
+ decode(listQualityReceiptsLegacy(orderId),z.array(receipt))
+export const inspectQualityReceipt=(receiptId:string,body:{
+ requestKey:string;acceptedQuantity:number;rejectedQuantity:number;reason:string})=>
+ decode(requestInspect(receiptId,body),inspection)
+export const fetchQualityReturnsPage=(inspectionId:string,cursor:string|null=null)=>
+ decode(listQualityReturnsPage(inspectionId,{limit:50,...(cursor?{cursor}:{})}),
+  cursorPage(supplierReturn))
+export const fetchQualityReturnSummary=(inspectionId:string)=>
+ decode(getQualityReturnSummary(inspectionId),returnSummary)
+export const fetchQualityFindingsPage=(filter:'ACTIVE'|'ALL',cursor:string|null=null)=>
+ decode(listQualityFindingsPage({limit:50,filter,...(cursor?{cursor}:{})}),
+  cursorPage(finding))
+export const fetchQualityReturns=(inspectionId:string)=>
+ decode(listQualityReturnsLegacy(inspectionId),z.array(supplierReturn))
 export const createQualityReturn=(inspectionId:string,body:{
- requestKey:string;quantity:number;reference:string|null})=>api(
- base+'/inspections/'+encodeURIComponent(inspectionId)+'/returns',
- supplierReturn,'POST',body)
-export const actQualityReturn=(id:string,kind:'dispatch'|'cancel')=>api(
- base+'/returns/'+encodeURIComponent(id)+'/'+kind,supplierReturn,'POST')
-export const fetchQualityFindings=(filter:'ACTIVE'|'ALL')=>api(
- base+'/findings?filter='+filter,z.array(finding))
-export const scanQualityFindings=()=>api(base+'/scan',scan,'POST')
-export const changeQualityFinding=(id:string,state:QualityFindingState)=>api(
- base+'/findings/'+encodeURIComponent(id)+'/state',
- z.object({id:z.string().uuid(),state:z.enum(['OPEN','ACKNOWLEDGED','DONE'])}),
- 'POST',{state})
+ requestKey:string;quantity:number;reference:string|null})=>
+ decode(createQualitySupplierReturn(inspectionId,body),supplierReturn)
+export const actQualityReturn=(id:string,kind:'dispatch'|'cancel')=>
+ decode(kind==='dispatch'?dispatchQualitySupplierReturn(id):
+  cancelQualitySupplierReturn(id),supplierReturn)
+export const fetchQualityFindings=(filter:'ACTIVE'|'ALL')=>
+ decode(listQualityFindingsLegacy({filter}),z.array(finding))
+export const scanQualityFindings=()=>decode(requestScan(),scan)
+export const changeQualityFinding=(id:string,state:QualityFindingState)=>
+ decode(changeQualityFindingState(id,{state}),
+  z.object({id:z.string().uuid(),state:z.enum(['OPEN','ACKNOWLEDGED','DONE'])}))
