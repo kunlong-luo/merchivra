@@ -1,3 +1,5 @@
+# V131: rerun exact-main-SHA full A3 after Next V104 hydration-safe
+# dialog open regression while retaining one-confirmation-only write assertions.
 # V130: one post-merge exact-main-SHA full A3 after fixing FIFO/FEFO
 # >500 position selection and the React preview lower-bound contract.
 # V129: one exact-main-SHA full A3 after adding the forward-only PG18
@@ -21,7 +23,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V130-A3-FIFO-FEFO-500-position-pick' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V131-A3-Next-V104-confirm-hydration' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -48,6 +50,7 @@ on:
           - V128-A3-Next-healthcheck-release-gate
           - V129-A3-private-proof-download-audit
           - V130-A3-FIFO-FEFO-500-position-pick
+          - V131-A3-Next-V104-confirm-hydration
 
 permissions:
   contents: read
