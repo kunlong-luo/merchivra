@@ -42,6 +42,7 @@ class PurchaseDeliveryFullScopeV119Test {
         when(rs.getString("currency_code")).thenReturn("USD");
         when(rs.getString("internal_sku")).thenReturn("SKU-"+n);
         when(rs.getInt("ordered_quantity")).thenReturn(10);
+        when(rs.getLong("ordered_quantity")).thenReturn(10L);
         when(rs.getLong("received_units")).thenReturn(2L);
         when(rs.getLong("draft_units")).thenReturn(0L);
         when(rs.getLong("shipped_outstanding")).thenReturn(0L);
