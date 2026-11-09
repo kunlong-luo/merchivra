@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Merchivra local purchasing read pages",
-    "version": "119.0.0",
-    "description": "Tenant-local purchases with true delivery all-row aggregates and complete keyset line pages; legacy 300-row overview remains compatibility only; no Amazon live writes."
+    "version": "120.0.0",
+    "description": "Tenant-scoped local purchasing 112 contracts, including supplier evidence/followups and V52 supplier return dispatch reporting; no external shipment, Amazon OAuth or production writes."
   },
   "servers": [
     {
@@ -5353,6 +5353,508 @@
           }
         }
       }
+    },
+    "/api/v1/purchasing/supplier-performance/scorecards": {
+      "get": {
+        "operationId": "listSupplierEvidenceScorecardsLegacy",
+        "summary": "Legacy first 200 evidence scorecards",
+        "responses": {
+          "200": {
+            "description": "Legacy first 200 evidence scorecards",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SupplierEvidenceScorecard"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid scope or request"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "Permission or CSRF denied"
+          },
+          "404": {
+            "description": "Tenant resource unavailable"
+          },
+          "409": {
+            "description": "Review/state/idempotency conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/supplier-performance/scorecards/page": {
+      "get": {
+        "operationId": "listSupplierEvidenceScorecardsPage",
+        "summary": "Complete 90-day local ASN/QC evidence scorecards; insufficient evidence stays null",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete 90-day local ASN/QC evidence scorecards; insufficient evidence stays null",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierEvidenceScorecardPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid scope or request"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "Permission or CSRF denied"
+          },
+          "404": {
+            "description": "Tenant resource unavailable"
+          },
+          "409": {
+            "description": "Review/state/idempotency conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/supplier-performance/followups": {
+      "get": {
+        "operationId": "listPurchaseFollowupsLegacy",
+        "summary": "Legacy first 100 human local followups, no automatic supplier contact",
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "ALL"
+              ],
+              "default": "ACTIVE"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Legacy first 100 human local followups, no automatic supplier contact",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PurchaseFollowupFinding"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid scope or request"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "Permission or CSRF denied"
+          },
+          "404": {
+            "description": "Tenant resource unavailable"
+          },
+          "409": {
+            "description": "Review/state/idempotency conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/supplier-performance/followups/page": {
+      "get": {
+        "operationId": "listPurchaseFollowupsPage",
+        "summary": "Full local purchase followup findings by status and stable keyset",
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "ALL"
+              ],
+              "default": "ACTIVE"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full local purchase followup findings by status and stable keyset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseFollowupFindingPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid scope or request"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "Permission or CSRF denied"
+          },
+          "404": {
+            "description": "Tenant resource unavailable"
+          },
+          "409": {
+            "description": "Review/state/idempotency conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/supplier-performance/scan": {
+      "post": {
+        "operationId": "scanPurchaseFollowups",
+        "summary": "Explicit local rules scan, not external supplier outreach",
+        "responses": {
+          "200": {
+            "description": "Explicit local rules scan, not external supplier outreach",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseFollowupScan"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid scope or request"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "Permission or CSRF denied"
+          },
+          "404": {
+            "description": "Tenant resource unavailable"
+          },
+          "409": {
+            "description": "Review/state/idempotency conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/supplier-performance/followups/{findingId}/state": {
+      "post": {
+        "operationId": "changePurchaseFollowupState",
+        "summary": "Human acknowledgement or review state; no supplier response inferred",
+        "parameters": [
+          {
+            "name": "findingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PurchaseFollowupStateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Human acknowledgement or review state; no supplier response inferred",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PurchaseFollowupChange"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid scope or request"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "Permission or CSRF denied"
+          },
+          "404": {
+            "description": "Tenant resource unavailable"
+          },
+          "409": {
+            "description": "Review/state/idempotency conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-supplier-returns/warehouses/{warehouseId}": {
+      "get": {
+        "operationId": "listLocalSupplierReturnTracesLegacy",
+        "summary": "Legacy first 200 reported disposition return traces",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Legacy first 200 reported disposition return traces",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocalSupplierReturnTrace"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid scope or request"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "Permission or CSRF denied"
+          },
+          "404": {
+            "description": "Tenant resource unavailable"
+          },
+          "409": {
+            "description": "Review/state/idempotency conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-supplier-returns/warehouses/{warehouseId}/page": {
+      "get": {
+        "operationId": "listLocalSupplierReturnTracesPage",
+        "summary": "Complete tenant+warehouse return dispatch and receipt report history",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete tenant+warehouse return dispatch and receipt report history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalSupplierReturnTracePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid scope or request"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "Permission or CSRF denied"
+          },
+          "404": {
+            "description": "Tenant resource unavailable"
+          },
+          "409": {
+            "description": "Review/state/idempotency conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-supplier-returns": {
+      "post": {
+        "operationId": "dispatchLocalSupplierReturn",
+        "summary": "Idempotent human dispatch report sourced from already executed supplier-return disposition",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalSupplierReturnDispatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Idempotent human dispatch report sourced from already executed supplier-return disposition",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalSupplierReturnTrace"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid scope or request"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "Permission or CSRF denied"
+          },
+          "404": {
+            "description": "Tenant resource unavailable"
+          },
+          "409": {
+            "description": "Review/state/idempotency conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-supplier-returns/{id}/receipt": {
+      "post": {
+        "operationId": "reportLocalSupplierReturnReceipt",
+        "summary": "Independent human reported supplier receipt, not verified carrier delivery and not stock posting",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalSupplierReturnReceipt"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Independent human reported supplier receipt, not verified carrier delivery and not stock posting",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalSupplierReturnTrace"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid scope or request"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "Permission or CSRF denied"
+          },
+          "404": {
+            "description": "Tenant resource unavailable"
+          },
+          "409": {
+            "description": "Review/state/idempotency conflict"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -9915,6 +10417,486 @@
             "maximum": 100
           }
         }
+      },
+      "SupplierEvidenceScorecard": {
+        "type": "object",
+        "properties": {
+          "supplierId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "supplierName": {
+            "type": "string"
+          },
+          "completeAsnSampleCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "observedOnTimeAsnCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inspectedReceiptSampleCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "acceptedQcUnits": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "inspectedQcUnits": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "activeVarianceCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "observedOnTimePercent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "inspectedAcceptancePercent": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidenceScore": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scoringStatus": {
+            "type": "string",
+            "enum": [
+              "INSUFFICIENT_EVIDENCE",
+              "PROVISIONAL"
+            ]
+          }
+        },
+        "required": [
+          "supplierId",
+          "supplierName",
+          "completeAsnSampleCount",
+          "observedOnTimeAsnCount",
+          "inspectedReceiptSampleCount",
+          "acceptedQcUnits",
+          "inspectedQcUnits",
+          "activeVarianceCount",
+          "observedOnTimePercent",
+          "inspectedAcceptancePercent",
+          "evidenceScore",
+          "scoringStatus"
+        ]
+      },
+      "PurchaseFollowupFinding": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderNumber": {
+            "type": "string"
+          },
+          "lineId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "internalSku": {
+            "type": "string"
+          },
+          "supplierName": {
+            "type": "string"
+          },
+          "ruleCode": {
+            "type": "string",
+            "enum": [
+              "ASN_COVERAGE_GAP",
+              "ASN_NOT_DISPATCHED"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "ACKNOWLEDGED",
+              "DONE",
+              "CLEARED"
+            ]
+          },
+          "approvedAt": {
+            "type": "string"
+          },
+          "orderedQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "receivedQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "activeAsnQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "uncoveredQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "lastSeenAt": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "orderId",
+          "orderNumber",
+          "lineId",
+          "internalSku",
+          "supplierName",
+          "ruleCode",
+          "state",
+          "approvedAt",
+          "orderedQuantity",
+          "receivedQuantity",
+          "activeAsnQuantity",
+          "uncoveredQuantity",
+          "lastSeenAt"
+        ]
+      },
+      "PurchaseFollowupScan": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "triggerType": {
+            "type": "string",
+            "enum": [
+              "MANUAL"
+            ]
+          },
+          "matchedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "clearedCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "id",
+          "triggerType",
+          "matchedCount",
+          "clearedCount"
+        ]
+      },
+      "PurchaseFollowupStateBody": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "ACKNOWLEDGED",
+              "DONE"
+            ]
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "PurchaseFollowupChange": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "ACKNOWLEDGED",
+              "DONE"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "state"
+        ]
+      },
+      "LocalSupplierReturnTrace": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dispositionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceReceiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "supplierId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "carrierReference": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DISPATCH_REPORTED",
+              "SUPPLIER_RECEIPT_REPORTED",
+              "RECEIPT_MISMATCH"
+            ]
+          },
+          "dispatchedBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receivedQuantity": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int32"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "receiptReference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "receivedReportedBy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "dispositionId",
+          "sourceReceiptId",
+          "supplierId",
+          "quantity",
+          "carrierReference",
+          "reason",
+          "status",
+          "dispatchedBy",
+          "receivedQuantity",
+          "receiptReference",
+          "receivedReportedBy"
+        ]
+      },
+      "LocalSupplierReturnDispatch": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "dispositionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "carrierReference": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 120
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "requestKey",
+          "dispositionId",
+          "carrierReference",
+          "reason"
+        ]
+      },
+      "LocalSupplierReturnReceipt": {
+        "type": "object",
+        "properties": {
+          "receivedQuantity": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "receiptReference": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 120
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "receivedQuantity",
+          "receiptReference",
+          "reason"
+        ]
+      },
+      "SupplierEvidenceScorecardPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierEvidenceScorecard"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "PurchaseFollowupFindingPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PurchaseFollowupFinding"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "LocalSupplierReturnTracePage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LocalSupplierReturnTrace"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
       }
     }
   }
