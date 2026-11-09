@@ -66,6 +66,8 @@
 
 > **A1 / V116 实施进展（2026-11-09）**：按现有 Java Controller 真实合同，供应商 ASN（9）、采购 QC/退货（13）、V46 收货批次（9）、V47 待检库位/分件（9）共 **40 条附属采购读写 API** 纳入同一 OpenAPI/Orval，采购源规范现累计 58 个唯一操作。已有前端业务函数签名、TanStack Query 与 Zod 校验不变，POST 统一使用 Session/CSRF 安全 transport；动态路径 UUID 校验避免生成 URL 直接插入非法字符串。详见 [V116 范围、测试与剩余缺口](../purchasing/asn-qc-receipt-bins-orval-v116.md)。底层审核、批次隔离、实际收货证据和 Spring 事务锁未改。**旧 ASN/事件等 LIMIT 200 不因 Orval 生成消失；V48/V49、供应商采购计划等附属域及集中 PG18 验收继续保留未完成，Next 正式部署 Issue #63 仍未放行。**
 
+> **A1 / V117 实施进展（2026-11-09）**：V48 已放行实物批次/分段质检/上架/FIFO-FEFO 拣货、V49 库位调拨/过期隔离/盘点观察/审计来源链纳入已有 OpenAPI/Orval 请求生成链；现累计 **71 个采购唯一 operationId**。新增 ASN 通知与不可覆盖事件日志的 Session 租户/PO/ASN 游标绑定服务端全量分页，前端展示第 201 条后真实通知和事件，旧 200 条兼容 API 保留供旧消费者使用。专项 Java 225 通知/事件、CSRF 和 Vitest 测试随 [V117 说明](../purchasing/released-lots-asn-pages-v117.md) 落库。**PG18 全量权限/并发/事务验收仍由 A3 集中执行，不以 CI 快速测试代替**。采购计划/供应商报价、索赔/批次证据、Next 正式切换 #63 与真实 Amazon 授权继续未完成。
+
 ## 第一批可执行 P0 核查清单
 
 | 核查对象 | 当前有证据的缺口 | 下一步 |

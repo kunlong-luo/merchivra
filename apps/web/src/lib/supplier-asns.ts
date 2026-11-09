@@ -2,7 +2,8 @@ import {z} from 'zod'
 import {
  listSupplierAsnNotices,listSupplierAsnNoticeEvents,createSupplierAsnNotice,
  shipSupplierAsnNotice,cancelSupplierAsnNotice,updateSupplierAsnNoticeEta,
- listSupplierAsnFindings,scanSupplierAsnFindings,changeSupplierAsnFindingState
+ listSupplierAsnFindings,scanSupplierAsnFindings,changeSupplierAsnFindingState,
+ listSupplierAsnNoticesPage,listSupplierAsnNoticeEventsPage
 } from '../generated/purchasing-v114'
 
 const base='/api/v1/purchasing/supplier-asns'
@@ -37,6 +38,20 @@ export type NewSupplierAsn={requestKey:string;lineId:string;warehouseId:string;
 const pathId=(id:string)=>z.string().uuid().parse(id)
 const decode=<T>(promise:Promise<{data:unknown}>,schema:z.ZodType<T>):Promise<T>=>
  promise.then(r=>schema.parse(r.data))
+const pageOf=<T extends z.ZodTypeAny>(schema:T)=>z.object({
+ items:z.array(schema).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{
+ message:'ASN page must have a cursor iff more rows remain'
+})
+export const fetchSupplierAsnsPage=(orderId:string,cursor:string|null=null)=>
+ decode(listSupplierAsnNoticesPage(pathId(orderId),
+  {limit:50,...(cursor?{cursor}:{})}),pageOf(asn))
+export const fetchSupplierAsnEventsPage=(orderId:string,asnId:string,
+ cursor:string|null=null)=>
+ decode(listSupplierAsnNoticeEventsPage(pathId(orderId),pathId(asnId),
+  {limit:50,...(cursor?{cursor}:{})}),pageOf(event))
+
 export const fetchSupplierAsns=(orderId:string)=>
  decode(listSupplierAsnNotices(pathId(orderId)),z.array(asn))
 export const fetchSupplierAsnEvents=(orderId:string,asnId:string)=>
