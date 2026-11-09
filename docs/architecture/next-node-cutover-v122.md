@@ -44,3 +44,11 @@ docker compose --env-file .env -f deploy/compose.yaml \
 快速 CI 只验证镜像部署配置、React/Next TS 与现有单测。A3 里程碑运行 `.github/workflows/milestone-validation.yml`，自动调用 **完整 CI PG18 / Flyway / Next 生产构建 / Java / React**、**Vite+Next Chromium**、**Compose 三服务链及新 Node 独立容器真实 Spring Session/CSRF**。V122 合并后因该 workflow 本身发生变化会自动针对**V122 main 精确 SHA**触发一次，工作流 URL 和成功/失败必须真实记录；不能沿用 V108 或 V121 快速 CI 假称 A3 放行。
 
 与主线已有 V119/V120 的 PG18 冒烟互补，V121 225 条与 V48 原批次等高数据量测试的真实 SQL/索引与 P0 仍需验证；全绿也只代表**合成一次性环境**，不代表已走完真实 Amazon 生产授权或生产安全审批。
+
+## V128 容器就绪探针（无需生产密钥）
+
+`next-web` 的 Docker Compose healthcheck 现在使用 Node 24 内置 `fetch`，从**容器内部**访问 `http://127.0.0.1:3000/api/v1/ping`：该请求必须经 Next 同源转发实际到达 Spring，且 HTTP 状态严格为 200；单次超时 3 秒，Compose 每 15 秒重试、启动缓冲 60 秒。不安装 curl、不访问 Amazon、不注入数据库或 OAuth 凭证。探针只观察**运行时就绪**，不证明外部 TLS/证书/IAM 或真实 Seller 授权安全。
+
+在一次性合成环境运行 `docker compose --env-file .env -f deploy/compose.yaml -f deploy/compose.next.yaml ps` 查看 `next-web` 是否 `healthy`；完整 A3 Compose 脚本会在现有 HTTP/Session/CSRF 检查以外核实这个状态。若 Spring 中断，Next 服务可能仍在监听端口，但应被标记为 `unhealthy`，发布代理/部署平台不得只依赖 TCP 存活作流量切换判断。是否将此健康探针绑定到目标 ingress 的流量摘除机制，必须在真实部署环境另行验证。
+
+**V128 提交只运行快速 PR CI；如最终生产候选 SHA 因合并而变化，必须针对该新 SHA 重新执行完整 A3 里程碑，不能挪用旧 V126 结果冒充对新镜像的完整验证。**
