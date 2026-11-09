@@ -4,7 +4,7 @@ import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
 import {fetchLotPositions} from './lib/released-lots'
 import CursorPageControls from './CursorPageControls'
-import {fetchLotCountCases,fetchDestinationTransfers} from './lib/lot-reconciliation'
+import {fetchLotCountCasesPage,fetchDestinationTransfersPage} from './lib/lot-reconciliation'
 import {
  fetchLotExceptionsPage,proposeLotException,decideLotException,
  type LotExceptionFilter,type NewLotException
@@ -19,6 +19,10 @@ export default function LotExceptionPanel({tenantId,currentUserId,warehouses}:{
  const [warehouse,setWarehouse]=useState('')
  const [reviewFilter,setReviewFilter]=useState<LotExceptionFilter>('PENDING')
  const [reviewCursors,setReviewCursors]=useState<(string|null)[]>([null])
+ const [countSourceCursors,setCountSourceCursors]=useState<(string|null)[]>([null])
+ const [transferSourceCursors,setTransferSourceCursors]=useState<(string|null)[]>([null])
+ const countSourceCursor=countSourceCursors.at(-1)??null
+ const transferSourceCursor=transferSourceCursors.at(-1)??null
  const reviewCursor=reviewCursors.at(-1)??null
  const [type,setType]=useState<NewLotException['resolutionType']>('RELEASED_SURPLUS_BIND')
  const [sourceId,setSourceId]=useState('')
@@ -27,21 +31,23 @@ export default function LotExceptionPanel({tenantId,currentUserId,warehouses}:{
  const [key,setKey]=useState(()=>crypto.randomUUID())
  const [reviewReason,setReviewReason]=useState('')
  const [success,setSuccess]=useState(''),[error,setError]=useState('')
- const counts=useQuery({queryKey:[...root,'count-reviews',warehouse],
-  queryFn:()=>fetchLotCountCases(warehouse),enabled:!!warehouse,retry:false})
- const transfers=useQuery({queryKey:[...root,'transfer-receiving',warehouse],
-  queryFn:()=>fetchDestinationTransfers(warehouse),enabled:!!warehouse,retry:false})
+ const counts=useQuery({queryKey:[...root,'count-reviews-page',warehouse,countSourceCursor],
+  queryFn:()=>fetchLotCountCasesPage(warehouse,countSourceCursor),
+  enabled:!!warehouse,retry:false})
+ const transfers=useQuery({queryKey:[...root,'transfer-receiving-page',warehouse,transferSourceCursor],
+  queryFn:()=>fetchDestinationTransfersPage(warehouse,transferSourceCursor),
+  enabled:!!warehouse,retry:false})
  const positions=useQuery({queryKey:[...root,'lot-positions',warehouse],
   queryFn:()=>fetchLotPositions(warehouse),enabled:!!warehouse,retry:false})
  const resolutions=useQuery({queryKey:[...root,'lot-exceptions-page',warehouse,reviewFilter,reviewCursor],
   queryFn:()=>fetchLotExceptionsPage(warehouse,reviewFilter,reviewCursor),
   enabled:!!warehouse,retry:false})
  const refresh=()=>void client.invalidateQueries({queryKey:root})
- const surplus=(counts.data??[]).filter(c=>c.status==='EVIDENCE_REQUIRED'&&
+ const surplus=(counts.data?.items??[]).filter(c=>c.status==='EVIDENCE_REQUIRED'&&
   c.observedQuantity>c.expectedPositionQuantity)
- const shortages=(transfers.data??[]).filter(t=>t.status==='MISMATCH'&&
+ const shortages=(transfers.data?.items??[]).filter(t=>t.status==='MISMATCH'&&
   t.expectedQuantity>t.receivedQuantity)
- const count=counts.data?.find(c=>c.id===sourceId)
+ const count=counts.data?.items.find(c=>c.id===sourceId)
  const sourceReceipt=positions.data?.find(p=>p.id===count?.positionId)?.receiptId??null
  const valid=!!sourceId&&reasonOk(reason)&&reference.trim().length>=4&&
   reference.trim().length<=120&&
@@ -84,6 +90,7 @@ export default function LotExceptionPanel({tenantId,currentUserId,warehouses}:{
     label="需要处理的仓库（全库）" value={warehouse}
     onChange={id=>{
    setWarehouse(id);setReviewCursors([null]);
+   setCountSourceCursors([null]);setTransferSourceCursors([null]);
    setSourceId('');setKey(crypto.randomUUID())}}/>
   {!!warehouse&&<>
    <h3>提出有来源的异常纠正申请</h3>
@@ -91,7 +98,8 @@ export default function LotExceptionPanel({tenantId,currentUserId,warehouses}:{
     <label htmlFor="v51-type">异常类型</label>
     <select id="v51-type" value={type} onChange={e=>{
      setType(e.target.value as NewLotException['resolutionType']);
-     setSourceId('');setKey(crypto.randomUUID())}}>
+     setSourceId('');setCountSourceCursors([null]);
+     setTransferSourceCursors([null]);setKey(crypto.randomUUID())}}>
      <option value="RELEASED_SURPLUS_BIND">盘盈 · 绑定原已放行但未定位数量</option>
      <option value="TRANSFER_SHORTAGE">目的仓少收 · 正式减仓库/批次库存</option>
     </select>
@@ -107,6 +115,20 @@ export default function LotExceptionPanel({tenantId,currentUserId,warehouses}:{
        目标仓少收 {t.expectedQuantity-t.receivedQuantity} 件 ·
        调拨 {t.actionId.slice(0,8)}</option>)}
     </select>
+    {type==='RELEASED_SURPLUS_BIND'&&counts.data&&<CursorPageControls
+     label="盘盈实物来源全库" page={countSourceCursors.length}
+     hasMore={counts.data.hasMore} nextCursor={counts.data.nextCursor}
+     busy={counts.isFetching}
+     onPrev={()=>{setCountSourceCursors(v=>v.slice(0,-1));setSourceId('')}}
+     onNext={cursor=>{setCountSourceCursors(v=>[...v,cursor]);setSourceId('')}}/>}
+    {type==='TRANSFER_SHORTAGE'&&transfers.data&&<CursorPageControls
+     label="目的仓少收来源全库" page={transferSourceCursors.length}
+     hasMore={transfers.data.hasMore} nextCursor={transfers.data.nextCursor}
+     busy={transfers.isFetching}
+     onPrev={()=>{setTransferSourceCursors(v=>v.slice(0,-1));setSourceId('')}}
+     onNext={cursor=>{setTransferSourceCursors(v=>[...v,cursor]);setSourceId('')}}/>}
+    <p className="setup-hint">来源候选每页最多 50 条，早期盘点和调拨可以翻页选择。
+     只有服务端全库幂等核对及真实质检放行的收货凭据才允许申请，不能由当前页推断唯一性。</p>
     {type==='RELEASED_SURPLUS_BIND'&&count&&
      <p className="setup-hint">来源真实收货：
       {sourceReceipt??'无法确定原始收货，不能提交'}。

@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.security.TenantAccessService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -24,6 +26,40 @@ public class LotReconciliationController {
     public List<LotReconciliationService.CountCase> counts(Authentication auth,
         HttpServletRequest request,@PathVariable UUID warehouseId) {
         return service.counts(access.currentTenant(auth,request),warehouseId);
+    }
+
+    @GetMapping("/warehouses/{warehouseId}/counts/page")
+    public ResponseEntity<LocalKeysetPage.Page<LotReconciliationService.CountCase>> countsPage(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID warehouseId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.countsPage(access.currentTenant(auth,request),warehouseId,limit,cursor));
+    }
+    @GetMapping("/warehouses/{warehouseId}/transfers/page")
+    public ResponseEntity<LocalKeysetPage.Page<LotReconciliationService.Transfer>> transfersPage(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID warehouseId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.transfersPage(access.currentTenant(auth,request),warehouseId,limit,cursor));
+    }
+    @GetMapping("/warehouses/{warehouseId}/dispositions/page")
+    public ResponseEntity<LocalKeysetPage.Page<LotReconciliationService.Disposition>> dispositionsPage(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID warehouseId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.dispositionsPage(access.currentTenant(auth,request),warehouseId,limit,cursor));
+    }
+    @GetMapping("/warehouses/{warehouseId}/unplanned-quarantines/page")
+    public ResponseEntity<LocalKeysetPage.Page<String>> unplannedQuarantinesPage(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID warehouseId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.unplannedQuarantinesPage(
+            access.currentTenant(auth,request),warehouseId,limit,cursor));
     }
     @PostMapping("/counts")
     @ResponseStatus(HttpStatus.CREATED)
