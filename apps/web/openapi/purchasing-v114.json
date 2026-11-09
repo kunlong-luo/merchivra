@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Merchivra local purchasing read pages",
-    "version": "116.1.0",
-    "description": "Authenticated tenant local purchasing core, ASN/QC/receipt batch and held QC bin/receipt piece operations. No Amazon live calls or FBA available-stock claims."
+    "version": "117.0.0",
+    "description": "Local purchasing, supplier ASN + complete audit pages, QC, released V48 and V49 lot stock operations, Session+CSRF. No Amazon live calls."
   },
   "servers": [
     {
@@ -3104,6 +3104,691 @@
           }
         }
       }
+    },
+    "/api/v1/purchasing/piece-grades/receipts/{receiptId}": {
+      "get": {
+        "operationId": "listReceiptPieceGrades",
+        "summary": "Capped historical piece QC grade list",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Capped historical piece QC grade list",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PieceGrade"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid cursor or input"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "CSRF or Owner not permitted"
+          },
+          "404": {
+            "description": "No scoped resource"
+          },
+          "409": {
+            "description": "Stock, lot, source, or idempotency conflict"
+          }
+        }
+      },
+      "post": {
+        "operationId": "gradeReceiptPiece",
+        "summary": "Idempotent human piece QC, not stock release",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewPieceGrade"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Idempotent human piece QC, not stock release",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PieceGrade"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid cursor or input"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "CSRF or Owner not permitted"
+          },
+          "404": {
+            "description": "No scoped resource"
+          },
+          "409": {
+            "description": "Stock, lot, source, or idempotency conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/piece-grades/receipts/{receiptId}/finalize": {
+      "post": {
+        "operationId": "finalizeReceiptPieceGrades",
+        "summary": "Finalize complete graded pieces to inspection, still QC HOLD",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinalizePieceGrades"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Finalize complete graded pieces to inspection, still QC HOLD",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityInspection"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid cursor or input"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "CSRF or Owner not permitted"
+          },
+          "404": {
+            "description": "No scoped resource"
+          },
+          "409": {
+            "description": "Stock, lot, source, or idempotency conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/released-lots/warehouses/{warehouseId}/positions": {
+      "get": {
+        "operationId": "listReleasedLotPositions",
+        "summary": "Legacy bounded released-lot positions by tenant warehouse",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Legacy bounded released-lot positions by tenant warehouse",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReleasedLotPosition"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid cursor or input"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "CSRF or Owner not permitted"
+          },
+          "404": {
+            "description": "No scoped resource"
+          },
+          "409": {
+            "description": "Stock, lot, source, or idempotency conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/released-lots/putaway": {
+      "post": {
+        "operationId": "putawayReleasedLotPosition",
+        "summary": "Idempotent physical STORAGE placement of already released units, not stock credit",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewLotPutaway"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Idempotent physical STORAGE placement of already released units, not stock credit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleasedLotPosition"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid cursor or input"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "CSRF or Owner not permitted"
+          },
+          "404": {
+            "description": "No scoped resource"
+          },
+          "409": {
+            "description": "Stock, lot, source, or idempotency conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/released-lots/warehouses/{warehouseId}/skus/{skuId}/pick-preview": {
+      "get": {
+        "operationId": "previewReleasedLotPick",
+        "summary": "Read-only FIFO/FEFO preview, expiry protected",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "skuId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "policy",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "FIFO",
+                "FEFO"
+              ],
+              "default": "FIFO"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Read-only FIFO/FEFO preview, expiry protected",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReleasedLotPosition"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid cursor or input"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "CSRF or Owner not permitted"
+          },
+          "404": {
+            "description": "No scoped resource"
+          },
+          "409": {
+            "description": "Stock, lot, source, or idempotency conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/released-lots/picks": {
+      "post": {
+        "operationId": "pickReleasedLotPositions",
+        "summary": "Idempotent physical pick and signed warehouse OUTBOUND in one local transaction",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewReleasedLotPick"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Idempotent physical pick and signed warehouse OUTBOUND in one local transaction",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleasedLotPick"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid cursor or input"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "CSRF or Owner not permitted"
+          },
+          "404": {
+            "description": "No scoped resource"
+          },
+          "409": {
+            "description": "Stock, lot, source, or idempotency conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-lifecycle/positions/{positionId}/actions": {
+      "post": {
+        "operationId": "actReleasedLotPosition",
+        "summary": "MOVE, TRANSFER, quarantine or non-posting count; expected stock and lot quantities",
+        "parameters": [
+          {
+            "name": "positionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LotLifecycleNewAction"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "MOVE, TRANSFER, quarantine or non-posting count; expected stock and lot quantities",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotLifecycleAction"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid cursor or input"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "CSRF or Owner not permitted"
+          },
+          "404": {
+            "description": "No scoped resource"
+          },
+          "409": {
+            "description": "Stock, lot, source, or idempotency conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-lifecycle/positions/{positionId}/history": {
+      "get": {
+        "operationId": "listReleasedLotActionHistory",
+        "summary": "Legacy immutable position action history",
+        "parameters": [
+          {
+            "name": "positionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Legacy immutable position action history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LotLifecycleAction"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid cursor or input"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "CSRF or Owner not permitted"
+          },
+          "404": {
+            "description": "No scoped resource"
+          },
+          "409": {
+            "description": "Stock, lot, source, or idempotency conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-lifecycle/positions/{positionId}/lineage": {
+      "get": {
+        "operationId": "getReleasedLotLineage",
+        "summary": "Tenant-limited release receipt lineage",
+        "parameters": [
+          {
+            "name": "positionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-limited release receipt lineage",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LotLineage"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid cursor or input"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "CSRF or Owner not permitted"
+          },
+          "404": {
+            "description": "No scoped resource"
+          },
+          "409": {
+            "description": "Stock, lot, source, or idempotency conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-lifecycle/warehouses/{warehouseId}/expiry-alerts": {
+      "get": {
+        "operationId": "listReleasedLotExpiryAlerts",
+        "summary": "Tenant-scoped per-warehouse expiry alerts",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-scoped per-warehouse expiry alerts",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LotExpiryAlert"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid cursor or input"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "CSRF or Owner not permitted"
+          },
+          "404": {
+            "description": "No scoped resource"
+          },
+          "409": {
+            "description": "Stock, lot, source, or idempotency conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/supplier-asns/orders/{orderId}/page": {
+      "get": {
+        "operationId": "listSupplierAsnNoticesPage",
+        "summary": "V117 complete order-specific ASN notices by tenant-bound keyset",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "V117 complete order-specific ASN notices by tenant-bound keyset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierAsnNoticePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid cursor or input"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "CSRF or Owner not permitted"
+          },
+          "404": {
+            "description": "No scoped resource"
+          },
+          "409": {
+            "description": "Stock, lot, source, or idempotency conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/supplier-asns/orders/{orderId}/{asnId}/events/page": {
+      "get": {
+        "operationId": "listSupplierAsnNoticeEventsPage",
+        "summary": "V117 complete owned ASN audit events by order/ASN-bound keyset",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "asnId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "V117 complete owned ASN audit events by order/ASN-bound keyset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierAsnEventPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid cursor or input"
+          },
+          "401": {
+            "description": "Session required"
+          },
+          "403": {
+            "description": "CSRF or Owner not permitted"
+          },
+          "404": {
+            "description": "No scoped resource"
+          },
+          "409": {
+            "description": "Stock, lot, source, or idempotency conflict"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -5398,6 +6083,753 @@
           "hasMore",
           "pageSize",
           "totalQuantity"
+        ]
+      },
+      "PieceGrade": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pieceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "acceptedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rejectedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "inspectedBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "receiptId",
+          "pieceId",
+          "acceptedQuantity",
+          "rejectedQuantity",
+          "reason",
+          "inspectedBy",
+          "createdAt"
+        ]
+      },
+      "NewPieceGrade": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pieceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "acceptedQuantity": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "rejectedQuantity": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "requestKey",
+          "pieceId",
+          "acceptedQuantity",
+          "rejectedQuantity",
+          "reason"
+        ]
+      },
+      "FinalizePieceGrades": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "requestKey",
+          "reason"
+        ]
+      },
+      "ReleasedLotPosition": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "binId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "binCode": {
+            "type": "string"
+          },
+          "lotCode": {
+            "type": "string"
+          },
+          "placedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "remainingQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "expiryDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "receiptId",
+          "warehouseId",
+          "productSkuId",
+          "binId",
+          "binCode",
+          "lotCode",
+          "placedQuantity",
+          "remainingQuantity",
+          "expiryDate",
+          "createdAt"
+        ]
+      },
+      "NewLotPutaway": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "binId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "expiryDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "requestKey",
+          "receiptId",
+          "binId",
+          "quantity",
+          "expiryDate",
+          "reason"
+        ]
+      },
+      "NewReleasedLotPick": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "policy": {
+            "type": "string",
+            "enum": [
+              "FIFO",
+              "FEFO"
+            ]
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "expectedOnHand": {
+            "type": "integer",
+            "minimum": 0,
+            "format": "int64"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "requestKey",
+          "warehouseId",
+          "productSkuId",
+          "policy",
+          "quantity",
+          "expectedOnHand",
+          "reason"
+        ]
+      },
+      "ReleasedLotPickLine": {
+        "type": "object",
+        "properties": {
+          "positionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lotCode": {
+            "type": "string"
+          },
+          "binCode": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "expiryDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "positionId",
+          "lotCode",
+          "binCode",
+          "quantity",
+          "expiryDate"
+        ]
+      },
+      "ReleasedLotPick": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "operationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "policy": {
+            "type": "string",
+            "enum": [
+              "FIFO",
+              "FEFO"
+            ]
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "expectedOnHand": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "actorUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "allocations": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReleasedLotPickLine"
+            }
+          }
+        },
+        "required": [
+          "id",
+          "warehouseId",
+          "productSkuId",
+          "operationId",
+          "policy",
+          "quantity",
+          "expectedOnHand",
+          "reason",
+          "actorUserId",
+          "allocations"
+        ]
+      },
+      "LotLifecycleNewAction": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actionType": {
+            "type": "string",
+            "enum": [
+              "MOVE",
+              "TRANSFER",
+              "EXPIRED_QUARANTINE",
+              "COUNT_OBSERVATION"
+            ]
+          },
+          "expectedBinId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "destinationBinId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expectedRemaining": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "expectedOnHand": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0,
+                "format": "int64"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "observedQuantity": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "requestKey",
+          "actionType",
+          "expectedBinId",
+          "destinationBinId",
+          "quantity",
+          "expectedRemaining",
+          "expectedOnHand",
+          "observedQuantity",
+          "reason"
+        ]
+      },
+      "LotLifecycleAction": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "actionType": {
+            "type": "string",
+            "enum": [
+              "MOVE",
+              "TRANSFER",
+              "EXPIRED_QUARANTINE",
+              "COUNT_OBSERVATION"
+            ]
+          },
+          "sourcePositionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceWarehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceBinId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "destinationWarehouseId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "destinationBinId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "destinationPositionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "operationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "expectedRemaining": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "expectedOnHand": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int64"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "observedQuantity": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int32"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "actorUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "actionType",
+          "sourcePositionId",
+          "sourceWarehouseId",
+          "sourceBinId",
+          "destinationWarehouseId",
+          "destinationBinId",
+          "destinationPositionId",
+          "operationId",
+          "quantity",
+          "expectedRemaining",
+          "expectedOnHand",
+          "observedQuantity",
+          "reason",
+          "actorUserId",
+          "createdAt"
+        ]
+      },
+      "LotExpiryAlert": {
+        "type": "object",
+        "properties": {
+          "positionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lotCode": {
+            "type": "string"
+          },
+          "binCode": {
+            "type": "string"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "remainingQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "expiryDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "urgency": {
+            "type": "string",
+            "enum": [
+              "EXPIRED",
+              "NEAR_EXPIRY"
+            ]
+          }
+        },
+        "required": [
+          "positionId",
+          "lotCode",
+          "binCode",
+          "productSkuId",
+          "remainingQuantity",
+          "expiryDate",
+          "urgency"
+        ]
+      },
+      "LotLineage": {
+        "type": "object",
+        "properties": {
+          "positionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "originPositionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "receiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "binCode": {
+            "type": "string"
+          },
+          "lotCode": {
+            "type": "string"
+          },
+          "placedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "remainingQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "expiryDate": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "generation": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "positionId",
+          "originPositionId",
+          "receiptId",
+          "warehouseId",
+          "binCode",
+          "lotCode",
+          "placedQuantity",
+          "remainingQuantity",
+          "expiryDate",
+          "generation"
+        ]
+      },
+      "SupplierAsnNoticePage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierAsnNotice"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "SupplierAsnEventPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SupplierAsnEvent"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
         ]
       }
     }
