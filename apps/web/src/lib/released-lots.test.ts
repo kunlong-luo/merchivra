@@ -1,6 +1,6 @@
 import {afterEach,describe,expect,it,vi} from 'vitest'
 import {fetchPieceGrades,gradePiece,finalizePieceGrades,fetchLotPositions,
- putawayReleasedLot,previewLotPick,pickReleasedLots} from './released-lots'
+ putawayReleasedLot,previewLotPick,pickReleasedLots,lotPickCapacityHint} from './released-lots'
 afterEach(()=>vi.unstubAllGlobals())
 const receipt='11111111-1111-4111-8111-111111111111'
 const piece='22222222-2222-4222-8222-222222222222'
@@ -39,6 +39,17 @@ function fake(handler:(url:string,opts?:RequestInit)=>unknown){
  return calls
 }
 describe('V48 per-piece QC and lot stock workflows',()=>{
+ it('V130 never treats exactly 500 preview rows as complete inventory',()=>{
+  const partial=Array.from({length:500},()=>({remainingQuantity:1}))
+  expect(lotPickCapacityHint(partial,650)).toEqual({
+   shown:500,mayHaveMore:true,maxPickable:650
+  })
+  expect(lotPickCapacityHint(partial.slice(0,499),650)).toEqual({
+   shown:499,mayHaveMore:false,maxPickable:499
+  })
+  expect(lotPickCapacityHint(partial,undefined).maxPickable).toBe(0)
+  expect(lotPickCapacityHint([],100).maxPickable).toBe(0)
+ })
  it('grade records immutable actual piece quantities with authenticated CSRF',async()=>{
   const calls=fake(url=>url.includes('/finalize')?inspected:gradeData)
   await gradePiece(receipt,{requestKey:reqKey,pieceId:piece,
