@@ -1,5 +1,8 @@
 import {z} from 'zod'
-import {csrfHeader} from './auth'
+import {
+ listLotExceptionResolutionsLegacy,listLotExceptionResolutionsPage,
+ proposeLotExceptionResolution,decideLotExceptionResolution
+} from '../generated/purchasing-v114'
 const id=z.string().uuid()
 const resolution=z.object({
  id,resolutionType:z.enum(['RELEASED_SURPLUS_BIND','TRANSFER_SHORTAGE']),
@@ -18,36 +21,24 @@ export type NewLotException={
  requestKey:string;resolutionType:LotExceptionResolution['resolutionType'];
  sourceId:string;sourceReceiptId:string|null;evidenceReference:string;reason:string
 }
-async function api<T>(path:string,schema:z.ZodType<T>,method='GET',body?:unknown):Promise<T>{
- const res=await fetch('/api/v1/purchasing/lot-exceptions'+path,{
-  method,credentials:'same-origin',cache:'no-store',
-  headers:{Accept:'application/json',...(method==='GET'?{}:await csrfHeader()),
-   ...(body===undefined?{}:{'Content-Type':'application/json'})},
-  ...(body===undefined?{}:{body:JSON.stringify(body)})})
- if(!res.ok) {
-  if(res.status===403)throw Error('需要当前租户 Owner 审核权限')
-  if(res.status===404)throw Error('库存异常、收货来源或仓库不属于当前租户')
-  if(res.status===409)throw Error('库存数量、库位或来源证据已经变化，必须刷新后重新审核')
-  throw Error('V51 异常纠正 API HTTP '+res.status)
- }
- return schema.parse(await res.json())
-}
-export const fetchLotExceptions=(warehouseId:string)=>api(
- '/warehouses/'+encodeURIComponent(warehouseId),z.array(resolution))
-const pageSchema=z.object({items:z.array(resolution).max(100),
- nextCursor:z.string().min(1).nullable(),hasMore:z.boolean(),
- pageSize:z.number().int().min(1).max(100)
+// The business state machine remains server-side; generated Orval paths
+// use the shared Cookie/CSRF/no-store transport and Zod checks the real DTO.
+const pathId=(value:string)=>id.parse(value)
+const decode=<T>(response:Promise<{data:unknown}>,schema:z.ZodType<T>):Promise<T>=>
+ response.then(r=>schema.parse(r.data))
+const pageSchema=z.object({
+ items:z.array(resolution).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
 }).refine(p=>p.hasMore===(p.nextCursor!==null),{message:'Invalid lot resolution cursor'})
 export type LotExceptionFilter='PENDING'|'ALL'
-export const fetchLotExceptionsPage=(warehouseId:string,filter:LotExceptionFilter='PENDING',
- cursor:string|null=null)=>{
- const params=new URLSearchParams({filter,limit:'50'})
- if(cursor)params.set('cursor',cursor)
- return api('/warehouses/'+encodeURIComponent(warehouseId)+'/page?'+params.toString(),
-  pageSchema)
-}
+export const fetchLotExceptions=(warehouseId:string)=>
+ decode(listLotExceptionResolutionsLegacy(pathId(warehouseId)),z.array(resolution))
+export const fetchLotExceptionsPage=(warehouseId:string,
+ filter:LotExceptionFilter='PENDING',cursor:string|null=null)=>
+ decode(listLotExceptionResolutionsPage(pathId(warehouseId),
+  {filter,limit:50,...(cursor?{cursor}:{})}),pageSchema)
 export const proposeLotException=(body:NewLotException)=>
- api('',resolution,'POST',body)
+ decode(proposeLotExceptionResolution(body),resolution)
 export const decideLotException=(id:string,body:{
  decision:'APPROVE'|'REJECT';reason:string
-})=>api('/'+encodeURIComponent(id)+'/decision',resolution,'POST',body)
+})=>decode(decideLotExceptionResolution(pathId(id),body),resolution)
