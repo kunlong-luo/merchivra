@@ -193,6 +193,10 @@ jobs:
             "SELECT count(*) FROM erp_local_lot_disposition_proof_file WHERE size_bytes > 2097152"
           psql -h 127.0.0.1 -U merchivra -d merchivra -v ON_ERROR_STOP=1 -Atc \
             "SELECT count(*) FROM erp_lot_supplier_return_trace"
+          # V129: real PG18 verifies the forward-only V84 audit migration.
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='84' AND success")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM pg_constraint WHERE conname='erp_lot_proof_file_tenant_proof_id_unique'")" = "1"
+          psql -h 127.0.0.1 -U merchivra -d merchivra -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM erp_local_lot_proof_file_download_audit"
           curl -fsS http://127.0.0.1:8080/v3/api-docs/finance-profits > /tmp/merchivra-live-finance-openapi.json
           node scripts/normalize-finance-openapi.mjs /tmp/merchivra-live-finance-openapi.json /tmp/merchivra-normalized-finance-openapi.json
           cmp apps/web/openapi/finance-profits.json /tmp/merchivra-normalized-finance-openapi.json
