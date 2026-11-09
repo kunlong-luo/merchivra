@@ -1,6 +1,8 @@
 import {z} from 'zod'
-import {csrfHeader} from './auth'
-const root='/api/v1/purchasing/lot-lifecycle'
+import {
+ actReleasedLotPosition,listReleasedLotActionHistory,
+ getReleasedLotLineage,listReleasedLotExpiryAlerts
+} from '../generated/purchasing-v114'
 const action=z.object({
  id:z.string().uuid(),actionType:z.enum(['MOVE','TRANSFER','EXPIRED_QUARANTINE','COUNT_OBSERVATION']),
  sourcePositionId:z.string().uuid(),sourceWarehouseId:z.string().uuid(),
@@ -29,25 +31,16 @@ export type LotActionRequest={
  expectedBinId:string;destinationBinId:string|null;quantity:number;expectedRemaining:number;
  expectedOnHand:number|null;observedQuantity:number|null;reason:string
 }
-async function api<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown):Promise<T>{
- const response=await fetch(url,{method,credentials:'same-origin',cache:'no-store',
-  headers:{Accept:'application/json',...(method==='GET'?{}:await csrfHeader()),
-   ...(body===undefined?{}:{'Content-Type':'application/json'})},
-  ...(body===undefined?{}:{body:JSON.stringify(body)})})
- if(!response.ok){
-  if(response.status===403)throw Error('此库位操作需要当前租户 Owner 权限')
-  if(response.status===404)throw Error('来源库位、仓库或批次不可访问')
-  if(response.status===409)throw Error('批次、目标库位或仓库库存已变化；请刷新后重试')
-  throw Error('批次生命周期操作失败 HTTP '+response.status)
- }
- return schema.parse(await response.json())
-}
-export const actLotPosition=(positionId:string,body:LotActionRequest)=>api(
- root+'/positions/'+encodeURIComponent(positionId)+'/actions',action,'POST',body)
-export const fetchLotActionHistory=(positionId:string)=>api(
- root+'/positions/'+encodeURIComponent(positionId)+'/history',z.array(action))
-export const fetchLotExpiryAlerts=(warehouseId:string)=>api(
- root+'/warehouses/'+encodeURIComponent(warehouseId)+'/expiry-alerts',z.array(alert))
-
-export const fetchLotLineage=(positionId:string)=>api(
- root+'/positions/'+encodeURIComponent(positionId)+'/lineage',z.array(lineage))
+// Orval uses reviewed Spring DTO contracts and the shared CSRF/no-store
+// request transport. Dynamic paths must first be exact UUID values.
+const pathId=(id:string)=>z.string().uuid().parse(id)
+const decode=<T>(promise:Promise<{data:unknown}>,schema:z.ZodType<T>):Promise<T>=>
+ promise.then(r=>schema.parse(r.data))
+export const actLotPosition=(positionId:string,body:LotActionRequest)=>
+ decode(actReleasedLotPosition(pathId(positionId),body),action)
+export const fetchLotActionHistory=(positionId:string)=>
+ decode(listReleasedLotActionHistory(pathId(positionId)),z.array(action))
+export const fetchLotExpiryAlerts=(warehouseId:string)=>
+ decode(listReleasedLotExpiryAlerts(pathId(warehouseId)),z.array(alert))
+export const fetchLotLineage=(positionId:string)=>
+ decode(getReleasedLotLineage(pathId(positionId)),z.array(lineage))
