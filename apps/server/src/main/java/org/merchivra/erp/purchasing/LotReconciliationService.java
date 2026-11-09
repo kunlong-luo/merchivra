@@ -3,6 +3,9 @@ package org.merchivra.erp.purchasing;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -44,6 +47,63 @@ public class LotReconciliationService {
                               int quantity,String method,String status,String reason,
                               String proposedBy,String reviewedBy,String completedBy,
                               String completionReference) {}
+
+    private record Timed<T>(T item,String createdAt,String id) {}
+    /** Stable, tenant/warehouse/type-bound read-only keyset; no inventory mutations. */
+    private <T> LocalKeysetPage.Page<T> page(UUID tenant,UUID warehouse,String type,
+        int requested,String cursor,String sql,String createdColumn,String idColumn,
+        org.springframework.jdbc.core.RowMapper<T> mapper) {
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=LocalKeysetPage.decode(cursor,5);
+        if(after!=null && (!tenant.toString().equals(after[0])
+            || !warehouse.toString().equals(after[1]) || !type.equals(after[2])))
+            throw bad("Lot reconciliation cursor belongs to another scope");
+        var args=new ArrayList<Object>();
+        args.add(tenant);args.add(warehouse);
+        String predicate="";
+        if(after!=null) {
+            try {
+                predicate=" AND ("+createdColumn+","+idColumn+") < (?,?)";
+                args.add(OffsetDateTime.ofInstant(Instant.parse(after[3]),ZoneOffset.UTC));
+                args.add(UUID.fromString(after[4]));
+            } catch(Exception ex) {throw bad("Invalid lot reconciliation cursor");}
+        }
+        args.add(limit+1);
+        List<Timed<T>> rows=jdbc.query(sql+predicate+
+            " ORDER BY "+createdColumn+" DESC,"+idColumn+" DESC LIMIT ?",
+            (rs,i)->new Timed<>(mapper.mapRow(rs,i),
+                rs.getObject("created_at",OffsetDateTime.class).toInstant().toString(),
+                rs.getObject("id",UUID.class).toString()),args.toArray());
+        var result=LocalKeysetPage.pack(rows,limit,r->LocalKeysetPage.encode(
+            tenant.toString(),warehouse.toString(),type,r.createdAt(),r.id()));
+        return new LocalKeysetPage.Page<>(result.items().stream().map(Timed::item).toList(),
+            result.nextCursor(),result.hasMore(),result.pageSize());
+    }
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<CountCase> countsPage(UUID tenant,UUID warehouse,
+        int limit,String cursor) {
+        return page(tenant,warehouse,"COUNTS",limit,cursor,
+            COUNT_SQL.replace("FROM erp_local_lot_count_review",
+                ",created_at FROM erp_local_lot_count_review")+" AND warehouse_id=?",
+            "created_at","id",LotReconciliationService::mapCount);
+    }
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Transfer> transfersPage(UUID tenant,UUID warehouse,
+        int limit,String cursor) {
+        return page(tenant,warehouse,"TRANSFERS",limit,cursor,
+            TRANSFER_SQL.replace("FROM erp_local_lot_action a",
+                ",a.created_at FROM erp_local_lot_action a")+
+                " AND a.destination_warehouse_id=?",
+            "a.created_at","a.id",LotReconciliationService::mapTransfer);
+    }
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Disposition> dispositionsPage(UUID tenant,UUID warehouse,
+        int limit,String cursor) {
+        return page(tenant,warehouse,"DISPOSITIONS",limit,cursor,
+            DISPOSITION_SQL.replace("FROM erp_local_lot_disposition",
+                ",created_at FROM erp_local_lot_disposition")+" AND warehouse_id=?",
+            "created_at","id",LotReconciliationService::mapDisposition);
+    }
     private record Observation(UUID id,UUID position,UUID warehouse,UUID bin,
                                int expected,int observed,UUID observer) {}
     private record Snapshot(UUID warehouse,UUID sku,UUID bin,int remaining) {}
