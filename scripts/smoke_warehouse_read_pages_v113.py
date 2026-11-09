@@ -172,7 +172,9 @@ assert len(get(pending_base,limit=50,status="RECEIVING",
 assert len(get(pending_base,limit=50,status="APPROVED",
     search="PO-V113-PEND-")["items"])==50
 assert len(get(pending_base,limit=50,search="PO-V113-PEND-0525")["items"])==1
-assert get(pending_base,limit=50,search="PO%")["items"]==[]
+# V124: '%' is deliberately rejected by safeSearch (400); verify the
+# 200 empty-result behavior only with a permitted nonmatching literal.
+assert get(pending_base,limit=50,search="PO-V113-NOT-EXIST")["items"]==[]
 assert len(request("/api/v1/purchasing/pending-receipts"))<=500
 
 def error(base,defaults,**args):
