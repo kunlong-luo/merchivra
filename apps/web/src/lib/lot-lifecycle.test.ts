@@ -52,8 +52,8 @@ describe('V49 released lot lifecycle API contracts',()=>{
    observedQuantity:null,reason})
   expect(result.actionType).toBe('MOVE')
   const post=calls.find(c=>c.options?.method==='POST')
-  expect(post?.options?.headers).toMatchObject({
-   'X-CSRF-TOKEN':'valid-lifecycle-csrf-token'})
+  expect(new Headers(post?.options?.headers).get('X-CSRF-TOKEN'))
+   .toBe('valid-lifecycle-csrf-token')
   expect(JSON.parse(String(post?.options?.body))).toEqual({
    requestKey,actionType:'MOVE',expectedBinId:sourceBin,destinationBinId:destinationBin,
    quantity:0,expectedRemaining:10,expectedOnHand:null,
