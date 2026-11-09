@@ -46,7 +46,7 @@ describe('V48 per-piece QC and lot stock workflows',()=>{
   await finalizePieceGrades(receipt,{requestKey:reqKey,reason:'Completed lot quality inspection'})
   const posts=calls.filter(c=>c.options?.method==='POST')
   expect(posts).toHaveLength(2)
-  expect(posts[0].options?.headers).toMatchObject({'X-CSRF-TOKEN':'valid-v48-csrf-token'})
+  expect(new Headers(posts[0].options?.headers).get('X-CSRF-TOKEN')).toBe('valid-v48-csrf-token')
   expect(JSON.parse(String(posts[0].options?.body))).toMatchObject({
    requestKey:reqKey,pieceId:piece,acceptedQuantity:7,rejectedQuantity:3
   })
