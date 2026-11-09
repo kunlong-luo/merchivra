@@ -343,6 +343,8 @@ jobs:
         run: python3 scripts/check_ci_cadence_v108.py
       - name: Verify V109 active documentation links and runtime status
         run: python3 scripts/check_docs_consistency_v109.py
+      - name: V122 fail-closed Next Node runtime image and Vite rollback contract
+        run: python3 scripts/check_next_runtime_v122.py
       - name: Validate both documented deployment modes without using real databases
         shell: bash
         run: |
@@ -360,4 +362,11 @@ jobs:
           docker compose --env-file .env.example -f deploy/compose.spark-db.yaml -f deploy/compose.production.yaml config -q
           docker compose --env-file .env.example -f deploy/compose.yaml -f deploy/compose.production.yaml --profile optional-cache config --format json |
             python3 scripts/check_release_config_v68.py
+          docker compose --env-file .env.example -f deploy/compose.yaml \
+            -f deploy/compose.next.yaml config --format json |
+            python3 scripts/check_next_runtime_v122.py --compose
+          docker compose --env-file .env.example -f deploy/compose.yaml \
+            -f deploy/compose.production.yaml -f deploy/compose.next.yaml \
+            config --format json |
+            python3 scripts/check_next_runtime_v122.py --compose --production
           echo "PASS: three bundled services, optional Redis, external spark-db reuse, production overlay"

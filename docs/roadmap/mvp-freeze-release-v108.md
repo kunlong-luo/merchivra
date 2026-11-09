@@ -76,6 +76,8 @@
 
 > **A1 / V121 实施进展（2026-11-09）**：V50 盘点复核、跨仓目的仓 ACK、已隔离处置历史和未规划隔离来源均新增 Session tenant+warehouse+domain 绑定的全库 keyset（每页 50），React 工作台不再以旧 `LIMIT 200` 截断审批/来源候选。V51 盘盈/少收来源选择也使用 V50 服务器分页，原有 V51 纠正审批 `PENDING/ALL` 页保留。V50/V51 共 **18 条 GET/POST** 纳入 OpenAPI/Orval v8，采购规范累计 **130 个唯一 operationId**；Java/Vitest 模拟 225 条每类 5 页、跨租户/跨仓库/跨记录类型游标拒绝以及 CSRF/库存来源/409 校验。旧兼容接口保留但主工作台不依赖旧历史定额。详见 [V121 记录](../purchasing/lot-reconciliation-pages-v121.md)。**PG18 全量真实 Flyway/HTTP、并发+权限+库存、Next runtime #63、Amazon 本地生产授权仍未验收或开启。**
 
+> **A2/A3 / V122（2026-11-09）**：为 Next.js 16.4.5 App Router 创建独立 **Node 24 standalone 多阶段/非 root 镜像** `apps/web/Dockerfile.next` 和可选择的私有 `deploy/compose.next.yaml`；默认仅暴露 `127.0.0.1:3001`，原 Vite/Nginx `web` 保持不变，可作为即时代理回切。编译时明确将 `/api` 代理指向 Compose 内部 `server:8080`，不通过浏览器暴露后端身份/秘密。普通 CI 新增有效 Compose 配置、Next Build、非 root/端口/禁 Seller/禁注入 Secrets 和 Vite 回退校验；V122 完整 Compose 里程碑将通过 Node 容器与 Spring/PG18 真登录、Session+CSRF 及 Cookie/权限校验。**本轮合并后 `milestone-validation.yml` 变更会自动触发一次主线精确 SHA 的全量 PG18、Chromium、Compose 回归，运行结果必须实查**，不能以绿色普通 PR 代替。详情与受控切流/回退见 [V122](../architecture/next-node-cutover-v122.md)。生产公网 TLS、真实 Seller/Ads 本地授权、外部秘密与 G1/G2/G3 签署仍需用户最终批准，故当前不声称正式上线。
+
 ## 第一批可执行 P0 核查清单
 
 | 核查对象 | 当前有证据的缺口 | 下一步 |

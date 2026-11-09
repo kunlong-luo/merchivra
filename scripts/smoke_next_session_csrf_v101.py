@@ -10,7 +10,12 @@ from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import HTTPCookieProcessor, Request, build_opener
 
-BASE = "http://127.0.0.1:3355"
+# V122: also exercise the real Docker standalone Node Next runtime on the
+# isolated Compose host port; never permit external user-supplied targets.
+BASE = os.environ.get("MERCHIVRA_V101_NEXT_BASE", "http://127.0.0.1:3355")
+assert BASE in ("http://127.0.0.1:3355","http://127.0.0.1:3001"), (
+    "Session/CSRF smoke must only reach disposable loopback Next runtime"
+)
 assert os.environ.get("MERCHIVRA_V101_DISPOSABLE_ONLY") == "true"
 assert os.environ.get("MERCHIVRA_SPAPI_ENABLED") == "false"
 assert os.environ.get("MERCHIVRA_SPAPI_OAUTH_ENABLED") == "false"

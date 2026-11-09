@@ -140,6 +140,45 @@ jobs:
           . ./.env
           set +a
           python3 scripts/smoke_team.py
+      # V122: run the actual compiled standalone Node artifact side-by-side
+      # with the Vite rollback, against the SAME disposable PG18 + Spring.
+      - name: V122 Next Node container with real Spring Session and CSRF
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose --env-file .env -f deploy/compose.yaml \
+            -f deploy/compose.next.yaml up -d --build next-web
+          ready=0
+          for i in $(seq 1 90); do
+            if curl --silent --fail http://127.0.0.1:3001/api/v1/ping \
+              >/tmp/v122-next-standalone-ping.json; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          if [ "$ready" != 1 ]; then
+            docker compose --env-file .env -f deploy/compose.yaml \
+              -f deploy/compose.next.yaml logs --no-color --tail=120 next-web
+            exit 1
+          fi
+          for path in / /orders /purchasing /finance /ops /team /sync; do
+            status=$(curl --silent --output /tmp/v122-next-page.html \
+              --write-out '%{http_code}' "http://127.0.0.1:3001$path")
+            test "$status" = 200
+            grep -Fq 'Merchivra ERP' /tmp/v122-next-page.html
+          done
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            http://127.0.0.1:3001/not-a-route-v122)" = 404
+          set -a
+          . ./.env
+          set +a
+          MERCHIVRA_V101_DISPOSABLE_ONLY=true \
+          MERCHIVRA_V101_NEXT_BASE=http://127.0.0.1:3001 \
+          MERCHIVRA_SPAPI_ENABLED=false \
+          MERCHIVRA_SPAPI_OAUTH_ENABLED=false \
+            python3 scripts/smoke_next_session_csrf_v101.py
+          echo "PASS V122: Next 16 standalone Docker real same-origin PG18 session/CSRF"
       - name: Diagnostics
         if: failure()
         run: docker compose --env-file .env -f deploy/compose.yaml logs --no-color --tail=150

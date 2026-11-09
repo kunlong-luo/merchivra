@@ -1,9 +1,12 @@
+# V122 A3: merging this workflow update to main intentionally triggers ONE
+# full disposable PG18/Flyway + Node standalone/Compose + Chromium validation
+# at the merged main SHA. It is NOT production deployment approval.
 # V108: one-click, disposable, complete release-candidate regression.
 # Run from Actions > MVP milestone full validation > Run workflow (main).
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V108-initial-baseline' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V122-A3-Next-runtime-baseline' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -25,6 +28,7 @@ on:
           - pre-Beta
           - release-candidate
           - security-regression
+          - V122-A3-Next-runtime-baseline
 
 permissions:
   contents: read
