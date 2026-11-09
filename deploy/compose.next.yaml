@@ -1,0 +1,24 @@
+# V122: opt-in private Next.js Node App Router for disposable acceptance
+# and controlled cutover. Vite/Nginx web stays unchanged as rollback.
+# Only use behind reviewed HTTPS ingress; loopback staging port is NOT public.
+#
+# docker compose --env-file .env -f deploy/compose.yaml \
+#   -f deploy/compose.next.yaml up -d --build next-web
+services:
+  next-web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile.next
+      args:
+        MERCHIVRA_API_INTERNAL_URL: http://server:8080
+    ports:
+      - "127.0.0.1:${MERCHIVRA_NEXT_PORT:-3001}:3000"
+    depends_on:
+      - server
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: '3000'
+      NEXT_TELEMETRY_DISABLED: '1'
+    # No Seller, Ads, bank or database secrets are injected into this service.
