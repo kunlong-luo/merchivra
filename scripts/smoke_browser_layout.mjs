@@ -332,8 +332,12 @@ const server = createServer(async (req, res) => {
   if (url.pathname === '/api/v1/purchasing/supplier-performance/followups'
       || url.pathname === '/api/v1/purchasing/supplier-performance/followups/page')
     return respond(res,url.pathname.endsWith('/page')?emptyCursorPage([]):[])
-  if (url.pathname === '/api/v1/purchasing/delivery/overview')
-    return respond(res,{
+  // V123: the real V119 board uses an all-tenant summary and a separate
+  // keyset page. Keep the V72 legacy response for backward compatibility.
+  if (['/api/v1/purchasing/delivery/overview',
+       '/api/v1/purchasing/delivery/summary',
+       '/api/v1/purchasing/delivery/lines/page'].includes(url.pathname)) {
+    const delivery={
       asOfDateUtc:'2026-11-02',
       totals:{lineCount:1,pendingQuantity:18,reportedUnreceivedQuantity:0,
         awaitingQcReleaseQuantity:0,warningLines:1,overdueLines:0,
@@ -352,7 +356,14 @@ const server = createServer(async (req, res) => {
         replenishmentSellerSku:null,replenishmentPricingSource:null,
         deliveryState:'NO_ASN_RECORDED'
       }]
-    })
+    }
+    if(url.pathname.endsWith('/summary'))
+      return respond(res,{asOfDateUtc:delivery.asOfDateUtc,totals:delivery.totals})
+    if(url.pathname.endsWith('/lines/page'))
+      return respond(res,{items:delivery.lines,nextCursor:null,
+        hasMore:false,pageSize:Number(url.searchParams.get('limit')??50)})
+    return respond(res,delivery)
+  }
   if (url.pathname === '/api/v1/replenishment/marketplaces/' + market + '/priorities')
     return respond(res, [{
       sellerSku:'TEST-SKU-100',stockState:'NO_OBSERVATION',
