@@ -1,3 +1,5 @@
+# V125: full main-SHA PG18 + Chromium milestone recheck after 70-second
+# V97 supplier followup query timeout fix (page before ASN/receipt LATERAL).
 # V124 A3: repeat complete PG18+Chromium suite on exact merged main SHA
 # after V113 wildcard expectation and V107 accessible table label fixes.
 # V123 A3: this workflow change triggers a fresh *full* regression at the
@@ -11,7 +13,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V124-A3-warehouse-ledger-and-PG18-release-gate' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V125-A3-followup-keyset-PG18-release-gate' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -34,7 +36,7 @@ on:
           - release-candidate
           - security-regression
           - V122-A3-Next-runtime-baseline
-          - V124-A3-warehouse-ledger-and-PG18-release-gate
+          - V125-A3-followup-keyset-PG18-release-gate
 
 permissions:
   contents: read

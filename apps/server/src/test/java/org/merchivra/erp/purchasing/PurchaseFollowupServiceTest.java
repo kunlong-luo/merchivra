@@ -47,6 +47,58 @@ class PurchaseFollowupServiceTest {
         verify(jdbc).update(contains("erp_purchase_followup_scan"),
             any(),eq(tenant),eq(actor),eq("MANUAL"),eq(3),eq(1));
     }
+    @Test void pageLimitsRawFindingIdsBeforeLoadingASNAndReceiptFacts() {
+        when(jdbc.query(anyString(),any(RowMapper.class),any(Object[].class)))
+            .thenAnswer(inv->{
+                String sql=inv.getArgument(0);
+                Object[] args=(Object[])inv.getRawArguments()[2];
+                assertTrue(sql.contains("WITH page_ids AS MATERIALIZED"));
+                assertTrue(sql.contains("SELECT f.id FROM erp_purchase_followup_finding f"));
+                assertTrue(sql.contains("ORDER BY "));
+                assertTrue(sql.contains("f.changed_at DESC,f.id DESC LIMIT ?"));
+                assertTrue(sql.contains("FROM page_ids page JOIN erp_purchase_followup_finding f"));
+                assertTrue(sql.contains("LEFT JOIN LATERAL"));
+                assertTrue(sql.indexOf("SELECT f.id FROM") <
+                    sql.indexOf("LEFT JOIN LATERAL"));
+                assertEquals(5,args.length);
+                assertEquals(tenant,args[0]);
+                assertEquals("ALL",args[1]);
+                assertEquals(51,args[2]);
+                assertEquals(tenant,args[3]);
+                assertEquals("ALL",args[4]);
+                return List.of();
+            });
+        var page=service.findingsPage(tenant,"ALL",50,null);
+        assertTrue(page.items().isEmpty());
+        assertNull(page.nextCursor());
+        assertFalse(page.hasMore());
+        assertEquals(50,page.pageSize());
+    }
+
+    @Test void pageCursorKeysetPrecedesExpensiveJoinAndIsTenantFilterBound() {
+        var id=UUID.fromString("44444444-4444-4444-8444-444444444444");
+        String cursor=LocalKeysetPage.encode(tenant.toString(),"ACTIVE",
+            "1","2026-11-09T09:00:00Z",id.toString());
+        when(jdbc.query(anyString(),any(RowMapper.class),any(Object[].class)))
+            .thenAnswer(inv->{
+                String sql=inv.getArgument(0);
+                Object[] args=(Object[])inv.getRawArguments()[2];
+                assertTrue(sql.contains("WITH page_ids AS MATERIALIZED"));
+                assertTrue(sql.contains("(f.changed_at,f.id)<(?,?)"));
+                assertEquals(9,args.length);
+                assertEquals(tenant,args[0]);
+                assertEquals("ACTIVE",args[1]);
+                assertEquals(1,args[2]);
+                assertEquals(1,args[3]);
+                assertEquals(id,args[5]);
+                assertEquals(51,args[6]);
+                assertEquals(tenant,args[7]);
+                assertEquals("ACTIVE",args[8]);
+                return List.of();
+            });
+        assertTrue(service.findingsPage(tenant,"ACTIVE",50,cursor).items().isEmpty());
+    }
+
     @Test void invalidOrClearedFindingCannotBeReopened() {
         assertEquals(HttpStatus.BAD_REQUEST,assertThrows(ResponseStatusException.class,
             ()->service.changeState(tenant,actor,finding,"UNKNOWN")).getStatusCode());
