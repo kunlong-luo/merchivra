@@ -31,6 +31,8 @@ const summary=z.object({pendingReceivedUnits:z.number().int().nonnegative(),
  awaitingReleaseBatchCount:z.number().int().nonnegative()})
 
 // V116 Orval generated requests with one secure CSRF/Session transport.
+// Orval path templates interpolate raw strings: require canonical UUIDs first.
+const pathId=(id:string)=>z.string().uuid().parse(id)
 const decode=<T>(promise:Promise<{data:unknown}>,schema:z.ZodType<T>):Promise<T>=>
  promise.then(r=>schema.parse(r.data))
 const pageOf=<T extends z.ZodTypeAny>(schema:T)=>z.object({
@@ -38,24 +40,24 @@ const pageOf=<T extends z.ZodTypeAny>(schema:T)=>z.object({
  hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
 }).refine(p=>p.hasMore===(p.nextCursor!==null),{message:'Invalid page cursor'})
 export const fetchReceiptBatchesPage=(orderId:string,cursor:string|null=null)=>
- decode(listReceiptQualityBatchesPage(orderId,{limit:50,...(cursor?{cursor}:{})}),
+ decode(listReceiptQualityBatchesPage(pathId(orderId),{limit:50,...(cursor?{cursor}:{})}),
   pageOf(batch))
 export const fetchReceiptBatchSummary=(orderId:string)=>
- decode(getReceiptQualityBatchSummary(orderId),summary)
+ decode(getReceiptQualityBatchSummary(pathId(orderId)),summary)
 export const fetchWarehouseReceiptBatchesPage=(warehouseId:string,cursor:string|null=null)=>
- decode(listWarehouseReceiptQualityBatchesPage(warehouseId,
+ decode(listWarehouseReceiptQualityBatchesPage(pathId(warehouseId),
   {limit:50,...(cursor?{cursor}:{})}),pageOf(batch))
 export const fetchReceiptBatches=(orderId:string)=>
- decode(listReceiptQualityBatchesLegacy(orderId),z.array(batch))
+ decode(listReceiptQualityBatchesLegacy(pathId(orderId)),z.array(batch))
 export const fetchWarehouseReceiptBatches=(warehouseId:string)=>
- decode(listWarehouseReceiptQualityBatchesLegacy(warehouseId),z.array(batch))
+ decode(listWarehouseReceiptQualityBatchesLegacy(pathId(warehouseId)),z.array(batch))
 export const relabelReceiptBatch=(receiptId:string,expectedLotCode:string,
  newLotCode:string,reason:string)=>
- decode(relabelReceiptQualityBatch(receiptId,{expectedLotCode,newLotCode,reason}),batch)
+ decode(relabelReceiptQualityBatch(pathId(receiptId),{expectedLotCode,newLotCode,reason}),batch)
 export const releaseReceiptBatch=(receiptId:string)=>
- decode(releaseReceiptQualityBatch(receiptId),batch)
+ decode(releaseReceiptQualityBatch(pathId(receiptId)),batch)
 export const fetchReceiptBatchEvents=(receiptId:string)=>
- decode(listReceiptQualityBatchEventsLegacy(receiptId),z.array(event))
+ decode(listReceiptQualityBatchEventsLegacy(pathId(receiptId)),z.array(event))
 export const fetchReceiptBatchEventsPage=(receiptId:string,cursor:string|null=null)=>
- decode(listReceiptQualityBatchEventsPage(receiptId,
+ decode(listReceiptQualityBatchEventsPage(pathId(receiptId),
   {limit:50,...(cursor?{cursor}:{})}),pageOf(event))
