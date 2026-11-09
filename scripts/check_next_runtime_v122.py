@@ -64,6 +64,16 @@ if args.compose:
     assert len(ports) == 1
     assert ports[0]["host_ip"] == "127.0.0.1", "Next is internet-exposed"
     assert str(ports[0]["target"]) == "3000"
+    # V128 readiness must exercise the actual Next same-origin rewrite to Spring,
+    # not merely verify that the Node process has bound a port.
+    health = next_web.get("healthcheck", {})
+    probe = health.get("test", [])
+    assert probe[:3] == ["CMD", "node", "-e"], "Next readiness requires Node (no curl or shell)"
+    assert len(probe) == 4
+    assert "http://127.0.0.1:3000/api/v1/ping" in probe[3], "Next health must traverse Spring"
+    assert "AbortSignal.timeout(3000)" in probe[3], "Next health must be time bounded"
+    assert "response.status === 200" in probe[3], "Next health must reject non-200"
+    assert int(health.get("retries", 0)) >= 3
     assert services["web"]["build"]["context"], "Lost Vite rollback"
     assert services["postgres"]["image"].startswith("postgres:18-")
     if args.production:
@@ -77,5 +87,5 @@ if args.compose:
             assert env.get(var,"").lower() == "false", f"Unsafe {var}"
         assert env["MERCHIVRA_SESSION_COOKIE_SECURE"] == "true"
 
-print("PASS V122: nonroot Node standalone, private API proxy, safe rollback "
+print("PASS V122/V128: nonroot Node standalone, private API proxy, safe rollback "
       "and loopback-only Next container")

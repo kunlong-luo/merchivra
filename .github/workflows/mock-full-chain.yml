@@ -162,6 +162,25 @@ jobs:
               -f deploy/compose.next.yaml logs --no-color --tail=120 next-web
             exit 1
           fi
+          # V128: a successful host curl alone does not prove Compose
+          # tracks app readiness. Assert the container's bounded Next -> Spring
+          # health probe transitions to healthy without any production secrets.
+          next_container=$(docker compose --env-file .env -f deploy/compose.yaml \
+            -f deploy/compose.next.yaml ps -q next-web)
+          test -n "$next_container"
+          healthy=0
+          for i in $(seq 1 40); do
+            health=$(docker inspect --format '{{.State.Health.Status}}' "$next_container")
+            case "$health" in
+              healthy) healthy=1; break ;;
+              starting) sleep 2 ;;
+              *) docker inspect --format '{{json .State.Health}}' "$next_container"; exit 1 ;;
+            esac
+          done
+          if [ "$healthy" != 1 ]; then
+            docker inspect --format '{{json .State.Health}}' "$next_container"
+            exit 1
+          fi
           for path in / /orders /purchasing /finance /ops /team /sync; do
             status=$(curl --silent --output /tmp/v122-next-page.html \
               --write-out '%{http_code}' "http://127.0.0.1:3001$path")
