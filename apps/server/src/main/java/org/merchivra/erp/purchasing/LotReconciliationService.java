@@ -104,6 +104,21 @@ public class LotReconciliationService {
                 ",created_at FROM erp_local_lot_disposition")+" AND warehouse_id=?",
             "created_at","id",LotReconciliationService::mapDisposition);
     }
+    /** V121: full unplanned quarantine candidate directory, not first 200. */
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<String> unplannedQuarantinesPage(UUID tenant,
+        UUID warehouse,int limit,String cursor) {
+        return page(tenant,warehouse,"UNPLANNED",limit,cursor,
+            """
+            SELECT a.id,a.created_at
+            FROM erp_local_lot_action a
+            LEFT JOIN erp_local_lot_disposition d
+              ON d.tenant_id=a.tenant_id AND d.quarantine_action_id=a.id
+            WHERE a.tenant_id=? AND a.source_warehouse_id=?
+              AND a.action_type='EXPIRED_QUARANTINE' AND d.id IS NULL
+            ""","a.created_at","a.id",
+            (rs,i)->rs.getObject("id",UUID.class).toString());
+    }
     private record Observation(UUID id,UUID position,UUID warehouse,UUID bin,
                                int expected,int observed,UUID observer) {}
     private record Snapshot(UUID warehouse,UUID sku,UUID bin,int remaining) {}
