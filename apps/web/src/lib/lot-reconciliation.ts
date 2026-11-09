@@ -69,3 +69,20 @@ export const reportLotDispositionCompletion=(id:string,body:{
  reference:string;reason:string
 })=>call(root+'/dispositions/'+encodeURIComponent(id)+'/completion',
  disposition,'POST',body)
+
+const pageOf=<T extends z.ZodTypeAny>(schema:T)=>z.object({
+ items:z.array(schema),nextCursor:z.string().nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().positive()
+})
+function pageUrl(warehouseId:string,kind:string,cursor:string|null,limit=50){
+ const query=new URLSearchParams({limit:String(limit)})
+ if(cursor)query.set('cursor',cursor)
+ return root+'/warehouses/'+encodeURIComponent(id.parse(warehouseId))+'/'+kind+
+  '/page?'+query.toString()
+}
+export const fetchLotCountCasesPage=(warehouseId:string,cursor:string|null=null)=>
+ call(pageUrl(warehouseId,'counts',cursor),pageOf(count))
+export const fetchDestinationTransfersPage=(warehouseId:string,cursor:string|null=null)=>
+ call(pageUrl(warehouseId,'transfers',cursor),pageOf(transfer))
+export const fetchLotDispositionsPage=(warehouseId:string,cursor:string|null=null)=>
+ call(pageUrl(warehouseId,'dispositions',cursor),pageOf(disposition))
