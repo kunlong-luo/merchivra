@@ -190,15 +190,21 @@ public class ReleasedLotStockService {
             """,UUID.randomUUID(),tenant,id,req.quantity(),actor);
         return position(tenant,id);
     }
-    private List<Position> candidates(UUID tenant,UUID warehouse,UUID sku,String policy){
+    private List<Position> candidates(UUID tenant,UUID warehouse,UUID sku,
+                                      String policy,int rowLimit){
+        // V130: each eligible position has >=1 unit. An actual pick of Q units
+        // therefore needs at most Q positions; a fixed LIMIT 500 could falsely
+        // reject a fully stocked SKU split across >500 real lots. Preview is
+        // still intentionally bounded and never promises a full stock total.
         return jdbc.query(POSITION_SQL+"""
             AND p.warehouse_id=? AND p.product_sku_id=?
             AND p.remaining_quantity>0
             AND (p.expiry_date IS NULL OR p.expiry_date>=CURRENT_DATE)
             ORDER BY CASE WHEN ?='FEFO' THEN p.expiry_date END ASC NULLS LAST,
               b.created_at ASC,p.created_at ASC,p.id ASC
-            LIMIT 500
-            """,ReleasedLotStockService::mapPosition,tenant,warehouse,sku,policy);
+            LIMIT ?
+            """,ReleasedLotStockService::mapPosition,tenant,warehouse,sku,
+            policy,rowLimit);
     }
     private static String policy(String p) {
         if(p==null || !List.of("FIFO","FEFO").contains(p))
@@ -208,7 +214,7 @@ public class ReleasedLotStockService {
     @Transactional(readOnly=true)
     public List<Position> preview(UUID tenant,UUID warehouse,UUID sku,String p){
         if(warehouse==null || sku==null)throw bad("Warehouse and SKU required");
-        return candidates(tenant,warehouse,sku,policy(p));
+        return candidates(tenant,warehouse,sku,policy(p),500);
     }
     private Pick byPick(UUID tenant,UUID id){
         List<Pick> result=jdbc.query("""
@@ -275,7 +281,7 @@ public class ReleasedLotStockService {
             throw conflict("Warehouse balance changed; refresh before lot pick");
         if(balance<req.quantity())throw conflict("Insufficient usable local stock");
         List<Position> sorted=candidates(tenant,req.warehouseId(),
-            req.productSkuId(),p);
+            req.productSkuId(),p,req.quantity());
         int needed=req.quantity();
         record Allocation(UUID id,int quantity) {}
         List<Allocation> consumed=new ArrayList<>();
