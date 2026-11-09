@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Merchivra local purchasing read pages",
-    "version": "116.0.0",
-    "description": "Tenant-scoped local purchasing with Session/CSRF-protected writes; V116 includes ASN, purchasing QC and real receipt-lot review lifecycle, not Amazon Seller or carrier proof."
+    "version": "116.1.0",
+    "description": "Authenticated tenant local purchasing core, ASN/QC/receipt batch and held QC bin/receipt piece operations. No Amazon live calls or FBA available-stock claims."
   },
   "servers": [
     {
@@ -2608,6 +2608,502 @@
           }
         }
       }
+    },
+    "/api/v1/purchasing/lot-locations/warehouses/{warehouseId}/bins": {
+      "get": {
+        "operationId": "listLocalStockBins",
+        "summary": "Legacy first-200 virtual local QC/storage bins",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Legacy first-200 virtual local QC/storage bins",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocalStockBin"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authenticated tenant required"
+          },
+          "403": {
+            "description": "Owner role or CSRF denied"
+          },
+          "404": {
+            "description": "Resource missing in tenant"
+          },
+          "409": {
+            "description": "Conflicting receipt piece version or quantity"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createLocalStockBin",
+        "summary": "Create explicitly named local QC or storage bin",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalNewStockBin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Create explicitly named local QC or storage bin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalStockBin"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authenticated tenant required"
+          },
+          "403": {
+            "description": "Owner role or CSRF denied"
+          },
+          "404": {
+            "description": "Resource missing in tenant"
+          },
+          "409": {
+            "description": "Conflicting receipt piece version or quantity"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-locations/warehouses/{warehouseId}/bins/page": {
+      "get": {
+        "operationId": "listLocalStockBinsPage",
+        "summary": "Full warehouse bins keyset",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full warehouse bins keyset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalStockBinPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authenticated tenant required"
+          },
+          "403": {
+            "description": "Owner role or CSRF denied"
+          },
+          "404": {
+            "description": "Resource missing in tenant"
+          },
+          "409": {
+            "description": "Conflicting receipt piece version or quantity"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-locations/receipts/{receiptId}/pieces": {
+      "get": {
+        "operationId": "listLocalReceiptLotPieces",
+        "summary": "Legacy first-N receipt pieces, held stage not saleable",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Legacy first-N receipt pieces, held stage not saleable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocalReceiptLotPiece"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authenticated tenant required"
+          },
+          "403": {
+            "description": "Owner role or CSRF denied"
+          },
+          "404": {
+            "description": "Resource missing in tenant"
+          },
+          "409": {
+            "description": "Conflicting receipt piece version or quantity"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-locations/receipts/{receiptId}/pieces/page": {
+      "get": {
+        "operationId": "listLocalReceiptLotPiecesPage",
+        "summary": "Paged receipt pieces with full receipt quantity",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paged receipt pieces with full receipt quantity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalReceiptLotPiecePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authenticated tenant required"
+          },
+          "403": {
+            "description": "Owner role or CSRF denied"
+          },
+          "404": {
+            "description": "Resource missing in tenant"
+          },
+          "409": {
+            "description": "Conflicting receipt piece version or quantity"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-locations/receipts/{receiptId}/split": {
+      "post": {
+        "operationId": "splitLocalReceiptLot",
+        "summary": "Idempotent local held receipt split, no stock movement",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalSplitReceiptLot"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Idempotent local held receipt split, no stock movement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocalReceiptLotPiece"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authenticated tenant required"
+          },
+          "403": {
+            "description": "Owner role or CSRF denied"
+          },
+          "404": {
+            "description": "Resource missing in tenant"
+          },
+          "409": {
+            "description": "Conflicting receipt piece version or quantity"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-locations/receipts/{receiptId}/move": {
+      "post": {
+        "operationId": "moveLocalReceiptLot",
+        "summary": "Expected-bin compare-and-set local held receipt move",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalMoveReceiptLot"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Expected-bin compare-and-set local held receipt move",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocalReceiptLotPiece"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authenticated tenant required"
+          },
+          "403": {
+            "description": "Owner role or CSRF denied"
+          },
+          "404": {
+            "description": "Resource missing in tenant"
+          },
+          "409": {
+            "description": "Conflicting receipt piece version or quantity"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-locations/warehouses/{warehouseId}/pressure": {
+      "get": {
+        "operationId": "listLocalReceiptSupplyPressure",
+        "summary": "Legacy warehouse per-SKU QC, usable and supplier-claimed quantities",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Legacy warehouse per-SKU QC, usable and supplier-claimed quantities",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocalReceiptSupplyPressure"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authenticated tenant required"
+          },
+          "403": {
+            "description": "Owner role or CSRF denied"
+          },
+          "404": {
+            "description": "Resource missing in tenant"
+          },
+          "409": {
+            "description": "Conflicting receipt piece version or quantity"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-locations/warehouses/{warehouseId}/pressure/page": {
+      "get": {
+        "operationId": "listLocalReceiptSupplyPressurePage",
+        "summary": "Complete local per-SKU supply pressure keyset",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete local per-SKU supply pressure keyset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalReceiptSupplyPressurePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authenticated tenant required"
+          },
+          "403": {
+            "description": "Owner role or CSRF denied"
+          },
+          "404": {
+            "description": "Resource missing in tenant"
+          },
+          "409": {
+            "description": "Conflicting receipt piece version or quantity"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -4579,6 +5075,329 @@
           "nextCursor",
           "hasMore",
           "pageSize"
+        ]
+      },
+      "LocalStockBin": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "QC_HOLD",
+              "STORAGE"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "warehouseId",
+          "code",
+          "purpose",
+          "status"
+        ]
+      },
+      "LocalReceiptLotPiece": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "binId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pieceCode": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "id",
+          "receiptId",
+          "warehouseId",
+          "productSkuId",
+          "binId",
+          "pieceCode",
+          "quantity"
+        ]
+      },
+      "LocalReceiptSupplyPressure": {
+        "type": "object",
+        "properties": {
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "internalSku": {
+            "type": "string"
+          },
+          "usableUnits": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pendingQcUnits": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "acceptedAwaitingReleaseUnits": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "declaredAsnInTransitUnits": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "warehouseId",
+          "productSkuId",
+          "internalSku",
+          "usableUnits",
+          "pendingQcUnits",
+          "acceptedAwaitingReleaseUnits",
+          "declaredAsnInTransitUnits"
+        ]
+      },
+      "LocalNewStockBin": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[A-Z0-9][A-Z0-9_-]{1,63}$"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "QC_HOLD",
+              "STORAGE"
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "purpose"
+        ]
+      },
+      "LocalSplitReceiptLot": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pieceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pieceCode": {
+            "type": "string"
+          },
+          "destinationBinId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "requestKey",
+          "pieceId",
+          "quantity",
+          "pieceCode",
+          "destinationBinId",
+          "reason"
+        ]
+      },
+      "LocalMoveReceiptLot": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pieceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedBinId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "destinationBinId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "requestKey",
+          "pieceId",
+          "expectedBinId",
+          "destinationBinId",
+          "reason"
+        ]
+      },
+      "LocalStockBinPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LocalStockBin"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "LocalReceiptSupplyPressurePage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LocalReceiptSupplyPressure"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "LocalReceiptLotPiecePage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LocalReceiptLotPiece"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalQuantity": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize",
+          "totalQuantity"
         ]
       }
     }
