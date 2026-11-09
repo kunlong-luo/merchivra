@@ -33,24 +33,26 @@ export type NewSupplierAsn={requestKey:string;lineId:string;warehouseId:string;
 
 // V116: source-backed Orval request functions (shared same-origin+Session/CSRF
 // transport); Zod remains the runtime fail-closed DTO boundary.
+// Orval path templates interpolate raw strings: require canonical UUIDs first.
+const pathId=(id:string)=>z.string().uuid().parse(id)
 const decode=<T>(promise:Promise<{data:unknown}>,schema:z.ZodType<T>):Promise<T>=>
  promise.then(r=>schema.parse(r.data))
 export const fetchSupplierAsns=(orderId:string)=>
- decode(listSupplierAsnNotices(orderId),z.array(asn))
+ decode(listSupplierAsnNotices(pathId(orderId)),z.array(asn))
 export const fetchSupplierAsnEvents=(orderId:string,asnId:string)=>
- decode(listSupplierAsnNoticeEvents(orderId,asnId),z.array(event))
+ decode(listSupplierAsnNoticeEvents(pathId(orderId),pathId(asnId)),z.array(event))
 export const createSupplierAsn=(orderId:string,body:NewSupplierAsn)=>
- decode(createSupplierAsnNotice(orderId,body),asn)
+ decode(createSupplierAsnNotice(pathId(orderId),body),asn)
 export const supplierAsnAction=(orderId:string,asnId:string,kind:'ship'|'cancel')=>
- decode(kind==='ship'?shipSupplierAsnNotice(orderId,asnId):
-  cancelSupplierAsnNotice(orderId,asnId),asn)
+ decode(kind==='ship'?shipSupplierAsnNotice(pathId(orderId),pathId(asnId)):
+  cancelSupplierAsnNotice(pathId(orderId),pathId(asnId)),asn)
 export const updateSupplierAsnEta=(orderId:string,asnId:string,expectedArrivalDate:string,
  expectedPreviousEta:string,reason:string)=>
- decode(updateSupplierAsnNoticeEta(orderId,asnId,{
+ decode(updateSupplierAsnNoticeEta(pathId(orderId),pathId(asnId),{
   expectedArrivalDate,expectedPreviousEta,reason}),asn)
 export const fetchSupplierAsnFindings=(filter:'ACTIVE'|'ALL')=>
  decode(listSupplierAsnFindings({filter}),z.array(finding))
 export const scanSupplierAsns=()=>decode(scanSupplierAsnFindings(),scan)
 export const supplierAsnFindingState=(id:string,state:SupplierAsnFindingState)=>
- decode(changeSupplierAsnFindingState(id,{state}),
+ decode(changeSupplierAsnFindingState(pathId(id),{state}),
   z.object({id:z.string().uuid(),state:z.enum(['OPEN','ACKNOWLEDGED','DONE'])}))
