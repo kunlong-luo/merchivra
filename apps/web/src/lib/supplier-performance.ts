@@ -1,5 +1,9 @@
 import {z} from 'zod'
-import {csrfHeader} from './auth'
+import {
+ listSupplierEvidenceScorecardsLegacy,listSupplierEvidenceScorecardsPage,
+ listPurchaseFollowupsLegacy,listPurchaseFollowupsPage,
+ scanPurchaseFollowups as requestScan,changePurchaseFollowupState
+} from '../generated/purchasing-v114'
 
 const root='/api/v1/purchasing/supplier-performance'
 const percent=z.string().regex(/^\d{1,3}\.\d$/).nullable()
@@ -31,38 +35,27 @@ export type SupplierScorecard=z.infer<typeof scorecard>
 export type PurchaseFollowup=z.infer<typeof followup>
 export type FollowupState='OPEN'|'ACKNOWLEDGED'|'DONE'
 
-async function request<T>(path:string,schema:z.ZodType<T>,method='GET',body?:unknown):Promise<T>{
- const response=await fetch(root+path,{method,credentials:'same-origin',cache:'no-store',
-  headers:{Accept:'application/json',...(method==='GET'?{}:await csrfHeader()),
-   ...(body===undefined?{}:{'Content-Type':'application/json'})},
-  ...(body===undefined?{}:{body:JSON.stringify(body)})})
- if(!response.ok){
-  if(response.status===401)throw Error('会话已过期，请重新登录')
-  if(response.status===403)throw Error('仅 Owner 可管理采购跟进')
-  if(response.status===409)throw Error('待办已变化或已解决，请刷新后重试')
-  if(response.status===404)throw Error('待办不存在或不在当前租户')
-  throw Error('供应商履约管理失败：HTTP '+response.status)
- }
- return schema.parse(await response.json())
-}
-const page=<T extends z.ZodType>(item:T)=>z.object({
+// V120: same-origin generated Orval transports share Session/CSRF/no-store,
+ // while Zod keeps strict runtime evidence and cursor checks.
+const pathId=(value:string)=>z.string().uuid().parse(value)
+const decode=<T>(response:Promise<{data:unknown}>,schema:z.ZodType<T>):Promise<T>=>
+ response.then(r=>schema.parse(r.data))
+const page=<T extends z.ZodTypeAny>(item:T)=>z.object({
  items:z.array(item).max(100),nextCursor:z.string().min(1).nullable(),
  hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
 }).refine(x=>x.hasMore===(x.nextCursor!==null),{
  message:'供应商分页游标与状态不一致'
 })
-const pageQuery=(cursor:string|null,filter?:'ACTIVE'|'ALL')=>{
- const args=new URLSearchParams({limit:'50',...(filter?{filter}:{})})
- if(cursor)args.set('cursor',cursor)
- return '/page?'+args.toString()
-}
 export const fetchSupplierScorecardsPage=(cursor:string|null=null)=>
- request('/scorecards'+pageQuery(cursor),page(scorecard))
+ decode(listSupplierEvidenceScorecardsPage({limit:50,...(cursor?{cursor}:{})}),page(scorecard))
 export const fetchPurchaseFollowupsPage=(filter:'ACTIVE'|'ALL'='ACTIVE',
- cursor:string|null=null)=>request('/followups'+pageQuery(cursor,filter),page(followup))
-export const fetchSupplierScorecards=()=>request('/scorecards',z.array(scorecard).max(200))
+ cursor:string|null=null)=>
+ decode(listPurchaseFollowupsPage({filter,limit:50,...(cursor?{cursor}:{})}),page(followup))
+export const fetchSupplierScorecards=()=>
+ decode(listSupplierEvidenceScorecardsLegacy(),z.array(scorecard).max(200))
 export const fetchPurchaseFollowups=(filter:'ACTIVE'|'ALL'='ACTIVE')=>
- request('/followups?filter='+filter,z.array(followup).max(100))
-export const scanPurchaseFollowups=()=>request('/scan',scan,'POST')
+ decode(listPurchaseFollowupsLegacy({filter}),z.array(followup).max(100))
+export const scanPurchaseFollowups=()=>
+ decode(requestScan(),scan)
 export const setPurchaseFollowupState=(id:string,state:FollowupState)=>
- request('/followups/'+encodeURIComponent(id)+'/state',change,'POST',{state})
+ decode(changePurchaseFollowupState(pathId(id),{state}),change)

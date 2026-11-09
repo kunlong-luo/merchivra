@@ -72,6 +72,8 @@
 
 > **A1 / V119 实施进展（2026-11-09）**：采购 V72 `/delivery/overview` 旧 `LIMIT 300` 总量截断已通过新的全租户数据库 `GET /delivery/summary` 聚合及 `GET /delivery/lines/page`（订单更新时间+订单/明细 UUID 绑定游标，每页 50）在主 React 采购交付工作台中解决；旧 API 仅作兼容。新增 2 项 Orval 读合同，采购 OpenAPI 累计 **102 个唯一 operationId**。服务端汇总直接从**全部本地符合条件的采购行**计算，UI 不再把 300 条局部求和误作全租户总计；仍保留 ASN 申报≠承运商、QC≠FBA 可售及无历史事实不猜测的规则。[V119 实现、专项测试及 A3 待执行说明](../purchasing/delivery-full-store-v119.md)。真实 PG18 性能/权限/并发/全链验证与 Next 正式切换 #63 仍未放行，Amazon 真实授权继续关闭。
 
+> **A1 / V120 实施进展（2026-11-09）**：复用 V73 已有的供应商本地履约 90 天证据分数和人工催办真实分页，把 6 条 GET/POST 接入 OpenAPI/Orval；V52 已执行供应商退货新增仓库+租户绑定的 `/lot-supplier-returns/warehouses/{warehouseId}/page` 全库 keyset，连同旧兼容读/人工发运/独立收货报告 4 条一起纳入生成合同（本阶段 +10，采购规范累计 **112 个唯一操作**）。现有 V50 处置工作台加入独立 Owner 报告发运和人工收货及可翻页历史；保留 VOID/UNKNOWN、隔离库存**不二次扣减**、发运/收货仅本地声明非第三方核验、样本不足不评分的安全语义。详见 [V120 说明](../purchasing/supplier-followup-return-traces-v120.md)。V50 处置候选的旧定额、V51/52 原件字节与源证据链、A3 PG18 真实安全回归及 #63 Next 正式运行继续未完成，Amazon 真实授权保持关闭。
+
 ## 第一批可执行 P0 核查清单
 
 | 核查对象 | 当前有证据的缺口 | 下一步 |
