@@ -1,5 +1,12 @@
 import {z} from 'zod'
-import {csrfHeader} from './auth'
+import {
+ listLotCountReviewsLegacy,listLotCountReviewsPage,submitLotCountReview,
+ decideLotCountReview,listLotDestinationTransfersLegacy,
+ listLotDestinationTransfersPage,acknowledgeLotDestinationTransfer,
+ listLotDispositionReviewsLegacy,listLotDispositionReviewsPage,
+ listUnplannedQuarantinesLegacy,listUnplannedQuarantinesPage,
+ proposeLotDispositionReview,decideLotDispositionReview,completeLotDispositionReview
+} from '../generated/purchasing-v114'
 const root='/api/v1/purchasing/lot-reconciliation'
 const id=z.string().uuid()
 const count=z.object({
@@ -27,62 +34,48 @@ const disposition=z.object({
 export type LotCountCase=z.infer<typeof count>
 export type LotTransferReceipt=z.infer<typeof transfer>
 export type LotDisposition=z.infer<typeof disposition>
-async function call<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown):Promise<T>{
- const res=await fetch(url,{method,cache:'no-store',credentials:'same-origin',
-  headers:{Accept:'application/json',...(method==='GET'?{}:await csrfHeader()),
-   ...(body===undefined?{}:{'Content-Type':'application/json'})},
-  ...(body===undefined?{}:{body:JSON.stringify(body)})})
- if(!res.ok) {
-  if(res.status===403)throw Error('需要当前租户 Owner 权限及有效的登录会话')
-  if(res.status===404)throw Error('该批次或证据不存在，或不属于当前租户')
-  if(res.status===409)throw Error('证据已被处理，或库存/来源发生变化，请刷新重新核对')
-  throw Error('V50 业务审核 API HTTP '+res.status)
- }
- return schema.parse(await res.json())
-}
-export const fetchLotCountCases=(warehouseId:string)=>call(
- root+'/warehouses/'+encodeURIComponent(warehouseId)+'/counts',z.array(count))
+// V121: generated Orval shares strict same-origin Session + CSRF/no-store.
+ // Dynamic UUID paths and actual response DTOs are validated fail-closed.
+const pathId=(value:string)=>id.parse(value)
+const decode=<T>(response:Promise<{data:unknown}>,schema:z.ZodType<T>):Promise<T>=>
+ response.then(r=>schema.parse(r.data))
+const pageOf=<T extends z.ZodTypeAny>(item:T)=>z.object({
+ items:z.array(item).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{
+ message:'V50 审计分页游标与状态不一致'
+})
+const query=(cursor:string|null)=>({limit:50,...(cursor?{cursor}:{})})
+export const fetchLotCountCases=(warehouseId:string)=>
+ decode(listLotCountReviewsLegacy(pathId(warehouseId)),z.array(count))
+export const fetchLotCountCasesPage=(warehouseId:string,cursor:string|null=null)=>
+ decode(listLotCountReviewsPage(pathId(warehouseId),query(cursor)),pageOf(count))
 export const submitLotCount=(body:{requestKey:string;observationActionId:string;reason:string})=>
- call(root+'/counts',count,'POST',body)
+ decode(submitLotCountReview(body),count)
 export const decideLotCount=(id:string,body:{decision:'APPROVE'|'REJECT';reason:string})=>
- call(root+'/counts/'+encodeURIComponent(id)+'/decision',count,'POST',body)
-export const fetchDestinationTransfers=(warehouseId:string)=>call(
- root+'/warehouses/'+encodeURIComponent(warehouseId)+'/transfers',z.array(transfer))
+ decode(decideLotCountReview(pathId(id),body),count)
+export const fetchDestinationTransfers=(warehouseId:string)=>
+ decode(listLotDestinationTransfersLegacy(pathId(warehouseId)),z.array(transfer))
+export const fetchDestinationTransfersPage=(warehouseId:string,cursor:string|null=null)=>
+ decode(listLotDestinationTransfersPage(pathId(warehouseId),query(cursor)),pageOf(transfer))
 export const acknowledgeDestinationTransfer=(id:string,body:{
  requestKey:string;receivedQuantity:number;reference:string;reason:string
-})=>call(root+'/transfers/'+encodeURIComponent(id)+'/acknowledge',transfer,'POST',body)
-export const fetchLotDispositions=(warehouseId:string)=>call(
- root+'/warehouses/'+encodeURIComponent(warehouseId)+'/dispositions',
- z.array(disposition))
-export const fetchUnplannedQuarantines=(warehouseId:string)=>call(
- root+'/warehouses/'+encodeURIComponent(warehouseId)+'/unplanned-quarantines',
- z.array(id))
+})=>decode(acknowledgeLotDestinationTransfer(pathId(id),body),transfer)
+export const fetchLotDispositions=(warehouseId:string)=>
+ decode(listLotDispositionReviewsLegacy(pathId(warehouseId)),z.array(disposition))
+export const fetchLotDispositionsPage=(warehouseId:string,cursor:string|null=null)=>
+ decode(listLotDispositionReviewsPage(pathId(warehouseId),query(cursor)),pageOf(disposition))
+export const fetchUnplannedQuarantines=(warehouseId:string)=>
+ decode(listUnplannedQuarantinesLegacy(pathId(warehouseId)),z.array(id))
+export const fetchUnplannedQuarantinesPage=(warehouseId:string,cursor:string|null=null)=>
+ decode(listUnplannedQuarantinesPage(pathId(warehouseId),query(cursor)),pageOf(id))
 export const proposeLotDisposition=(body:{
  requestKey:string;quarantineActionId:string;
  method:'DISPOSAL'|'SUPPLIER_RETURN';reason:string
-})=>call(root+'/dispositions',disposition,'POST',body)
+})=>decode(proposeLotDispositionReview(body),disposition)
 export const decideLotDisposition=(id:string,body:{
  decision:'APPROVE'|'REJECT';reason:string
-})=>call(root+'/dispositions/'+encodeURIComponent(id)+'/decision',
- disposition,'POST',body)
+})=>decode(decideLotDispositionReview(pathId(id),body),disposition)
 export const reportLotDispositionCompletion=(id:string,body:{
  reference:string;reason:string
-})=>call(root+'/dispositions/'+encodeURIComponent(id)+'/completion',
- disposition,'POST',body)
-
-const pageOf=<T extends z.ZodTypeAny>(schema:T)=>z.object({
- items:z.array(schema),nextCursor:z.string().nullable(),
- hasMore:z.boolean(),pageSize:z.number().int().positive()
-})
-function pageUrl(warehouseId:string,kind:string,cursor:string|null,limit=50){
- const query=new URLSearchParams({limit:String(limit)})
- if(cursor)query.set('cursor',cursor)
- return root+'/warehouses/'+encodeURIComponent(id.parse(warehouseId))+'/'+kind+
-  '/page?'+query.toString()
-}
-export const fetchLotCountCasesPage=(warehouseId:string,cursor:string|null=null)=>
- call(pageUrl(warehouseId,'counts',cursor),pageOf(count))
-export const fetchDestinationTransfersPage=(warehouseId:string,cursor:string|null=null)=>
- call(pageUrl(warehouseId,'transfers',cursor),pageOf(transfer))
-export const fetchLotDispositionsPage=(warehouseId:string,cursor:string|null=null)=>
- call(pageUrl(warehouseId,'dispositions',cursor),pageOf(disposition))
+})=>decode(completeLotDispositionReview(pathId(id),body),disposition)
