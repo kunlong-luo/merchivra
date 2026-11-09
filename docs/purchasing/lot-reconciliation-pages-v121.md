@@ -1,0 +1,9 @@
+# V121 · V50 reconciliation read-only history pagination (partial)
+
+Date: 2026-11-09. Scope: existing V50 count review, destination transfer acknowledgment, quarantine disposition histories.
+
+Three new Owner-session, tenant-and-warehouse scoped GET endpoints are available under `/api/v1/purchasing/lot-reconciliation/warehouses/{warehouseId}/{counts|transfers|dispositions}/page?limit=50&cursor=...`. They use `(created_at,id)` descending keysets with an opaque tenant/warehouse/resource-bound cursor and reject limits outside 1–100 or mismatched/invalid cursors. Each response includes `items`, `nextCursor`, `hasMore`, and `pageSize`. Existing `LIMIT 200` compatibility reads remain unchanged. The corresponding frontend library exposes Zod-validated readers; this first increment does **not** yet replace all V50/V51 screen consumers or add these operations to OpenAPI/Orval. Do not mistake these APIs for complete V121.
+
+No stock posting, count decision, transfer acknowledgment or disposition workflow is changed. A page is a moving read-only view, not a transactional snapshot. In particular a transfer acknowledgment does not debit stock twice, a surplus observation does not credit stock, and disposal reporting is not external proof.
+
+Remaining P0: wire screen cursor navigation and V51 source selection (including historical candidates), migrate new contracts to Orval, remove the unplanned-quarantine 200-row source-selection ceiling, add server-side 225+ row/tenant/warehouse/cursor and PG18 HTTP regression, and verify query plans and indexes. V119/V120 changes are already merged in main; do not redo them. Full PG18 Flyway/HTTP, security/CSRF/concurrency and Next.js runtime milestone remain **unexecuted** until their workflows actually run. Amazon OAuth/SP-API writes remain disabled.
