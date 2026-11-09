@@ -37,6 +37,8 @@ export type QualityFindingState='OPEN'|'ACKNOWLEDGED'|'DONE'
 
 // Orval V116 owns transport (same-origin Session, CSRF, no-store).
 // Keep Zod DTO validation and keyset cursor invariants.
+// Orval path templates interpolate raw strings: require canonical UUIDs first.
+const pathId=(id:string)=>z.string().uuid().parse(id)
 const decode=<T>(promise:Promise<{data:unknown}>,schema:z.ZodType<T>):Promise<T>=>
  promise.then(r=>schema.parse(r.data))
 const cursorPage=<T extends z.ZodTypeAny>(item:T)=>z.object({
@@ -47,32 +49,32 @@ const returnSummary=z.object({rejectedUnits:z.number().int().nonnegative(),
  draftedUnits:z.number().int().nonnegative(),dispatchedUnits:z.number().int().nonnegative(),
  unallocatedUnits:z.number().int().nonnegative()})
 export const fetchQualityReceiptsPage=(orderId:string,cursor:string|null=null)=>
- decode(listQualityReceiptsPage(orderId,{limit:50,...(cursor?{cursor}:{})}),
+ decode(listQualityReceiptsPage(pathId(orderId),{limit:50,...(cursor?{cursor}:{})}),
   cursorPage(receipt))
 export const fetchQualityReceipts=(orderId:string)=>
- decode(listQualityReceiptsLegacy(orderId),z.array(receipt))
+ decode(listQualityReceiptsLegacy(pathId(orderId)),z.array(receipt))
 export const inspectQualityReceipt=(receiptId:string,body:{
  requestKey:string;acceptedQuantity:number;rejectedQuantity:number;reason:string})=>
- decode(requestInspect(receiptId,body),inspection)
+ decode(requestInspect(pathId(receiptId),body),inspection)
 export const fetchQualityReturnsPage=(inspectionId:string,cursor:string|null=null)=>
- decode(listQualityReturnsPage(inspectionId,{limit:50,...(cursor?{cursor}:{})}),
+ decode(listQualityReturnsPage(pathId(inspectionId),{limit:50,...(cursor?{cursor}:{})}),
   cursorPage(supplierReturn))
 export const fetchQualityReturnSummary=(inspectionId:string)=>
- decode(getQualityReturnSummary(inspectionId),returnSummary)
+ decode(getQualityReturnSummary(pathId(inspectionId)),returnSummary)
 export const fetchQualityFindingsPage=(filter:'ACTIVE'|'ALL',cursor:string|null=null)=>
  decode(listQualityFindingsPage({limit:50,filter,...(cursor?{cursor}:{})}),
   cursorPage(finding))
 export const fetchQualityReturns=(inspectionId:string)=>
- decode(listQualityReturnsLegacy(inspectionId),z.array(supplierReturn))
+ decode(listQualityReturnsLegacy(pathId(inspectionId)),z.array(supplierReturn))
 export const createQualityReturn=(inspectionId:string,body:{
  requestKey:string;quantity:number;reference:string|null})=>
- decode(createQualitySupplierReturn(inspectionId,body),supplierReturn)
+ decode(createQualitySupplierReturn(pathId(inspectionId),body),supplierReturn)
 export const actQualityReturn=(id:string,kind:'dispatch'|'cancel')=>
- decode(kind==='dispatch'?dispatchQualitySupplierReturn(id):
-  cancelQualitySupplierReturn(id),supplierReturn)
+ decode(kind==='dispatch'?dispatchQualitySupplierReturn(pathId(id)):
+  cancelQualitySupplierReturn(pathId(id)),supplierReturn)
 export const fetchQualityFindings=(filter:'ACTIVE'|'ALL')=>
  decode(listQualityFindingsLegacy({filter}),z.array(finding))
 export const scanQualityFindings=()=>decode(requestScan(),scan)
 export const changeQualityFinding=(id:string,state:QualityFindingState)=>
- decode(changeQualityFindingState(id,{state}),
+ decode(changeQualityFindingState(pathId(id),{state}),
   z.object({id:z.string().uuid(),state:z.enum(['OPEN','ACKNOWLEDGED','DONE'])}))
