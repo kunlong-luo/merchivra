@@ -70,6 +70,8 @@
 
 > **A1 / V118 实施进展（2026-11-09）**：复用现有 OpenAPI 3.1/Orval v8 生成方式，把 V42 供应商 MOQ/箱规/原币报价/采购计划（11）、V45 差异与供应商索赔（14）、V51 处置证明元数据（3）及 V72 本地交付概览读（1）共 **29 条已实现 API** 纳入生成请求合同，采购累计 **100 个唯一 operationId**；前端保留 Zod 运行校验、CSRF、Session、幂等键、UNKNOWN 防护和服务器审批规则。V52 真实附件仍走专门的 multipart MIME/大小/哈希和 CSRF 边界，不直接拿 JSON Orval mutator 代替。本次还在 V72 页面明确提示：`/delivery/overview` 旧 `LIMIT 300` 及其汇总仅为当前最多 300 行，**绝不是全租户总量**。修复全库汇总仍在 P0 待办；A3 PostgreSQL 18 真实验收、Next 正式切换与 Amazon 本地授权依旧未执行。详情见 [V118 变更](../purchasing/planning-disputes-proof-orval-v118.md)。
 
+> **A1 / V119 实施进展（2026-11-09）**：采购 V72 `/delivery/overview` 旧 `LIMIT 300` 总量截断已通过新的全租户数据库 `GET /delivery/summary` 聚合及 `GET /delivery/lines/page`（订单更新时间+订单/明细 UUID 绑定游标，每页 50）在主 React 采购交付工作台中解决；旧 API 仅作兼容。新增 2 项 Orval 读合同，采购 OpenAPI 累计 **102 个唯一 operationId**。服务端汇总直接从**全部本地符合条件的采购行**计算，UI 不再把 300 条局部求和误作全租户总计；仍保留 ASN 申报≠承运商、QC≠FBA 可售及无历史事实不猜测的规则。[V119 实现、专项测试及 A3 待执行说明](../purchasing/delivery-full-store-v119.md)。真实 PG18 性能/权限/并发/全链验证与 Next 正式切换 #63 仍未放行，Amazon 真实授权继续关闭。
+
 ## 第一批可执行 P0 核查清单
 
 | 核查对象 | 当前有证据的缺口 | 下一步 |
