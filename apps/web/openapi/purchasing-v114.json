@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Merchivra local purchasing read pages",
-    "version": "120.0.0",
-    "description": "Tenant-scoped local purchasing 112 contracts, including supplier evidence/followups and V52 supplier return dispatch reporting; no external shipment, Amazon OAuth or production writes."
+    "version": "121.0.0",
+    "description": "V50 V51 local lot reconciliation and correction fully source-backed Orval, 4 complete keysets, manual two-owner review. No Amazon writes."
   },
   "servers": [
     {
@@ -5855,6 +5855,969 @@
           }
         }
       }
+    },
+    "/api/v1/purchasing/lot-reconciliation/warehouses/{warehouseId}/counts": {
+      "get": {
+        "operationId": "listLotCountReviewsLegacy",
+        "summary": "Legacy first 200 warehouse counts; use /page for full history",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Legacy first 200 warehouse counts; use /page for full history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LotCountReview"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "CSRF or RBAC denied"
+          },
+          "404": {
+            "description": "Resource absent from current tenant"
+          },
+          "409": {
+            "description": "Immutable evidence or inventory balance changed"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-reconciliation/warehouses/{warehouseId}/counts/page": {
+      "get": {
+        "operationId": "listLotCountReviewsPage",
+        "summary": "Complete tenant+warehouse+V50-kind bounded keyset",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete tenant+warehouse+V50-kind bounded keyset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotCountReviewPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "CSRF or RBAC denied"
+          },
+          "404": {
+            "description": "Resource absent from current tenant"
+          },
+          "409": {
+            "description": "Immutable evidence or inventory balance changed"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-reconciliation/warehouses/{warehouseId}/transfers": {
+      "get": {
+        "operationId": "listLotDestinationTransfersLegacy",
+        "summary": "Legacy first 200 warehouse transfers; use /page for full history",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Legacy first 200 warehouse transfers; use /page for full history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LotDestinationTransfer"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "CSRF or RBAC denied"
+          },
+          "404": {
+            "description": "Resource absent from current tenant"
+          },
+          "409": {
+            "description": "Immutable evidence or inventory balance changed"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-reconciliation/warehouses/{warehouseId}/transfers/page": {
+      "get": {
+        "operationId": "listLotDestinationTransfersPage",
+        "summary": "Complete tenant+warehouse+V50-kind bounded keyset",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete tenant+warehouse+V50-kind bounded keyset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotDestinationTransferPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "CSRF or RBAC denied"
+          },
+          "404": {
+            "description": "Resource absent from current tenant"
+          },
+          "409": {
+            "description": "Immutable evidence or inventory balance changed"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-reconciliation/warehouses/{warehouseId}/dispositions": {
+      "get": {
+        "operationId": "listLotDispositionReviewsLegacy",
+        "summary": "Legacy first 200 warehouse dispositions; use /page for full history",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Legacy first 200 warehouse dispositions; use /page for full history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LotDispositionReview"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "CSRF or RBAC denied"
+          },
+          "404": {
+            "description": "Resource absent from current tenant"
+          },
+          "409": {
+            "description": "Immutable evidence or inventory balance changed"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-reconciliation/warehouses/{warehouseId}/dispositions/page": {
+      "get": {
+        "operationId": "listLotDispositionReviewsPage",
+        "summary": "Complete tenant+warehouse+V50-kind bounded keyset",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete tenant+warehouse+V50-kind bounded keyset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotDispositionReviewPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "CSRF or RBAC denied"
+          },
+          "404": {
+            "description": "Resource absent from current tenant"
+          },
+          "409": {
+            "description": "Immutable evidence or inventory balance changed"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-reconciliation/warehouses/{warehouseId}/unplanned-quarantines": {
+      "get": {
+        "operationId": "listUnplannedQuarantinesLegacy",
+        "summary": "Legacy first 200 warehouse unplanned-quarantines; use /page for full history",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Legacy first 200 warehouse unplanned-quarantines; use /page for full history",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "format": "uuid"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "CSRF or RBAC denied"
+          },
+          "404": {
+            "description": "Resource absent from current tenant"
+          },
+          "409": {
+            "description": "Immutable evidence or inventory balance changed"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-reconciliation/warehouses/{warehouseId}/unplanned-quarantines/page": {
+      "get": {
+        "operationId": "listUnplannedQuarantinesPage",
+        "summary": "Complete tenant+warehouse+V50-kind bounded keyset",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete tenant+warehouse+V50-kind bounded keyset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnplannedQuarantinePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "CSRF or RBAC denied"
+          },
+          "404": {
+            "description": "Resource absent from current tenant"
+          },
+          "409": {
+            "description": "Immutable evidence or inventory balance changed"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-reconciliation/counts": {
+      "post": {
+        "operationId": "submitLotCountReview",
+        "summary": "Idempotent physical observation review, no ledger posting before independent approval",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewLotCountReview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Idempotent physical observation review, no ledger posting before independent approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotCountReview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "CSRF or RBAC denied"
+          },
+          "404": {
+            "description": "Resource absent from current tenant"
+          },
+          "409": {
+            "description": "Immutable evidence or inventory balance changed"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-reconciliation/counts/{id}/decision": {
+      "post": {
+        "operationId": "decideLotCountReview",
+        "summary": "Independent approval; unproven surplus never posts stock credit",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LotReconciliationDecision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Independent approval; unproven surplus never posts stock credit",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotCountReview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "CSRF or RBAC denied"
+          },
+          "404": {
+            "description": "Resource absent from current tenant"
+          },
+          "409": {
+            "description": "Immutable evidence or inventory balance changed"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-reconciliation/transfers/{id}/acknowledge": {
+      "post": {
+        "operationId": "acknowledgeLotDestinationTransfer",
+        "summary": "Independent destination quantity receipt; never double-post stock",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LotDestinationAck"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Independent destination quantity receipt; never double-post stock",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotDestinationTransfer"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "CSRF or RBAC denied"
+          },
+          "404": {
+            "description": "Resource absent from current tenant"
+          },
+          "409": {
+            "description": "Immutable evidence or inventory balance changed"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-reconciliation/dispositions": {
+      "post": {
+        "operationId": "proposeLotDispositionReview",
+        "summary": "Quarantine disposal/return plan, already debited by V49",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewLotDispositionReview"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Quarantine disposal/return plan, already debited by V49",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotDispositionReview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "CSRF or RBAC denied"
+          },
+          "404": {
+            "description": "Resource absent from current tenant"
+          },
+          "409": {
+            "description": "Immutable evidence or inventory balance changed"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-reconciliation/dispositions/{id}/decision": {
+      "post": {
+        "operationId": "decideLotDispositionReview",
+        "summary": "Independent two-owner disposition approval",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LotReconciliationDecision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Independent two-owner disposition approval",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotDispositionReview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "CSRF or RBAC denied"
+          },
+          "404": {
+            "description": "Resource absent from current tenant"
+          },
+          "409": {
+            "description": "Immutable evidence or inventory balance changed"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-reconciliation/dispositions/{id}/completion": {
+      "post": {
+        "operationId": "completeLotDispositionReview",
+        "summary": "Human execution report, NOT extra stock posting or verified supplier shipment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LotDispositionCompletion"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Human execution report, NOT extra stock posting or verified supplier shipment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotDispositionReview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "CSRF or RBAC denied"
+          },
+          "404": {
+            "description": "Resource absent from current tenant"
+          },
+          "409": {
+            "description": "Immutable evidence or inventory balance changed"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-exceptions/warehouses/{warehouseId}": {
+      "get": {
+        "operationId": "listLotExceptionResolutionsLegacy",
+        "summary": "Legacy first 200 warehouse lot corrections",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Legacy first 200 warehouse lot corrections",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LotExceptionResolution"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "CSRF or RBAC denied"
+          },
+          "404": {
+            "description": "Resource absent from current tenant"
+          },
+          "409": {
+            "description": "Immutable evidence or inventory balance changed"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-exceptions/warehouses/{warehouseId}/page": {
+      "get": {
+        "operationId": "listLotExceptionResolutionsPage",
+        "summary": "Full V51 source-bound signed lot corrections by status and keyset",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "PENDING",
+                "ALL"
+              ],
+              "default": "PENDING"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full V51 source-bound signed lot corrections by status and keyset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotExceptionResolutionPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "CSRF or RBAC denied"
+          },
+          "404": {
+            "description": "Resource absent from current tenant"
+          },
+          "409": {
+            "description": "Immutable evidence or inventory balance changed"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-exceptions": {
+      "post": {
+        "operationId": "proposeLotExceptionResolution",
+        "summary": "Idempotent signed source-bound V51 adjustment application request",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NewLotExceptionResolution"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Idempotent signed source-bound V51 adjustment application request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotExceptionResolution"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "CSRF or RBAC denied"
+          },
+          "404": {
+            "description": "Resource absent from current tenant"
+          },
+          "409": {
+            "description": "Immutable evidence or inventory balance changed"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-exceptions/{id}/decision": {
+      "post": {
+        "operationId": "decideLotExceptionResolution",
+        "summary": "Independent V51 approval, no invented stock or double-post",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LotReconciliationDecision"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Independent V51 approval, no invented stock or double-post",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotExceptionResolution"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input or cursor"
+          },
+          "401": {
+            "description": "Owner Session required"
+          },
+          "403": {
+            "description": "CSRF or RBAC denied"
+          },
+          "404": {
+            "description": "Resource absent from current tenant"
+          },
+          "409": {
+            "description": "Immutable evidence or inventory balance changed"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -10870,6 +11833,772 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/LocalSupplierReturnTrace"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "LotCountReview": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "observationActionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "positionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedBinId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedPositionQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "observedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "expectedOnHand": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING_REVIEW",
+              "APPLIED",
+              "CONFIRMED_NO_CHANGE",
+              "EVIDENCE_REQUIRED",
+              "REJECTED"
+            ]
+          },
+          "submittedBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reviewedBy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "operationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reviewReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "observationActionId",
+          "positionId",
+          "warehouseId",
+          "productSkuId",
+          "expectedBinId",
+          "expectedPositionQuantity",
+          "observedQuantity",
+          "expectedOnHand",
+          "reason",
+          "status",
+          "submittedBy",
+          "reviewedBy",
+          "operationId",
+          "reviewReason"
+        ]
+      },
+      "NewLotCountReview": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "observationActionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "requestKey",
+          "observationActionId",
+          "reason"
+        ]
+      },
+      "LotReconciliationDecision": {
+        "type": "object",
+        "properties": {
+          "decision": {
+            "type": "string",
+            "enum": [
+              "APPROVE",
+              "REJECT"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "decision",
+          "reason"
+        ]
+      },
+      "LotDestinationTransfer": {
+        "type": "object",
+        "properties": {
+          "actionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "destinationWarehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourcePositionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "destinationPositionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "receivedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "POSTED_AWAITING_DESTINATION",
+              "CONFIRMED",
+              "MISMATCH"
+            ]
+          },
+          "transferredBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "acknowledgedBy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "actionId",
+          "destinationWarehouseId",
+          "sourcePositionId",
+          "destinationPositionId",
+          "expectedQuantity",
+          "receivedQuantity",
+          "status",
+          "transferredBy",
+          "acknowledgedBy",
+          "reference"
+        ]
+      },
+      "LotDestinationAck": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receivedQuantity": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reference": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 120
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "requestKey",
+          "receivedQuantity",
+          "reference",
+          "reason"
+        ]
+      },
+      "LotDispositionReview": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quarantineActionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "DISPOSAL",
+              "SUPPLIER_RETURN"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING_APPROVAL",
+              "APPROVED",
+              "REJECTED",
+              "EXECUTED_REPORTED"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "proposedBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reviewedBy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "completedBy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "completionReference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "quarantineActionId",
+          "warehouseId",
+          "quantity",
+          "method",
+          "status",
+          "reason",
+          "proposedBy",
+          "reviewedBy",
+          "completedBy",
+          "completionReference"
+        ]
+      },
+      "NewLotDispositionReview": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quarantineActionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "method": {
+            "type": "string",
+            "enum": [
+              "DISPOSAL",
+              "SUPPLIER_RETURN"
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "requestKey",
+          "quarantineActionId",
+          "method",
+          "reason"
+        ]
+      },
+      "LotDispositionCompletion": {
+        "type": "object",
+        "properties": {
+          "reference": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 120
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "reference",
+          "reason"
+        ]
+      },
+      "LotExceptionResolution": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "resolutionType": {
+            "type": "string",
+            "enum": [
+              "RELEASED_SURPLUS_BIND",
+              "TRANSFER_SHORTAGE"
+            ]
+          },
+          "countReviewId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "transferActionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sourceReceiptId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "positionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedBinId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedPositionQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "expectedOnHand": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "adjustmentQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "evidenceReference": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING_REVIEW",
+              "APPLIED",
+              "REJECTED"
+            ]
+          },
+          "proposedBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reviewedBy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reviewReason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "operationId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "resolutionType",
+          "countReviewId",
+          "transferActionId",
+          "sourceReceiptId",
+          "positionId",
+          "warehouseId",
+          "productSkuId",
+          "expectedBinId",
+          "expectedPositionQuantity",
+          "expectedOnHand",
+          "adjustmentQuantity",
+          "evidenceReference",
+          "reason",
+          "status",
+          "proposedBy",
+          "reviewedBy",
+          "reviewReason",
+          "operationId"
+        ]
+      },
+      "NewLotExceptionResolution": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "resolutionType": {
+            "type": "string",
+            "enum": [
+              "RELEASED_SURPLUS_BIND",
+              "TRANSFER_SHORTAGE"
+            ]
+          },
+          "sourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "sourceReceiptId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidenceReference": {
+            "type": "string",
+            "minLength": 4,
+            "maxLength": 120
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "requestKey",
+          "resolutionType",
+          "sourceId",
+          "sourceReceiptId",
+          "evidenceReference",
+          "reason"
+        ]
+      },
+      "LotCountReviewPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LotCountReview"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "LotDestinationTransferPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LotDestinationTransfer"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "LotDispositionReviewPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LotDispositionReview"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "LotExceptionResolutionPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LotExceptionResolution"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "UnplannedQuarantinePage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
             }
           },
           "nextCursor": {
