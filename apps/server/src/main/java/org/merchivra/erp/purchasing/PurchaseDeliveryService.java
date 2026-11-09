@@ -196,7 +196,7 @@ public class PurchaseDeliveryService {
                 afterTime=OffsetDateTime.parse(c[2]);
                 afterOrder=UUID.fromString(c[3]);
                 afterLine=UUID.fromString(c[4]);
-            } catch(IllegalArgumentException ex) {
+            } catch(java.time.format.DateTimeParseException|IllegalArgumentException ex) {
                 throw LocalKeysetPage.bad("Invalid delivery page cursor");
             }
         }
