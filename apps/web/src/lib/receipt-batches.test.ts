@@ -54,7 +54,8 @@ describe('V46 new real receipts held until separate QC release',()=>{
    expectedLotCode:'LOT-ABCDEF',newLotCode:'LOT-NEW',
    reason:'Supplier provided official lot number'
   })
-  expect(post?.opts?.headers).toMatchObject({'X-CSRF-TOKEN':'valid-lot-csrf'})
+  expect(new Headers(post?.opts?.headers).get('X-CSRF-TOKEN'))
+   .toBe('valid-lot-csrf')
  })
  it('release is a separate human POST and never silently QC-inspects',async()=>{
   const calls:Array<{url:string;opts?:RequestInit}>=[]
