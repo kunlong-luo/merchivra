@@ -164,10 +164,23 @@ assert score()["evidenceScore"]=="77.3"
 # V120 PG18 full_suite extension: followup and scorecard keysets reuse
 # existing actual source data; supplier return traces are separate V52 local
 # human reports and this scoped GET must remain safe even with zero records.
-scored=call(root+"/scorecards/page?limit=50")
-assert scored["pageSize"]==50 and isinstance(scored["items"],list)
-assert any(x["supplierId"]==supplier["id"] and x["evidenceScore"]=="77.3"
- for x in scored["items"]),"V120 scorecard page did not include synthetic scored supplier"
+score_cursor=None
+score_found=False
+for _ in range(50):
+    query="?"+urlencode({"limit":50,**({"cursor":score_cursor} if score_cursor else {})})
+    scored=call(root+"/scorecards/page"+query)
+    assert scored["pageSize"]==50 and isinstance(scored["items"],list)
+    if any(x["supplierId"]==supplier["id"] and x["evidenceScore"]=="77.3"
+           for x in scored["items"]):
+        score_found=True
+    if not scored["hasMore"]:
+        assert scored["nextCursor"] is None
+        break
+    score_cursor=scored["nextCursor"]
+    assert score_cursor
+else:
+    raise AssertionError("V120 scorecard paging exceeded test fixture bound")
+assert score_found,"V120 pages omitted synthetic 77.3 scored supplier"
 followed=call(root+"/followups/page?filter=ALL&limit=50")
 assert followed["pageSize"]==50 and isinstance(followed["items"],list)
 assert all(x["ruleCode"] in ("ASN_COVERAGE_GAP","ASN_NOT_DISPATCHED")
