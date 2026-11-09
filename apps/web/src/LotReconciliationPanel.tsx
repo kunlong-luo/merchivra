@@ -1,4 +1,5 @@
 import WarehousePicker from './WarehousePicker'
+import SupplierReturnTraceSection from './SupplierReturnTraceSection'
 import {useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
@@ -301,6 +302,9 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
      </tr>)}
     </tbody></table>
    </div>}
+   <SupplierReturnTraceSection key={warehouse} tenantId={tenantId}
+    warehouseId={warehouse} currentUserId={currentUserId}
+    dispositions={dispositions.data??[]}/>
   </>}
   {message&&<p className="panel-caption" role="status">{message}</p>}
   {failure&&<p className="setup-error" role="alert">{failure}</p>}
