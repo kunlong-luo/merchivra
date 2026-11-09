@@ -61,7 +61,11 @@ describe('V97 supplier and finance cursor pages',()=>{
   const urls=serve(envelope(followup))
   const page=await fetchPurchaseFollowupsPage('ACTIVE','after-100')
   expect(page.items[0].state).toBe('OPEN')
-  expect(urls[0]).toBe('/api/v1/purchasing/supplier-performance/followups/page?limit=50&filter=ACTIVE&cursor=after-100')
+  const url=new URL(urls[0],'http://localhost')
+   expect(url.pathname).toBe('/api/v1/purchasing/supplier-performance/followups/page')
+   expect(url.searchParams.get('limit')).toBe('50')
+   expect(url.searchParams.get('filter')).toBe('ACTIVE')
+   expect(url.searchParams.get('cursor')).toBe('after-100')
  })
  it('lets the operator select an older manually unverified settlement',async()=>{
   const urls=serve(envelope(statement))
