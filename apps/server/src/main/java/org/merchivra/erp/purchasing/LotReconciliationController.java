@@ -25,6 +25,28 @@ public class LotReconciliationController {
         HttpServletRequest request,@PathVariable UUID warehouseId) {
         return service.counts(access.currentTenant(auth,request),warehouseId);
     }
+
+    @GetMapping("/warehouses/{warehouseId}/counts/page")
+    public LocalKeysetPage.Page<LotReconciliationService.CountCase> countsPage(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID warehouseId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return service.countsPage(access.currentTenant(auth,request),warehouseId,limit,cursor);
+    }
+    @GetMapping("/warehouses/{warehouseId}/transfers/page")
+    public LocalKeysetPage.Page<LotReconciliationService.Transfer> transfersPage(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID warehouseId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return service.transfersPage(access.currentTenant(auth,request),warehouseId,limit,cursor);
+    }
+    @GetMapping("/warehouses/{warehouseId}/dispositions/page")
+    public LocalKeysetPage.Page<LotReconciliationService.Disposition> dispositionsPage(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID warehouseId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return service.dispositionsPage(access.currentTenant(auth,request),warehouseId,limit,cursor);
+    }
     @PostMapping("/counts")
     @ResponseStatus(HttpStatus.CREATED)
     public LotReconciliationService.CountCase submitCount(Authentication auth,
