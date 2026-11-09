@@ -1,14 +1,15 @@
 import WarehousePicker from './WarehousePicker'
 import SupplierReturnTraceSection from './SupplierReturnTraceSection'
-import {useState,type FormEvent} from 'react'
+import {useEffect,useState,type FormEvent} from 'react'
+import CursorPageControls from './CursorPageControls'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
 import {fetchLotPositions} from './lib/released-lots'
 import {fetchLotActionHistory} from './lib/lot-lifecycle'
 import {
- fetchLotCountCases,submitLotCount,decideLotCount,
- fetchDestinationTransfers,acknowledgeDestinationTransfer,
- fetchLotDispositions,fetchUnplannedQuarantines,proposeLotDisposition,
+ fetchLotCountCasesPage,submitLotCount,decideLotCount,
+ fetchDestinationTransfersPage,acknowledgeDestinationTransfer,
+ fetchLotDispositionsPage,fetchUnplannedQuarantinesPage,proposeLotDisposition,
  decideLotDisposition,reportLotDispositionCompletion
 } from './lib/lot-reconciliation'
 
@@ -25,6 +26,18 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
  const qc=useQueryClient()
  const root=['purchasing',tenantId]
  const [warehouse,setWarehouse]=useState('')
+ const [countCursors,setCountCursors]=useState<(string|null)[]>([null])
+ const [transferCursors,setTransferCursors]=useState<(string|null)[]>([null])
+ const [dispositionCursors,setDispositionCursors]=useState<(string|null)[]>([null])
+ const [quarantineCursors,setQuarantineCursors]=useState<(string|null)[]>([null])
+ const countCursor=countCursors.at(-1)??null
+ const transferCursor=transferCursors.at(-1)??null
+ const dispositionCursor=dispositionCursors.at(-1)??null
+ const quarantineCursor=quarantineCursors.at(-1)??null
+ useEffect(()=>{
+  setCountCursors([null]);setTransferCursors([null])
+  setDispositionCursors([null]);setQuarantineCursors([null])
+ },[tenantId])
  const [positionId,setPositionId]=useState('')
  const [observationId,setObservationId]=useState('')
  const [countKey,setCountKey]=useState(()=>crypto.randomUUID())
@@ -47,16 +60,21 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
   queryFn:()=>fetchLotPositions(warehouse),enabled:!!warehouse,retry:false})
  const actionHistory=useQuery({queryKey:[...root,'lot-history',positionId],
   queryFn:()=>fetchLotActionHistory(positionId),enabled:!!positionId,retry:false})
- const countCases=useQuery({queryKey:[...root,'count-reviews',warehouse],
-  queryFn:()=>fetchLotCountCases(warehouse),enabled:!!warehouse,retry:false})
- const transfers=useQuery({queryKey:[...root,'transfer-receiving',warehouse],
-  queryFn:()=>fetchDestinationTransfers(warehouse),enabled:!!warehouse,retry:false})
- const dispositions=useQuery({queryKey:[...root,'lot-dispositions',warehouse],
-  queryFn:()=>fetchLotDispositions(warehouse),enabled:!!warehouse,retry:false})
- const unplanned=useQuery({queryKey:[...root,'unplanned-quarantines',warehouse],
-  queryFn:()=>fetchUnplannedQuarantines(warehouse),enabled:!!warehouse,retry:false})
+ const countCases=useQuery({queryKey:[...root,'count-reviews-page',warehouse,countCursor],
+  queryFn:()=>fetchLotCountCasesPage(warehouse,countCursor),enabled:!!warehouse,retry:false})
+ const transfers=useQuery({queryKey:[...root,'transfer-receiving-page',warehouse,transferCursor],
+  queryFn:()=>fetchDestinationTransfersPage(warehouse,transferCursor),
+  enabled:!!warehouse,retry:false})
+ const dispositions=useQuery({queryKey:[...root,'lot-dispositions-page',warehouse,dispositionCursor],
+  queryFn:()=>fetchLotDispositionsPage(warehouse,dispositionCursor),
+  enabled:!!warehouse,retry:false})
+ const unplanned=useQuery({queryKey:[...root,'unplanned-quarantines-page',warehouse,quarantineCursor],
+  queryFn:()=>fetchUnplannedQuarantinesPage(warehouse,quarantineCursor),
+  enabled:!!warehouse,retry:false})
  const reload=()=>void qc.invalidateQueries({queryKey:root})
  function succeeded(value:string){
+  setCountCursors([null]);setTransferCursors([null]);
+  setDispositionCursors([null]);setQuarantineCursors([null])
   setMessage(value);setFailure('');reload()
  }
  const makeCount=useMutation({
@@ -110,8 +128,8 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
   },onError:(e:Error)=>setFailure(e.message)
  })
  const availableObservations=(actionHistory.data??[]).filter(a=>
-  a.actionType==='COUNT_OBSERVATION'&&!countCases.data?.some(c=>c.observationActionId===a.id))
- const selectedTransfer=transfers.data?.find(x=>x.actionId===ackAction)
+  a.actionType==='COUNT_OBSERVATION'&&!countCases.data?.items.some(c=>c.observationActionId===a.id))
+ const selectedTransfer=transfers.data?.items.find(x=>x.actionId===ackAction)
  function submitAck(e:FormEvent){
   e.preventDefault()
   if(!selectedTransfer||!Number.isSafeInteger(ackQuantity)||ackQuantity<0||
@@ -131,7 +149,9 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
     label="本地仓库（全库）" value={warehouse}
     onChange={id=>{
    setWarehouse(id);setPositionId('');setObservationId('');
-   setAckAction('');setQuarantineId('')}}/>
+   setAckAction('');setQuarantineId('')
+   setCountCursors([null]);setTransferCursors([null])
+   setDispositionCursors([null]);setQuarantineCursors([null])}}/>
   {!!warehouse&&<>
    <h3>1. 盘点观察 → 独立复核 → 仅盘亏安全调账</h3>
    <p className="setup-hint">选择在 V49 已记录的库位盘点观察。审核人不得是观察者或提交人。
@@ -165,10 +185,10 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
     </button>
    </form>
    {countCases.isError?<p className="setup-error" role="alert">{String(countCases.error)}</p>:
-    (countCases.data??[]).length>0&&<div className="table-scroll" role="region" tabIndex={0}>
+    (countCases.data?.items??[]).length>0&&<div className="table-scroll" role="region" tabIndex={0}>
      <table><thead><tr><th scope="col">账面 / 实点</th><th scope="col">状态</th>
       <th scope="col">审核</th></tr></thead><tbody>
-      {(countCases.data??[]).map(c=><tr key={c.id}>
+      {(countCases.data?.items??[]).map(c=><tr key={c.id}>
        <td>{c.expectedPositionQuantity} / {c.observedQuantity}</td>
        <td>{countLabels[c.status]||c.status}</td>
        <td>{c.status==='PENDING_REVIEW'&&c.submittedBy!==currentUserId?
@@ -185,7 +205,7 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
       </tr>)}
       </tbody></table>
     </div>}
-   {!!countCases.data?.some(c=>c.status==='PENDING_REVIEW'&&
+   {!!countCases.data?.items.some(c=>c.status==='PENDING_REVIEW'&&
      c.submittedBy!==currentUserId)&&<>
     <label htmlFor="v50-review-reason">盘点审核意见（适用于下方选择的记录）</label>
     <input id="v50-review-reason" value={reviewReason} minLength={5} maxLength={300}
@@ -195,10 +215,10 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
    <h3>2. 跨仓调拨目的仓人工收货确认</h3>
    <p className="setup-hint">V49 调拨在提交时已完成双仓本地台账过账。
     目的仓另一位 Owner 需要核对实际到货件数；不足时记录异常，不自动修改既有库存。</p>
-   {(transfers.data??[]).length>0&&<div className="table-scroll" role="region" tabIndex={0}>
+   {(transfers.data?.items??[]).length>0&&<div className="table-scroll" role="region" tabIndex={0}>
     <table><thead><tr><th scope="col">目标批次来源</th>
      <th scope="col">已过账数量</th><th scope="col">目的仓状态</th></tr></thead><tbody>
-     {(transfers.data??[]).map(t=><tr key={t.actionId}>
+     {(transfers.data?.items??[]).map(t=><tr key={t.actionId}>
       <td>{t.destinationPositionId.slice(0,8)}</td><td>{t.expectedQuantity}</td>
       <td>{t.status==='POSTED_AWAITING_DESTINATION'?'待目的仓独立核对':
        t.status==='CONFIRMED'?'目的仓全部确认':'目的仓数量差异：实点 '+t.receivedQuantity}</td>
@@ -209,10 +229,10 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
     <label htmlFor="v50-transfer">待确认的跨仓调拨</label>
     <select id="v50-transfer" value={ackAction}
      onChange={e=>{const id=e.target.value;setAckAction(id);
-      const selected=transfers.data?.find(t=>t.actionId===id);
+      const selected=transfers.data?.items.find(t=>t.actionId===id);
       setAckQuantity(selected?.expectedQuantity??0);setAckKey(crypto.randomUUID())}}>
      <option value="">选择待收货的目标仓库批次</option>
-     {(transfers.data??[]).filter(t=>t.status==='POSTED_AWAITING_DESTINATION'&&
+     {(transfers.data?.items??[]).filter(t=>t.status==='POSTED_AWAITING_DESTINATION'&&
        t.transferredBy!==currentUserId).map(t=>
        <option key={t.actionId} value={t.actionId}>
         {t.actionId.slice(0,8)} · 应收 {t.expectedQuantity} 件</option>)}
@@ -247,7 +267,7 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
     <select id="v50-quarantine" value={quarantineId} onChange={e=>{
      setQuarantineId(e.target.value);setPlanKey(crypto.randomUUID())}}>
      <option value="">选择已扣除本地可用库存的过期隔离流水来源</option>
-     {(unplanned.data??[]).map(id=>
+     {(unplanned.data?.items??[]).map(id=>
       <option key={id} value={id}>隔离行动 {id.slice(0,8)}</option>)}
     </select>
     <label htmlFor="v50-method">处置方式</label>
@@ -273,10 +293,10 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
    <label htmlFor="v50-completion-reason">物理处置执行报告说明</label>
    <input id="v50-completion-reason" minLength={5} maxLength={300}
     value={completionReason} onChange={e=>setCompletionReason(e.target.value)}/>
-   {(dispositions.data??[]).length>0&&<div className="table-scroll" role="region" tabIndex={0}>
+   {(dispositions.data?.items??[]).length>0&&<div className="table-scroll" role="region" tabIndex={0}>
     <table><thead><tr><th scope="col">隔离来源与件数</th><th scope="col">计划</th>
      <th scope="col">状态 / 独立处理</th></tr></thead><tbody>
-     {(dispositions.data??[]).map(d=><tr key={d.id}>
+     {(dispositions.data?.items??[]).map(d=><tr key={d.id}>
       <td>{d.quarantineActionId.slice(0,8)} · {d.quantity} 件</td>
       <td>{methodLabels[d.method]}</td>
       <td>{d.status==='PENDING_APPROVAL'&&d.proposedBy!==currentUserId?
@@ -304,7 +324,7 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
    </div>}
    <SupplierReturnTraceSection key={warehouse} tenantId={tenantId}
     warehouseId={warehouse} currentUserId={currentUserId}
-    dispositions={dispositions.data??[]}/>
+    dispositions={dispositions.data?.items??[]}/>
   </>}
   {message&&<p className="panel-caption" role="status">{message}</p>}
   {failure&&<p className="setup-error" role="alert">{failure}</p>}
