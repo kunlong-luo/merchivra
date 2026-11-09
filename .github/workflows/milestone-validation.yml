@@ -1,3 +1,5 @@
+# V129: one exact-main-SHA full A3 after adding the forward-only PG18
+# V84 private original-download audit and fail-closed Java behavior.
 # V128: one post-merge full A3 on the private Next -> Spring Compose
 # readiness healthcheck change, in addition to the existing real PG18/Chromium gates.
 # V126: finalize Chromium Next hydration rule-row regression while
@@ -17,7 +19,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V128-A3-Next-healthcheck-release-gate' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V129-A3-private-proof-download-audit' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -42,6 +44,7 @@ on:
           - V122-A3-Next-runtime-baseline
           - V126-A3-Next-ops-and-PG18-final-gate
           - V128-A3-Next-healthcheck-release-gate
+          - V129-A3-private-proof-download-audit
 
 permissions:
   contents: read
