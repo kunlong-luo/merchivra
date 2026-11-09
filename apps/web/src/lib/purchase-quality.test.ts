@@ -46,7 +46,8 @@ describe('V44 quality, held stock and supplier return',()=>{
   expect(post?.url).toBe('/api/v1/purchasing/quality/receipts/'+receiptId+'/inspect')
   expect(JSON.parse(String(post?.options?.body))).toEqual({
    requestKey,acceptedQuantity:7,rejectedQuantity:3,reason:'Three broken packages'})
-  expect(post?.options?.headers).toMatchObject({'X-CSRF-TOKEN':'valid-qc-csrf-token'})
+  expect(new Headers(post?.options?.headers).get('X-CSRF-TOKEN'))
+   .toBe('valid-qc-csrf-token')
  })
  it('supplier return is a separate draft and dispatch, not a second stock mutation',async()=>{
   const calls:Array<{url:string;options?:RequestInit}>=[]
