@@ -153,6 +153,7 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
    setCountCursors([null]);setTransferCursors([null])
    setDispositionCursors([null]);setQuarantineCursors([null])}}/>
   {!!warehouse&&<>
+   <p className="setup-hint">本页只显示每类当前 50 条真实历史。所有盘点、调拨与处置去重和签名库存快照均以服务端全库核对为准。</p>
    <h3>1. 盘点观察 → 独立复核 → 仅盘亏安全调账</h3>
    <p className="setup-hint">选择在 V49 已记录的库位盘点观察。审核人不得是观察者或提交人。
     已盘盈数量需额外实际收货来源，不能仅凭观察擅自增加放行库存。</p>
@@ -205,6 +206,11 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
       </tr>)}
       </tbody></table>
     </div>}
+   {countCases.data&&<CursorPageControls label="盘点复核完整历史"
+    page={countCursors.length} hasMore={countCases.data.hasMore}
+    nextCursor={countCases.data.nextCursor} busy={countCases.isFetching}
+    onPrev={()=>setCountCursors(v=>v.slice(0,-1))}
+    onNext={cursor=>setCountCursors(v=>[...v,cursor])}/>}
    {!!countCases.data?.items.some(c=>c.status==='PENDING_REVIEW'&&
      c.submittedBy!==currentUserId)&&<>
     <label htmlFor="v50-review-reason">盘点审核意见（适用于下方选择的记录）</label>
@@ -225,6 +231,11 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
      </tr>)}
     </tbody></table>
    </div>}
+   {transfers.data&&<CursorPageControls label="目的仓调拨全库收货历史"
+    page={transferCursors.length} hasMore={transfers.data.hasMore}
+    nextCursor={transfers.data.nextCursor} busy={transfers.isFetching}
+    onPrev={()=>{setTransferCursors(v=>v.slice(0,-1));setAckAction('')}}
+    onNext={cursor=>{setTransferCursors(v=>[...v,cursor]);setAckAction('')}}/>}
    <form className="team-invite-form" onSubmit={submitAck}>
     <label htmlFor="v50-transfer">待确认的跨仓调拨</label>
     <select id="v50-transfer" value={ackAction}
@@ -270,6 +281,11 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
      {(unplanned.data?.items??[]).map(id=>
       <option key={id} value={id}>隔离行动 {id.slice(0,8)}</option>)}
     </select>
+    {unplanned.data&&<CursorPageControls label="未规划隔离来源全库"
+     page={quarantineCursors.length} hasMore={unplanned.data.hasMore}
+     nextCursor={unplanned.data.nextCursor} busy={unplanned.isFetching}
+     onPrev={()=>{setQuarantineCursors(v=>v.slice(0,-1));setQuarantineId('')}}
+     onNext={cursor=>{setQuarantineCursors(v=>[...v,cursor]);setQuarantineId('')}}/>}
     <label htmlFor="v50-method">处置方式</label>
     <select id="v50-method" value={method} onChange={e=>{
      setMethod(e.target.value as 'DISPOSAL'|'SUPPLIER_RETURN');
@@ -322,6 +338,11 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
      </tr>)}
     </tbody></table>
    </div>}
+   {dispositions.data&&<CursorPageControls label="已隔离批次处置全历史"
+    page={dispositionCursors.length} hasMore={dispositions.data.hasMore}
+    nextCursor={dispositions.data.nextCursor} busy={dispositions.isFetching}
+    onPrev={()=>setDispositionCursors(v=>v.slice(0,-1))}
+    onNext={cursor=>setDispositionCursors(v=>[...v,cursor])}/>}
    <SupplierReturnTraceSection key={warehouse} tenantId={tenantId}
     warehouseId={warehouse} currentUserId={currentUserId}
     dispositions={dispositions.data?.items??[]}/>
