@@ -30,6 +30,19 @@ export type PieceGrade=z.infer<typeof grade>
 export type LotPosition=z.infer<typeof position>
 export type StockLotPick=z.infer<typeof pick>
 export type LotPolicy='FIFO'|'FEFO'
+// V130: the GET preview contains at most the first 500 matching positions.
+// Its sum is a full bound only when fewer than 500 rows are returned. The
+// signed warehouse balance remains authoritative and the POST rechecks all
+// eligible positions transactionally; never treat omitted rows as zero.
+export function lotPickCapacityHint(
+ preview:ReadonlyArray<{remainingQuantity:number}>|undefined,
+ onHand:number|undefined
+){
+ const shown=preview?.reduce((sum,p)=>sum+p.remainingQuantity,0)??0
+ const mayHaveMore=(preview?.length??0)>=500
+ return {shown,mayHaveMore,maxPickable:onHand===undefined?0:
+  mayHaveMore?onHand:Math.min(onHand,shown)}
+}
 // V117: Orval source-backed Fetch transport + strict runtime Zod validation.
 // Reject dynamic path interpolation except canonical UUID strings.
 const pathId=(id:string)=>z.string().uuid().parse(id)
