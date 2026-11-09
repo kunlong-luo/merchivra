@@ -1,5 +1,5 @@
 import {afterEach,describe,expect,it,vi} from 'vitest'
-import {fetchSupplierAsns,createSupplierAsn} from './supplier-asns'
+import {fetchSupplierAsns} from './supplier-asns'
 import {fetchQualityReceiptsPage,fetchQualityReturnsPage,
  fetchQualityFindingsPage,inspectQualityReceipt} from './purchase-quality'
 import {fetchReceiptBatchesPage,fetchWarehouseReceiptBatchesPage,
