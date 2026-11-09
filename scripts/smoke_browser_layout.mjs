@@ -832,12 +832,25 @@ async function main() {
 
       await evaluate(send, "(() => {const btn=[...document.querySelectorAll('.nav-link')]" +
         ".find(b=>b.textContent.includes('运营自动化'));if(!btn)throw Error('Missing operations navigation');btn.click();})()")
+      // Next's App Router may hydrate the list between successive remote
+      // evaluations. Assert content after the row is present, not that the
+      // first row still exists at the exact instant of the next CDP call.
       await waitFor(send,
-        "document.querySelector('.v105-ops-table tbody tr')?.textContent?.includes('模拟测试')",
+        "[...document.querySelectorAll('.v105-ops-table tbody tr')].some(" +
+        "x=>x.textContent.includes('模拟测试'))",
         'operations triage')
-      assert.equal(await evaluate(send,
-        "document.querySelector('.v105-ops-table tbody tr')?.textContent?.includes('FBA 库存数据不完整')"),
-        true, 'operations rule label')
+      try {
+        await waitFor(send,
+          "[...document.querySelectorAll('.v105-ops-table tbody tr')].some(" +
+          "x=>x.textContent.includes('FBA 库存数据不完整'))",
+          'operations rule label')
+      } catch(error) {
+        console.error('V126 operations provenance diagnostic:',
+          await evaluate(send,
+            "[...document.querySelectorAll('.v105-ops-table tbody tr')]" +
+            ".slice(0,8).map(x=>x.textContent)"))
+        throw error
+      }
       await waitFor(send,
         "[...document.querySelectorAll('[aria-label=\"站点异常规则表\"] tbody tr')].some(x=>x.textContent.includes('库存'))",
         'V69 Marketplace rule settings')
