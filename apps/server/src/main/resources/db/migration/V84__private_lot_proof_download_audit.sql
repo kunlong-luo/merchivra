@@ -2,6 +2,12 @@
 -- access event. This is an internal access log, not external provenance or
 -- an authenticity certificate. The BYTEA payload never enters this table.
 -- Existing V52 originals are retained without modification.
+-- Bind the audit's proof and file together at the database level as well
+-- as in the service, so an unrelated same-tenant attachment cannot be logged.
+ALTER TABLE erp_local_lot_disposition_proof_file
+  ADD CONSTRAINT erp_lot_proof_file_tenant_proof_id_unique
+  UNIQUE(tenant_id,proof_id,id);
+
 CREATE TABLE erp_local_lot_proof_file_download_audit (
   id UUID PRIMARY KEY,
   tenant_id UUID NOT NULL REFERENCES tenant(id),
@@ -12,8 +18,8 @@ CREATE TABLE erp_local_lot_proof_file_download_audit (
   downloaded_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   FOREIGN KEY (tenant_id,proof_id)
     REFERENCES erp_local_lot_disposition_proof(tenant_id,id),
-  FOREIGN KEY (tenant_id,file_id)
-    REFERENCES erp_local_lot_disposition_proof_file(tenant_id,id),
+  FOREIGN KEY (tenant_id,proof_id,file_id)
+    REFERENCES erp_local_lot_disposition_proof_file(tenant_id,proof_id,id),
   FOREIGN KEY (tenant_id,downloaded_by)
     REFERENCES membership(tenant_id,user_id)
 );
