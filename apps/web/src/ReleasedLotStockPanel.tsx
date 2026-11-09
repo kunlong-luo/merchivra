@@ -8,7 +8,7 @@ import {fetchReceiptBatches} from './lib/receipt-batches'
 import {fetchReceiptLotPieces,fetchStockBins} from './lib/lot-locations'
 import {fetchPieceGrades,gradePiece,finalizePieceGrades,
  fetchLotPositions,putawayReleasedLot,previewLotPick,pickReleasedLots,
- type LotPolicy} from './lib/released-lots'
+ lotPickCapacityHint,type LotPolicy} from './lib/released-lots'
 
 export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
  tenantId:string;orderId:string;warehouses:LocalWarehouse[]
@@ -96,7 +96,7 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
    .reduce((sum,p)=>sum+p.placedQuantity,0)??0))
  // A SKU absent from the legacy 500-stock array must not be guessed as zero.
  const usable=stockItem.data?.onHandQuantity
- const availablePositioned=preview.data?.reduce((n,p)=>n+p.remainingQuantity,0)??0
+ const pickCapacity=lotPickCapacityHint(preview.data,usable)
  const canGrade=!!selectedBatch&&selectedBatch.status==='PENDING_QC'&&
   !!selectedPiece&&!gradeMap.has(selectedPiece.id)&&
   Number.isSafeInteger(rejected)&&rejected>=0&&rejected<=selectedPiece.quantity&&
@@ -108,9 +108,10 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
   putawayReason.trim().length>=5&&putawayReason.trim().length<=300&&!putaway.isPending
  const canPick=!!sku&&!!warehouse&&usable!==undefined&&
   Number.isSafeInteger(pickQty)&&pickQty>=1&&
-  pickQty<=Math.min(usable,availablePositioned)&&
+  pickQty<=pickCapacity.maxPickable&&
   pickReason.trim().length>=5&&pickReason.trim().length<=300&&
-  !stockItem.isFetching&&!stockItem.isError&&!preview.isFetching&&!pick.isPending
+  !stockItem.isFetching&&!stockItem.isError&&!preview.isFetching&&
+  !preview.isError&&!pick.isPending
  return <section className="panel full-panel" aria-label="V48 分段质检与批次库位拣货">
   <div className="panel-heading"><div>
    <h2>V48 · 分段质检、合格品上架与 FIFO/FEFO 拣货</h2>
@@ -255,8 +256,11 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
      <option value="FIFO">FIFO · 优先较早收货</option>
      <option value="FEFO">FEFO · 优先较早有效期</option>
     </select>
-    <p className="setup-hint">符合策略的非过期已上架批次余量：
-     {availablePositioned} 件；仓库总可用 {usable===undefined?'未知（精确读取未完成或失败）':usable} 件。</p>
+    <p className="setup-hint">符合策略的非过期已上架批次
+     {pickCapacity.mayHaveMore?'（只预览前 500 个库位）':'余量'}：
+     {pickCapacity.shown} 件{pickCapacity.mayHaveMore?
+      '（预览下限；其他批次由后端在实际拣货时全库校验）':''}；
+     仓库总可用 {usable===undefined?'未知（精确读取未完成或失败）':usable} 件。</p>
     {!!preview.data?.length&&<div className="table-scroll" role="region" tabIndex={0}>
      <table><thead><tr><th scope="col">预计拣货顺序</th><th scope="col">批次/库位</th>
       <th scope="col">余量</th><th scope="col">有效期</th></tr></thead><tbody>
@@ -267,7 +271,7 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
     </div>}
     <label htmlFor="v48-pick-qty">确认实际拣货件数</label>
     <input id="v48-pick-qty" type="number" min={1}
-     max={Math.min(usable??0,availablePositioned)} value={pickQty}
+     max={pickCapacity.maxPickable} value={pickQty}
      onChange={e=>{setPickQty(Number(e.target.value));setPickKey(crypto.randomUUID())}}/>
     <label htmlFor="v48-pick-reason">实际出库原因</label>
     <input id="v48-pick-reason" minLength={5} maxLength={300}
