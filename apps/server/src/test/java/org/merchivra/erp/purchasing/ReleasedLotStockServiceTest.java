@@ -95,7 +95,7 @@ class ReleasedLotStockServiceTest {
             bin.toString(),"SHELF-A","LOT-A",7,7,
             "2026-12-01","2026-11-01T00:00:00Z");
         when(jdbc.query(contains("FROM erp_local_lot_position p"),
-            any(RowMapper.class),eq(tenant),eq(warehouse),eq(sku),eq("FEFO")))
+            any(RowMapper.class),eq(tenant),eq(warehouse),eq(sku),eq("FEFO"),eq(3)))
             .thenReturn(List.of(positionSnapshot));
         when(jdbc.update(contains("UPDATE erp_local_lot_position"),
             eq(3),eq(tenant),eq(position),eq(3))).thenReturn(1);
@@ -128,7 +128,42 @@ class ReleasedLotStockServiceTest {
         verify(jdbc).query(argThat((String sql)->
                 sql.contains("p.expiry_date>=CURRENT_DATE")
                   && sql.contains("b.created_at ASC")),
-            any(RowMapper.class),eq(tenant),eq(warehouse),eq(sku),eq("FIFO"));
+            any(RowMapper.class),eq(tenant),eq(warehouse),eq(sku),eq("FIFO"),eq(500));
         verifyNoInteractions(stock);
+    }
+
+    @Test void pickingAcross501SingleUnitLotsCannotBeTruncatedTo500(){
+        activeTenant();activeWarehouse();balance(501);
+        var all=new java.util.ArrayList<ReleasedLotStockService.Position>();
+        for(int i=0;i<501;i++){
+            all.add(new ReleasedLotStockService.Position(UUID.randomUUID().toString(),
+                receipt.toString(),warehouse.toString(),sku.toString(),bin.toString(),
+                "SHELF-"+i,"LOT-"+i,1,1,null,"2026-11-01T00:00:00Z"));
+        }
+        when(jdbc.query(contains("FROM erp_local_lot_position p"),
+            any(RowMapper.class),eq(tenant),eq(warehouse),eq(sku),eq("FEFO"),eq(501)))
+            .thenReturn(all);
+        when(jdbc.update(contains("UPDATE erp_local_lot_position"),
+            eq(1),eq(tenant),any(UUID.class),eq(1))).thenReturn(1);
+        var posted=new WarehouseStockOperationService.Operation(operation.toString(),
+            "OUTBOUND",warehouse.toString(),null,sku.toString(),501,501,-501,0,
+            "Actually picked from storage rack",actor.toString(),"2026-11-01T00:00:00Z");
+        when(stock.post(eq(tenant),eq(actor),
+            any(WarehouseStockOperationService.Request.class))).thenReturn(posted);
+        var saved=new ReleasedLotStockService.Pick(pickId.toString(),warehouse.toString(),
+            sku.toString(),operation.toString(),"FEFO",501,501,
+            "Actually picked from storage rack",actor.toString(),List.of());
+        when(jdbc.query(contains("FROM erp_local_lot_pick WHERE tenant_id=?"),
+            any(RowMapper.class),eq(tenant),any(UUID.class))).thenReturn(List.of(saved));
+        var result=service.pick(tenant,actor,pick(501,501));
+        assertEquals(501,result.quantity());
+        verify(jdbc).query(argThat((String sql)->sql.contains("LIMIT ?") &&
+                sql.contains("remaining_quantity>0")),
+            any(RowMapper.class),eq(tenant),eq(warehouse),eq(sku),eq("FEFO"),eq(501));
+        verify(jdbc,times(501)).update(contains("UPDATE erp_local_lot_position"),
+            eq(1),eq(tenant),any(UUID.class),eq(1));
+        verify(stock).post(eq(tenant),eq(actor),argThat(req->
+            req.quantity()==501 && req.expectedOnHand()==501 &&
+            "OUTBOUND".equals(req.type())));
     }
 }
