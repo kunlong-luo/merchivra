@@ -48,6 +48,6 @@ describe('V72 purchase delivery evidence boundary',()=>{
  })
  it('fails closed on non-owner access without a fallback',async()=>{
   vi.stubGlobal('fetch',vi.fn(async()=>new Response('',{status:403})))
-  await expect(fetchPurchaseDeliveryOverview()).rejects.toThrow('Owner')
+  await expect(fetchPurchaseDeliveryOverview()).rejects.toThrow('操作权限')
  })
 })
