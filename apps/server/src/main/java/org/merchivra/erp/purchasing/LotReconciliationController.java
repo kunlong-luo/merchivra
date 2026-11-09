@@ -47,6 +47,14 @@ public class LotReconciliationController {
         @RequestParam(required=false) String cursor) {
         return service.dispositionsPage(access.currentTenant(auth,request),warehouseId,limit,cursor);
     }
+    @GetMapping("/warehouses/{warehouseId}/unplanned-quarantines/page")
+    public LocalKeysetPage.Page<String> unplannedQuarantinesPage(
+        Authentication auth,HttpServletRequest request,@PathVariable UUID warehouseId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) String cursor) {
+        return service.unplannedQuarantinesPage(
+            access.currentTenant(auth,request),warehouseId,limit,cursor);
+    }
     @PostMapping("/counts")
     @ResponseStatus(HttpStatus.CREATED)
     public LotReconciliationService.CountCase submitCount(Authentication auth,
