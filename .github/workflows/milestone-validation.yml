@@ -1,3 +1,5 @@
+# V124 A3: repeat complete PG18+Chromium suite on exact merged main SHA
+# after V113 wildcard expectation and V107 accessible table label fixes.
 # V123 A3: this workflow change triggers a fresh *full* regression at the
 # repaired main SHA after V122 PG18 + browser failures. Successful V122
 # Docker/Session alone does not count as A3 success.
@@ -9,7 +11,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V123-A3-PG18-browser-regression-recheck' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V124-A3-warehouse-ledger-and-PG18-release-gate' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -32,7 +34,7 @@ on:
           - release-candidate
           - security-regression
           - V122-A3-Next-runtime-baseline
-          - V123-A3-PG18-browser-regression-recheck
+          - V124-A3-warehouse-ledger-and-PG18-release-gate
 
 permissions:
   contents: read

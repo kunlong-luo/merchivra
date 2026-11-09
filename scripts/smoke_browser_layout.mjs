@@ -983,10 +983,10 @@ async function main() {
         set.call(el,'${v107WarehouseId}');
         el.dispatchEvent(new Event('change',{bubbles:true}))})()`)
       await waitFor(send,
-        "document.querySelectorAll('[aria-label=\\\"仓库完整库存流水\\\"] tbody tr').length===2",
+        "document.querySelectorAll('[aria-label=\\\"仓库本地库存流水\\\"] tbody tr').length===2",
         'V107 two synthetic local audit movements')
       assert.equal(await evaluate(send,
-        "document.querySelector('[aria-label=\\\"仓库完整库存流水\\\"]')?.textContent?.includes('86868686-8686-4686-8686-868686868686')"),
+        "document.querySelector('[aria-label=\\\"仓库本地库存流水\\\"]')?.textContent?.includes('86868686-8686-4686-8686-868686868686')"),
         true,'V107 original inventory operation ID is retained')
       await evaluate(send,
         "document.querySelector('[aria-label=\\\"筛选本地库存流水类型\\\"]')?.click()")
@@ -997,14 +997,14 @@ async function main() {
         "([...document.querySelectorAll('.v105-filter-item')].find(x=>" +
         "x.textContent.includes('调拨转出')))?.click()")
       await waitFor(send,
-        "document.querySelectorAll('[aria-label=\\\"仓库完整库存流水\\\"] tbody tr').length===1 && " +
-        "document.querySelector('[aria-label=\\\"仓库完整库存流水\\\"] tbody tr')?.textContent?.includes('调拨转出')",
+        "document.querySelectorAll('[aria-label=\\\"仓库本地库存流水\\\"] tbody tr').length===1 && " +
+        "document.querySelector('[aria-label=\\\"仓库本地库存流水\\\"] tbody tr')?.textContent?.includes('调拨转出')",
         'V107 filtered local ledger rows')
       assert.equal(await evaluate(send,
-        "document.querySelector('[aria-label=\\\"仓库完整库存流水\\\"] tbody tr')?.textContent?.includes('V107 synthetic transfer audit')"),
+        "document.querySelector('[aria-label=\\\"仓库本地库存流水\\\"] tbody tr')?.textContent?.includes('V107 synthetic transfer audit')"),
         true,'V107 immutable warehouse business reason retained')
       await evaluate(send,
-        "document.querySelector('[aria-label=\\\"仓库完整库存流水\\\"]')?.scrollIntoView({block:'center'})")
+        "document.querySelector('[aria-label=\\\"仓库本地库存流水\\\"]')?.scrollIntoView({block:'center'})")
       await layout(send,width,'v107-warehouse-360')
       await screenshot(send,'v107-warehouse-360.png')
       assert.equal(v104CancelWrites,0,'V107 view filters cannot write to purchasing')
