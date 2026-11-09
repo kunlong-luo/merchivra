@@ -66,7 +66,7 @@ describe('V50 local lot reconciliation evidence contracts',()=>{
    reason:'Physical cartons were recounted'})
   const post=calls.find(c=>c.opts?.method==='POST')
   expect(post?.url).toBe('/api/v1/purchasing/lot-reconciliation/counts')
-  expect(post?.opts?.headers).toMatchObject({'X-CSRF-TOKEN':'v50-valid-test-csrf-token'})
+  expect(new Headers(post?.opts?.headers).get('X-CSRF-TOKEN')).toBe('v50-valid-test-csrf-token')
   expect(JSON.parse(String(post?.opts?.body))).toMatchObject({
    requestKey:key,observationActionId:actionId})
  })
