@@ -172,7 +172,8 @@ assert len(get(pending_base,limit=50,status="RECEIVING",
 assert len(get(pending_base,limit=50,status="APPROVED",
     search="PO-V113-PEND-")["items"])==50
 assert len(get(pending_base,limit=50,search="PO-V113-PEND-0525")["items"])==1
-assert get(pending_base,limit=50,search="PO%")["items"]==[]
+# Wildcard input is rejected by the API validator, not treated as a literal match.
+request(pending_base+"?"+urlencode({"limit":50,"search":"PO%"}),expected=400)
 assert len(request("/api/v1/purchasing/pending-receipts"))<=500
 
 def error(base,defaults,**args):
