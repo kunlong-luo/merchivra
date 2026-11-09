@@ -580,14 +580,17 @@ public class WarehouseInventoryService {
         List<Object> args=new ArrayList<>();
         args.add(tenant);
         if(!"ALL".equals(filter)) {
-            sql.append(" AND o.status=?");
+            sql.append(" AND o.status=? ");
             args.add(filter);
         }
         if(!term.isEmpty()) {
+            // Leading whitespace is mandatory after the dynamic status bind.
+            // Java text blocks remove incidental indentation/newlines; without
+            // explicit spacing PostgreSQL receives "$2AND" (SQLSTATE 42601).
             sql.append("""
-                AND (POSITION(? IN UPPER(o.order_number))>0
-                  OR POSITION(? IN UPPER(s.internal_sku))>0)
-                """);
+                 AND (POSITION(? IN UPPER(o.order_number))>0
+                   OR POSITION(? IN UPPER(s.internal_sku))>0)
+                 """);
             args.add(term);args.add(term);
         }
         if(lastNumber!=null) {
