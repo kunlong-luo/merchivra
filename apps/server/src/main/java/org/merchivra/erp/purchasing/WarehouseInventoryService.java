@@ -317,6 +317,8 @@ public class WarehouseInventoryService {
             sql.append(" AND (s.internal_sku,k.product_sku_id)>(?,?)");
             args.add(lastSku);args.add(lastId);
         }
+        // Java text blocks do not guarantee an initial space after dynamic filters.
+        sql.append(" ");
         sql.append("""
                 ORDER BY s.internal_sku ASC,k.product_sku_id ASC LIMIT ?
             )
@@ -597,6 +599,7 @@ public class WarehouseInventoryService {
             sql.append(" AND (o.order_number,l.id)>(?,?)");
             args.add(lastNumber);args.add(lastLine);
         }
+        sql.append(" ");
         sql.append("""
             GROUP BY o.id,o.order_number,o.status,o.currency_code,
                 l.id,l.product_sku_id,s.internal_sku,l.ordered_quantity,l.unit_cost
