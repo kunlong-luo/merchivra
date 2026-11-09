@@ -47,6 +47,7 @@ public class PurchaseDeliveryService {
                          long awaitingQcReleaseQuantity,long warningLines,
                          long overdueLines,long unresolvedVarianceLines) {}
     public record Overview(String asOfDateUtc,Totals totals,List<LineProgress> lines) {}
+    public record FullSummary(String asOfDateUtc,Totals totals) {}
 
     /** "Shipped" only means locally entered supplier claim, not carrier proof. */
     static String classify(long remaining,long draft,long shippedOutstanding,
@@ -219,7 +220,7 @@ public class PurchaseDeliveryService {
 
     /** V119: PostgreSQL aggregates over all approved tenant lines, not LIMIT 300. */
     @Transactional(readOnly=true)
-    public Totals globalTotals(UUID tenant) {
+    public FullSummary globalSummary(UUID tenant) {
         requireActiveTenant(tenant);
         LocalDate today=LocalDate.now(clock.withZone(ZoneOffset.UTC));
         String q="""
@@ -256,13 +257,14 @@ public class PurchaseDeliveryService {
                 THEN 1 ELSE 0 END),0) AS unresolved_variance_lines
             FROM classified
             """;
-        return jdbc.queryForObject(q,(rs,i)->new Totals(
+        Totals totals=jdbc.queryForObject(q,(rs,i)->new Totals(
             Math.toIntExact(rs.getLong("line_count")),
             rs.getLong("pending_quantity"),
             rs.getLong("reported_unreceived_quantity"),
             rs.getLong("awaiting_qc_release_quantity"),
             rs.getLong("warning_lines"),rs.getLong("overdue_lines"),
             rs.getLong("unresolved_variance_lines")),tenant,today,today);
+        return new FullSummary(today.toString(),totals);
     }
 
     @Transactional(readOnly=true)
