@@ -1,5 +1,11 @@
 import {z} from 'zod'
-import {csrfHeader} from './auth'
+import {
+ listReceiptQualityBatchesLegacy,listReceiptQualityBatchesPage,
+ getReceiptQualityBatchSummary,listWarehouseReceiptQualityBatchesLegacy,
+ listWarehouseReceiptQualityBatchesPage,relabelReceiptQualityBatch,
+ releaseReceiptQualityBatch,listReceiptQualityBatchEventsLegacy,
+ listReceiptQualityBatchEventsPage
+} from '../generated/purchasing-v114'
 const base='/api/v1/purchasing/receipt-batches'
 const batch=z.object({
  receiptId:z.string().uuid(),warehouseId:z.string().uuid(),
@@ -24,54 +30,32 @@ const summary=z.object({pendingReceivedUnits:z.number().int().nonnegative(),
  pendingBatchCount:z.number().int().nonnegative(),
  awaitingReleaseBatchCount:z.number().int().nonnegative()})
 
-async function api<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown):Promise<T>{
- const response=await fetch(url,{method,credentials:'same-origin',cache:'no-store',
-  headers:{Accept:'application/json',...(method==='GET'?{}:await csrfHeader()),
-   ...(body===undefined?{}:{'Content-Type':'application/json'})},
-  ...(body===undefined?{}:{body:JSON.stringify(body)})})
- if(!response.ok){
-  if(response.status===403)throw Error('当前账号不具备批次质检放行权限')
-  if(response.status===404)throw Error('本地收货批次不存在或不属于当前租户')
-  if(response.status===409)throw Error('批次、质检审批或仓库状态已改变，请刷新后操作')
-  throw Error('本地收货批次 API HTTP '+response.status)
- }
- return schema.parse(await response.json())
-}
+// V116 Orval generated requests with one secure CSRF/Session transport.
+const decode=<T>(promise:Promise<{data:unknown}>,schema:z.ZodType<T>):Promise<T>=>
+ promise.then(r=>schema.parse(r.data))
 const pageOf=<T extends z.ZodTypeAny>(schema:T)=>z.object({
  items:z.array(schema).max(100),nextCursor:z.string().min(1).nullable(),
  hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
 }).refine(p=>p.hasMore===(p.nextCursor!==null),{message:'Invalid page cursor'})
-const batchPage=z.object({
- items:z.array(batch).max(100),nextCursor:z.string().min(1).nullable(),
- hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
-}).refine(p=>p.hasMore===(p.nextCursor!==null),{message:'Invalid batch page cursor'})
-export const fetchReceiptBatchesPage=(orderId:string,cursor:string|null=null)=>{
- const params=new URLSearchParams({limit:'50'})
- if(cursor)params.set('cursor',cursor)
- return api(base+'/orders/'+encodeURIComponent(orderId)+'/page?'+params.toString(),batchPage)
-}
-export const fetchReceiptBatchSummary=(orderId:string)=>api(
- base+'/orders/'+encodeURIComponent(orderId)+'/summary',summary)
-export const fetchWarehouseReceiptBatchesPage=(warehouseId:string,cursor:string|null=null)=>{
- const params=new URLSearchParams({limit:'50'})
- if(cursor)params.set('cursor',cursor)
- return api(base+'/warehouses/'+encodeURIComponent(warehouseId)+'/page?'+params.toString(),batchPage)
-}
-export const fetchReceiptBatches=(orderId:string)=>api(
- base+'/orders/'+encodeURIComponent(orderId),z.array(batch))
-export const fetchWarehouseReceiptBatches=(warehouseId:string)=>api(
- base+'/warehouses/'+encodeURIComponent(warehouseId),z.array(batch))
+export const fetchReceiptBatchesPage=(orderId:string,cursor:string|null=null)=>
+ decode(listReceiptQualityBatchesPage(orderId,{limit:50,...(cursor?{cursor}:{})}),
+  pageOf(batch))
+export const fetchReceiptBatchSummary=(orderId:string)=>
+ decode(getReceiptQualityBatchSummary(orderId),summary)
+export const fetchWarehouseReceiptBatchesPage=(warehouseId:string,cursor:string|null=null)=>
+ decode(listWarehouseReceiptQualityBatchesPage(warehouseId,
+  {limit:50,...(cursor?{cursor}:{})}),pageOf(batch))
+export const fetchReceiptBatches=(orderId:string)=>
+ decode(listReceiptQualityBatchesLegacy(orderId),z.array(batch))
+export const fetchWarehouseReceiptBatches=(warehouseId:string)=>
+ decode(listWarehouseReceiptQualityBatchesLegacy(warehouseId),z.array(batch))
 export const relabelReceiptBatch=(receiptId:string,expectedLotCode:string,
- newLotCode:string,reason:string)=>api(
- base+'/'+encodeURIComponent(receiptId)+'/relabel',batch,'POST',
- {expectedLotCode,newLotCode,reason})
-export const releaseReceiptBatch=(receiptId:string)=>api(
- base+'/'+encodeURIComponent(receiptId)+'/release',batch,'POST')
-export const fetchReceiptBatchEvents=(receiptId:string)=>api(
- base+'/'+encodeURIComponent(receiptId)+'/events',z.array(event))
-
-export const fetchReceiptBatchEventsPage=(receiptId:string,cursor:string|null=null)=>{
- const params=new URLSearchParams({limit:'50'})
- if(cursor)params.set('cursor',cursor)
- return api(base+'/'+encodeURIComponent(receiptId)+'/events/page?'+params.toString(),pageOf(event))
-}
+ newLotCode:string,reason:string)=>
+ decode(relabelReceiptQualityBatch(receiptId,{expectedLotCode,newLotCode,reason}),batch)
+export const releaseReceiptBatch=(receiptId:string)=>
+ decode(releaseReceiptQualityBatch(receiptId),batch)
+export const fetchReceiptBatchEvents=(receiptId:string)=>
+ decode(listReceiptQualityBatchEventsLegacy(receiptId),z.array(event))
+export const fetchReceiptBatchEventsPage=(receiptId:string,cursor:string|null=null)=>
+ decode(listReceiptQualityBatchEventsPage(receiptId,
+  {limit:50,...(cursor?{cursor}:{})}),pageOf(event))
