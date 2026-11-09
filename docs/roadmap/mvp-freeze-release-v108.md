@@ -68,6 +68,8 @@
 
 > **A1 / V117 实施进展（2026-11-09）**：V48 已放行实物批次/分段质检/上架/FIFO-FEFO 拣货、V49 库位调拨/过期隔离/盘点观察/审计来源链纳入已有 OpenAPI/Orval 请求生成链；现累计 **71 个采购唯一 operationId**。新增 ASN 通知与不可覆盖事件日志的 Session 租户/PO/ASN 游标绑定服务端全量分页，前端展示第 201 条后真实通知和事件，旧 200 条兼容 API 保留供旧消费者使用。专项 Java 225 通知/事件、CSRF 和 Vitest 测试随 [V117 说明](../purchasing/released-lots-asn-pages-v117.md) 落库。**PG18 全量权限/并发/事务验收仍由 A3 集中执行，不以 CI 快速测试代替**。采购计划/供应商报价、索赔/批次证据、Next 正式切换 #63 与真实 Amazon 授权继续未完成。
 
+> **A1 / V118 实施进展（2026-11-09）**：复用现有 OpenAPI 3.1/Orval v8 生成方式，把 V42 供应商 MOQ/箱规/原币报价/采购计划（11）、V45 差异与供应商索赔（14）、V51 处置证明元数据（3）及 V72 本地交付概览读（1）共 **29 条已实现 API** 纳入生成请求合同，采购累计 **100 个唯一 operationId**；前端保留 Zod 运行校验、CSRF、Session、幂等键、UNKNOWN 防护和服务器审批规则。V52 真实附件仍走专门的 multipart MIME/大小/哈希和 CSRF 边界，不直接拿 JSON Orval mutator 代替。本次还在 V72 页面明确提示：`/delivery/overview` 旧 `LIMIT 300` 及其汇总仅为当前最多 300 行，**绝不是全租户总量**。修复全库汇总仍在 P0 待办；A3 PostgreSQL 18 真实验收、Next 正式切换与 Amazon 本地授权依旧未执行。详情见 [V118 变更](../purchasing/planning-disputes-proof-orval-v118.md)。
+
 ## 第一批可执行 P0 核查清单
 
 | 核查对象 | 当前有证据的缺口 | 下一步 |
