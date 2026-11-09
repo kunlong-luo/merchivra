@@ -2,8 +2,8 @@
   "openapi": "3.1.0",
   "info": {
     "title": "Merchivra local purchasing read pages",
-    "version": "115.1.0",
-    "description": "Tenant-scoped core purchasing reads and authenticated CSRF-protected local writes; no Amazon LIVE remote writes. APIs always recheck permissions, status, balance, currency and transaction safety on server."
+    "version": "116.1.0",
+    "description": "Authenticated tenant local purchasing core, ASN/QC/receipt batch and held QC bin/receipt piece operations. No Amazon live calls or FBA available-stock claims."
   },
   "servers": [
     {
@@ -1011,6 +1011,2099 @@
           }
         }
       }
+    },
+    "/api/v1/purchasing/supplier-asns/orders/{orderId}": {
+      "get": {
+        "operationId": "listSupplierAsnNotices",
+        "summary": "Current local ASN records; supplier claims are not carrier proof",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-bound local read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SupplierAsnNotice"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createSupplierAsnNotice",
+        "summary": "Idempotent supplier submitted ASN, not verified shipped",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupplierAsnCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Existing server-authorized local action result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierAsnNotice"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/supplier-asns/orders/{orderId}/{asnId}/events": {
+      "get": {
+        "operationId": "listSupplierAsnNoticeEvents",
+        "summary": "Immutable ASN event history (legacy bounded)",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "asnId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-bound local read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SupplierAsnEvent"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/supplier-asns/orders/{orderId}/{asnId}/ship": {
+      "post": {
+        "operationId": "shipSupplierAsnNotice",
+        "summary": "Explicit review of supplier ASN claim",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "asnId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Existing server-authorized local action result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierAsnNotice"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/supplier-asns/orders/{orderId}/{asnId}/cancel": {
+      "post": {
+        "operationId": "cancelSupplierAsnNotice",
+        "summary": "Explicit review of supplier ASN claim",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "asnId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Existing server-authorized local action result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierAsnNotice"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/supplier-asns/orders/{orderId}/{asnId}/eta": {
+      "post": {
+        "operationId": "updateSupplierAsnNoticeEta",
+        "summary": "Explicit ETA adjustment with prior date and audit",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "asnId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SupplierAsnEtaChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Existing server-authorized local action result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierAsnNotice"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/supplier-asns/findings": {
+      "get": {
+        "operationId": "listSupplierAsnFindings",
+        "summary": "Local ASN ETA findings; no automatic shipping",
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "ALL"
+              ],
+              "default": "ACTIVE"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-bound local read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SupplierAsnFinding"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/supplier-asns/scan": {
+      "post": {
+        "operationId": "scanSupplierAsnFindings",
+        "summary": "Explicit local supplier ETA rule scan",
+        "responses": {
+          "200": {
+            "description": "Existing server-authorized local action result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierAsnScan"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/supplier-asns/findings/{findingId}/state": {
+      "post": {
+        "operationId": "changeSupplierAsnFindingState",
+        "summary": "Human acknowledgement/review state",
+        "parameters": [
+          {
+            "name": "findingId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalReviewState"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Existing server-authorized local action result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupplierAsnFindingChange"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/quality/orders/{orderId}/receipts": {
+      "get": {
+        "operationId": "listQualityReceiptsLegacy",
+        "summary": "Legacy first-300 local receipts",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-bound local read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QualityReceipt"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/quality/orders/{orderId}/receipts/page": {
+      "get": {
+        "operationId": "listQualityReceiptsPage",
+        "summary": "Complete local receipt history keyset; no page totals",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-bound local read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityReceiptPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/quality/receipts/{receiptId}/inspect": {
+      "post": {
+        "operationId": "inspectQualityReceipt",
+        "summary": "Idempotent explicit receipt QC; NOT release",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QualityInspectRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Existing server-authorized local action result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityInspection"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/quality/inspections/{inspectionId}/returns": {
+      "get": {
+        "operationId": "listQualityReturnsLegacy",
+        "summary": "Legacy supplier return list",
+        "parameters": [
+          {
+            "name": "inspectionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-bound local read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QualitySupplierReturn"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createQualitySupplierReturn",
+        "summary": "Idempotent supplier return draft; no second stock deduction",
+        "parameters": [
+          {
+            "name": "inspectionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QualityReturnRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Existing server-authorized local action result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualitySupplierReturn"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/quality/inspections/{inspectionId}/returns/page": {
+      "get": {
+        "operationId": "listQualityReturnsPage",
+        "summary": "Complete supplier return history keyset",
+        "parameters": [
+          {
+            "name": "inspectionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-bound local read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualitySupplierReturnPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/quality/inspections/{inspectionId}/returns/summary": {
+      "get": {
+        "operationId": "getQualityReturnSummary",
+        "summary": "Full inspection totals, not current page subtotal",
+        "parameters": [
+          {
+            "name": "inspectionId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-bound local read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityReturnSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/quality/returns/{id}/dispatch": {
+      "post": {
+        "operationId": "dispatchQualitySupplierReturn",
+        "summary": "Explicit human supplier return state change",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Existing server-authorized local action result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualitySupplierReturn"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/quality/returns/{id}/cancel": {
+      "post": {
+        "operationId": "cancelQualitySupplierReturn",
+        "summary": "Explicit human supplier return state change",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Existing server-authorized local action result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualitySupplierReturn"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/quality/findings": {
+      "get": {
+        "operationId": "listQualityFindingsLegacy",
+        "summary": "Legacy quality exception findings",
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "ALL"
+              ],
+              "default": "ACTIVE"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-bound local read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/QualityFinding"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/quality/findings/page": {
+      "get": {
+        "operationId": "listQualityFindingsPage",
+        "summary": "Full quality findings server keyset",
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ACTIVE",
+                "ALL"
+              ],
+              "default": "ACTIVE"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-bound local read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityFindingPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/quality/scan": {
+      "post": {
+        "operationId": "scanQualityFindings",
+        "summary": "Explicit local QC rule scan",
+        "responses": {
+          "200": {
+            "description": "Existing server-authorized local action result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityScan"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/quality/findings/{id}/state": {
+      "post": {
+        "operationId": "changeQualityFindingState",
+        "summary": "Human review state, not supplier acknowledgement",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalReviewState"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Existing server-authorized local action result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QualityFindingChange"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/receipt-batches/orders/{orderId}": {
+      "get": {
+        "operationId": "listReceiptQualityBatchesLegacy",
+        "summary": "Legacy order batches (capped)",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-bound local read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReceiptQualityBatch"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/receipt-batches/orders/{orderId}/page": {
+      "get": {
+        "operationId": "listReceiptQualityBatchesPage",
+        "summary": "Complete tenant order receipt lots",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-bound local read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptQualityBatchPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/receipt-batches/orders/{orderId}/summary": {
+      "get": {
+        "operationId": "getReceiptQualityBatchSummary",
+        "summary": "Full-order QC hold totals",
+        "parameters": [
+          {
+            "name": "orderId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-bound local read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptBatchSummary"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/receipt-batches/warehouses/{warehouseId}": {
+      "get": {
+        "operationId": "listWarehouseReceiptQualityBatchesLegacy",
+        "summary": "Legacy warehouse batches (capped)",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-bound local read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReceiptQualityBatch"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/receipt-batches/warehouses/{warehouseId}/page": {
+      "get": {
+        "operationId": "listWarehouseReceiptQualityBatchesPage",
+        "summary": "Complete warehouse receipt lots",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-bound local read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptQualityBatchPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/receipt-batches/{receiptId}/relabel": {
+      "post": {
+        "operationId": "relabelReceiptQualityBatch",
+        "summary": "Original-code-constrained lot relabel",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReceiptBatchChange"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Existing server-authorized local action result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptQualityBatch"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/receipt-batches/{receiptId}/release": {
+      "post": {
+        "operationId": "releaseReceiptQualityBatch",
+        "summary": "Independent Owner releases QC-accepted units",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Existing server-authorized local action result",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptQualityBatch"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/receipt-batches/{receiptId}/events": {
+      "get": {
+        "operationId": "listReceiptQualityBatchEventsLegacy",
+        "summary": "Legacy immutable lot audit events",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-bound local read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReceiptBatchEvent"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/receipt-batches/{receiptId}/events/page": {
+      "get": {
+        "operationId": "listReceiptQualityBatchEventsPage",
+        "summary": "Full immutable lot audit event keyset",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Tenant-bound local read",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptBatchEventPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input; no write committed"
+          },
+          "401": {
+            "description": "Authenticated session required"
+          },
+          "403": {
+            "description": "Role or CSRF rejected"
+          },
+          "404": {
+            "description": "Resource absent or not in session tenant"
+          },
+          "409": {
+            "description": "Concurrent update, state, idempotency or inventory conflict"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-locations/warehouses/{warehouseId}/bins": {
+      "get": {
+        "operationId": "listLocalStockBins",
+        "summary": "Legacy first-200 virtual local QC/storage bins",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Legacy first-200 virtual local QC/storage bins",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocalStockBin"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authenticated tenant required"
+          },
+          "403": {
+            "description": "Owner role or CSRF denied"
+          },
+          "404": {
+            "description": "Resource missing in tenant"
+          },
+          "409": {
+            "description": "Conflicting receipt piece version or quantity"
+          }
+        }
+      },
+      "post": {
+        "operationId": "createLocalStockBin",
+        "summary": "Create explicitly named local QC or storage bin",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalNewStockBin"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Create explicitly named local QC or storage bin",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalStockBin"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authenticated tenant required"
+          },
+          "403": {
+            "description": "Owner role or CSRF denied"
+          },
+          "404": {
+            "description": "Resource missing in tenant"
+          },
+          "409": {
+            "description": "Conflicting receipt piece version or quantity"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-locations/warehouses/{warehouseId}/bins/page": {
+      "get": {
+        "operationId": "listLocalStockBinsPage",
+        "summary": "Full warehouse bins keyset",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Full warehouse bins keyset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalStockBinPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authenticated tenant required"
+          },
+          "403": {
+            "description": "Owner role or CSRF denied"
+          },
+          "404": {
+            "description": "Resource missing in tenant"
+          },
+          "409": {
+            "description": "Conflicting receipt piece version or quantity"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-locations/receipts/{receiptId}/pieces": {
+      "get": {
+        "operationId": "listLocalReceiptLotPieces",
+        "summary": "Legacy first-N receipt pieces, held stage not saleable",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Legacy first-N receipt pieces, held stage not saleable",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocalReceiptLotPiece"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authenticated tenant required"
+          },
+          "403": {
+            "description": "Owner role or CSRF denied"
+          },
+          "404": {
+            "description": "Resource missing in tenant"
+          },
+          "409": {
+            "description": "Conflicting receipt piece version or quantity"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-locations/receipts/{receiptId}/pieces/page": {
+      "get": {
+        "operationId": "listLocalReceiptLotPiecesPage",
+        "summary": "Paged receipt pieces with full receipt quantity",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Paged receipt pieces with full receipt quantity",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalReceiptLotPiecePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authenticated tenant required"
+          },
+          "403": {
+            "description": "Owner role or CSRF denied"
+          },
+          "404": {
+            "description": "Resource missing in tenant"
+          },
+          "409": {
+            "description": "Conflicting receipt piece version or quantity"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-locations/receipts/{receiptId}/split": {
+      "post": {
+        "operationId": "splitLocalReceiptLot",
+        "summary": "Idempotent local held receipt split, no stock movement",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalSplitReceiptLot"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Idempotent local held receipt split, no stock movement",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocalReceiptLotPiece"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authenticated tenant required"
+          },
+          "403": {
+            "description": "Owner role or CSRF denied"
+          },
+          "404": {
+            "description": "Resource missing in tenant"
+          },
+          "409": {
+            "description": "Conflicting receipt piece version or quantity"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-locations/receipts/{receiptId}/move": {
+      "post": {
+        "operationId": "moveLocalReceiptLot",
+        "summary": "Expected-bin compare-and-set local held receipt move",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LocalMoveReceiptLot"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Expected-bin compare-and-set local held receipt move",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocalReceiptLotPiece"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authenticated tenant required"
+          },
+          "403": {
+            "description": "Owner role or CSRF denied"
+          },
+          "404": {
+            "description": "Resource missing in tenant"
+          },
+          "409": {
+            "description": "Conflicting receipt piece version or quantity"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-locations/warehouses/{warehouseId}/pressure": {
+      "get": {
+        "operationId": "listLocalReceiptSupplyPressure",
+        "summary": "Legacy warehouse per-SKU QC, usable and supplier-claimed quantities",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Legacy warehouse per-SKU QC, usable and supplier-claimed quantities",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/LocalReceiptSupplyPressure"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authenticated tenant required"
+          },
+          "403": {
+            "description": "Owner role or CSRF denied"
+          },
+          "404": {
+            "description": "Resource missing in tenant"
+          },
+          "409": {
+            "description": "Conflicting receipt piece version or quantity"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/lot-locations/warehouses/{warehouseId}/pressure/page": {
+      "get": {
+        "operationId": "listLocalReceiptSupplyPressurePage",
+        "summary": "Complete local per-SKU supply pressure keyset",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Complete local per-SKU supply pressure keyset",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LocalReceiptSupplyPressurePage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input"
+          },
+          "401": {
+            "description": "Authenticated tenant required"
+          },
+          "403": {
+            "description": "Owner role or CSRF denied"
+          },
+          "404": {
+            "description": "Resource missing in tenant"
+          },
+          "409": {
+            "description": "Conflicting receipt piece version or quantity"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -1856,6 +3949,1456 @@
             "type": "string"
           }
         }
+      },
+      "SupplierAsnNotice": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lineId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "receivedQuantity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "expectedArrivalDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "trackingReference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "SHIPPED",
+              "CANCELLED"
+            ]
+          },
+          "dispatchReportedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "orderId",
+          "lineId",
+          "warehouseId",
+          "quantity",
+          "receivedQuantity",
+          "expectedArrivalDate",
+          "trackingReference",
+          "status",
+          "dispatchReportedAt",
+          "createdAt"
+        ]
+      },
+      "SupplierAsnEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "CREATED",
+              "SHIPMENT_REPORTED",
+              "ETA_UPDATED",
+              "CANCELLED",
+              "RECEIPT_LINKED"
+            ]
+          },
+          "actorUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int32"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "oldEta": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "newEta": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "eventType",
+          "actorUserId",
+          "quantity",
+          "oldEta",
+          "newEta",
+          "note",
+          "createdAt"
+        ]
+      },
+      "SupplierAsnFinding": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "asnId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "trackingReference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "ruleCode": {
+            "type": "string",
+            "enum": [
+              "SUPPLIER_ASN_OVERDUE",
+              "SUPPLIER_ASN_DUE_SOON"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "ACKNOWLEDGED",
+              "DONE",
+              "CLEARED"
+            ]
+          },
+          "expectedArrivalDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "asnId",
+          "orderId",
+          "trackingReference",
+          "ruleCode",
+          "state",
+          "expectedArrivalDate",
+          "lastSeenAt"
+        ]
+      },
+      "SupplierAsnCreate": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lineId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 1000000
+          },
+          "expectedArrivalDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "trackingReference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "requestKey",
+          "lineId",
+          "warehouseId",
+          "quantity",
+          "expectedArrivalDate",
+          "trackingReference"
+        ]
+      },
+      "SupplierAsnEtaChange": {
+        "type": "object",
+        "properties": {
+          "expectedArrivalDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "expectedPreviousEta": {
+            "type": "string",
+            "format": "date"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "expectedArrivalDate",
+          "expectedPreviousEta",
+          "reason"
+        ]
+      },
+      "SupplierAsnScan": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "triggerType": {
+            "type": "string",
+            "enum": [
+              "MANUAL"
+            ]
+          },
+          "matchedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "clearedCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "id",
+          "triggerType",
+          "matchedCount",
+          "clearedCount"
+        ]
+      },
+      "SupplierAsnFindingChange": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "ACKNOWLEDGED",
+              "DONE"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "state"
+        ]
+      },
+      "LocalReviewState": {
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "ACKNOWLEDGED",
+              "DONE"
+            ]
+          }
+        },
+        "required": [
+          "state"
+        ]
+      },
+      "QualityReceipt": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "orderId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lineId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receivedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "receivedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "inspectionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "acceptedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rejectedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "heldQuantity": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "id",
+          "orderId",
+          "lineId",
+          "warehouseId",
+          "productSkuId",
+          "receivedQuantity",
+          "receivedAt",
+          "inspectionId",
+          "acceptedQuantity",
+          "rejectedQuantity",
+          "heldQuantity"
+        ]
+      },
+      "QualityInspection": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "inspectedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "acceptedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rejectedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "inspectedBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "receiptId",
+          "warehouseId",
+          "productSkuId",
+          "inspectedQuantity",
+          "acceptedQuantity",
+          "rejectedQuantity",
+          "reason",
+          "inspectedBy",
+          "createdAt"
+        ]
+      },
+      "QualityInspectRequest": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "acceptedQuantity": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "rejectedQuantity": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "requestKey",
+          "acceptedQuantity",
+          "rejectedQuantity",
+          "reason"
+        ]
+      },
+      "QualitySupplierReturn": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "inspectionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "supplierId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "DRAFT",
+              "DISPATCHED",
+              "CANCELLED"
+            ]
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "dispatchedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "inspectionId",
+          "supplierId",
+          "quantity",
+          "reference",
+          "status",
+          "createdBy",
+          "createdAt",
+          "dispatchedAt"
+        ]
+      },
+      "QualityReturnRequest": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "requestKey",
+          "quantity",
+          "reference"
+        ]
+      },
+      "QualityReturnSummary": {
+        "type": "object",
+        "properties": {
+          "rejectedUnits": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "draftedUnits": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "dispatchedUnits": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "unallocatedUnits": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "rejectedUnits",
+          "draftedUnits",
+          "dispatchedUnits",
+          "unallocatedUnits"
+        ]
+      },
+      "QualityFinding": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "inspectionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ruleCode": {
+            "type": "string",
+            "enum": [
+              "QC_REJECTED_PENDING",
+              "QC_HOLD_AGED"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "ACKNOWLEDGED",
+              "DONE",
+              "CLEARED"
+            ]
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "inspectionId",
+          "receiptId",
+          "ruleCode",
+          "state",
+          "lastSeenAt"
+        ]
+      },
+      "QualityScan": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "triggerType": {
+            "type": "string",
+            "enum": [
+              "MANUAL"
+            ]
+          },
+          "matchedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "clearedCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "id",
+          "triggerType",
+          "matchedCount",
+          "clearedCount"
+        ]
+      },
+      "QualityFindingChange": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "OPEN",
+              "ACKNOWLEDGED",
+              "DONE"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "state"
+        ]
+      },
+      "ReceiptQualityBatch": {
+        "type": "object",
+        "properties": {
+          "receiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "lotCode": {
+            "type": "string"
+          },
+          "receivedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING_QC",
+              "INSPECTED",
+              "RELEASED"
+            ]
+          },
+          "inspectionId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "acceptedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rejectedQuantity": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inspectedBy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "releasedBy": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "receiptId",
+          "warehouseId",
+          "productSkuId",
+          "lotCode",
+          "receivedQuantity",
+          "status",
+          "inspectionId",
+          "acceptedQuantity",
+          "rejectedQuantity",
+          "inspectedBy",
+          "releasedBy",
+          "createdAt"
+        ]
+      },
+      "ReceiptBatchChange": {
+        "type": "object",
+        "properties": {
+          "expectedLotCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "newLotCode": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 80
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "expectedLotCode",
+          "newLotCode",
+          "reason"
+        ]
+      },
+      "ReceiptBatchEvent": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "RECEIVED_TO_HOLD",
+              "LOT_RELABELED",
+              "QC_RECORDED",
+              "QC_RELEASED"
+            ]
+          },
+          "actorUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "oldLotCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "newLotCode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "format": "int32"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "required": [
+          "id",
+          "eventType",
+          "actorUserId",
+          "oldLotCode",
+          "newLotCode",
+          "quantity",
+          "note",
+          "createdAt"
+        ]
+      },
+      "ReceiptBatchSummary": {
+        "type": "object",
+        "properties": {
+          "pendingReceivedUnits": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "awaitingReleaseAcceptedUnits": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pendingBatchCount": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "awaitingReleaseBatchCount": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "pendingReceivedUnits",
+          "awaitingReleaseAcceptedUnits",
+          "pendingBatchCount",
+          "awaitingReleaseBatchCount"
+        ]
+      },
+      "QualityReceiptPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QualityReceipt"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "QualitySupplierReturnPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QualitySupplierReturn"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "QualityFindingPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/QualityFinding"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "ReceiptQualityBatchPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReceiptQualityBatch"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "ReceiptBatchEventPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReceiptBatchEvent"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "LocalStockBin": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "code": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "QC_HOLD",
+              "STORAGE"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ACTIVE",
+              "ARCHIVED"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "warehouseId",
+          "code",
+          "purpose",
+          "status"
+        ]
+      },
+      "LocalReceiptLotPiece": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "binId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pieceCode": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "id",
+          "receiptId",
+          "warehouseId",
+          "productSkuId",
+          "binId",
+          "pieceCode",
+          "quantity"
+        ]
+      },
+      "LocalReceiptSupplyPressure": {
+        "type": "object",
+        "properties": {
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "internalSku": {
+            "type": "string"
+          },
+          "usableUnits": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pendingQcUnits": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "acceptedAwaitingReleaseUnits": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "declaredAsnInTransitUnits": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "warehouseId",
+          "productSkuId",
+          "internalSku",
+          "usableUnits",
+          "pendingQcUnits",
+          "acceptedAwaitingReleaseUnits",
+          "declaredAsnInTransitUnits"
+        ]
+      },
+      "LocalNewStockBin": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "pattern": "^[A-Z0-9][A-Z0-9_-]{1,63}$"
+          },
+          "purpose": {
+            "type": "string",
+            "enum": [
+              "QC_HOLD",
+              "STORAGE"
+            ]
+          }
+        },
+        "required": [
+          "code",
+          "purpose"
+        ]
+      },
+      "LocalSplitReceiptLot": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pieceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "quantity": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "pieceCode": {
+            "type": "string"
+          },
+          "destinationBinId": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "uuid"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "requestKey",
+          "pieceId",
+          "quantity",
+          "pieceCode",
+          "destinationBinId",
+          "reason"
+        ]
+      },
+      "LocalMoveReceiptLot": {
+        "type": "object",
+        "properties": {
+          "requestKey": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "pieceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "expectedBinId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "destinationBinId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reason": {
+            "type": "string",
+            "minLength": 5,
+            "maxLength": 300
+          }
+        },
+        "required": [
+          "requestKey",
+          "pieceId",
+          "expectedBinId",
+          "destinationBinId",
+          "reason"
+        ]
+      },
+      "LocalStockBinPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LocalStockBin"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "LocalReceiptSupplyPressurePage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LocalReceiptSupplyPressure"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "LocalReceiptLotPiecePage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LocalReceiptLotPiece"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalQuantity": {
+            "type": "integer",
+            "format": "int64"
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize",
+          "totalQuantity"
+        ]
       }
     }
   }

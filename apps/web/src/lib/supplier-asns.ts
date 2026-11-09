@@ -1,5 +1,9 @@
 import {z} from 'zod'
-import {csrfHeader} from './auth'
+import {
+ listSupplierAsnNotices,listSupplierAsnNoticeEvents,createSupplierAsnNotice,
+ shipSupplierAsnNotice,cancelSupplierAsnNotice,updateSupplierAsnNoticeEta,
+ listSupplierAsnFindings,scanSupplierAsnFindings,changeSupplierAsnFindingState
+} from '../generated/purchasing-v114'
 
 const base='/api/v1/purchasing/supplier-asns'
 const asn=z.object({id:z.string().uuid(),orderId:z.string().uuid(),lineId:z.string().uuid(),
@@ -27,37 +31,28 @@ export type SupplierAsnFindingState='OPEN'|'ACKNOWLEDGED'|'DONE'
 export type NewSupplierAsn={requestKey:string;lineId:string;warehouseId:string;
  quantity:number;expectedArrivalDate:string;trackingReference:string|null}
 
-async function api<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown):Promise<T>{
- const response=await fetch(url,{method,credentials:'same-origin',cache:'no-store',
-  headers:{Accept:'application/json',...(method==='GET'?{}:await csrfHeader()),
-   ...(body===undefined?{}:{'Content-Type':'application/json'})},
-  ...(body===undefined?{}:{body:JSON.stringify(body)})})
- if(!response.ok){
-  if(response.status===403)throw Error('当前账号无供应商预到货操作权限')
-  if(response.status===404)throw Error('ASN、采购单或仓库不属于当前租户或不可用')
-  if(response.status===409)throw Error('ASN 状态、收货数量或预计日期已变化，请刷新后确认')
-  throw Error('供应商 ASN 操作失败：HTTP '+response.status)
- }
- return schema.parse(await response.json())
-}
-export const fetchSupplierAsns=(orderId:string)=>api(
- base+'/orders/'+encodeURIComponent(orderId),z.array(asn))
-export const fetchSupplierAsnEvents=(orderId:string,asnId:string)=>api(
- base+'/orders/'+encodeURIComponent(orderId)+'/'+encodeURIComponent(asnId)+'/events',
- z.array(event))
-export const createSupplierAsn=(orderId:string,body:NewSupplierAsn)=>api(
- base+'/orders/'+encodeURIComponent(orderId),asn,'POST',body)
-export const supplierAsnAction=(orderId:string,asnId:string,kind:'ship'|'cancel')=>api(
- base+'/orders/'+encodeURIComponent(orderId)+'/'+encodeURIComponent(asnId)+'/'+kind,
- asn,'POST')
+// V116: source-backed Orval request functions (shared same-origin+Session/CSRF
+// transport); Zod remains the runtime fail-closed DTO boundary.
+// Orval path templates interpolate raw strings: require canonical UUIDs first.
+const pathId=(id:string)=>z.string().uuid().parse(id)
+const decode=<T>(promise:Promise<{data:unknown}>,schema:z.ZodType<T>):Promise<T>=>
+ promise.then(r=>schema.parse(r.data))
+export const fetchSupplierAsns=(orderId:string)=>
+ decode(listSupplierAsnNotices(pathId(orderId)),z.array(asn))
+export const fetchSupplierAsnEvents=(orderId:string,asnId:string)=>
+ decode(listSupplierAsnNoticeEvents(pathId(orderId),pathId(asnId)),z.array(event))
+export const createSupplierAsn=(orderId:string,body:NewSupplierAsn)=>
+ decode(createSupplierAsnNotice(pathId(orderId),body),asn)
+export const supplierAsnAction=(orderId:string,asnId:string,kind:'ship'|'cancel')=>
+ decode(kind==='ship'?shipSupplierAsnNotice(pathId(orderId),pathId(asnId)):
+  cancelSupplierAsnNotice(pathId(orderId),pathId(asnId)),asn)
 export const updateSupplierAsnEta=(orderId:string,asnId:string,expectedArrivalDate:string,
- expectedPreviousEta:string,reason:string)=>api(
- base+'/orders/'+encodeURIComponent(orderId)+'/'+encodeURIComponent(asnId)+'/eta',
- asn,'POST',{expectedArrivalDate,expectedPreviousEta,reason})
-export const fetchSupplierAsnFindings=(filter:'ACTIVE'|'ALL')=>api(
- base+'/findings?filter='+filter,z.array(finding))
-export const scanSupplierAsns=()=>api(base+'/scan',scan,'POST')
-export const supplierAsnFindingState=(id:string,state:SupplierAsnFindingState)=>api(
- base+'/findings/'+encodeURIComponent(id)+'/state',
- z.object({id:z.string().uuid(),state:z.enum(['OPEN','ACKNOWLEDGED','DONE'])}),
- 'POST',{state})
+ expectedPreviousEta:string,reason:string)=>
+ decode(updateSupplierAsnNoticeEta(pathId(orderId),pathId(asnId),{
+  expectedArrivalDate,expectedPreviousEta,reason}),asn)
+export const fetchSupplierAsnFindings=(filter:'ACTIVE'|'ALL')=>
+ decode(listSupplierAsnFindings({filter}),z.array(finding))
+export const scanSupplierAsns=()=>decode(scanSupplierAsnFindings(),scan)
+export const supplierAsnFindingState=(id:string,state:SupplierAsnFindingState)=>
+ decode(changeSupplierAsnFindingState(pathId(id),{state}),
+  z.object({id:z.string().uuid(),state:z.enum(['OPEN','ACKNOWLEDGED','DONE'])}))
