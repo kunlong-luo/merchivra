@@ -66,7 +66,7 @@ describe('V121 V50/V51 generated keysets and signed evidence guards',()=>{
    let cursor:string|null=null
    const sizes:number[]=[]
    for(let p=0;p<5;p++){
-    const result=await source.run(wh,cursor)
+    const result:{items:unknown[];nextCursor:string|null}=await source.run(wh,cursor)
     sizes.push(result.items.length)
     cursor=result.nextCursor
    }
