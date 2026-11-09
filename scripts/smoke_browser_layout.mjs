@@ -1054,10 +1054,30 @@ async function main() {
           const button=[...row.querySelectorAll('button')]
             .find(b=>b.textContent.trim()==='取消');
           if(!button)throw Error('No cancellable PO');button.click()})()`
-        await evaluate(send,openCancel)
-        await waitFor(send,
-          "document.querySelector('[role=\\\"alertdialog\\\"]')?.textContent?.includes('确认取消采购单')",
-          'V104 Base UI alert dialog visible')
+        // Next can show the server-rendered row before its React click handler
+        // hydrates. Retry only opening this non-writing dialog until it is
+        // actually mounted; all zero-write, focus and explicit-approval
+        // assertions below remain mandatory.
+        const openCancelWhenHydrated=async label=>{
+          try {
+            await waitFor(send,`(() => {
+              if(document.querySelector('[role="alertdialog"]')?.textContent?.includes('确认取消采购单'))
+                return true;
+              ${openCancel};
+              return false;
+            })()`,label)
+          } catch(e) {
+            const state=await evaluate(send,`({
+              path:location.pathname,
+              rows:[...document.querySelectorAll('[aria-label="采购单列表"] tbody tr')]
+                .map(r=>r.textContent.slice(0,150)),
+              popup:document.querySelector('[role="alertdialog"]')?.textContent?.slice(0,250)
+            })`)
+            console.error('V104 Next confirmation diagnostics:',JSON.stringify(state))
+            throw e
+          }
+        }
+        await openCancelWhenHydrated('V104 Base UI alert dialog visible')
         assert.equal(v104CancelWrites,0,'opening a dialog must not mutate purchase orders')
         await waitFor(send,
           "!!document.activeElement?.closest('.v104-confirm-popup')",
@@ -1068,10 +1088,10 @@ async function main() {
           "!document.querySelector('[role=\\\"alertdialog\\\"]')",
           'V104 dismissal returns to purchase order')
         assert.equal(v104CancelWrites,0,'cancel action must never write')
-        await evaluate(send,openCancel)
+        await openCancelWhenHydrated('V104 confirmation reopen')
         await waitFor(send,
           "!!document.querySelector('.v104-confirm-approve')",
-          'V104 confirmation reopen')
+          'V104 confirmation controls after reopening')
         await evaluate(send,"document.querySelector('.v104-confirm-approve')?.click()")
         await waitFor(send,
           "document.querySelector('.core-workspace')?.textContent?.includes('采购单状态已更新：CANCELLED')",
