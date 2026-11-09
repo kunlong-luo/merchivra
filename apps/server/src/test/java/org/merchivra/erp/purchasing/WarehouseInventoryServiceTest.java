@@ -82,6 +82,26 @@ class WarehouseInventoryServiceTest {
         verify(jdbc).query(contains("WITH sku_keys AS"),
             any(RowMapper.class),eq(tenant),eq(location),eq(tenant),eq(location));
     }
+    /** V123 PG18 A3 regression: status+SKU term must not turn ? AND into
+     * a PostgreSQL "$2AND" parameter syntax error (formerly HTTP 500). */
+    @Test void filteredPendingReceiptSqlSeparatesBoundStatusFromSearch() {
+        doAnswer(inv->{
+            String sql=inv.getArgument(0);
+            assertTrue(sql.contains("WHERE o.tenant_id=?"));
+            assertTrue(sql.matches("(?s).*o.status=\\?\\s+AND \\(POSITION\\(\\? IN UPPER\\(o.order_number\\)\\).*"),
+                "SQL must place whitespace after the bound status parameter: "+sql);
+            assertFalse(sql.contains("=?AND"));
+            Object[] args=(Object[])inv.getRawArguments()[2];
+            assertArrayEquals(new Object[]{tenant,"RECEIVING",
+                "PO-V113-PEND-","PO-V113-PEND-",51},args);
+            return List.of();
+        }).when(jdbc).query(anyString(),any(RowMapper.class),any(Object[].class));
+        var page=warehouse.pendingReceiptsPage(tenant,50,"RECEIVING",
+            "PO-V113-PEND-",null);
+        assertTrue(page.items().isEmpty());
+        assertFalse(page.hasMore());
+    }
+
     @Test void pendingReceiptsAreScopedToAuthenticatedTenant() {
         warehouse.pendingReceipts(tenant);
         verify(jdbc).query(contains("o.status IN ('APPROVED','RECEIVING')"),

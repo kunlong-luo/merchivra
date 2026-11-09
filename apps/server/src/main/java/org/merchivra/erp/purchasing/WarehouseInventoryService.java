@@ -317,6 +317,8 @@ public class WarehouseInventoryService {
             sql.append(" AND (s.internal_sku,k.product_sku_id)>(?,?)");
             args.add(lastSku);args.add(lastId);
         }
+        // Java text blocks do not guarantee an initial space after dynamic filters.
+        sql.append(" ");
         sql.append("""
                 ORDER BY s.internal_sku ASC,k.product_sku_id ASC LIMIT ?
             )
@@ -580,20 +582,24 @@ public class WarehouseInventoryService {
         List<Object> args=new ArrayList<>();
         args.add(tenant);
         if(!"ALL".equals(filter)) {
-            sql.append(" AND o.status=?");
+            sql.append(" AND o.status=? ");
             args.add(filter);
         }
         if(!term.isEmpty()) {
+            // Leading whitespace is mandatory after the dynamic status bind.
+            // Java text blocks remove incidental indentation/newlines; without
+            // explicit spacing PostgreSQL receives "$2AND" (SQLSTATE 42601).
             sql.append("""
-                AND (POSITION(? IN UPPER(o.order_number))>0
-                  OR POSITION(? IN UPPER(s.internal_sku))>0)
-                """);
+                 AND (POSITION(? IN UPPER(o.order_number))>0
+                   OR POSITION(? IN UPPER(s.internal_sku))>0)
+                 """);
             args.add(term);args.add(term);
         }
         if(lastNumber!=null) {
             sql.append(" AND (o.order_number,l.id)>(?,?)");
             args.add(lastNumber);args.add(lastLine);
         }
+        sql.append(" ");
         sql.append("""
             GROUP BY o.id,o.order_number,o.status,o.currency_code,
                 l.id,l.product_sku_id,s.internal_sku,l.ordered_quantity,l.unit_cost

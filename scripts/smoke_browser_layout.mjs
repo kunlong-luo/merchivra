@@ -157,17 +157,58 @@ const server = createServer(async (req, res) => {
   }
   if(url.pathname==='/api/v1/purchasing/suppliers' && req.method==='GET')
     return respond(res,v107Suppliers)
+  // V111/V114: the real React supplier and warehouse pickers now require
+  // server-scoped pages; old array mock alone silently emptied the workspace.
+  if(url.pathname==='/api/v1/purchasing/suppliers/page' && req.method==='GET'){
+    const status=url.searchParams.get('status')??'ALL'
+    const prefix=(url.searchParams.get('prefix')??'').toUpperCase()
+    return respond(res,emptyCursorPage(v107Suppliers.filter(x=>
+      (status==='ALL'||x.status===status)&&x.code.startsWith(prefix))))
+  }
   if(url.pathname==='/api/v1/purchasing/warehouses' && req.method==='GET')
     return respond(res,[{id:v107WarehouseId,code:'WH-V107',
       name:'V107 Local Warehouse',status:'ACTIVE'}])
+  if(url.pathname==='/api/v1/purchasing/warehouses/page' && req.method==='GET'){
+    const status=url.searchParams.get('status')??'ALL'
+    const prefix=(url.searchParams.get('prefix')??'').toUpperCase()
+    const rows=[{id:v107WarehouseId,code:'WH-V107',
+      name:'V107 Local Warehouse',status:'ACTIVE'}]
+      .filter(x=>(status==='ALL'||x.status===status)&&x.code.startsWith(prefix))
+    return respond(res,emptyCursorPage(rows))
+  }
+  if(url.pathname==='/api/v1/purchasing/warehouses/item' && req.method==='GET'){
+    if(url.searchParams.get('warehouseId')!==v107WarehouseId)
+      return respond(res,{message:'Unknown synthetic warehouse'},404)
+    return respond(res,{id:v107WarehouseId,code:'WH-V107',
+      name:'V107 Local Warehouse',status:'ACTIVE'})
+  }
   if(url.pathname==='/api/v1/purchasing/warehouse-stock' && req.method==='GET'
      && url.searchParams.get('warehouseId')===v107WarehouseId)
     return respond(res,[{warehouseId:v107WarehouseId,
       productSkuId:v107SkuId,internalSku:'V107-LOCAL-SKU',
       recordedReceivedQuantity:3,onHandQuantity:2}])
+  if(url.pathname==='/api/v1/purchasing/warehouse-stock/page' && req.method==='GET'
+     && url.searchParams.get('warehouseId')===v107WarehouseId)
+    return respond(res,emptyCursorPage([{warehouseId:v107WarehouseId,
+      productSkuId:v107SkuId,internalSku:'V107-LOCAL-SKU',
+      recordedReceivedQuantity:3,onHandQuantity:2}]))
+  if(url.pathname==='/api/v1/purchasing/warehouse-stock/item' && req.method==='GET'
+     && url.searchParams.get('warehouseId')===v107WarehouseId
+     && url.searchParams.get('productSkuId')===v107SkuId)
+    return respond(res,{warehouseId:v107WarehouseId,
+      productSkuId:v107SkuId,internalSku:'V107-LOCAL-SKU',
+      recordedReceivedQuantity:3,onHandQuantity:2})
   if(url.pathname==='/api/v1/purchasing/warehouse-ledger' && req.method==='GET'
      && url.searchParams.get('warehouseId')===v107WarehouseId)
     return respond(res,v107Ledger)
+  if(url.pathname==='/api/v1/purchasing/warehouse-ledger/page' && req.method==='GET'
+     && url.searchParams.get('warehouseId')===v107WarehouseId){
+    const movementType=url.searchParams.get('movementType')??'ALL'
+    const search=(url.searchParams.get('search')??'').toUpperCase()
+    return respond(res,emptyCursorPage(v107Ledger.filter(x=>
+      (movementType==='ALL'||x.movementType===movementType)&&
+       x.internalSku.toUpperCase().includes(search))))
+  }
   // V110: purchase list status/search are handled by server, not client-side
   // filtering of the first 100 records. Fake fixture is explicitly synthetic.
   if(url.pathname==='/api/v1/purchasing/orders/page' && req.method==='GET'){
@@ -332,8 +373,12 @@ const server = createServer(async (req, res) => {
   if (url.pathname === '/api/v1/purchasing/supplier-performance/followups'
       || url.pathname === '/api/v1/purchasing/supplier-performance/followups/page')
     return respond(res,url.pathname.endsWith('/page')?emptyCursorPage([]):[])
-  if (url.pathname === '/api/v1/purchasing/delivery/overview')
-    return respond(res,{
+  // V123: the real V119 board uses an all-tenant summary and a separate
+  // keyset page. Keep the V72 legacy response for backward compatibility.
+  if (['/api/v1/purchasing/delivery/overview',
+       '/api/v1/purchasing/delivery/summary',
+       '/api/v1/purchasing/delivery/lines/page'].includes(url.pathname)) {
+    const delivery={
       asOfDateUtc:'2026-11-02',
       totals:{lineCount:1,pendingQuantity:18,reportedUnreceivedQuantity:0,
         awaitingQcReleaseQuantity:0,warningLines:1,overdueLines:0,
@@ -352,7 +397,14 @@ const server = createServer(async (req, res) => {
         replenishmentSellerSku:null,replenishmentPricingSource:null,
         deliveryState:'NO_ASN_RECORDED'
       }]
-    })
+    }
+    if(url.pathname.endsWith('/summary'))
+      return respond(res,{asOfDateUtc:delivery.asOfDateUtc,totals:delivery.totals})
+    if(url.pathname.endsWith('/lines/page'))
+      return respond(res,{items:delivery.lines,nextCursor:null,
+        hasMore:false,pageSize:Number(url.searchParams.get('limit')??50)})
+    return respond(res,delivery)
+  }
   if (url.pathname === '/api/v1/replenishment/marketplaces/' + market + '/priorities')
     return respond(res, [{
       sellerSku:'TEST-SKU-100',stockState:'NO_OBSERVATION',

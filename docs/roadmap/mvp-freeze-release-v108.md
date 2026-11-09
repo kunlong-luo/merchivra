@@ -78,6 +78,8 @@
 
 > **A2/A3 / V122（2026-11-09）**：为 Next.js 16.4.5 App Router 创建独立 **Node 24 standalone 多阶段/非 root 镜像** `apps/web/Dockerfile.next` 和可选择的私有 `deploy/compose.next.yaml`；默认仅暴露 `127.0.0.1:3001`，原 Vite/Nginx `web` 保持不变，可作为即时代理回切。编译时明确将 `/api` 代理指向 Compose 内部 `server:8080`，不通过浏览器暴露后端身份/秘密。普通 CI 新增有效 Compose 配置、Next Build、非 root/端口/禁 Seller/禁注入 Secrets 和 Vite 回退校验；V122 完整 Compose 里程碑将通过 Node 容器与 Spring/PG18 真登录、Session+CSRF 及 Cookie/权限校验。**本轮合并后 `milestone-validation.yml` 变更会自动触发一次主线精确 SHA 的全量 PG18、Chromium、Compose 回归，运行结果必须实查**，不能以绿色普通 PR 代替。详情与受控切流/回退见 [V122](../architecture/next-node-cutover-v122.md)。生产公网 TLS、真实 Seller/Ads 本地授权、外部秘密与 G1/G2/G3 签署仍需用户最终批准，故当前不声称正式上线。
 
+> **A3 / V123 集中测试实测发现（2026-11-09）**：V122 main `08dce7a` 首轮 [A3 #42602507335](https://github.com/kunlong-luo/merchivra/actions/runs/42602507335) **失败**，必须保持发布阻塞。Compose 三服务 + **Next16 standalone Node ↔ Spring ↔ PG18 真实 Session/CSRF** 全链通过，但 Chromium 的 V72 合成 Mock 未适配 V119 的 `/delivery/summary` 与 `/lines/page`，PG18 `/pending-receipts/page` 的状态+搜索 SQL 意外拼接 `$2AND` 引发 HTTP 500；V119/V120 真 PG18 冒烟到达并通过。V123 修复这些确诊断点并加入 SQL 拼接单测，合并后通过更新的 milestone workflow **再次在新的 main SHA 运行完整 PG18/Chromium/Compose**。详见 [V123 失败证据与修复记录](../testing/a3-regression-v123.md)。未全绿之前任何快速 CI 或历史测试均不能替代 A3；真实 Amazon 授权与正式生产仍关闭。
+
 ## 第一批可执行 P0 核查清单
 
 | 核查对象 | 当前有证据的缺口 | 下一步 |
