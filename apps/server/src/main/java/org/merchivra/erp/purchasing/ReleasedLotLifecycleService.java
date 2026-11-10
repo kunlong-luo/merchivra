@@ -169,6 +169,56 @@ public class ReleasedLotLifecycleService {
                 rs.getObject("expiry_date",LocalDate.class).toString(),
                 rs.getString("urgency")),tenant,warehouse);
     }
+    /** V134: complete expiry alert navigation, retaining legacy first 300 for compatibility.
+     * Date/id ascending keyset includes all past-due and next-30-day positions
+     * without ever implying an automatic stock quarantine.
+     */
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<ExpiryAlert> expiryPage(UUID tenant,UUID warehouse,
+        int requested,String cursor) {
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=LocalKeysetPage.decode(cursor,5);
+        if(after!=null && (!tenant.toString().equals(after[0])
+            || !warehouse.toString().equals(after[1])
+            || !"EXPIRY".equals(after[2])))
+            throw bad("Lot expiry cursor belongs to another tenant, warehouse or domain");
+        var args=new ArrayList<Object>();
+        args.add(tenant);
+        args.add(warehouse);
+        String predicate="";
+        if(after!=null) {
+            try {
+                predicate=" AND (p.expiry_date,p.id) > (?,?)";
+                args.add(LocalDate.parse(after[3]));
+                args.add(UUID.fromString(after[4]));
+            } catch(java.time.DateTimeException | IllegalArgumentException e) {
+                throw bad("Invalid expiry cursor");
+            }
+        }
+        args.add(limit+1);
+        List<ExpiryAlert> rows=jdbc.query("""
+            SELECT p.id,b.lot_code,z.bin_code,p.product_sku_id,p.remaining_quantity,
+              p.expiry_date,
+              CASE WHEN p.expiry_date<CURRENT_DATE THEN 'EXPIRED'
+                   ELSE 'NEAR_EXPIRY' END AS urgency
+            FROM erp_local_lot_position p
+            JOIN erp_receipt_quality_batch b
+              ON b.tenant_id=p.tenant_id AND b.receipt_id=p.receipt_id
+            JOIN erp_local_stock_bin z
+              ON z.tenant_id=p.tenant_id AND z.id=p.bin_id
+            WHERE p.tenant_id=? AND p.warehouse_id=? AND p.remaining_quantity>0
+              AND p.expiry_date<=CURRENT_DATE+30
+            """+predicate+"""
+            ORDER BY p.expiry_date ASC,p.id ASC LIMIT ?
+            """,(rs,i)->new ExpiryAlert(rs.getObject("id",UUID.class).toString(),
+                rs.getString("lot_code"),rs.getString("bin_code"),
+                rs.getObject("product_sku_id",UUID.class).toString(),
+                rs.getInt("remaining_quantity"),
+                rs.getObject("expiry_date",LocalDate.class).toString(),
+                rs.getString("urgency")),args.toArray());
+        return LocalKeysetPage.pack(rows,limit,r->LocalKeysetPage.encode(
+            tenant.toString(),warehouse.toString(),"EXPIRY",r.expiryDate(),r.positionId()));
+    }
     @Transactional(readOnly=true)
     public List<Lineage> lineage(UUID tenant,UUID positionId) {
         // Follow the immutable origin_position_id chain to the original released
