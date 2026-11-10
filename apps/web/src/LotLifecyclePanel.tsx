@@ -6,7 +6,7 @@ import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
 import {fetchWarehouseStockItem} from './lib/purchasing'
 import {fetchStockBins} from './lib/lot-locations'
-import {fetchLotPositions} from './lib/released-lots'
+import {fetchLotPositionsPage} from './lib/released-lots'
 import {actLotPosition,fetchLotActionHistoryPage,fetchLotExpiryAlerts,fetchLotLineage,
  type LotActionRequest} from './lib/lot-lifecycle'
 
@@ -22,6 +22,9 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
  const root=['purchasing',tenantId]
  const client=useQueryClient()
  const [warehouseId,setWarehouseId]=useState('')
+ const [positionCursors,setPositionCursors]=useState<(string|null)[]>([null])
+ const positionCursor=positionCursors.at(-1)??null
+ useEffect(()=>setPositionCursors([null]),[tenantId,warehouseId])
  const [positionId,setPositionId]=useState('')
  const [type,setType]=useState<LotActionRequest['actionType']>('MOVE')
  const [destWarehouse,setDestWarehouse]=useState('')
@@ -35,11 +38,12 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
  const historyCursor=historyCursors.at(-1)??null
  useEffect(()=>setHistoryCursors([null]),[tenantId,historyId])
  const [success,setSuccess]=useState(''),[error,setError]=useState('')
- const positions=useQuery({queryKey:[...root,'lot-positions',warehouseId],
-  queryFn:()=>fetchLotPositions(warehouseId),enabled:!!warehouseId,retry:false})
+ const positions=useQuery({queryKey:[...root,'lot-positions-page',warehouseId,positionCursor],
+  queryFn:()=>fetchLotPositionsPage(warehouseId,positionCursor),
+  enabled:!!warehouseId,retry:false})
  const alerts=useQuery({queryKey:[...root,'expiry-alerts',warehouseId],
   queryFn:()=>fetchLotExpiryAlerts(warehouseId),enabled:!!warehouseId,retry:false})
- const chosen=positions.data?.find(p=>p.id===positionId)
+ const chosen=positions.data?.items.find(p=>p.id===positionId)
  const targetWh=type==='TRANSFER'?destWarehouse:warehouseId
  const bins=useQuery({queryKey:[...root,'bins',targetWh],
   queryFn:()=>fetchStockBins(targetWh),enabled:!!targetWh,retry:false})
@@ -139,10 +143,18 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
    <select id="v49-position" value={positionId} onChange={e=>{
     setPositionId(e.target.value);setDestBin('');change()}}>
     <option value="">选择有实际余量的批次库位</option>
-    {(positions.data??[]).filter(p=>p.remainingQuantity>0).map(p=>
+    {(positions.data?.items??[]).filter(p=>p.remainingQuantity>0).map(p=>
      <option key={p.id} value={p.id}>
       {p.lotCode} · {p.binCode} · {p.remainingQuantity} 件</option>)}
    </select>
+   {positions.isError&&<p className="setup-error" role="alert">{String(positions.error)}</p>}
+   {positions.data&&<CursorPageControls label="V48 已上架批次库位全库位置选择"
+     page={positionCursors.length} hasMore={positions.data.hasMore}
+     nextCursor={positions.data.nextCursor} busy={positions.isFetching}
+     onPrev={()=>{setPositionId('');setHistoryId('');
+      setPositionCursors(v=>v.slice(0,-1));change()}}
+     onNext={cursor=>{setPositionId('');setHistoryId('');
+      setPositionCursors(v=>[...v,cursor]);change()}}/>}
    {!!chosen&&<>
     <p className="setup-hint">原始实收来源 {chosen.receiptId.slice(0,8)}；
      当前库位 {chosen.remainingQuantity} 件；SKU 仓库签名可用 {usable===undefined?'未知（未取得精确余额）':usable} 件；

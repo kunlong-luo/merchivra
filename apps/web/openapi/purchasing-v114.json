@@ -6878,6 +6878,107 @@
           }
         }
       }
+    },
+    "/api/v1/purchasing/released-lots/warehouses/{warehouseId}/positions/page": {
+      "get": {
+        "operationId": "listReleasedLotPositionsPage",
+        "summary": "V133 complete tenant-scoped released lot positions by warehouse keyset",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Bounded stable positions page, not an aggregate total",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleasedLotPositionPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad scope, cursor or limit"
+          },
+          "401": {
+            "description": "Owner login required"
+          },
+          "403": {
+            "description": "Owner role denied"
+          }
+        }
+      }
+    },
+    "/api/v1/purchasing/released-lots/receipts/{receiptId}/allocation": {
+      "get": {
+        "operationId": "getReleasedLotReceiptAllocation",
+        "summary": "V133 exact root-only released receipt putaway allocation across the whole tenant",
+        "parameters": [
+          {
+            "name": "receiptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Exact approved, placed and remaining quantities, no first-page inference",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReleasedLotReceiptAllocation"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid source"
+          },
+          "401": {
+            "description": "Owner login required"
+          },
+          "403": {
+            "description": "Owner role denied"
+          },
+          "404": {
+            "description": "Receipt absent from current tenant"
+          },
+          "409": {
+            "description": "Corrupt or conflicting released source allocation"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -12720,6 +12821,84 @@
           "nextCursor",
           "hasMore",
           "pageSize"
+        ]
+      },
+      "ReleasedLotPositionPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReleasedLotPosition"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
+        ]
+      },
+      "ReleasedLotReceiptAllocation": {
+        "type": "object",
+        "properties": {
+          "receiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "warehouseId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "productSkuId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "type": "string"
+          },
+          "acceptedQuantity": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "placedQuantity": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          },
+          "remainingQuantity": {
+            "type": "integer",
+            "format": "int64",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "receiptId",
+          "warehouseId",
+          "productSkuId",
+          "status",
+          "acceptedQuantity",
+          "placedQuantity",
+          "remainingQuantity"
         ]
       }
     }

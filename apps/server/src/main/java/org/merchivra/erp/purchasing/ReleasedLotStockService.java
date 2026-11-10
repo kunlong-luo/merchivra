@@ -4,6 +4,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -31,6 +33,9 @@ public class ReleasedLotStockService {
                            int remainingQuantity,String expiryDate,String createdAt) {}
     public record PickRequest(UUID requestKey,UUID warehouseId,UUID productSkuId,
                               String policy,int quantity,long expectedOnHand,String reason) {}
+    public record ReceiptAllocation(String receiptId,String warehouseId,String productSkuId,
+                                    String status,int acceptedQuantity,long placedQuantity,
+                                    long remainingQuantity) {}
     public record PickLine(String positionId,String lotCode,String binCode,int quantity,
                            String expiryDate) {}
     public record Pick(String id,String warehouseId,String productSkuId,String operationId,
@@ -98,6 +103,69 @@ public class ReleasedLotStockService {
         return jdbc.query(POSITION_SQL+"""
             AND p.warehouse_id=? ORDER BY p.created_at DESC,p.id DESC LIMIT 300
             """,ReleasedLotStockService::mapPosition,tenant,warehouse);
+    }
+    /** V133: keyset source directory; legacy /positions is 300-row compatible. */
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Position> positionsPage(UUID tenant,UUID warehouse,
+        int requested,String cursor) {
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=LocalKeysetPage.decode(cursor,4);
+        if(after!=null && (!tenant.toString().equals(after[0])
+            || !warehouse.toString().equals(after[1])))
+            throw bad("Lot position cursor belongs to another tenant or warehouse");
+        var args=new ArrayList<Object>();
+        args.add(tenant);
+        args.add(warehouse);
+        String predicate="";
+        if(after!=null){
+            try{
+                predicate=" AND (p.created_at,p.id) < (?,?)";
+                args.add(OffsetDateTime.ofInstant(Instant.parse(after[2]),ZoneOffset.UTC));
+                args.add(UUID.fromString(after[3]));
+            }catch(java.time.DateTimeException | IllegalArgumentException ex){
+                throw bad("Invalid lot position cursor");
+            }
+        }
+        args.add(limit+1);
+        List<Position> rows=jdbc.query(POSITION_SQL+"""
+            AND p.warehouse_id=?
+            """+predicate+"""
+            ORDER BY p.created_at DESC,p.id DESC LIMIT ?
+            """,ReleasedLotStockService::mapPosition,args.toArray());
+        return LocalKeysetPage.pack(rows,limit,r->LocalKeysetPage.encode(
+            tenant.toString(),warehouse.toString(),r.createdAt(),r.id()));
+    }
+
+    /** V133: source-truth allocation across ALL original receipt positions,
+     * excluding transferred descendants. Never infer capacity from a page.
+     */
+    @Transactional(readOnly=true)
+    public ReceiptAllocation receiptAllocation(UUID tenant,UUID receiptId){
+        if(receiptId==null)throw bad("Real receipt required");
+        return jdbc.query("""
+            SELECT b.receipt_id,b.warehouse_id,b.product_sku_id,b.status,
+              COALESCE(q.accepted_quantity,0)::integer AS accepted,
+              COALESCE((
+                SELECT SUM(p.placed_quantity) FROM erp_local_lot_position p
+                WHERE p.tenant_id=b.tenant_id AND p.receipt_id=b.receipt_id
+                  AND p.origin_position_id IS NULL
+              ),0)::bigint AS placed
+            FROM erp_receipt_quality_batch b
+            LEFT JOIN erp_purchase_receipt_qc q
+              ON q.tenant_id=b.tenant_id AND q.id=b.inspection_id
+            WHERE b.tenant_id=? AND b.receipt_id=?
+            """,(rs,i)->{
+                int accepted=rs.getInt("accepted");
+                long placed=rs.getLong("placed");
+                String status=rs.getString("status");
+                if(placed>accepted && "RELEASED".equals(status))
+                    throw conflict("Released receipt allocation exceeds independently approved quantity");
+                long available="RELEASED".equals(status)?Math.max(0,(long)accepted-placed):0;
+                return new ReceiptAllocation(rs.getObject("receipt_id",UUID.class).toString(),
+                    rs.getObject("warehouse_id",UUID.class).toString(),
+                    rs.getObject("product_sku_id",UUID.class).toString(),
+                    status,accepted,placed,available);
+            },tenant,receiptId).stream().findFirst().orElseThrow(ReleasedLotStockService::missing);
     }
     private Position position(UUID tenant,UUID id) {
         return jdbc.query(POSITION_SQL+" AND p.id=?",
