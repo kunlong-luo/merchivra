@@ -139,7 +139,7 @@ describe('V49 released lot lifecycle API contracts',()=>{
  it('V132 malformed page cursor response fails closed and wrong UUID blocks request',async()=>{
   mocked(()=>({items:[],hasMore:true,nextCursor:null,pageSize:50}))
   await expect(fetchLotActionHistoryPage(position)).rejects.toThrow()
-  await expect(fetchLotActionHistoryPage('wrong')).rejects.toThrow()
+  expect(()=>fetchLotActionHistoryPage('wrong')).toThrow()
  })
 
 })
