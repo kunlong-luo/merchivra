@@ -1,7 +1,8 @@
 import {z} from 'zod'
 import {
  actReleasedLotPosition,listReleasedLotActionHistory,
- listReleasedLotActionHistoryPage,getReleasedLotLineage,listReleasedLotExpiryAlerts
+ listReleasedLotActionHistoryPage,getReleasedLotLineage,
+ listReleasedLotExpiryAlerts,listReleasedLotExpiryAlertsPage
 } from '../generated/purchasing-v114'
 const action=z.object({
  id:z.string().uuid(),actionType:z.enum(['MOVE','TRANSFER','EXPIRED_QUARANTINE','COUNT_OBSERVATION']),
@@ -33,6 +34,13 @@ const actionPage=z.object({
 })
 export type LotActionHistoryPage=z.infer<typeof actionPage>
 export type LotExpiryAlert=z.infer<typeof alert>
+const expiryPage=z.object({
+ items:z.array(alert).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{
+ message:'V49 到期预警分页游标与状态不一致'
+})
+export type LotExpiryAlertPage=z.infer<typeof expiryPage>
 export type LotActionRequest={
  requestKey:string;actionType:LotLifecycleAction['actionType'];
  expectedBinId:string;destinationBinId:string|null;quantity:number;expectedRemaining:number;
@@ -53,5 +61,9 @@ export const fetchLotActionHistoryPage=(positionId:string,cursor:string|null=nul
  }),actionPage)
 export const fetchLotExpiryAlerts=(warehouseId:string)=>
  decode(listReleasedLotExpiryAlerts(pathId(warehouseId)),z.array(alert))
+export const fetchLotExpiryAlertsPage=(warehouseId:string,cursor:string|null=null)=>
+ decode(listReleasedLotExpiryAlertsPage(pathId(warehouseId),{
+  limit:50,...(cursor?{cursor}:{})
+ }),expiryPage)
 export const fetchLotLineage=(positionId:string)=>
  decode(getReleasedLotLineage(pathId(positionId)),z.array(lineage))
