@@ -4,7 +4,7 @@ import {useEffect,useState,type FormEvent} from 'react'
 import CursorPageControls from './CursorPageControls'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
-import {fetchLotPositions} from './lib/released-lots'
+import {fetchLotPositionsPage} from './lib/released-lots'
 import {fetchLotActionHistoryPage} from './lib/lot-lifecycle'
 import {
  fetchLotCountCasesPage,submitLotCount,decideLotCount,
@@ -39,6 +39,9 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
   setDispositionCursors([null]);setQuarantineCursors([null])
  },[tenantId])
  const [positionId,setPositionId]=useState('')
+ const [positionCursors,setPositionCursors]=useState<(string|null)[]>([null])
+ const positionCursor=positionCursors.at(-1)??null
+ useEffect(()=>setPositionCursors([null]),[tenantId,warehouse])
  const [observationCursors,setObservationCursors]=useState<(string|null)[]>([null])
  const observationCursor=observationCursors.at(-1)??null
  useEffect(()=>setObservationCursors([null]),[tenantId,positionId])
@@ -59,8 +62,9 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
  const [completionReason,setCompletionReason]=useState('')
  const [completionReference,setCompletionReference]=useState('')
  const [message,setMessage]=useState(''),[failure,setFailure]=useState('')
- const positions=useQuery({queryKey:[...root,'lot-positions',warehouse],
-  queryFn:()=>fetchLotPositions(warehouse),enabled:!!warehouse,retry:false})
+ const positions=useQuery({queryKey:[...root,'lot-positions-page',warehouse,positionCursor],
+  queryFn:()=>fetchLotPositionsPage(warehouse,positionCursor),
+  enabled:!!warehouse,retry:false})
  const actionHistory=useQuery({queryKey:[...root,'lot-history-page',positionId,observationCursor],
   queryFn:()=>fetchLotActionHistoryPage(positionId,observationCursor),
   enabled:!!positionId,retry:false})
@@ -170,9 +174,17 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
     <select id="v50-pos" value={positionId} onChange={e=>{
      setPositionId(e.target.value);setObservationId('');setCountKey(crypto.randomUUID())}}>
      <option value="">选择批次来源</option>
-     {(positions.data??[]).map(p=><option value={p.id} key={p.id}>
+     {(positions.data?.items??[]).map(p=><option value={p.id} key={p.id}>
       {p.lotCode} · {p.binCode} · {p.remainingQuantity} 件</option>)}
     </select>
+    {positions.isError&&<p className="setup-error" role="alert">{String(positions.error)}</p>}
+    {positions.data&&<CursorPageControls label="V48 批次来源仓库全库选择"
+      page={positionCursors.length} hasMore={positions.data.hasMore}
+      nextCursor={positions.data.nextCursor} busy={positions.isFetching}
+      onPrev={()=>{setPositionId('');setObservationId('');
+       setPositionCursors(v=>v.slice(0,-1))}}
+      onNext={cursor=>{setPositionId('');setObservationId('');
+       setPositionCursors(v=>[...v,cursor])}}/>}
     <label htmlFor="v50-obs">V49 盘点观察（当前历史页；是否已提交由服务器复核）</label>
     <select id="v50-obs" value={observationId} onChange={e=>{
      setObservationId(e.target.value);setCountKey(crypto.randomUUID())}}>
