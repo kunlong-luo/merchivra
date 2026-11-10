@@ -1,8 +1,8 @@
 import {z} from 'zod'
 import {
  listReceiptPieceGrades,gradeReceiptPiece,finalizeReceiptPieceGrades,
- listReleasedLotPositions,putawayReleasedLotPosition,
- previewReleasedLotPick,pickReleasedLotPositions
+ listReleasedLotPositions,listReleasedLotPositionsPage,getReleasedLotReceiptAllocation,
+ putawayReleasedLotPosition,previewReleasedLotPick,pickReleasedLotPositions
 } from '../generated/purchasing-v114'
 const grade=z.object({id:z.string().uuid(),receiptId:z.string().uuid(),
  pieceId:z.string().uuid(),acceptedQuantity:z.number().int().nonnegative(),
@@ -28,6 +28,22 @@ const pick=z.object({id:z.string().uuid(),warehouseId:z.string().uuid(),
  actorUserId:z.string().uuid(),allocations:z.array(pickLine)})
 export type PieceGrade=z.infer<typeof grade>
 export type LotPosition=z.infer<typeof position>
+const positionPage=z.object({
+ items:z.array(position).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{
+ message:'V48 批次库位分页游标与状态不一致'
+})
+const receiptAllocation=z.object({
+ receiptId:z.string().uuid(),warehouseId:z.string().uuid(),productSkuId:z.string().uuid(),
+ status:z.string(),acceptedQuantity:z.number().int().nonnegative(),
+ placedQuantity:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER),
+ remainingQuantity:z.number().int().min(0).max(Number.MAX_SAFE_INTEGER)
+}).refine(a=>a.status!=='RELEASED'||
+ a.placedQuantity+a.remainingQuantity===a.acceptedQuantity,{
+ message:'V48 精确上架容量与已批准合格品不一致'
+})
+export type ReleasedLotReceiptAllocation=z.infer<typeof receiptAllocation>
 export type StockLotPick=z.infer<typeof pick>
 export type LotPolicy='FIFO'|'FEFO'
 // V130: the GET preview contains at most the first 500 matching positions.
@@ -57,6 +73,12 @@ export const finalizePieceGrades=(receiptId:string,body:{requestKey:string;reaso
  decode(finalizeReceiptPieceGrades(pathId(receiptId),body),inspection)
 export const fetchLotPositions=(warehouseId:string)=>
  decode(listReleasedLotPositions(pathId(warehouseId)),z.array(position))
+export const fetchLotPositionsPage=(warehouseId:string,cursor:string|null=null)=>
+ decode(listReleasedLotPositionsPage(pathId(warehouseId),{
+  limit:50,...(cursor?{cursor}:{})
+ }),positionPage)
+export const fetchReleasedLotReceiptAllocation=(receiptId:string)=>
+ decode(getReleasedLotReceiptAllocation(pathId(receiptId)),receiptAllocation)
 export const putawayReleasedLot=(body:{requestKey:string;receiptId:string;binId:string;
  quantity:number;expiryDate:string|null;reason:string})=>
  decode(putawayReleasedLotPosition(body),position)
