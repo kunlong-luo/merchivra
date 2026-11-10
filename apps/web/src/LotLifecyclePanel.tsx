@@ -1,12 +1,13 @@
 import {useWarehouseLabelMap} from './useWarehouseLabelMap'
+import CursorPageControls from './CursorPageControls'
 import WarehousePicker from './WarehousePicker'
-import {useState,type FormEvent} from 'react'
+import {useEffect,useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
 import {fetchWarehouseStockItem} from './lib/purchasing'
 import {fetchStockBins} from './lib/lot-locations'
 import {fetchLotPositions} from './lib/released-lots'
-import {actLotPosition,fetchLotActionHistory,fetchLotExpiryAlerts,fetchLotLineage,
+import {actLotPosition,fetchLotActionHistoryPage,fetchLotExpiryAlerts,fetchLotLineage,
  type LotActionRequest} from './lib/lot-lifecycle'
 
 const labels:Record<LotActionRequest['actionType'],string>={
@@ -30,6 +31,9 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
  const [reason,setReason]=useState('')
  const [requestKey,setRequestKey]=useState(()=>crypto.randomUUID())
  const [historyId,setHistoryId]=useState('')
+ const [historyCursors,setHistoryCursors]=useState<(string|null)[]>([null])
+ const historyCursor=historyCursors.at(-1)??null
+ useEffect(()=>setHistoryCursors([null]),[tenantId,historyId])
  const [success,setSuccess]=useState(''),[error,setError]=useState('')
  const positions=useQuery({queryKey:[...root,'lot-positions',warehouseId],
   queryFn:()=>fetchLotPositions(warehouseId),enabled:!!warehouseId,retry:false})
@@ -39,8 +43,9 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
  const targetWh=type==='TRANSFER'?destWarehouse:warehouseId
  const bins=useQuery({queryKey:[...root,'bins',targetWh],
   queryFn:()=>fetchStockBins(targetWh),enabled:!!targetWh,retry:false})
- const history=useQuery({queryKey:[...root,'lot-history',historyId],
-  queryFn:()=>fetchLotActionHistory(historyId),enabled:!!historyId,retry:false})
+ const history=useQuery({queryKey:[...root,'lot-history-page',historyId,historyCursor],
+  queryFn:()=>fetchLotActionHistoryPage(historyId,historyCursor),
+  enabled:!!historyId,retry:false})
  const ancestry=useQuery({queryKey:[...root,'lot-lineage',historyId],
   queryFn:()=>fetchLotLineage(historyId),enabled:!!historyId,retry:false})
  const warehouseLabels=useWarehouseLabelMap(tenantId,
@@ -214,16 +219,21 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
     <h3>不可覆盖的批次操作审计</h3>
     {history.isPending?<p className="empty-state">读取操作历史…</p>:
      history.isError?<p className="setup-error" role="alert">{String(history.error)}</p>:
-     !history.data?.length?<p className="empty-state">当前批次尚无 V49 操作记录。</p>:
+     !history.data?.items.length?<p className="empty-state">本页无 V49 操作记录。</p>:
      <div className="table-scroll" role="region" tabIndex={0}>
       <table><thead><tr><th scope="col">时间</th><th scope="col">类型</th>
        <th scope="col">件数/盘点</th><th scope="col">来源</th><th scope="col">说明</th></tr></thead><tbody>
-       {history.data.map(a=><tr key={a.id}>
+       {(history.data?.items??[]).map(a=><tr key={a.id}>
         <td>{new Date(a.createdAt).toLocaleString('zh-CN')}</td>
         <td>{labels[a.actionType]}</td><td>{a.observedQuantity??a.quantity}</td>
         <td>{a.sourcePositionId.slice(0,8)}</td><td>{a.reason}</td>
        </tr>)}</tbody></table>
      </div>}
+    {history.data&&<CursorPageControls label="批次来源与目标操作全库历史"
+      page={historyCursors.length} hasMore={history.data.hasMore}
+      nextCursor={history.data.nextCursor} busy={history.isFetching}
+      onPrev={()=>setHistoryCursors(v=>v.slice(0,-1))}
+      onNext={cursor=>setHistoryCursors(v=>[...v,cursor])}/>}
    </>}
   </>}
   {success&&<p role="status" className="panel-caption">{success}</p>}
