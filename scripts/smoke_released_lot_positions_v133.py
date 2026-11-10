@@ -64,6 +64,9 @@ position,warehouse,receipt,sku,bin_id=base
 source=f"/api/v1/purchasing/released-lots/warehouses/{warehouse}/positions"
 stock_before=sql(f"""SELECT count(*) FROM erp_local_stock_movement
  WHERE tenant_id='{tenant}'""")
+root_before=int(sql(f"""SELECT COALESCE(SUM(placed_quantity),0)
+ FROM erp_local_lot_position WHERE tenant_id='{tenant}' AND receipt_id='{receipt}'
+ AND origin_position_id IS NULL"""))
 marker="V133 synthetic read-only batch position fixture"
 new_count=sql(f"""WITH added AS (
  INSERT INTO erp_local_lot_position
@@ -106,7 +109,7 @@ allocation=call(f"/api/v1/purchasing/released-lots/receipts/{receipt}/allocation
 assert allocation["receiptId"]==receipt
 assert allocation["warehouseId"]==warehouse
 assert allocation["status"]!="RELEASED"
-assert allocation["placedQuantity"]==326,allocation
+assert allocation["placedQuantity"]==root_before+325,allocation
 assert allocation["remainingQuantity"]==0,allocation
 valid_cursor=call(source+"/page?limit=50")["nextCursor"]
 assert valid_cursor
