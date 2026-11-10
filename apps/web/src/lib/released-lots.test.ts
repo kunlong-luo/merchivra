@@ -1,6 +1,7 @@
 import {afterEach,describe,expect,it,vi} from 'vitest'
 import {fetchPieceGrades,gradePiece,finalizePieceGrades,fetchLotPositions,
- putawayReleasedLot,previewLotPick,pickReleasedLots,lotPickCapacityHint} from './released-lots'
+ putawayReleasedLot,previewLotPick,pickReleasedLots,lotPickCapacityHint,
+ fetchLotPositionsPage,fetchReleasedLotReceiptAllocation} from './released-lots'
 afterEach(()=>vi.unstubAllGlobals())
 const receipt='11111111-1111-4111-8111-111111111111'
 const piece='22222222-2222-4222-8222-222222222222'
@@ -99,4 +100,54 @@ describe('V48 per-piece QC and lot stock workflows',()=>{
   expect(JSON.parse(String(post?.options?.body))).toMatchObject({
    policy:'FEFO',quantity:3,expectedOnHand:10,requestKey:reqKey})
  })
+
+ it('V133 uses Orval to browse 325 actual positions over seven source pages',async()=>{
+  const data=Array.from({length:325},(_,n)=>({
+   ...positionData,id:'00000000-0000-4000-8000-'+(n+1).toString(16).padStart(12,'0')
+  }))
+  const calls=fake(url=>{
+   if(!url.includes('/positions/page'))throw Error('Unexpected URL '+url)
+   const search=new URL(url,'http://127.0.0.1').searchParams
+   expect(search.get('limit')).toBe('50')
+   const offset=Number(search.get('cursor')??'0')
+   const items=data.slice(offset,offset+50)
+   const hasMore=offset+50<data.length
+   return {items,hasMore,nextCursor:hasMore?String(offset+50):null,pageSize:50}
+  })
+  let cursor:string|null=null
+  const seen=new Set<string>()
+  const sizes:number[]=[]
+  for(let i=0;i<7;i++){
+   const response=await fetchLotPositionsPage(warehouse,cursor)
+   sizes.push(response.items.length)
+   expect(response.hasMore).toBe(i<6)
+   response.items.forEach(p=>seen.add(p.id))
+   cursor=response.nextCursor
+  }
+  expect(sizes).toEqual([50,50,50,50,50,50,25])
+  expect(seen.size).toBe(325)
+  expect(cursor).toBeNull()
+  expect(calls).toHaveLength(7)
+  expect(calls.every(c=>c.options?.method===undefined||c.options?.method==='GET')).toBe(true)
+ })
+ it('V133 exact receipt allocation never derives capacity from the first page',async()=>{
+  const calls=fake(()=>({
+   receiptId:receipt,warehouseId:warehouse,productSkuId:sku,status:'RELEASED',
+   acceptedQuantity:650,placedQuantity:601,remainingQuantity:49
+  }))
+  const result=await fetchReleasedLotReceiptAllocation(receipt)
+  expect(result.remainingQuantity).toBe(49)
+  expect(result.placedQuantity).toBe(601)
+  expect(calls[0].url).toBe('/api/v1/purchasing/released-lots/receipts/'+receipt+'/allocation')
+  expect(calls[0].options?.method??'GET').toBe('GET')
+ })
+ it('V133 rejects contradictory allocation, cursors, and non-UUID receipt paths',async()=>{
+  fake(()=>({
+   receiptId:receipt,warehouseId:warehouse,productSkuId:sku,status:'RELEASED',
+   acceptedQuantity:650,placedQuantity:601,remainingQuantity:100
+  }))
+  await expect(fetchReleasedLotReceiptAllocation(receipt)).rejects.toThrow()
+  expect(()=>fetchReleasedLotReceiptAllocation('bad')).toThrow()
+ })
+
 })
