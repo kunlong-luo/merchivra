@@ -130,7 +130,7 @@ public class ReleasedLotLifecycleService {
                 predicate=" AND (created_at,id) < (?,?)";
                 args.add(OffsetDateTime.ofInstant(Instant.parse(after[2]),ZoneOffset.UTC));
                 args.add(UUID.fromString(after[3]));
-            } catch(IllegalArgumentException ex) {
+            } catch(java.time.DateTimeException | IllegalArgumentException ex) {
                 throw bad("Invalid lot history cursor");
             }
         }
