@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.security.TenantAccessService;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.CacheControl;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,6 +31,15 @@ public class ReleasedLotLifecycleController {
     public List<ReleasedLotLifecycleService.Action> history(Authentication auth,
         HttpServletRequest req,@PathVariable UUID positionId) {
         return service.history(access.currentTenant(auth,req),positionId);
+    }
+    @GetMapping("/positions/{positionId}/history/page")
+    public ResponseEntity<LocalKeysetPage.Page<ReleasedLotLifecycleService.Action>>
+        historyPage(Authentication auth,HttpServletRequest req,
+            @PathVariable UUID positionId,
+            @RequestParam(defaultValue="50") int limit,
+            @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.historyPage(access.currentTenant(auth,req),positionId,limit,cursor));
     }
     @GetMapping("/positions/{positionId}/lineage")
     public List<ReleasedLotLifecycleService.Lineage> lineage(Authentication auth,

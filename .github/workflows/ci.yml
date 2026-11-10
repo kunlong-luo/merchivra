@@ -195,6 +195,8 @@ jobs:
             "SELECT count(*) FROM erp_lot_supplier_return_trace"
           # V129: real PG18 verifies the forward-only V84 audit migration.
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='84' AND success")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='85' AND success")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM pg_indexes WHERE indexname='erp_local_lot_action_destination_recent_idx'")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM pg_constraint WHERE conname='erp_lot_proof_file_tenant_proof_id_unique'")" = "1"
           psql -h 127.0.0.1 -U merchivra -d merchivra -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM erp_local_lot_proof_file_download_audit"
           curl -fsS http://127.0.0.1:8080/v3/api-docs/finance-profits > /tmp/merchivra-live-finance-openapi.json
@@ -271,6 +273,7 @@ jobs:
           python3 scripts/smoke_receipt_operational_pages_v93.py
           python3 scripts/smoke_quality_returns_findings_v94.py
           python3 scripts/smoke_ops_lot_pagination_v95.py
+          python3 scripts/smoke_lot_history_v132.py
           python3 scripts/smoke_supplier_case_pages_v96.py
           python3 scripts/smoke_supplier_finance_settlement_pages_v97.py
           python3 scripts/smoke_finance_audit_pages_v98.py

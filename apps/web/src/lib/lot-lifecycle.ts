@@ -1,7 +1,7 @@
 import {z} from 'zod'
 import {
  actReleasedLotPosition,listReleasedLotActionHistory,
- getReleasedLotLineage,listReleasedLotExpiryAlerts
+ listReleasedLotActionHistoryPage,getReleasedLotLineage,listReleasedLotExpiryAlerts
 } from '../generated/purchasing-v114'
 const action=z.object({
  id:z.string().uuid(),actionType:z.enum(['MOVE','TRANSFER','EXPIRED_QUARANTINE','COUNT_OBSERVATION']),
@@ -25,6 +25,13 @@ const lineage=z.object({positionId:z.string().uuid(),
  expiryDate:z.string().nullable(),generation:z.number().int().nonnegative()})
 export type LotLineage=z.infer<typeof lineage>
 export type LotLifecycleAction=z.infer<typeof action>
+const actionPage=z.object({
+ items:z.array(action).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{
+ message:'V49 批次操作历史游标与分页状态不一致'
+})
+export type LotActionHistoryPage=z.infer<typeof actionPage>
 export type LotExpiryAlert=z.infer<typeof alert>
 export type LotActionRequest={
  requestKey:string;actionType:LotLifecycleAction['actionType'];
@@ -40,6 +47,10 @@ export const actLotPosition=(positionId:string,body:LotActionRequest)=>
  decode(actReleasedLotPosition(pathId(positionId),body),action)
 export const fetchLotActionHistory=(positionId:string)=>
  decode(listReleasedLotActionHistory(pathId(positionId)),z.array(action))
+export const fetchLotActionHistoryPage=(positionId:string,cursor:string|null=null)=>
+ decode(listReleasedLotActionHistoryPage(pathId(positionId),{
+  limit:50,...(cursor?{cursor}:{})
+ }),actionPage)
 export const fetchLotExpiryAlerts=(warehouseId:string)=>
  decode(listReleasedLotExpiryAlerts(pathId(warehouseId)),z.array(alert))
 export const fetchLotLineage=(positionId:string)=>

@@ -4,6 +4,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -104,6 +107,45 @@ public class ReleasedLotLifecycleService {
             AND (source_position_id=? OR destination_position_id=?)
             ORDER BY created_at DESC,id DESC LIMIT 200
             """,ReleasedLotLifecycleService::map,tenant,positionId,positionId);
+    }
+    /** V132: complete V49 action history, including transfer destination evidence.
+     * The old 200-row list remains for compatible API clients, but the owner
+     * workspaces consume this tenant/position-scoped keyset endpoint instead.
+     */
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Action> historyPage(UUID tenant,UUID positionId,
+        int requested,String cursor) {
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=LocalKeysetPage.decode(cursor,4);
+        if(after!=null && (!tenant.toString().equals(after[0])
+            || !positionId.toString().equals(after[1])))
+            throw bad("Lot history cursor belongs to another tenant or position");
+        var args=new ArrayList<Object>();
+        args.add(tenant);
+        args.add(positionId);
+        args.add(positionId);
+        String predicate="";
+        if(after!=null) {
+            try {
+                predicate=" AND (created_at,id) < (?,?)";
+                args.add(OffsetDateTime.ofInstant(Instant.parse(after[2]),ZoneOffset.UTC));
+                args.add(UUID.fromString(after[3]));
+            } catch(java.time.DateTimeException | IllegalArgumentException ex) {
+                throw bad("Invalid lot history cursor");
+            }
+        }
+        List<UUID> present=jdbc.queryForList("""
+            SELECT id FROM erp_local_lot_position WHERE tenant_id=? AND id=?
+            """,UUID.class,tenant,positionId);
+        if(present.isEmpty())throw missing();
+        args.add(limit+1);
+        List<Action> rows=jdbc.query(ACTION_SQL+"""
+            AND (source_position_id=? OR destination_position_id=?)
+            """+predicate+"""
+            ORDER BY created_at DESC,id DESC LIMIT ?
+            """,ReleasedLotLifecycleService::map,args.toArray());
+        return LocalKeysetPage.pack(rows,limit,r->LocalKeysetPage.encode(
+            tenant.toString(),positionId.toString(),r.createdAt(),r.id()));
     }
     @Transactional(readOnly=true)
     public List<ExpiryAlert> expiry(UUID tenant,UUID warehouse) {
