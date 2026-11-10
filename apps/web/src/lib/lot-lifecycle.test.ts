@@ -1,5 +1,5 @@
 import {afterEach,describe,expect,it,vi} from 'vitest'
-import {actLotPosition,fetchLotActionHistory,fetchLotExpiryAlerts} from './lot-lifecycle'
+import {actLotPosition,fetchLotActionHistory,fetchLotActionHistoryPage,fetchLotExpiryAlerts} from './lot-lifecycle'
 afterEach(()=>vi.unstubAllGlobals())
 const position='11111111-1111-4111-8111-111111111111'
 const warehouse='22222222-2222-4222-8222-222222222222'
@@ -103,4 +103,43 @@ describe('V49 released lot lifecycle API contracts',()=>{
   expect(history[0].operationId).toBe(op)
   expect(calls[0].url).toBe('/api/v1/purchasing/lot-lifecycle/positions/'+position+'/history')
  })
+
+ it('V132 follows 225 tenant-position history rows across five generated Orval pages',async()=>{
+  const data=Array.from({length:225},(_,n)=>({
+   ...action(n%2===0?'TRANSFER':'MOVE'),
+   id:'00000000-0000-4000-8000-'+(n+1).toString(16).padStart(12,'0'),
+   createdAt:'2026-11-09T12:00:00Z'
+  }))
+  const calls=mocked(url=>{
+   if(!url.includes('/history/page'))throw Error('Unexpected URL '+url)
+   const params=new URL(url,'http://127.0.0.1').searchParams
+   expect(params.get('limit')).toBe('50')
+   const offset=Number(params.get('cursor')??'0')
+   const items=data.slice(offset,offset+50)
+   const more=offset+50<data.length
+   return {items,nextCursor:more?String(offset+50):null,
+    hasMore:more,pageSize:50}
+  })
+  let cursor:string|null=null
+  const ids=new Set<string>()
+  const sizes:number[]=[]
+  for(let p=0;p<5;p++){
+   const result=await fetchLotActionHistoryPage(position,cursor)
+   sizes.push(result.items.length)
+   result.items.forEach(x=>ids.add(x.id))
+   expect(result.hasMore).toBe(p<4)
+   cursor=result.nextCursor
+  }
+  expect(sizes).toEqual([50,50,50,50,25])
+  expect(ids.size).toBe(225)
+  expect(cursor).toBeNull()
+  expect(calls).toHaveLength(5)
+  expect(calls.every(c=>c.options?.method===undefined||c.options?.method==='GET')).toBe(true)
+ })
+ it('V132 malformed page cursor response fails closed and wrong UUID blocks request',async()=>{
+  mocked(()=>({items:[],hasMore:true,nextCursor:null,pageSize:50}))
+  await expect(fetchLotActionHistoryPage(position)).rejects.toThrow()
+  await expect(fetchLotActionHistoryPage('wrong')).rejects.toThrow()
+ })
+
 })
