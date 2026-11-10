@@ -5,7 +5,7 @@ import CursorPageControls from './CursorPageControls'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
 import {fetchLotPositions} from './lib/released-lots'
-import {fetchLotActionHistory} from './lib/lot-lifecycle'
+import {fetchLotActionHistoryPage} from './lib/lot-lifecycle'
 import {
  fetchLotCountCasesPage,submitLotCount,decideLotCount,
  fetchDestinationTransfersPage,acknowledgeDestinationTransfer,
@@ -39,6 +39,9 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
   setDispositionCursors([null]);setQuarantineCursors([null])
  },[tenantId])
  const [positionId,setPositionId]=useState('')
+ const [observationCursors,setObservationCursors]=useState<(string|null)[]>([null])
+ const observationCursor=observationCursors.at(-1)??null
+ useEffect(()=>setObservationCursors([null]),[tenantId,positionId])
  const [observationId,setObservationId]=useState('')
  const [countKey,setCountKey]=useState(()=>crypto.randomUUID())
  const [countReason,setCountReason]=useState('')
@@ -58,8 +61,9 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
  const [message,setMessage]=useState(''),[failure,setFailure]=useState('')
  const positions=useQuery({queryKey:[...root,'lot-positions',warehouse],
   queryFn:()=>fetchLotPositions(warehouse),enabled:!!warehouse,retry:false})
- const actionHistory=useQuery({queryKey:[...root,'lot-history',positionId],
-  queryFn:()=>fetchLotActionHistory(positionId),enabled:!!positionId,retry:false})
+ const actionHistory=useQuery({queryKey:[...root,'lot-history-page',positionId,observationCursor],
+  queryFn:()=>fetchLotActionHistoryPage(positionId,observationCursor),
+  enabled:!!positionId,retry:false})
  const countCases=useQuery({queryKey:[...root,'count-reviews-page',warehouse,countCursor],
   queryFn:()=>fetchLotCountCasesPage(warehouse,countCursor),enabled:!!warehouse,retry:false})
  const transfers=useQuery({queryKey:[...root,'transfer-receiving-page',warehouse,transferCursor],
@@ -127,7 +131,7 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
    setCompletionReference('');setCompletionReason('')
   },onError:(e:Error)=>setFailure(e.message)
  })
- const availableObservations=(actionHistory.data??[]).filter(a=>
+ const availableObservations=(actionHistory.data?.items??[]).filter(a=>
   a.actionType==='COUNT_OBSERVATION'&&!countCases.data?.items.some(c=>c.observationActionId===a.id))
  const selectedTransfer=transfers.data?.items.find(x=>x.actionId===ackAction)
  function submitAck(e:FormEvent){
@@ -169,13 +173,20 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
      {(positions.data??[]).map(p=><option value={p.id} key={p.id}>
       {p.lotCode} · {p.binCode} · {p.remainingQuantity} 件</option>)}
     </select>
-    <label htmlFor="v50-obs">未提交的 V49 盘点观察</label>
+    <label htmlFor="v50-obs">未提交的 V49 盘点观察（每页最多 50 条）</label>
     <select id="v50-obs" value={observationId} onChange={e=>{
      setObservationId(e.target.value);setCountKey(crypto.randomUUID())}}>
      <option value="">选择实物清点记录</option>
      {availableObservations.map(a=><option key={a.id} value={a.id}>
       账面 {a.expectedRemaining} → 实点 {a.observedQuantity}</option>)}
     </select>
+    {actionHistory.isError&&<p className="setup-error" role="alert">
+      {String(actionHistory.error)}</p>}
+    {actionHistory.data&&<CursorPageControls label="V49 盘点观察完整操作历史"
+      page={observationCursors.length} hasMore={actionHistory.data.hasMore}
+      nextCursor={actionHistory.data.nextCursor} busy={actionHistory.isFetching}
+      onPrev={()=>{setObservationId('');setObservationCursors(v=>v.slice(0,-1))}}
+      onNext={cursor=>{setObservationId('');setObservationCursors(v=>[...v,cursor])}}/>}
     <label htmlFor="v50-count-reason">盘点差异复核说明</label>
     <input id="v50-count-reason" minLength={5} maxLength={300}
      value={countReason} onChange={e=>{setCountReason(e.target.value);
