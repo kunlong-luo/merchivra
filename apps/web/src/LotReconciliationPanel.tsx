@@ -173,7 +173,7 @@ export default function LotReconciliationPanel({tenantId,currentUserId,warehouse
      {(positions.data??[]).map(p=><option value={p.id} key={p.id}>
       {p.lotCode} · {p.binCode} · {p.remainingQuantity} 件</option>)}
     </select>
-    <label htmlFor="v50-obs">未提交的 V49 盘点观察（每页最多 50 条）</label>
+    <label htmlFor="v50-obs">V49 盘点观察（当前历史页；是否已提交由服务器复核）</label>
     <select id="v50-obs" value={observationId} onChange={e=>{
      setObservationId(e.target.value);setCountKey(crypto.randomUUID())}}>
      <option value="">选择实物清点记录</option>
