@@ -79,6 +79,14 @@ def assess(plan_name, plan):
            and n.get("Relation Name") in LARGE_TABLES}
     buffer_hits = sum(int(n.get("Shared Hit Blocks", 0)) for n in (root,))
     buffer_reads = sum(int(n.get("Shared Read Blocks", 0)) for n in (root,))
+    # Report only execution-plan structure, no fixture IDs or data. This must
+    # be emitted BEFORE assertions so a failed A3 is actionable on first run.
+    print("V135 PLAN PRECHECK "+json.dumps({
+        "probe":plan_name,"node":root.get("Node Type"),"rows":actual,
+        "execution_ms":round(time_ms,3),"indexes":sorted(indices),
+        "large_table_seq_scans":sorted(seq),"shared_read":buffer_reads,
+        "shared_hit":buffer_hits
+    },sort_keys=True,separators=(",",":")),flush=True)
     assert actual == (1 if plan_name == "receipt_allocation" else 51), (
         plan_name, "missing or unbounded result", actual)
     if plan_name in EXPECTED_INDEXES:
@@ -186,16 +194,30 @@ def benchmark():
              (SELECT count(*) FROM erp_local_lot_action WHERE tenant_id='{tenant}'),
              (SELECT count(*) FROM erp_local_stock_movement WHERE tenant_id='{tenant}')
       """).split("|")))
-    q = f"""
-      SELECT p.id,p.receipt_id,p.warehouse_id,p.product_sku_id,p.bin_id,
-             z.bin_code,b.lot_code,p.placed_quantity,p.remaining_quantity,
-             p.expiry_date,p.created_at
-      FROM erp_local_lot_position p
-      JOIN erp_local_stock_bin z ON z.tenant_id=p.tenant_id AND z.id=p.bin_id
-      JOIN erp_receipt_quality_batch b ON b.tenant_id=p.tenant_id
-                                     AND b.receipt_id=p.receipt_id
-      WHERE p.tenant_id='{tenant}'::uuid AND p.warehouse_id='{warehouse}'::uuid
-    """
+    def positions_query(after=""):
+        # Mirrors V136 Spring: limit/order root position by index, then join
+        # only the bounded source page to bin and quality metadata.
+        return f"""
+          WITH selected AS MATERIALIZED (
+            SELECT p.id,p.tenant_id,p.receipt_id,p.warehouse_id,p.product_sku_id,
+                   p.bin_id,p.placed_quantity,p.remaining_quantity,p.expiry_date,
+                   p.created_at
+            FROM erp_local_lot_position p
+            WHERE p.tenant_id='{tenant}'::uuid
+              AND p.warehouse_id='{warehouse}'::uuid
+              {after}
+            ORDER BY p.created_at DESC,p.id DESC LIMIT 51
+          )
+          SELECT p.id,p.receipt_id,p.warehouse_id,p.product_sku_id,p.bin_id,
+                 z.bin_code,b.lot_code,p.placed_quantity,p.remaining_quantity,
+                 p.expiry_date,p.created_at
+          FROM selected p
+          JOIN erp_local_stock_bin z
+            ON z.tenant_id=p.tenant_id AND z.id=p.bin_id
+          JOIN erp_receipt_quality_batch b
+            ON b.tenant_id=p.tenant_id AND b.receipt_id=p.receipt_id
+          ORDER BY p.created_at DESC,p.id DESC
+        """
     history = f"""
       SELECT id,action_type,source_position_id,source_warehouse_id,source_bin_id,
              destination_warehouse_id,destination_bin_id,destination_position_id,
@@ -206,18 +228,31 @@ def benchmark():
         AND (source_position_id='{position}'::uuid
              OR destination_position_id='{position}'::uuid)
     """
-    expiry = f"""
-      SELECT p.id,b.lot_code,z.bin_code,p.product_sku_id,p.remaining_quantity,
-             p.expiry_date,
-             CASE WHEN p.expiry_date<CURRENT_DATE THEN 'EXPIRED'
-                  ELSE 'NEAR_EXPIRY' END AS urgency
-      FROM erp_local_lot_position p
-      JOIN erp_receipt_quality_batch b
-        ON b.tenant_id=p.tenant_id AND b.receipt_id=p.receipt_id
-      JOIN erp_local_stock_bin z ON z.tenant_id=p.tenant_id AND z.id=p.bin_id
-      WHERE p.tenant_id='{tenant}'::uuid AND p.warehouse_id='{warehouse}'::uuid
-        AND p.remaining_quantity>0 AND p.expiry_date<=CURRENT_DATE+30
-    """
+    def expiry_query(after=""):
+        # Mirrors V136 Spring: eligible expiry index decides the page BEFORE
+        # joining enriched lot code and bin code metadata.
+        return f"""
+          WITH selected AS MATERIALIZED (
+            SELECT p.id,p.tenant_id,p.receipt_id,p.warehouse_id,p.bin_id,
+                   p.product_sku_id,p.remaining_quantity,p.expiry_date
+            FROM erp_local_lot_position p
+            WHERE p.tenant_id='{tenant}'::uuid
+              AND p.warehouse_id='{warehouse}'::uuid
+              AND p.remaining_quantity>0 AND p.expiry_date<=CURRENT_DATE+30
+              {after}
+            ORDER BY p.expiry_date ASC,p.id ASC LIMIT 51
+          )
+          SELECT p.id,b.lot_code,z.bin_code,p.product_sku_id,p.remaining_quantity,
+                 p.expiry_date,
+                 CASE WHEN p.expiry_date<CURRENT_DATE THEN 'EXPIRED'
+                      ELSE 'NEAR_EXPIRY' END AS urgency
+          FROM selected p
+          JOIN erp_receipt_quality_batch b
+            ON b.tenant_id=p.tenant_id AND b.receipt_id=p.receipt_id
+          JOIN erp_local_stock_bin z
+            ON z.tenant_id=p.tenant_id AND z.id=p.bin_id
+          ORDER BY p.expiry_date ASC,p.id ASC
+        """
     allocation = f"""
       SELECT b.receipt_id,b.warehouse_id,b.product_sku_id,b.status,
              COALESCE(q.accepted_quantity,0)::integer AS accepted,
@@ -233,21 +268,21 @@ def benchmark():
       WHERE b.tenant_id='{tenant}'::uuid AND b.receipt_id='{receipt}'::uuid
     """
     probes = {
-        "position_start":q+" ORDER BY p.created_at DESC,p.id DESC LIMIT 51",
-        "position_deep":q+"""
+        "position_start": positions_query(),
+        "position_deep": positions_query("""
           AND (p.created_at,p.id) <
               (now()-interval '10500 seconds','ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid)
-          ORDER BY p.created_at DESC,p.id DESC LIMIT 51""",
+        """),
         "history_start":history+" ORDER BY created_at DESC,id DESC LIMIT 51",
         "history_deep":history+"""
           AND (created_at,id) <
               (now()-interval '180 seconds','ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid)
           ORDER BY created_at DESC,id DESC LIMIT 51""",
-        "expiry_start":expiry+" ORDER BY p.expiry_date ASC,p.id ASC LIMIT 51",
-        "expiry_deep":expiry+"""
+        "expiry_start":expiry_query(),
+        "expiry_deep":expiry_query("""
           AND (p.expiry_date,p.id) >
               (CURRENT_DATE+10,'00000000-0000-0000-0000-000000000000'::uuid)
-          ORDER BY p.expiry_date ASC,p.id ASC LIMIT 51""",
+        """),
         "receipt_allocation":allocation,
     }
     # End of the full-suite fixture pipeline: transaction rollback is also a

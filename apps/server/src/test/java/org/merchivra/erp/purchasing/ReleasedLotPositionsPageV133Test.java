@@ -43,6 +43,11 @@ class ReleasedLotPositionsPageV133Test {
                 String query=inv.getArgument(0);
                 Object[] args=(Object[])inv.getRawArguments()[2];
                 assertTrue(query.contains("AND p.warehouse_id=?"));
+                // V136 guards the actual bounded index-first query plan;
+                // joins must happen outside a 51-row MATERIALIZED CTE.
+                assertTrue(query.contains("WITH selected AS MATERIALIZED"));
+                assertTrue(query.contains("FROM selected p"));
+                assertTrue(query.indexOf("LIMIT ?") < query.indexOf("FROM selected p"));
                 assertTrue(query.contains("ORDER BY p.created_at DESC,p.id DESC LIMIT ?"));
                 assertFalse(query.contains("LIMIT 300"));
                 assertEquals(tenant,args[0]);
