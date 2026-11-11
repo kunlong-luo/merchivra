@@ -197,6 +197,8 @@ jobs:
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='84' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='85' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='86' AND success")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='87' AND success")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM pg_indexes WHERE indexname='erp_local_lot_position_expiry_page_idx'")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM pg_indexes WHERE indexname='erp_local_lot_position_warehouse_recent_idx'")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM pg_indexes WHERE indexname='erp_local_lot_position_receipt_root_idx'")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM pg_indexes WHERE indexname='erp_local_lot_action_destination_recent_idx'")" = "1"
@@ -278,6 +280,7 @@ jobs:
           python3 scripts/smoke_ops_lot_pagination_v95.py
           python3 scripts/smoke_lot_history_v132.py
           python3 scripts/smoke_released_lot_positions_v133.py
+          python3 scripts/smoke_lot_expiry_alerts_v134.py
           python3 scripts/smoke_supplier_case_pages_v96.py
           python3 scripts/smoke_supplier_finance_settlement_pages_v97.py
           python3 scripts/smoke_finance_audit_pages_v98.py

@@ -7,7 +7,7 @@ import type {LocalWarehouse} from './lib/purchasing'
 import {fetchWarehouseStockItem} from './lib/purchasing'
 import {fetchStockBins} from './lib/lot-locations'
 import {fetchLotPositionsPage} from './lib/released-lots'
-import {actLotPosition,fetchLotActionHistoryPage,fetchLotExpiryAlerts,fetchLotLineage,
+import {actLotPosition,fetchLotActionHistoryPage,fetchLotExpiryAlertsPage,fetchLotLineage,
  type LotActionRequest} from './lib/lot-lifecycle'
 
 const labels:Record<LotActionRequest['actionType'],string>={
@@ -22,6 +22,9 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
  const root=['purchasing',tenantId]
  const client=useQueryClient()
  const [warehouseId,setWarehouseId]=useState('')
+ const [expiryCursors,setExpiryCursors]=useState<(string|null)[]>([null])
+ const expiryCursor=expiryCursors.at(-1)??null
+ useEffect(()=>setExpiryCursors([null]),[tenantId,warehouseId])
  const [positionCursors,setPositionCursors]=useState<(string|null)[]>([null])
  const positionCursor=positionCursors.at(-1)??null
  useEffect(()=>setPositionCursors([null]),[tenantId,warehouseId])
@@ -41,8 +44,9 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
  const positions=useQuery({queryKey:[...root,'lot-positions-page',warehouseId,positionCursor],
   queryFn:()=>fetchLotPositionsPage(warehouseId,positionCursor),
   enabled:!!warehouseId,retry:false})
- const alerts=useQuery({queryKey:[...root,'expiry-alerts',warehouseId],
-  queryFn:()=>fetchLotExpiryAlerts(warehouseId),enabled:!!warehouseId,retry:false})
+ const alerts=useQuery({queryKey:[...root,'expiry-alerts-page',warehouseId,expiryCursor],
+  queryFn:()=>fetchLotExpiryAlertsPage(warehouseId,expiryCursor),
+  enabled:!!warehouseId,retry:false})
  const chosen=positions.data?.items.find(p=>p.id===positionId)
  const targetWh=type==='TRANSFER'?destWarehouse:warehouseId
  const bins=useQuery({queryKey:[...root,'bins',targetWh],
@@ -128,16 +132,21 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
     以下预警不会自动扣库存，过期隔离必须由 Owner 人工确认。</p>
    {alerts.isPending?<p className="empty-state">读取库位到期预警…</p>:
     alerts.isError?<p className="setup-error" role="alert">{String(alerts.error)}</p>:
-    !alerts.data?.length?<p className="empty-state">暂无可验证的近 30 天到期库位记录。</p>:
+    !alerts.data?.items.length?<p className="empty-state">本页暂无近 30 天到期库位记录。</p>:
     <div className="table-scroll" role="region" tabIndex={0}>
      <table><thead><tr><th scope="col">批次</th><th scope="col">库位</th>
       <th scope="col">余量</th><th scope="col">到期日</th>
       <th scope="col">状态</th></tr></thead><tbody>
-      {alerts.data.map(a=><tr key={a.positionId}>
+      {(alerts.data?.items??[]).map(a=><tr key={a.positionId}>
        <td>{a.lotCode}</td><td>{a.binCode}</td><td>{a.remainingQuantity}</td>
        <td>{a.expiryDate}</td><td>{a.urgency==='EXPIRED'?'已过期 · 待人工隔离':'近 30 天到期'}</td>
       </tr>)}</tbody></table>
     </div>}
+   {alerts.data&&<CursorPageControls label="V49 过期和近 30 天预警全库记录"
+     page={expiryCursors.length} hasMore={alerts.data.hasMore}
+     nextCursor={alerts.data.nextCursor} busy={alerts.isFetching}
+     onPrev={()=>setExpiryCursors(v=>v.slice(0,-1))}
+     onNext={cursor=>setExpiryCursors(v=>[...v,cursor])}/>}
    <h3>有来源的已上架批次</h3>
    <label htmlFor="v49-position">来源批次库位</label>
    <select id="v49-position" value={positionId} onChange={e=>{

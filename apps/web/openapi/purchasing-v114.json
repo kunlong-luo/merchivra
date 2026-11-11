@@ -6979,6 +6979,63 @@
           }
         }
       }
+    },
+    "/api/v1/purchasing/lot-lifecycle/warehouses/{warehouseId}/expiry-alerts/page": {
+      "get": {
+        "operationId": "listReleasedLotExpiryAlertsPage",
+        "summary": "V134 complete tenant/warehouse expired and next-30-day positions, bounded date/ID cursor",
+        "parameters": [
+          {
+            "name": "warehouseId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 50
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Stable date and ID ascending expiry alert page; not a stock adjustment",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LotExpiryAlertPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid tenant, warehouse or domain cursor or limit"
+          },
+          "401": {
+            "description": "Owner authentication required"
+          },
+          "403": {
+            "description": "Owner role denied"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -12899,6 +12956,41 @@
           "acceptedQuantity",
           "placedQuantity",
           "remainingQuantity"
+        ]
+      },
+      "LotExpiryAlertPage": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/LotExpiryAlert"
+            }
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "pageSize": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100
+          }
+        },
+        "required": [
+          "items",
+          "nextCursor",
+          "hasMore",
+          "pageSize"
         ]
       }
     }

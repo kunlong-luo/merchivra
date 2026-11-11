@@ -46,6 +46,15 @@ public class ReleasedLotLifecycleController {
         HttpServletRequest req,@PathVariable UUID positionId) {
         return service.lineage(access.currentTenant(auth,req),positionId);
     }
+    @GetMapping("/warehouses/{warehouseId}/expiry-alerts/page")
+    public ResponseEntity<LocalKeysetPage.Page<ReleasedLotLifecycleService.ExpiryAlert>>
+        expiryPage(Authentication auth,HttpServletRequest req,
+            @PathVariable UUID warehouseId,
+            @RequestParam(defaultValue="50") int limit,
+            @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.expiryPage(access.currentTenant(auth,req),warehouseId,limit,cursor));
+    }
     @GetMapping("/warehouses/{warehouseId}/expiry-alerts")
     public List<ReleasedLotLifecycleService.ExpiryAlert> expiry(Authentication auth,
         HttpServletRequest req,@PathVariable UUID warehouseId) {
