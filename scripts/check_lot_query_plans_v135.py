@@ -254,7 +254,9 @@ def benchmark():
     # safety assertion. No permanent rows, stock moves, or file artifacts.
     script = f"""
       BEGIN;
-      SET LOCAL statement_timeout='6000ms';
+      -- Synthetic bulk insert / ANALYZE can take longer than a single
+      -- bounded read; constrain individual EXPLAINs separately below.
+      SET LOCAL statement_timeout='30000ms';
       SET LOCAL lock_timeout='2s';
       INSERT INTO erp_local_lot_position(
         id,tenant_id,request_key,receipt_id,warehouse_id,product_sku_id,
@@ -287,6 +289,7 @@ def benchmark():
       ANALYZE erp_local_lot_position;
       ANALYZE erp_local_lot_action;
     """
+    script += "SET LOCAL statement_timeout='6000ms';\n"
     for name, query in probes.items():
         script += (f"SELECT '{MARKER_PREFIX}{name}';\n"
                    f"EXPLAIN (ANALYZE,BUFFERS,FORMAT JSON) {query};\n"
