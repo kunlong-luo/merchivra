@@ -241,7 +241,7 @@ def benchmark():
         "history_start":history+" ORDER BY created_at DESC,id DESC LIMIT 51",
         "history_deep":history+"""
           AND (created_at,id) <
-              (now()-interval '1400 seconds','ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid)
+              (now()-interval '180 seconds','ffffffff-ffff-ffff-ffff-ffffffffffff'::uuid)
           ORDER BY created_at DESC,id DESC LIMIT 51""",
         "expiry_start":expiry+" ORDER BY p.expiry_date ASC,p.id ASC LIMIT 51",
         "expiry_deep":expiry+"""
@@ -277,15 +277,20 @@ def benchmark():
         observed_quantity,reason,actor_user_id,created_at)
       SELECT gen_random_uuid(),'{tenant}'::uuid,gen_random_uuid(),
              'COUNT_OBSERVATION',
-             CASE WHEN i<=1800 THEN '{position}'::uuid ELSE
-                (SELECT id FROM erp_local_lot_position
-                 WHERE tenant_id='{tenant}'::uuid
-                   AND reason='V135 transaction-only query-plan fixture'
-                 ORDER BY id LIMIT 1) END,
+             CASE WHEN i<=240 THEN '{position}'::uuid
+                  ELSE spread.ids[1+((i-1)%100)] END,
              '{warehouse}'::uuid,'{bin_id}'::uuid,0,1,2,
              'V135 nonposting query-plan action','{actor}'::uuid,
              now()-i*interval '1 second'
-      FROM generate_series(1,{ACTION_COUNT}) AS i;
+      FROM generate_series(1,{ACTION_COUNT}) AS i
+      CROSS JOIN (
+        SELECT array_agg(id) AS ids FROM (
+          SELECT id FROM erp_local_lot_position
+          WHERE tenant_id='{tenant}'::uuid
+            AND reason='V135 transaction-only query-plan fixture'
+          ORDER BY id LIMIT 100
+        ) sampled
+      ) spread;
       ANALYZE erp_local_lot_position;
       ANALYZE erp_local_lot_action;
     """
