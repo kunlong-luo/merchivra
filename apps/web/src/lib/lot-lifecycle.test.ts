@@ -1,5 +1,6 @@
 import {afterEach,describe,expect,it,vi} from 'vitest'
-import {actLotPosition,fetchLotActionHistory,fetchLotActionHistoryPage,fetchLotExpiryAlerts} from './lot-lifecycle'
+import {actLotPosition,fetchLotActionHistory,fetchLotActionHistoryPage,
+ fetchLotExpiryAlerts,fetchLotExpiryAlertsPage} from './lot-lifecycle'
 afterEach(()=>vi.unstubAllGlobals())
 const position='11111111-1111-4111-8111-111111111111'
 const warehouse='22222222-2222-4222-8222-222222222222'
@@ -140,6 +141,48 @@ describe('V49 released lot lifecycle API contracts',()=>{
   mocked(()=>({items:[],hasMore:true,nextCursor:null,pageSize:50}))
   await expect(fetchLotActionHistoryPage(position)).rejects.toThrow()
   expect(()=>fetchLotActionHistoryPage('wrong')).toThrow()
+ })
+
+
+ it('V134 browses 325 expired and near-expiry positions over seven pages',async()=>{
+  const items=Array.from({length:325},(_,i)=>({
+   ...expiry,positionId:'00000000-0000-4000-8000-'+(i+1).toString(16).padStart(12,'0'),
+   expiryDate:i<175?'2026-11-01':'2026-11-19',
+   urgency:i<175?'EXPIRED':'NEAR_EXPIRY'
+  }))
+  const calls=mocked(url=>{
+   if(!url.includes('/expiry-alerts/page'))throw Error('Wrong route '+url)
+   const params=new URL(url,'http://127.0.0.1').searchParams
+   expect(params.get('limit')).toBe('50')
+   const offset=Number(params.get('cursor')??'0')
+   const rows=items.slice(offset,offset+50)
+   const more=offset+50<items.length
+   return {items:rows,hasMore:more,nextCursor:more?String(offset+50):null,
+    pageSize:50}
+  })
+  let cursor:string|null=null
+  const seen=new Set<string>()
+  const sizes:number[]=[]
+  for(let page=0;page<7;page++){
+   const response=await fetchLotExpiryAlertsPage(warehouse,cursor)
+   sizes.push(response.items.length)
+   expect(response.hasMore).toBe(page<6)
+   response.items.forEach(x=>seen.add(x.positionId))
+   cursor=response.nextCursor
+  }
+  expect(sizes).toEqual([50,50,50,50,50,50,25])
+  expect(seen.size).toBe(325)
+  expect(cursor).toBeNull()
+  expect(calls).toHaveLength(7)
+  expect(calls.every(c=>c.options?.method===undefined||c.options?.method==='GET')).toBe(true)
+ })
+ it('V134 fails closed on inconsistent cursor, invalid warehouse and oversized pages',async()=>{
+  mocked(()=>({items:[expiry],hasMore:true,nextCursor:null,pageSize:50}))
+  await expect(fetchLotExpiryAlertsPage(warehouse)).rejects.toThrow()
+  expect(()=>fetchLotExpiryAlertsPage('bad')).toThrow()
+  mocked(()=>({items:Array.from({length:101},()=>expiry),
+   hasMore:false,nextCursor:null,pageSize:50}))
+  await expect(fetchLotExpiryAlertsPage(warehouse)).rejects.toThrow()
  })
 
 })
