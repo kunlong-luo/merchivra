@@ -1,3 +1,5 @@
+# V135: one exact-main-SHA full A3 after PG18 12k-position/6k-action
+# EXPLAIN ANALYZE BUFFERS seven-query regression, no production data.
 # V134: one exact-main-SHA full A3 after V49 expiry-alert keysets,
 # PG18 Flyway V87, 325-row real HTTP full navigation and cursor checks.
 # V133: one exact-main-SHA full A3 after V48 325-position paging,
@@ -29,7 +31,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V134-A3-warehouse-expiry-alert-full-keyset' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V135-A3-large-tenant-lot-query-plans' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -60,6 +62,7 @@ on:
           - V132-A3-lot-history-keyset-PG18
           - V133-A3-released-lot-all-positions-exact-allocation
           - V134-A3-warehouse-expiry-alert-full-keyset
+          - V135-A3-large-tenant-lot-query-plans
 
 permissions:
   contents: read
