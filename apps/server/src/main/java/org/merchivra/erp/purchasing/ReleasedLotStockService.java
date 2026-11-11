@@ -127,10 +127,27 @@ public class ReleasedLotStockService {
             }
         }
         args.add(limit+1);
-        List<Position> rows=jdbc.query(POSITION_SQL+"""
-            AND p.warehouse_id=?
+        // V136: limit the indexed position directory BEFORE joining receipt
+        // and bin detail. Otherwise PG18 may scan/sort all positions of one
+        // large tenant+warehouse before applying the 51-row lookahead.
+        List<Position> rows=jdbc.query("""
+            WITH selected AS MATERIALIZED (
+              SELECT p.id,p.tenant_id,p.receipt_id,p.warehouse_id,p.product_sku_id,
+                p.bin_id,p.placed_quantity,p.remaining_quantity,p.expiry_date,p.created_at
+              FROM erp_local_lot_position p
+              WHERE p.tenant_id=? AND p.warehouse_id=?
             """+predicate+"""
-            ORDER BY p.created_at DESC,p.id DESC LIMIT ?
+              ORDER BY p.created_at DESC,p.id DESC LIMIT ?
+            )
+            SELECT p.id,p.receipt_id,p.warehouse_id,p.product_sku_id,
+              p.bin_id,z.bin_code,b.lot_code,p.placed_quantity,
+              p.remaining_quantity,p.expiry_date,p.created_at
+            FROM selected p
+            JOIN erp_local_stock_bin z
+              ON z.tenant_id=p.tenant_id AND z.id=p.bin_id
+            JOIN erp_receipt_quality_batch b
+              ON b.tenant_id=p.tenant_id AND b.receipt_id=p.receipt_id
+            ORDER BY p.created_at DESC,p.id DESC
             """,ReleasedLotStockService::mapPosition,args.toArray());
         return LocalKeysetPage.pack(rows,limit,r->LocalKeysetPage.encode(
             tenant.toString(),warehouse.toString(),r.createdAt(),r.id()));
