@@ -1,3 +1,5 @@
+# V134: one exact-main-SHA full A3 after V49 expiry-alert keysets,
+# PG18 Flyway V87, 325-row real HTTP full navigation and cursor checks.
 # V133: one exact-main-SHA full A3 after V48 325-position paging,
 # exact receipt source allocation and PG18 Flyway V86 true HTTP proof.
 # V132: one exact-main-SHA full A3 on V49 source/destination action history
@@ -27,7 +29,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V133-A3-released-lot-all-positions-exact-allocation' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V134-A3-warehouse-expiry-alert-full-keyset' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -57,6 +59,7 @@ on:
           - V131-A3-Next-V104-confirm-hydration
           - V132-A3-lot-history-keyset-PG18
           - V133-A3-released-lot-all-positions-exact-allocation
+          - V134-A3-warehouse-expiry-alert-full-keyset
 
 permissions:
   contents: read
