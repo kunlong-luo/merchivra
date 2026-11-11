@@ -139,6 +139,21 @@ class LotProofBinaryServiceTest {
         verify(jdbc).update(contains("INSERT INTO erp_local_lot_proof_file_download_audit"),
             any(UUID.class),eq(tenant),eq(proof),eq(fileId),eq(actor),eq(sha));
     }
+    @Test void olderOriginalDownloadMustScanBeforeCommittingAccessAudit() throws Exception {
+        String sha=LotProofBinaryService.digest(PDF);
+        storedFile(PDF,sha);
+        doThrow(new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+            "Private original file failed malware screening"))
+            .when(scanner).scan(org.mockito.AdditionalMatchers.aryEq(PDF));
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY,
+            assertThrows(ResponseStatusException.class,
+                ()->service.download(tenant,actor,proof)).getStatusCode());
+        verify(jdbc,never()).update(contains("INSERT INTO erp_local_lot_proof_file_download_audit"),
+            any(UUID.class),any(UUID.class),any(UUID.class),
+            any(UUID.class),any(UUID.class),anyString());
+        verify(scanner).scan(org.mockito.AdditionalMatchers.aryEq(PDF));
+    }
+
     @Test void auditWriteFailureMustBlockBinaryDelivery() throws Exception {
         storedFile(PDF,LotProofBinaryService.digest(PDF));
         // Unsuccessful write count is fail-closed; a thrown JDBC error also
