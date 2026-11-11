@@ -196,20 +196,28 @@ public class ReleasedLotLifecycleService {
             }
         }
         args.add(limit+1);
+        // V136: let the partial expiry index pick the 51 positions BEFORE
+        // receipt/bin joins. Reapply the stable date+id sort on the small page.
         List<ExpiryAlert> rows=jdbc.query("""
+            WITH selected AS MATERIALIZED (
+              SELECT p.id,p.tenant_id,p.receipt_id,p.warehouse_id,p.bin_id,
+                p.product_sku_id,p.remaining_quantity,p.expiry_date
+              FROM erp_local_lot_position p
+              WHERE p.tenant_id=? AND p.warehouse_id=? AND p.remaining_quantity>0
+                AND p.expiry_date<=CURRENT_DATE+30
+            """+predicate+"""
+              ORDER BY p.expiry_date ASC,p.id ASC LIMIT ?
+            )
             SELECT p.id,b.lot_code,z.bin_code,p.product_sku_id,p.remaining_quantity,
               p.expiry_date,
               CASE WHEN p.expiry_date<CURRENT_DATE THEN 'EXPIRED'
                    ELSE 'NEAR_EXPIRY' END AS urgency
-            FROM erp_local_lot_position p
+            FROM selected p
             JOIN erp_receipt_quality_batch b
               ON b.tenant_id=p.tenant_id AND b.receipt_id=p.receipt_id
             JOIN erp_local_stock_bin z
               ON z.tenant_id=p.tenant_id AND z.id=p.bin_id
-            WHERE p.tenant_id=? AND p.warehouse_id=? AND p.remaining_quantity>0
-              AND p.expiry_date<=CURRENT_DATE+30
-            """+predicate+"""
-            ORDER BY p.expiry_date ASC,p.id ASC LIMIT ?
+            ORDER BY p.expiry_date ASC,p.id ASC
             """,(rs,i)->new ExpiryAlert(rs.getObject("id",UUID.class).toString(),
                 rs.getString("lot_code"),rs.getString("bin_code"),
                 rs.getObject("product_sku_id",UUID.class).toString(),
