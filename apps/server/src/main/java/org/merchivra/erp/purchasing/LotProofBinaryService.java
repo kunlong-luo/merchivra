@@ -101,6 +101,10 @@ public class LotProofBinaryService {
             .stream().findFirst().orElseThrow(LotProofBinaryService::missing);
         if(bytes.length!=meta.sizeBytes() || !digest(bytes).equals(meta.sha256()))
             throw conflict("Private original-file digest/length check failed");
+        // V137: legacy V52 originals predate malware screening, so production
+        // download MUST also require a fresh clean verdict, then durable V129
+        // access audit. An unscanned or infected original never leaves the API.
+        scanner.scan(bytes);
         int recorded=jdbc.update("""
             INSERT INTO erp_local_lot_proof_file_download_audit
               (id,tenant_id,proof_id,file_id,downloaded_by,sha256)
