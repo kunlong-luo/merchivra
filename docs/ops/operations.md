@@ -4,6 +4,8 @@
 **V141 可执行的只读诊断与恢复证明**：参见 [PostgreSQL 18 物理容量、WAL 与恢复检查](../operations/v141-pg18-physical-capacity-wal-backup-restore.md)。它会在隔离 CI 中采集真实 PGDATA 文件系统与 WAL、验证 V68 恢复并输出 JSON/Prometheus 指标；生产 PITR、Alertmanager 收件人及人工演练尚未配置。V140 的原件字节统计不代表数据库磁盘。
 **V142 真实隔离 WAL 时间点恢复 / 内网告警投递**：参见 [V142 PITR 与 Alertmanager 测试边界](../operations/v142-isolated-pitr-alertmanager-acceptance.md)。使用两个完全独立的 PG18 合成容器验证恢复到指定时刻（后续提交不可见），并验证真实 Alertmanager 向 Docker 内网虚构接收器送达。此测试不配置生产 WAL 归档、外部值班接收器或生产审批。
 
+**V143 正式发布前阻断预检**：参见 [目标生产配置+G1/G2/G3 自声明证据审查](../operations/v143-production-release-preflight.md)。预检只读，不验证真实签章，任何情况下都不会自动批准上线。
+
 ## 日常运行
 
 - 显示 API 和 Worker 健康、数据库可用性、每店铺最近一次成功同步、待处理错误、队列积压。
