@@ -1,7 +1,8 @@
 import {afterEach,describe,expect,it,vi} from 'vitest'
 import {fetchProofFileInfo,uploadProofFile,proofDownloadHref,
  fetchSupplierReturnTraces,reportSupplierReturnDispatch,
- reportSupplierReturnReceipt} from './lot-evidence-files'
+ reportSupplierReturnReceipt,fetchProofGovernance,fetchProofCapacity,
+ commandProofGovernance} from './lot-evidence-files'
 afterEach(()=>vi.unstubAllGlobals())
 const proof='11111111-1111-4111-8111-111111111111'
 const fileId='22222222-2222-4222-8222-222222222222'
@@ -79,4 +80,49 @@ describe('V52 private evidence original upload and supplier return contracts',()
   expect(posts[1].url).toContain('/'+traceId+'/receipt')
   expect(JSON.parse(String(posts[1].options.body)).receivedQuantity).toBe(5)
  })
+
+ it('V138 reads tenant capacity without binary bytes or unknown total',async()=>{
+  const calls=mock(url=>url.endsWith('/capacity')?{
+   fileCount:5,originalBytes:1572864,heldFiles:1,
+   retentionUnsetFiles:4,pendingRetentionFiles:2,
+   reviewedDisposalFiles:0
+  }:meta)
+  const result=await fetchProofCapacity()
+  expect(result.fileCount).toBe(5)
+  expect(result.originalBytes).toBe(1572864)
+  expect(calls[0].url).toBe('/api/v1/purchasing/lot-proof-governance/capacity')
+  expect(calls[0].options.cache).toBe('no-store')
+  expect(calls[0].options.credentials).toBe('same-origin')
+  expect(calls[0].options.method).toBe('GET')
+  expect(JSON.stringify(result)).not.toContain('bytes:')
+ })
+ it('V138 legal holds and review-only disposal use CSRF-protected POST, never DELETE',async()=>{
+  const state={proofId:proof,fileId,legalHold:true,
+   holdSetBy:actor,holdReleaseRequestedBy:null,
+   retentionUntil:null,retentionProposedUntil:null,retentionProposedBy:null,
+   disposalState:'NONE',disposalRequestedBy:null,disposalReviewedBy:null}
+  const calls=mock(()=>state)
+  expect((await fetchProofGovernance(proof)).legalHold).toBe(true)
+  const result=await commandProofGovernance(proof,{
+   action:'PLACE_HOLD',reason:'Litigation request received from approved internal team'
+  })
+  expect(result.disposalState).toBe('NONE')
+  const post=calls.find(x=>x.options.method==='POST')
+  expect(post?.url).toBe('/api/v1/purchasing/lot-proof-governance/'+proof+'/commands')
+  expect(post?.options.headers).toMatchObject({'X-CSRF-TOKEN':'valid-v52-csrf-token'})
+  expect(JSON.parse(String(post?.options.body)).action).toBe('PLACE_HOLD')
+  expect(calls.some(x=>x.options.method==='DELETE')).toBe(false)
+ })
+ it('V138 fail-closes contradictory capacity and malformed governance state',async()=>{
+  mock(()=>({fileCount:1,originalBytes:10,heldFiles:2,
+   retentionUnsetFiles:0,pendingRetentionFiles:0,reviewedDisposalFiles:0}))
+  await expect(fetchProofCapacity()).rejects.toThrow()
+  mock(()=>({proofId:proof,fileId,legalHold:true,holdSetBy:actor,
+   holdReleaseRequestedBy:null,retentionUntil:null,retentionProposedUntil:null,
+   retentionProposedBy:null,disposalState:'DELETED',
+   disposalRequestedBy:null,disposalReviewedBy:null}))
+  await expect(fetchProofGovernance(proof)).rejects.toThrow()
+  expect(()=>fetchProofGovernance('not-a-uuid')).toThrow()
+ })
+
 })
