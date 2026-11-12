@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Merchivra verified local FBA inbound API
  * Owner Session; MOCK/MANUAL_UNVERIFIED evidence only. No Amazon writes.
- * OpenAPI spec version: 92.0.0
+ * OpenAPI spec version: 145.0.0
  */
 
 export interface Resolve {

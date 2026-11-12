@@ -1,6 +1,6 @@
 import {afterEach,describe,expect,it,vi} from 'vitest'
 import {purchaseLinkSchema,getPurchaseLinks,getPurchaseCandidates,
- proposePurchaseLink,confirmPurchaseLink} from './fba-purchase-links'
+ proposePurchaseLink,confirmPurchaseLink,revokePurchaseLink} from './fba-purchase-links'
 
 afterEach(()=>vi.unstubAllGlobals())
 describe('V75 explicit local FBA-to-PO/ASN identity proof',()=>{
@@ -79,4 +79,58 @@ describe('V75 explicit local FBA-to-PO/ASN identity proof',()=>{
   expect(JSON.parse(String(posted?.options?.body))).toEqual({
    reason:'V75 second Owner examined identities'})
  })
+ it('revokes using the generated route, same-origin Session and CSRF',async()=>{
+  const requests:Array<{url:string;options?:RequestInit}>=[]
+  vi.stubGlobal('fetch',vi.fn(async(url:string,options?:RequestInit)=>{
+   requests.push({url,options})
+   if(url.includes('/auth/csrf'))return Response.json({
+    headerName:'X-CSRF-TOKEN',token:'v145-fictional-csrf'})
+   return Response.json({...link,state:'REVOKED'})
+  }))
+  expect((await revokePurchaseLink(mp,shipment,link.id,'Source identity withdrawn')).state)
+   .toBe('REVOKED')
+  const posted=requests.find(x=>x.url.endsWith('/revoke'))
+  expect(posted?.url).toBe('/api/v1/fba/marketplaces/'+mp+'/shipments/'+shipment+
+   '/purchase-links/'+link.id+'/revoke')
+  expect(posted?.options).toMatchObject({method:'POST',credentials:'same-origin',cache:'no-store'})
+  expect(new Headers(posted?.options?.headers).get('X-CSRF-TOKEN')).toBe('v145-fictional-csrf')
+  expect(JSON.parse(String(posted?.options?.body))).toEqual({reason:'Source identity withdrawn'})
+ })
+ it('rejects every malformed dynamic path before requesting CSRF or business data',async()=>{
+  const fetch=vi.fn()
+  vi.stubGlobal('fetch',fetch)
+  const body={requestKey:mp,inboundLineId:line,purchaseOrderLineId:po,
+   asnId:null,proofReference:'V145 local identity reference'}
+  for(const invalid of ['../other','not-a-uuid',mp+'?tenantId='+po]){
+   await expect(getPurchaseLinks(invalid,shipment)).rejects.toThrow()
+   await expect(getPurchaseLinks(mp,invalid)).rejects.toThrow()
+   await expect(getPurchaseCandidates(mp,shipment,invalid)).rejects.toThrow()
+   await expect(proposePurchaseLink(mp,invalid,body)).rejects.toThrow()
+   await expect(confirmPurchaseLink(mp,shipment,invalid,'Independent local review')).rejects.toThrow()
+   await expect(revokePurchaseLink(invalid,shipment,link.id,'Local evidence withdrawn')).rejects.toThrow()
+  }
+  expect(fetch).not.toHaveBeenCalled()
+ })
+ it.each([401,403,409])('preserves HTTP %i failure and sends no retry or second write',async(status)=>{
+  const fetch=vi.fn(async(url:string)=>url.includes('/auth/csrf')?
+   Response.json({headerName:'X-CSRF-TOKEN',token:'v145-fictional-csrf'}):
+   Response.json({state:'CONFIRMED'},{status}))
+  vi.stubGlobal('fetch',fetch)
+  await expect(confirmPurchaseLink(mp,shipment,link.id,'Independent local review'))
+   .rejects.toThrow(status===401?'未登录':status===403?'没有操作权限':'业务状态变化')
+  expect(fetch.mock.calls.filter(([url])=>url.endsWith('/confirm'))).toHaveLength(1)
+ })
+ it('rejects truncated-contract overflow and invalid provenance after generated reads',async()=>{
+  vi.stubGlobal('fetch',vi.fn(async()=>Response.json(Array.from({length:201},()=>link))))
+  await expect(getPurchaseLinks(mp,shipment)).rejects.toThrow()
+  vi.stubGlobal('fetch',vi.fn(async()=>Response.json([{...link,shipmentOrigin:'LIVE'}])))
+  await expect(getPurchaseLinks(mp,shipment)).rejects.toThrow()
+  vi.stubGlobal('fetch',vi.fn(async()=>Response.json([{
+   purchaseOrderId:po,purchaseOrderLineId:po,orderNumber:'PO-V145',
+   supplierName:'Fictional supplier',orderedQuantity:20,localReceivedQuantity:-1,
+   asnId:null,asnStatus:null,asnQuantity:null,asnReceivedQuantity:0
+  }])))
+  await expect(getPurchaseCandidates(mp,shipment,line)).rejects.toThrow()
+ })
+
 })

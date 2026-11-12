@@ -1,5 +1,6 @@
 import {z} from 'zod'
-import {merchivraFetch} from './merchivra-mutator'
+import {listFbaPurchaseLinks,listFbaPurchaseCandidates,proposeFbaPurchaseLink,
+ confirmFbaPurchaseLink,revokeFbaPurchaseLink} from '../generated/fba-inbound'
 
 const uuid=z.string().uuid()
 const nullableId=uuid.nullable()
@@ -30,30 +31,21 @@ export type ProposePurchaseLink={
  requestKey:string;inboundLineId:string;purchaseOrderLineId:string;
  asnId:string|null;proofReference:string
 }
-const root=(marketplace:string,shipment:string)=>
- '/api/v1/fba/marketplaces/'+encodeURIComponent(marketplace)+
- '/shipments/'+encodeURIComponent(shipment)+'/purchase-links'
-
-/** Shared Orval Fetch mutator handles same-origin Session, CSRF, errors and no-store. */
-async function read<T>(url:string,schema:z.ZodType<T>):Promise<T>{
- const r=await merchivraFetch<{data:unknown}>(url,{method:'GET'})
- return schema.parse(r.data)
-}
-async function write<T>(url:string,payload:unknown,schema:z.ZodType<T>):Promise<T>{
- const r=await merchivraFetch<{data:unknown}>(url,{
-  method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
- return schema.parse(r.data)
-}
-export const getPurchaseLinks=(marketplace:string,shipment:string)=>
- read(root(marketplace,shipment),z.array(purchaseLinkSchema).max(200))
-export const getPurchaseCandidates=(marketplace:string,shipment:string,line:string)=>
- read(root(marketplace,shipment)+'/lines/'+encodeURIComponent(line)+'/candidates',
-  z.array(candidateSchema).max(100))
-export const proposePurchaseLink=(marketplace:string,shipment:string,body:ProposePurchaseLink)=>
- write(root(marketplace,shipment),body,purchaseLinkSchema)
-export const confirmPurchaseLink=(marketplace:string,shipment:string,id:string,reason:string)=>
- write(root(marketplace,shipment)+'/'+encodeURIComponent(id)+'/confirm',
-  {reason},purchaseLinkSchema)
-export const revokePurchaseLink=(marketplace:string,shipment:string,id:string,reason:string)=>
- write(root(marketplace,shipment)+'/'+encodeURIComponent(id)+'/revoke',
-  {reason},purchaseLinkSchema)
+/** V145: actual Springdoc/Orval operations, with UUID paths and Zod responses.
+ * Legacy limits remain 200 links / 100 candidates; neither is a full history.
+ */
+export const getPurchaseLinks=async(marketplace:string,shipment:string)=>
+ z.array(purchaseLinkSchema).max(200).parse((await listFbaPurchaseLinks(
+  uuid.parse(marketplace),uuid.parse(shipment))).data)
+export const getPurchaseCandidates=async(marketplace:string,shipment:string,line:string)=>
+ z.array(candidateSchema).max(100).parse((await listFbaPurchaseCandidates(
+  uuid.parse(marketplace),uuid.parse(shipment),uuid.parse(line))).data)
+export const proposePurchaseLink=async(marketplace:string,shipment:string,body:ProposePurchaseLink)=>
+ purchaseLinkSchema.parse((await proposeFbaPurchaseLink(
+  uuid.parse(marketplace),uuid.parse(shipment),body)).data)
+export const confirmPurchaseLink=async(marketplace:string,shipment:string,id:string,reason:string)=>
+ purchaseLinkSchema.parse((await confirmFbaPurchaseLink(
+  uuid.parse(marketplace),uuid.parse(shipment),uuid.parse(id),{reason})).data)
+export const revokePurchaseLink=async(marketplace:string,shipment:string,id:string,reason:string)=>
+ purchaseLinkSchema.parse((await revokeFbaPurchaseLink(
+  uuid.parse(marketplace),uuid.parse(shipment),uuid.parse(id),{reason})).data)

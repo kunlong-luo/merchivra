@@ -23,7 +23,11 @@ repositories {
 
 dependencies {
     // Generated official Amazon Selling Partner API SDK. No live calls by default.
-    implementation 'software.amazon.spapi:spapi-sdk:1.13.0'
+    implementation('software.amazon.spapi:spapi-sdk:1.13.0') {
+        // SDK's legacy annotation JAR duplicates Jakarta's io.swagger.v3 classes.
+        // Springdoc supplies the compatible Jakarta API; keep one Schema version.
+        exclude group: 'io.swagger.core.v3', module: 'swagger-annotations'
+    }
 
     implementation 'org.springframework.boot:spring-boot-starter-webmvc'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'

@@ -1,5 +1,6 @@
 package org.merchivra.erp.fba;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
@@ -24,18 +25,25 @@ public class FbaPurchaseLinkService {
     private final JdbcTemplate jdbc;
     public FbaPurchaseLinkService(JdbcTemplate jdbc){this.jdbc=jdbc;}
     public record Propose(UUID requestKey,UUID inboundLineId,UUID purchaseOrderLineId,
-                          UUID asnId,String proofReference) {}
+                          @Schema(types={"string","null"},format="uuid") UUID asnId,String proofReference) {}
     public record Candidate(String purchaseOrderId,String purchaseOrderLineId,
         String orderNumber,String supplierName,int orderedQuantity,
-        long localReceivedQuantity,String asnId,String asnStatus,
-        Integer asnQuantity,long asnReceivedQuantity) {}
+        long localReceivedQuantity,
+        @Schema(types={"string","null"}) String asnId,
+        @Schema(types={"string","null"}) String asnStatus,
+        @Schema(types={"integer","null"},format="int32") Integer asnQuantity,long asnReceivedQuantity) {}
     public record Linked(String id,String shipmentId,String inboundLineId,
         String sellerSku,String shipmentState,String shipmentOrigin,int inboundPlannedQuantity,
         long inboundReportedReceived,String purchaseOrderId,String purchaseOrderLineId,
         String orderNumber,String purchaseState,int poOrderedQuantity,
-        long localPoReceived,String asnId,String asnStatus,Integer asnQuantity,
-        Long asnLocalReceived,String state,String proofReference,
-        String proposedBy,String confirmedBy,String createdAt,String confirmedAt) {}
+        long localPoReceived,
+        @Schema(types={"string","null"}) String asnId,
+        @Schema(types={"string","null"}) String asnStatus,
+        @Schema(types={"integer","null"},format="int32") Integer asnQuantity,
+        @Schema(types={"integer","null"},format="int64") Long asnLocalReceived,
+        String state,String proofReference,String proposedBy,
+        @Schema(types={"string","null"}) String confirmedBy,String createdAt,
+        @Schema(types={"string","null"}) String confirmedAt) {}
     public record Changed(String id,String state) {}
     private static ResponseStatusException bad(String value){
         return new ResponseStatusException(HttpStatus.BAD_REQUEST,value);

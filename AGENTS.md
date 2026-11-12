@@ -895,3 +895,9 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - A browser regression must wait for the exact table under test before
   checking its rows; generic ancestor tbody probes can race unrelated
   panels, as happened after V106's main merge.
+
+
+## V145 · FBA 采购来源合同（2026-11-12）
+
+- V75 本地 PO/ASN 关联五项接口使用真实 Springdoc/Orval；FBA 入仓合同共 15 项操作。复用既有 Session/CSRF/no-store，路径 UUID 与响应 Zod 不得去除；业务双人审核、幂等和事务规则不变。
+- 关联历史 `LIMIT 200`、候选 `LIMIT 100` 尚未分页，不能因合同生成宣称全库查询或关闭 #62；见 [范围与测试](docs/inventory/fba-purchase-link-v75.md)。#63 Next 正式切换和 #104 目标生产 G1/G2/G3 独立验收，Amazon 本地授权仍由维护者最后执行。

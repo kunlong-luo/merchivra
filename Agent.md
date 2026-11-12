@@ -653,3 +653,9 @@ Amazon 官方角色文档：https://developer-docs.amazon.com/sp-api/docs/orders
 - Orval 8.44.0 已实际从 npm registry 安装、锁定并生成 apps/web/src/generated/finance-profits.ts 和 models/Query Hooks。V61/V64 请求已调用生成方法。GET 生成 Query、POST 生成 Mutation，不手写重复 fetch、DTO 和 Hooks。
 - 安全 mutator 采用 /api/v1/、same-origin Session、写请求 CSRF、no-store、统一错误、{data,status,headers}；财务 Zod 仍守住金额 NULL、审核和未验证状态。
 - CI npm run api:check 检测生成漂移含未跟踪文件，PG18 实际导出与提交契约逐字节对比；一次性可写 main 的初始化工作流已移除。后续接口按模块渐进迁移，见 docs/architecture/mature-tool-first-api-client-2026-11-01.md。
+
+
+## V145 · FBA 采购来源合同（2026-11-12）
+
+- V75 本地 PO/ASN 关联五项接口使用真实 Springdoc/Orval；FBA 入仓合同共 15 项操作。复用既有 Session/CSRF/no-store，路径 UUID 与响应 Zod 不得去除；业务双人审核、幂等和事务规则不变。
+- 关联历史 `LIMIT 200`、候选 `LIMIT 100` 尚未分页，不能因合同生成宣称全库查询或关闭 #62；见 [范围与测试](docs/inventory/fba-purchase-link-v75.md)。#63 Next 正式切换和 #104 目标生产 G1/G2/G3 独立验收，Amazon 本地授权仍由维护者最后执行。

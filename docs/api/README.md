@@ -10,6 +10,8 @@
 - **真实 Amazon Seller/Ads 生产出站与写入依旧默认关闭**；`/api/v1/demo/*` 是单独的合成 Mock 命名空间，见 [Mock 演示指南](../demo.md)。已有 OAuth/Worker 代码不代表真实 Amazon 授权完成。
 - 功能冻结前应按 [V108 MVP 计划](../roadmap/mvp-freeze-release-v108.md) 与 [P0 采购容量审计](../testing/p0-purchasing-read-cap-audit-v108.md) 检查每个实际 Controller/Orval 约束；G1/G2/G3 仍需审批。
 
+**V145 来源合同补齐（2026-11-12）**：FBA 货件/采购 PO/ASN 的五条现有本地关联读写接口已纳入 `fba-inbound.json`，该模块共 15 个 operationId；[合同、测试与仍存在的 100/200 条容量限制](../inventory/fba-purchase-link-v75.md)。这不表示整个 FBA API 或全库分页已经完成。
+
 ## 契约设计原则
 
 - 所有业务路径基于 `/api/v1`；只读操作不暴露 Amazon SP-API token、买家 PII 或未验证的租户 ID。
