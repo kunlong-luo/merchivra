@@ -181,7 +181,9 @@ jobs:
             docker inspect --format '{{json .State.Health}}' "$next_container"
             exit 1
           fi
-          for path in / /orders /purchasing /finance /ops /team /sync; do
+          # V144: all 11 real Next App Router screens, not a seven-route
+          # sample. The V101 real-session test then checks no SSR user leak.
+          for path in / /core /orders /catalog /inventory /purchasing /ops /finance /connections /team /sync; do
             status=$(curl --silent --output /tmp/v122-next-page.html \
               --write-out '%{http_code}' "http://127.0.0.1:3001$path")
             test "$status" = 200
