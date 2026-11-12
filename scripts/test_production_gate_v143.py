@@ -57,7 +57,7 @@ def evidence():
             controls[code]={
                 "source":"operator_attested_target",
                 "status":"verified",
-                "evidenceSha256":format(i+1000, "064x"),
+                "evidenceSha256":format(len(controls)+1000, "064x"),
                 "testedAt":TS,
                 "attestedBy":f"{group.lower()}-operator-{i}",
             }
@@ -164,6 +164,22 @@ class V143ProductionGateTests(unittest.TestCase):
             wrong["controls"]["production_wal_archiving_pitr_restore"]["source"]=bad
             self.assertIn("production_wal_archiving_pitr_restore",
                 inspect(compose(),wrong,SHA,NOW)["blockedChecks"]["operatorEvidence"])
+
+    def test_replayed_document_digest_or_single_attester_for_entire_gate_rejected(self):
+        e=evidence()
+        a=e["controls"]["encrypted_offsite_physical_backup_target"]["evidenceSha256"]
+        e["controls"]["production_wal_archiving_pitr_restore"]["evidenceSha256"]=a
+        r=inspect(compose(),e,SHA,NOW)
+        self.assertEqual(r["status"],"BLOCKED")
+        self.assertIn("production_wal_archiving_pitr_restore",
+                      r["blockedChecks"]["operatorEvidence"])
+        e=evidence()
+        for code in CONTROL_GROUPS["G3_OPERATIONS_RELEASE"]:
+            e["controls"][code]["attestedBy"]="g3-single-operator"
+        r=inspect(compose(),e,SHA,NOW)
+        self.assertEqual(r["status"],"BLOCKED")
+        self.assertIn("external_pager_delivered_and_acknowledged",
+                      r["blockedChecks"]["operatorEvidence"])
 
     def test_expired_or_future_evidence_but_no_default_green(self):
         for ts in ("2026-10-01T12:00:00Z","2026-11-13T12:00:00Z",
