@@ -22,13 +22,15 @@ dir="$(mktemp -d /tmp/merchivra-v142-pitr-XXXXXXXX)"
 src="v142-pitr-src-$$"
 dst="v142-pitr-restore-$$"
 cleanup() {
-  docker rm -f -v "$dst" "$src" >/dev/null 2>&1 || true
-  rm -rf -- "$dir"
+  docker rm -f -v "$dst" >/dev/null 2>&1 || true
+  docker exec -u root "$src" sh -c 'chown -R '\"$(id -u):$(id -g)\"' /backupdata /archive' >/dev/null 2>&1 || true
+  docker rm -f -v "$src" >/dev/null 2>&1 || true
+  rm -rf -- "$dir" || true
 }
 trap cleanup EXIT
 mkdir -p "$dir/data" "$dir/archive"
 # No published ports; the only SQL commands are inside temporary containers.
-docker run -d --name "$src" \
+docker run -d --name "$src" --network none \
   -e POSTGRES_PASSWORD=ci_disposable_v142_pitr_only \
   -v "$dir/data:/backupdata" -v "$dir/archive:/archive" \
   postgres:18-alpine \
@@ -36,7 +38,7 @@ docker run -d --name "$src" \
   -c 'archive_command=cp %p /archive/%f' \
   -c archive_timeout=1s > /dev/null
 docker exec -u root "$src" sh -c \
-  'chown postgres:postgres /archive /backupdata && chmod 700 /archive /backupdata'
+  'mkdir -p /backupdata/18 && chown postgres:postgres /archive /backupdata /backupdata/18 && chmod 700 /archive /backupdata /backupdata/18'
 sql_source() {
   docker exec -u postgres "$src" psql -X -q -A -t -v ON_ERROR_STOP=1 \
     -U postgres -d postgres -c "$1"
@@ -54,8 +56,8 @@ sql_source "INSERT INTO public.v142_pitr_marker VALUES (1,'pre-backup')" >/dev/n
 docker exec -u postgres -e PGPASSWORD=ci_disposable_v142_pitr_only \
   "$src" pg_basebackup -h 127.0.0.1 -U postgres -D /backupdata/18/docker \
   -Fp -Xs -c fast > /dev/null
-test -s "$dir/data/18/docker/PG_VERSION"
-test "$(cat "$dir/data/18/docker/PG_VERSION")" = 18
+docker exec -u postgres "$src" sh -c \
+  'test -s /backupdata/18/docker/PG_VERSION && grep -qx 18 /backupdata/18/docker/PG_VERSION'
 
 sql_source "INSERT INTO public.v142_pitr_marker VALUES (2,'before-target')" >/dev/null
 # Server clock *after commit 2* is our actual requested recovery_target_time.
@@ -71,7 +73,7 @@ last_wal="$(sql_source 'SELECT pg_walfile_name(pg_switch_wal())')"
 [[ "$last_wal" =~ ^[0-9A-F]{24}$ ]] || { echo 'Invalid WAL filename' >&2; exit 1; }
 archived=false
 for _ in $(seq 1 50); do
-  if [[ -s "$dir/archive/$last_wal" ]]; then archived=true; break; fi
+  if docker exec -u postgres "$src" test -s "/archive/$last_wal" >/dev/null 2>&1; then archived=true; break; fi
   sleep 1
 done
 [[ "$archived" == true ]] || {
@@ -80,13 +82,9 @@ done
 }
 # PostgreSQL recovery reads archived WAL and pauses at an actual timestamp.
 # pg_wal_replay_resume is NOT invoked and source data is NEVER modified.
-cat >> "$dir/data/18/docker/postgresql.auto.conf" <<EOF
-restore_command = 'cp /archive/%f %p'
-recovery_target_time = '$target'
-recovery_target_action = 'pause'
-recovery_target_inclusive = 'true'
-EOF
-touch "$dir/data/18/docker/recovery.signal"
+# Backup directory is owned by container's postgres UID (0700); do not
+# weaken filesystem permissions to modify it from the host runner.
+docker exec -u root "$src" sh -c "printf \"\\nrestore_command = 'cp /archive/%%f %%p'\\nrecovery_target_time = '%s'\\nrecovery_target_action = 'pause'\\nrecovery_target_inclusive = 'true'\\n\" '$target' >> /backupdata/18/docker/postgresql.auto.conf && touch /backupdata/18/docker/recovery.signal && chown postgres:postgres /backupdata/18/docker/postgresql.auto.conf /backupdata/18/docker/recovery.signal"
 docker run -d --name "$dst" --network none \
   -e POSTGRES_PASSWORD=ci_disposable_v142_pitr_only \
   -v "$dir/data:/var/lib/postgresql" -v "$dir/archive:/archive:ro" \
