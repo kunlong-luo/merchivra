@@ -12,7 +12,7 @@
 - GET /purchase-links，GET /purchase-links/lines/{inboundLineId}/candidates 当前 Owner Session / ACTIVE tenant 下查询证据及候选。
 - POST /purchase-links/{linkId}/confirm 或 /revoke 带 10–200 字符复核原因。提出人不能确认自己提出的链接。不同 Owner 才能把状态 PROPOSED 改 CONFIRMED；待审核的提议可撤销，并保留历史，重新提交需要新请求密钥。第二 Owner 复核只是**人工身份证明**。
 - 仅 PROPOSED 可以确认/撤销；CONFIRMED 不可重写、发运后所有关联不可更改。同一货件行至多一个有效链接，历史 REVOKED 行继续可查。修改以 FOR UPDATE 锁住货件父行并重新锁定读当前证明，避免并发第二 Owner 重复变更与重复审计。原 V65 dispatch 在任何 PROPOSED 关联尚未审核时返回 409；没有关联的原 V65 货件流程保持兼容。
-- 原 V65 9 个操作与 Orval 生成为既有固定契约：scripts/normalize-fba-openapi.mjs 排除新 purchase-links 路由和新 DTO，保证老客户端生成稳定。V75 前端复用同一个 merchivraFetch 安全传输（Session、CSRF、no-store、站内相对路径）并以 Zod 校验扩展响应，不引入另一套鉴权或直接修改 generated 文件。
+- **V75 历史实现**曾刻意在 Orval 中排除 purchase-links。**V145（2026-11-12）已将以下五条现有 Controller 接入真实 Springdoc/Orval 生成链**，复用 `merchivraFetch` 的 Session、CSRF、no-store 和 Zod；不再手写关联请求路径/JSON transport。
 
 ## 数量证据与不可“自动对账”
 
@@ -28,3 +28,21 @@ scripts/smoke_fba_purchase_links_v75.py 使用一次性 127.0.0.1 PostgreSQL18�
 ## 未实现
 
 尚无可靠可验证的 Amazon FBA Shipment ID 与本地货件 ID 官方对照，也无承运商 POD/实际 FBA Receipts 读取，无法声明“实际在途”或“已由 Amazon 签收”。未来必须独立建立 Seller 授权、真实只读 Shipment API、事件源签名/版本/时间链与补偿机制，并取得用户本地权限确认。不得直接把本阶段的本地证明加入 Amazon 可售或自动采购净需求。
+
+## V145 · 来源关联 API 合同收尾（2026-11-12）
+
+| 现有操作 | 稳定 operationId |
+| --- | --- |
+| GET purchase-links | `listFbaPurchaseLinks` |
+| GET purchase-links/lines/{lineId}/candidates | `listFbaPurchaseCandidates` |
+| POST purchase-links | `proposeFbaPurchaseLink` |
+| POST purchase-links/{linkId}/confirm | `confirmFbaPurchaseLink` |
+| POST purchase-links/{linkId}/revoke | `revokeFbaPurchaseLink` |
+
+`apps/web/openapi/fba-inbound.json` 由真实 Spring MVC `/v3/api-docs/fba-inbound` 导出，经 `scripts/normalize-fba-openapi.mjs` 筛选后共 **15 项操作**（原 10 + 关联 5）。SDK 的旧 `swagger-annotations` 与 Springdoc 的 `swagger-annotations-jakarta` 含重复类，遇到字段 `@Schema` 时会出现 `NoSuchMethodError: Schema.schemaResolution()`；Gradle 仅排除 SDK 传递依赖中的旧注解包，继续使用 Springdoc 提供的 Jakarta 注解，SDK 版本不变。归一化器核对唯一 operationId 和 DTO 引用；生成产物由 `npm run api:generate` 更新，`npm run api:check` 检查漂移。可选 ASN、待审核确认人/时间在源 DTO 明确保留 OpenAPI 3.1 的 `null`，避免生成类型把未知值压成缺失或零。动态 Marketplace、shipment、line 和 link 路径均先经 UUID 校验，再交由生成函数；不接受浏览器 tenantId。服务端 `currentTenant`、独立 Owner、事务锁、幂等键、来源容量和 CSRF 仍由原有实现负责。
+
+`FbaPurchaseLinkOpenApiV145Test` 在一次性随机环回端口启动真实 Springdoc，关闭 Flyway 并模拟首次管理员 bootstrap，核对五项操作、UUID 路径、隐藏认证参数及请求/响应形状；**不是 PG18 集成测试**。输出 `apps/server/build/fba-openapi-v145.json` 可供本地归一化。Vitest 覆盖生成请求的 CSRF、撤销、401/403/409 单次写入、非法路径零请求、来源字段与 NULL 校验。完整 PG18 的现有 V75 真 HTTP 冒烟和合同逐字节检查仍在 `full_suite` 执行，结果须绑定新提交核实。
+
+**仍未解决的容量断点**：`links()` 的 `LIMIT 200`、`candidates()` 的 `LIMIT 100` 继续存在；生成客户端不等于全库分页。超限旧来源仍可能无法在页面选择，Issue #62 继续开放，下一批应补稳定全排序的服务器游标及页面接入。其他 FBA 对账/异常接口也不能因此称为全部已接入 Orval。Next 正式切流 #63、目标环境人工签署 #104 与 Amazon 本地授权均独立保留。
+
+本轮已基于 V144 main `299d7215abda2f0daa08ee42327c4c7d1febbd10` 重放，保留会话缓存隔离和 11 条 Next 路由回归。本地验证：Java 25 Gradle **567 项全部通过**（受限容器以显式 Mockito agent 运行），Vitest **81 文件 / 354 项通过**，React/Next 类型检查及 Vite build 通过；真实 Springdoc 导出归一化通过，移除操作/删除引用 DTO 两个负例均拒绝。以上不包含本地 PG18/Compose/Chromium；最终候选在 GitHub 的同 SHA 完整 A3 结果应另行核实。合并本次 milestone 标记变更会触发一次完整合成回归，不授予生产发布许可。
