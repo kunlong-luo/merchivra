@@ -259,7 +259,9 @@ def prometheus(report: dict[str,Any]) -> str:
     result.extend(["# TYPE merchivra_pg18_ops_observation_known gauge",
                    f"merchivra_pg18_ops_observation_known {int(known)}",
                    "# TYPE merchivra_pg18_ops_critical gauge",
-                   f"merchivra_pg18_ops_critical {int(not known or any(c['status'] in ('CRITICAL','BLOCKED') for c in report.get('checks',[])))}"])
+                   f"merchivra_pg18_ops_critical {int(not known or any(c['status'] in ('CRITICAL','BLOCKED') for c in report.get('checks',[])))}",
+                   "# TYPE merchivra_pg18_ops_warning gauge",
+                   f"merchivra_pg18_ops_warning {int(any(c['status']=='WARNING' for c in report.get('checks',[])))}"])
     if "observedAt" in report:
         result.extend(["# TYPE merchivra_pg18_ops_observed_at_seconds gauge",
                    f"merchivra_pg18_ops_observed_at_seconds {int(dt.datetime.fromisoformat(report['observedAt'].replace('Z','+00:00')).timestamp())}"])
