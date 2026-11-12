@@ -402,7 +402,8 @@ jobs:
           assert a['productionApproved'] is False
           print('PASS V142 A3: real local PG18 timestamp PITR + internal Alertmanager delivery; production blocked')
           PY
-          rm -f -- "$v142_pitr" "$v142_alert"
+          # Leave only sanitized JSON evidence for 7-day Actions artifact.
+          # Never upload basebackup, archived WAL or raw webhook payload.
           echo "PostgreSQL 18 / Flyway / actual finance + FBA OpenAPI and local mock chain verified"
           kill "$app_pid" 2>/dev/null || true
       - name: Preserve V141 disposable disk/WAL/PITR-not-ready metrics (no credentials)
