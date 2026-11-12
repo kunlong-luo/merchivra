@@ -27,11 +27,14 @@ describe('V144 session boundary: all business tenant data must vanish',()=>{
    ['api','ping'],
   ] as const
   for(const key of cached)q.setQueryData([...key],{owner:'former-account'})
+  // V5 exposes Mutation.execute(), not the internal setState().
+  // Create a real, completed mutation to check that private results vanish.
   const mutation=q.getMutationCache().build(q,{
-   mutationKey:['purchasing',tenant,'dangerous-post']
+   mutationKey:['purchasing',tenant,'dangerous-post'],
+   mutationFn:async()=>({owner:'former-account'})
   })
-  mutation.setState({...mutation.state,
-   data:{owner:'former-account'},status:'success'})
+  await mutation.execute(undefined)
+  expect(mutation.state.data).toEqual({owner:'former-account'})
   expect(q.getQueryCache().getAll().length).toBe(cached.length+1)
   expect(q.getMutationCache().getAll()).toHaveLength(1)
   await purgeBusinessSessionCache(q)
