@@ -35,6 +35,27 @@ describe('purchase order server cursor pages',()=>{
   vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify([order]),{status:200})))
   await expect(fetchPurchaseOrdersPage()).rejects.toThrow()
  })
+ it('V144 rejects contradictory cursor flags before a misleading end-of-history UI',async()=>{
+  for(const invalid of [
+   {items:[order],nextCursor:null,hasMore:true,pageSize:50},
+   {items:[order],nextCursor:'forged-extra',hasMore:false,pageSize:50},
+  ]){
+   vi.stubGlobal('fetch',vi.fn(async()=>new Response(
+    JSON.stringify(invalid),{status:200})))
+   await expect(fetchPurchaseOrdersPage()).rejects.toThrow()
+  }
+ })
+ it('V144 rejects server page overflow above its declared size',async()=>{
+  const padded={items:Array.from({length:51},()=>order),nextCursor:'a',
+   hasMore:true,pageSize:50}
+  vi.stubGlobal('fetch',vi.fn(async()=>new Response(
+   JSON.stringify(padded),{status:200})))
+  await expect(fetchPurchaseOrdersPage()).rejects.toThrow()
+  vi.stubGlobal('fetch',vi.fn(async()=>new Response(
+   JSON.stringify({...padded,pageSize:100,
+    items:Array.from({length:101},()=>order)}),{status:200})))
+  await expect(fetchPurchaseOrdersPage()).rejects.toThrow()
+ })
  it('accepts exact last page with no further cursor',async()=>{
   vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify({
    items:[order],nextCursor:null,hasMore:false,pageSize:50}),{status:200})))
