@@ -1,6 +1,7 @@
 # OPS-001 · 运行、维护与故障恢复设计
 
 **Status: design only.** No production operational guarantees are implied.
+**V141 可执行的只读诊断与恢复证明**：参见 [PostgreSQL 18 物理容量、WAL 与恢复检查](../operations/v141-pg18-physical-capacity-wal-backup-restore.md)。它会在隔离 CI 中采集真实 PGDATA 文件系统与 WAL、验证 V68 恢复并输出 JSON/Prometheus 指标；生产 PITR、Alertmanager 收件人及人工演练尚未配置。V140 的原件字节统计不代表数据库磁盘。
 
 ## 日常运行
 
