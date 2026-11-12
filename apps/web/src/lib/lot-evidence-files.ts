@@ -12,9 +12,35 @@ const trace=z.object({id,dispositionId:id,sourceReceiptId:id,
  status:z.enum(['DISPATCH_REPORTED','SUPPLIER_RECEIPT_REPORTED','RECEIPT_MISMATCH']),
  dispatchedBy:id,receivedQuantity:z.number().int().nonnegative().nullable(),
  receiptReference:z.string().nullable(),receivedReportedBy:id.nullable()})
+const governance=z.object({
+ proofId:id,fileId:id,legalHold:z.boolean(),
+ holdSetBy:id.nullable(),holdReleaseRequestedBy:id.nullable(),
+ retentionUntil:z.string().datetime({offset:true}).nullable(),
+ retentionProposedUntil:z.string().datetime({offset:true}).nullable(),
+ retentionProposedBy:id.nullable(),
+ disposalState:z.enum(['NONE','REQUESTED','REVIEWED_NO_DELETE']),
+ disposalRequestedBy:id.nullable(),disposalReviewedBy:id.nullable()
+})
+const capacity=z.object({
+ fileCount:z.number().int().nonnegative(),
+ originalBytes:z.number().int().nonnegative(),
+ heldFiles:z.number().int().nonnegative(),
+ retentionUnsetFiles:z.number().int().nonnegative(),
+ pendingRetentionFiles:z.number().int().nonnegative(),
+ reviewedDisposalFiles:z.number().int().nonnegative()
+}).refine(p=>p.heldFiles<=p.fileCount&&p.retentionUnsetFiles<=p.fileCount&&
+ p.pendingRetentionFiles<=p.fileCount&&p.reviewedDisposalFiles<=p.fileCount,{
+ message:'租户私有证据容量统计不一致'
+})
+export type LotProofGovernance=z.infer<typeof governance>
+export type LotProofCapacity=z.infer<typeof capacity>
+export type LotProofGovernanceAction='PLACE_HOLD'|'REQUEST_HOLD_RELEASE'|
+ 'APPROVE_HOLD_RELEASE'|'PROPOSE_RETENTION'|'APPROVE_RETENTION'|
+ 'REQUEST_DISPOSAL'|'REVIEW_DISPOSAL'
 export type LotUploadedProof=z.infer<typeof info>
 export type LotSupplierReturnTrace=z.infer<typeof trace>
 const fileRoot='/api/v1/purchasing/lot-proof-files'
+const governanceRoot='/api/v1/purchasing/lot-proof-governance'
 const returnRoot='/api/v1/purchasing/lot-supplier-returns'
 async function request<T>(path:string,schema:z.ZodType<T>,method='GET',
  body?:unknown):Promise<T>{
@@ -49,6 +75,12 @@ export async function uploadProofFile(proofId:string,requestKey:string,file:File
 export function proofDownloadHref(proofId:string){
  return fileRoot+'/'+encodeURIComponent(proofId)+'/download'
 }
+export const fetchProofGovernance=(proofId:string)=>request(
+ governanceRoot+'/'+id.parse(proofId),governance)
+export const fetchProofCapacity=()=>request(governanceRoot+'/capacity',capacity)
+export const commandProofGovernance=(proofId:string,body:{
+ action:LotProofGovernanceAction;reason:string;retentionUntil?:string
+})=>request(governanceRoot+'/'+id.parse(proofId)+'/commands',governance,'POST',body)
 export const fetchSupplierReturnTraces=(warehouseId:string)=>request(
  returnRoot+'/warehouses/'+encodeURIComponent(warehouseId),z.array(trace))
 export const reportSupplierReturnDispatch=(body:{
