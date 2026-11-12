@@ -373,6 +373,36 @@ jobs:
           print('PASS V141 disposable local PG18 ops: measured disk/WAL, verified restore, never production approval')
           PY
           rm -f -- "$v141_attest" "$v141_disk"
+          # V142: true physical PG18 basebackup + archived WAL recovery to
+          # the server timestamp between two committed fictional markers.
+          # A second restored container MUST pause and EXCLUDE later commits.
+          v142_pitr="$(mktemp /tmp/merchivra-v142-pitr-XXXXXX.json)"
+          MERCHIVRA_V142_DISPOSABLE_ONLY=true \
+            MERCHIVRA_V142_PITR_EVIDENCE_FILE="$v142_pitr" \
+            bash scripts/smoke_pg18_pitr_v142.sh
+          # V142: real Alertmanager API and webhook delivery on a Docker
+          # --internal network; no external recipient or published port.
+          v142_alert="$(mktemp /tmp/merchivra-v142-alert-XXXXXX.json)"
+          MERCHIVRA_V142_DISPOSABLE_ONLY=true \
+            MERCHIVRA_V142_ALERT_EVIDENCE_FILE="$v142_alert" \
+            bash scripts/smoke_alertmanager_v142.sh
+          python3 - "$v142_pitr" "$v142_alert" <<'PY'
+          import json,sys
+          from pathlib import Path
+          p=json.loads(Path(sys.argv[1]).read_text())
+          a=json.loads(Path(sys.argv[2]).read_text())
+          assert p['mode']=='disposable' and p['postgresMajor']==18
+          assert all(p[k] for k in ('archivedWalSegment','physicalBasebackup',
+              'recoveryTargetPaused','includedCommittedBeforeTarget',
+              'excludedCommittedAfterTarget'))
+          assert p['productionPitrApproved'] is False
+          assert a['source']=='real_alertmanager_v142_local'
+          assert a['status']=='firing' and a['receiver']=='ci-local-webhook'
+          assert a['externalRecipientVerified'] is False
+          assert a['productionApproved'] is False
+          print('PASS V142 A3: real local PG18 timestamp PITR + internal Alertmanager delivery; production blocked')
+          PY
+          rm -f -- "$v142_pitr" "$v142_alert"
           echo "PostgreSQL 18 / Flyway / actual finance + FBA OpenAPI and local mock chain verified"
           kill "$app_pid" 2>/dev/null || true
       - name: Preserve V141 disposable disk/WAL/PITR-not-ready metrics (no credentials)
@@ -383,6 +413,16 @@ jobs:
           path: |
             /tmp/merchivra-v141-ops.json
             /tmp/merchivra-v141-pg18.prom
+          if-no-files-found: warn
+          retention-days: 7
+      - name: V142 audit-only PITR and private Alertmanager delivery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v142-disposable-pitr-alertmanager-evidence
+          path: |
+            /tmp/merchivra-v142-pitr-*.json
+            /tmp/merchivra-v142-alert-*.json
           if-no-files-found: warn
           retention-days: 7
       - name: Preserve verified V65 OpenAPI contract for Orval review
@@ -416,6 +456,22 @@ jobs:
           bash -n scripts/smoke_pg_restore_v68.sh
           python3 -m py_compile scripts/pg18_ops_probe_v141.py
           python3 -m unittest discover -s scripts -p 'test_pg18_ops_v141.py' -v
+      - name: V142 PITR and real Alertmanager isolated smoke syntax and refusal gate
+        run: |
+          bash -n scripts/smoke_pg18_pitr_v142.sh
+          bash -n scripts/smoke_alertmanager_v142.sh
+          python3 -m py_compile scripts/v142_alert_loopback.py
+          if env -u GITHUB_ACTIONS MERCHIVRA_V142_DISPOSABLE_ONLY=true \
+            bash scripts/smoke_pg18_pitr_v142.sh; then
+            echo 'Unsafe V142 PITR mode unexpectedly accepted non-CI' >&2
+            exit 1
+          fi
+          if env -u GITHUB_ACTIONS MERCHIVRA_V142_DISPOSABLE_ONLY=true \
+            bash scripts/smoke_alertmanager_v142.sh; then
+            echo 'Unsafe V142 Alertmanager mode unexpectedly accepted non-CI' >&2
+            exit 1
+          fi
+          echo 'PASS V142 fail-closed: non-CI/real execution refused before Docker or SQL'
       - name: V135 EXPLAIN JSON and plan assertions (no database needed)
         run: |
           python3 -m py_compile scripts/check_lot_query_plans_v135.py
