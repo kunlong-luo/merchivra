@@ -157,7 +157,7 @@ public class LotProofGovernanceService {
             try {
                 before=OffsetDateTime.parse(parts[3]);
                 lastId=UUID.fromString(parts[4]);
-            } catch(IllegalArgumentException e) {
+            } catch(DateTimeParseException | IllegalArgumentException e) {
                 throw bad("Invalid governance history cursor timestamp or id");
             }
         }
