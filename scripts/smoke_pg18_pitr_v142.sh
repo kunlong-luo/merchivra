@@ -51,8 +51,8 @@ sql_source "CREATE TABLE public.v142_pitr_marker(
 sql_source "INSERT INTO public.v142_pitr_marker VALUES (1,'pre-backup')" >/dev/null
 # The PG18 streaming physical basebackup carries checkpoint WAL, but not
 # later marker commits. This is NOT pg_dump or an in-place database restore.
-docker exec -u postgres "$src" pg_basebackup \
-  -h 127.0.0.1 -U postgres -D /backupdata/18/docker \
+docker exec -u postgres -e PGPASSWORD=ci_disposable_v142_pitr_only \
+  "$src" pg_basebackup -h 127.0.0.1 -U postgres -D /backupdata/18/docker \
   -Fp -Xs -c fast > /dev/null
 test -s "$dir/data/18/docker/PG_VERSION"
 test "$(cat "$dir/data/18/docker/PG_VERSION")" = 18
