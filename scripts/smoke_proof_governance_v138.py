@@ -63,6 +63,9 @@ csrf=call("/api/v1/auth/csrf")["token"]
 call("/api/v1/auth/login",method="POST",body={
     "username":os.environ["MERCHIVRA_BOOTSTRAP_USERNAME"],
     "password":os.environ["MERCHIVRA_BOOTSTRAP_PASSWORD"]},csrf=csrf)
+# Authentication rotates/migrates the session's CSRF token. All protected
+# governance POSTs MUST use the post-login token, not the anonymous one.
+csrf=call("/api/v1/auth/csrf")["token"]
 me=call("/api/v1/auth/me")
 assert me["isOwner"]
 tenant=me["activeTenantId"]
