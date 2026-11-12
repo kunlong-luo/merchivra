@@ -88,15 +88,19 @@ public class LotProofAvScanner {
     }
 
     private static String readReply(InputStream in) throws IOException {
+        // zINSTREAM mandates a NUL-framed response: an EOF or newline is NOT
+        // a complete clean verdict, even if the prefix happens to say OK.
         var buffer=new ByteArrayOutputStream();
+        boolean terminated=false;
         while(buffer.size()<MAX_REPLY){
             int next=in.read();
-            if(next<0 || next==0 || next=='\n')break;
+            if(next==0){terminated=true;break;}
             if(next<32 || next>126)
                 throw new IOException("Invalid scanner response framing");
             buffer.write(next);
         }
-        if(buffer.size()==MAX_REPLY)throw new IOException("Oversized scanner response");
+        if(!terminated || buffer.size()==0)
+            throw new IOException("Incomplete or oversized scanner response");
         return buffer.toString(StandardCharsets.US_ASCII);
     }
 
