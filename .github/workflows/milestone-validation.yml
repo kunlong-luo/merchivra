@@ -1,3 +1,5 @@
+# V143: exact main-SHA A3 includes G1/G2/G3 secret-safe release preflight
+# proving production stays BLOCKED without verified target and signoffs.
 # V142: exact-main-SHA A3 validates real disposable PG18 physical WAL
 # archiving, recovery_target_time pause/exclusion and actual private
 # Alertmanager-v2 -> webhook delivery. Production remains unapproved.
@@ -47,7 +49,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V142-A3-isolated-PG18-PITR-Alertmanager-delivery' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V143-A3-failclosed-G1-G2-G3-production-preflight' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -86,6 +88,7 @@ on:
           - V140-A3-proof-audit-capacity-warning
           - V141-A3-PG18-WAL-disk-restore-observability
           - V142-A3-isolated-PG18-PITR-Alertmanager-delivery
+          - V143-A3-failclosed-G1-G2-G3-production-preflight
 
 permissions:
   contents: read
