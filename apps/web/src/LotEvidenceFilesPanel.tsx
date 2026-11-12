@@ -6,8 +6,10 @@ import {fetchDispositionProofs} from './lib/lot-disposition-proofs'
 import {fetchLotDispositions} from './lib/lot-reconciliation'
 import {fetchProofFileInfo,uploadProofFile,proofDownloadHref,
  fetchProofGovernance,fetchProofCapacity,commandProofGovernance,
+ fetchProofHistory,fetchProofCapacityAlert,changeProofCapacityThreshold,
  fetchSupplierReturnTraces,reportSupplierReturnDispatch,
  reportSupplierReturnReceipt,type LotProofGovernanceAction} from './lib/lot-evidence-files'
+import CursorPageControls from './CursorPageControls'
 
 const noteOk=(text:string)=>text.trim().length>=5&&text.trim().length<=300
 export default function LotEvidenceFilesPanel({tenantId,currentUserId,warehouses}:{
@@ -21,6 +23,11 @@ export default function LotEvidenceFilesPanel({tenantId,currentUserId,warehouses
  const [governanceAction,setGovernanceAction]=useState<LotProofGovernanceAction>('PLACE_HOLD')
  const [governanceReason,setGovernanceReason]=useState('')
  const [retentionDate,setRetentionDate]=useState('')
+ const [auditCursor,setAuditCursor]=useState<string|null>(null)
+ const [auditPrevious,setAuditPrevious]=useState<(string|null)[]>([])
+ const [warningMib,setWarningMib]=useState('')
+ const [warningAction,setWarningAction]=useState<'SET'|'DISABLE'>('SET')
+ const [warningReason,setWarningReason]=useState('')
 
  const [dispositionId,setDispositionId]=useState('')
  const [carrierReference,setCarrierReference]=useState('')
@@ -40,6 +47,15 @@ export default function LotEvidenceFilesPanel({tenantId,currentUserId,warehouses
   enabled:!!proofId&&!!stored.data,retry:false})
  const storage=useQuery({queryKey:[...root,'proof-capacity'],
   queryFn:fetchProofCapacity,enabled:!!warehouse,retry:false})
+ const history=useQuery({
+  queryKey:[...root,'proof-history',proofId,auditCursor],
+  queryFn:()=>fetchProofHistory(proofId,auditCursor),
+  enabled:!!proofId&&!!stored.data,retry:false
+ })
+ const capacityAlert=useQuery({
+  queryKey:[...root,'proof-capacity-alert'],
+  queryFn:fetchProofCapacityAlert,enabled:!!warehouse,retry:false
+ })
  const dispositions=useQuery({queryKey:[...root,'lot-dispositions',warehouse],
   queryFn:()=>fetchLotDispositions(warehouse),enabled:!!warehouse,retry:false})
  const returns=useQuery({queryKey:[...root,'supplier-return-trace',warehouse],
@@ -63,6 +79,18 @@ export default function LotEvidenceFilesPanel({tenantId,currentUserId,warehouses
   setMessage('私有证据保留/保全审批记录已写入审计；未执行任何原件删除')
   setFailure('');setGovernanceReason('');refresh()
  },onError:(error:Error)=>setFailure(error.message)})
+ const warningChange=useMutation({
+  mutationFn:()=>changeProofCapacityThreshold({
+   action:warningAction,
+   ...(warningAction==='SET'?{warningBytes:Number(warningMib)*1048576}:{}),
+   reason:warningReason.trim()
+  }),
+  onSuccess:()=>{
+   setMessage('已审计保存本租户原件字节量告警设置；仅提供提示，不执行任何清理')
+   setFailure('');setWarningReason('');refresh()
+  },
+  onError:(error:Error)=>setFailure(error.message)
+ })
  const dispatch=useMutation({mutationFn:()=>reportSupplierReturnDispatch({
   requestKey:dispatchKey,dispositionId,carrierReference:carrierReference.trim(),
   reason:dispatchReason.trim()}),
@@ -96,13 +124,15 @@ export default function LotEvidenceFilesPanel({tenantId,currentUserId,warehouses
   <WarehousePicker tenantId={tenantId} id="v52-warehouse"
     label="本地仓库（全库）" value={warehouse}
     onChange={id=>{
-   setWarehouse(id);setProofId('');setDispositionId('');setTraceId('')}}/>
+   setWarehouse(id);setProofId('');setDispositionId('');setTraceId('')
+   setAuditCursor(null);setAuditPrevious([])}}/>
   {!!warehouse&&<>
    <h3>1. 私有凭据原件</h3>
    <form className="team-invite-form" onSubmit={submitUpload}>
     <label htmlFor="v52-proof">原 V51 报废 / 退货凭据元数据</label>
     <select id="v52-proof" value={proofId} onChange={e=>{
-     setProofId(e.target.value);setFile(null);setUploadKey(crypto.randomUUID())}}>
+     setProofId(e.target.value);setFile(null);setUploadKey(crypto.randomUUID())
+     setAuditCursor(null);setAuditPrevious([])}}>
      <option value="">选择已有的凭据元数据记录</option>
      {(proofs.data??[]).map(p=><option key={p.id} value={p.id}>
       {p.evidenceReference} · {p.status}</option>)}
@@ -141,6 +171,53 @@ export default function LotEvidenceFilesPanel({tenantId,currentUserId,warehouses
    </p>}
    {storage.isError&&<p className="setup-error" role="alert">
     无法取得租户原件容量统计：{String(storage.error)}</p>}
+   {capacityAlert.data&&<div className="setup-hint" role="status">
+    V140 · 原始证据字节量监测：
+    {capacityAlert.data.status==='UNCONFIGURED'?
+      '未设置提醒阈值（没有默认配额）':
+     capacityAlert.data.status==='WARNING'?
+      '已达到配置的预警线，请人工检查实际存储容量':
+      '原始文件字节量低于配置的提醒阈值'}。
+    {capacityAlert.data.warningBytes!==null&&
+     <>阈值 {Math.round(capacityAlert.data.warningBytes/1048576)} MiB；
+       当前 {capacityAlert.data.originalBytes.toLocaleString()} 字节。</>}
+    提醒仅表示原始文件字节数，不代表数据库磁盘、TOAST、WAL 或备份占用；
+    不自动上传、删除、清理或通知第三方。
+   </div>}
+   {capacityAlert.isError&&<p className="setup-error" role="alert">
+    无法检查证据容量告警：{String(capacityAlert.error)}；不得视为容量正常。</p>}
+   <form className="team-invite-form" onSubmit={e=>{
+    e.preventDefault()
+    const mib=Number(warningMib)
+    if(warningChange.isPending||warningReason.trim().length<10||
+       warningReason.trim().length>500||
+       (warningAction==='SET'&&(!Number.isSafeInteger(mib)||mib<1||mib>1048576)))
+      return
+    if(window.confirm('确认变更当前租户的原件容量提醒？只记录审计，不设置存储配额。'))
+     warningChange.mutate()
+   }}>
+    <label htmlFor="v140-warning-action">当前租户的可选容量提醒</label>
+    <select id="v140-warning-action" value={warningAction}
+      onChange={e=>setWarningAction(e.target.value as 'SET'|'DISABLE')}>
+     <option value="SET">设置原始附件容量提醒</option>
+     <option value="DISABLE">关闭本租户容量提醒（审计留痕）</option>
+    </select>
+    {warningAction==='SET'&&<>
+     <label htmlFor="v140-warning-mib">提醒阈值（MiB，1 至 1,048,576）</label>
+     <input id="v140-warning-mib" type="number" min={1} max={1048576}
+      step={1} value={warningMib} onChange={e=>setWarningMib(e.target.value)}/>
+    </>}
+    <label htmlFor="v140-warning-reason">设置原因（10–500 字符）</label>
+    <input id="v140-warning-reason" minLength={10} maxLength={500}
+     value={warningReason} onChange={e=>setWarningReason(e.target.value)}/>
+    <button type="submit" className="primary-button"
+     disabled={warningChange.isPending||warningReason.trim().length<10||
+      warningReason.trim().length>500||
+      (warningAction==='SET'&&(!Number.isSafeInteger(Number(warningMib))||
+      Number(warningMib)<1||Number(warningMib)>1048576))}>
+     保存租户提醒阈值（不删除）
+    </button>
+   </form>
    {!!stored.data&&governance.data&&<form className="team-invite-form" onSubmit={e=>{
     e.preventDefault()
     if(!proofId||!noteOk(governanceReason)||governanceReason.trim().length<10
@@ -187,6 +264,40 @@ export default function LotEvidenceFilesPanel({tenantId,currentUserId,warehouses
    </form>}
    {governance.isError&&!!stored.data&&<p className="setup-error" role="alert">
     无法验证原件治理状态：{String(governance.error)}</p>}
+   {!!stored.data&&<section aria-label="V140 私有证据治理审计历史">
+    <h3>V140 · 原件治理审计历史（按时间与 ID 稳定分页）</h3>
+    <p className="setup-hint">当前仅显示此原件对应的治理事件，每页最多 50 条；
+     操作人、理由和时间来自后端审计记录，当前页不代表完整历史。</p>
+    {history.data?.items.length?<>
+     <div className="table-scroll" role="region" tabIndex={0}
+      aria-label="原件治理审计记录">
+      <table><thead><tr><th scope="col">操作时间</th>
+       <th scope="col">操作类型</th><th scope="col">Owner</th>
+       <th scope="col">审计原因</th></tr></thead>
+       <tbody>{history.data.items.map(entry=><tr key={entry.id}>
+        <td>{entry.recordedAt}</td><td>{entry.action}</td>
+        <td>{entry.actorUserId.slice(0,8)}</td><td>{entry.reason}</td>
+       </tr>)}</tbody>
+      </table>
+     </div>
+    </>:history.isPending?<p className="empty-state">查询本原件审计历史…</p>:
+       <p className="empty-state">本原件尚无治理审计事件。</p>}
+    {history.isError&&<p className="setup-error" role="alert">
+     治理审计分页请求失败：{String(history.error)}</p>}
+    <CursorPageControls label="私有原件审计历史"
+     page={auditPrevious.length+1}
+     hasMore={history.data?.hasMore??false}
+     nextCursor={history.data?.nextCursor??null}
+     busy={history.isFetching}
+     onPrev={()=>{if(auditPrevious.length){
+      setAuditCursor(auditPrevious[auditPrevious.length-1])
+      setAuditPrevious(p=>p.slice(0,-1))
+     }}}
+     onNext={next=>{
+      setAuditPrevious(p=>[...p,auditCursor])
+      setAuditCursor(next)
+     }}/>
+   </section>}
    <h3>2. 与原采购订单供应商关联的退货发运</h3>
    <p className="setup-hint">来源从原始采购实收、采购订单和供应商记录自动推导，
     不使用 V44 的拒收品退货数量重复计算已放行过期品。</p>

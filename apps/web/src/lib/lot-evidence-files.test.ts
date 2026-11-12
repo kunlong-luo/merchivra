@@ -2,7 +2,8 @@ import {afterEach,describe,expect,it,vi} from 'vitest'
 import {fetchProofFileInfo,uploadProofFile,proofDownloadHref,
  fetchSupplierReturnTraces,reportSupplierReturnDispatch,
  reportSupplierReturnReceipt,fetchProofGovernance,fetchProofCapacity,
- commandProofGovernance} from './lot-evidence-files'
+ commandProofGovernance,fetchProofHistory,fetchProofCapacityAlert,
+ changeProofCapacityThreshold} from './lot-evidence-files'
 afterEach(()=>vi.unstubAllGlobals())
 const proof='11111111-1111-4111-8111-111111111111'
 const fileId='22222222-2222-4222-8222-222222222222'
@@ -123,6 +124,64 @@ describe('V52 private evidence original upload and supplier return contracts',()
    disposalRequestedBy:null,disposalReviewedBy:null}))
   await expect(fetchProofGovernance(proof)).rejects.toThrow()
   expect(()=>fetchProofGovernance('not-a-uuid')).toThrow()
+ })
+
+
+ it('V140 reads page-bounded Owner audit history, uses scoped cursor, never downloads files',async()=>{
+  const cursor='V140-valid+cursor/opaque'
+  const row={id:request,action:'PLACE_HOLD',actorUserId:actor,
+   reason:'Synthetic governance audit history record',
+   retentionCandidate:null,recordedAt:'2026-11-12T06:40:00Z'}
+  const calls=mock(()=>({items:[row],nextCursor:null,hasMore:false,pageSize:50}))
+  const data=await fetchProofHistory(proof,cursor)
+  expect(data.items).toHaveLength(1)
+  expect(data.items[0].actorUserId).toBe(actor)
+  expect(calls[0].url).toContain('/'+proof+'/history/page?')
+  expect(calls[0].url).toContain('limit=50')
+  expect(calls[0].url).toContain('cursor=')
+  expect(calls[0].url).not.toContain('/download')
+  expect(calls[0].options.cache).toBe('no-store')
+  expect(calls[0].options.credentials).toBe('same-origin')
+  expect(calls[0].options.method).toBe('GET')
+ })
+ it('V140 rejects forged history page length, missing next cursor, and invalid proof scope',async()=>{
+  mock(()=>({items:[],nextCursor:null,hasMore:true,pageSize:50}))
+  await expect(fetchProofHistory(proof)).rejects.toThrow()
+  expect(()=>fetchProofHistory('not-a-uuid')).toThrow()
+  mock(()=>({items:Array.from({length:51},(_,i)=>({
+   id:request,action:'PLACE_HOLD',actorUserId:actor,
+   reason:'Synthetic audit event '+i,
+   retentionCandidate:null,recordedAt:'2026-11-12T06:40:00Z'
+  })),nextCursor:'opaque',hasMore:true,pageSize:50}))
+  await expect(fetchProofHistory(proof)).rejects.toThrow()
+ })
+ it('V140 opt-in capacity warning is advisory and threshold writes use CSRF, never DELETE',async()=>{
+  const alert={status:'WARNING',warningBytes:1048576,
+   originalBytes:1048576,fileCount:2,advisoryOnly:true}
+  const calls=mock(()=>alert)
+  const read=await fetchProofCapacityAlert()
+  expect(read.status).toBe('WARNING')
+  const result=await changeProofCapacityThreshold({
+   action:'SET',warningBytes:1048576,
+   reason:'Owner configured the synthetic private capacity warning'
+  })
+  expect(result.warningBytes).toBe(1048576)
+  const post=calls.find(x=>x.options.method==='POST')
+  expect(post?.url).toContain('/lot-proof-governance/capacity-threshold')
+  expect(post?.options.headers).toMatchObject({'X-CSRF-TOKEN':'valid-v52-csrf-token'})
+  expect(JSON.parse(String(post?.options.body)).warningBytes).toBe(1048576)
+  expect(calls.some(x=>x.options.method==='DELETE')).toBe(false)
+ })
+ it('V140 unconfigured threshold is not represented as healthy and rejects fake disk capacity',async()=>{
+  mock(()=>({status:'UNCONFIGURED',warningBytes:null,
+   originalBytes:24,fileCount:1,advisoryOnly:true}))
+  expect((await fetchProofCapacityAlert()).status).toBe('UNCONFIGURED')
+  mock(()=>({status:'NORMAL',warningBytes:1048576,
+   originalBytes:2097152,fileCount:1,advisoryOnly:true}))
+  await expect(fetchProofCapacityAlert()).rejects.toThrow()
+  mock(()=>({status:'WARNING',warningBytes:1048576,
+   originalBytes:2097152,fileCount:1,advisoryOnly:false}))
+  await expect(fetchProofCapacityAlert()).rejects.toThrow()
  })
 
 })
