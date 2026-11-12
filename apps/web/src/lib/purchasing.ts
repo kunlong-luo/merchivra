@@ -92,8 +92,12 @@ export const createSupplier=(supplierCode:string,displayName:string)=>
   .then(r=>supplier.parse(r.data))
 // V110: a page is an API-scoped view, never a full-tenant count or audit snapshot.
 const purchaseOrdersPage=z.object({
- items:z.array(order),nextCursor:z.string().min(1).nullable(),
+ items:z.array(order).max(100),nextCursor:z.string().min(1).nullable(),
  hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{
+ message:'Invalid purchase order page cursor contract'
+}).refine(p=>p.items.length<=p.pageSize,{
+ message:'Purchase order page exceeds declared server size'
 })
 export type PurchaseOrdersPage=z.infer<typeof purchaseOrdersPage>
 export const fetchPurchaseOrdersPage=({limit=50,cursor=null,status='ALL',search=''}:{
