@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "environment": "production",
+  "candidateSha": "REPLACE_WITH_ACTUAL_REVIEWED_MAIN_40_HEX_COMMIT",
+  "source": "operator_attested_target",
+  "productionApproved": false,
+  "deploymentPermitted": false,
+  "gateReviewers": {
+    "G1_BUSINESS": "",
+    "G2_SECURITY_ARCHITECTURE": "",
+    "G3_OPERATIONS_RELEASE": ""
+  },
+  "controls": {
+    "product_scope_owner": {
+      "source": "operator_attested_target",
+      "status": "pending",
+      "evidenceSha256": "",
+      "testedAt": "",
+      "attestedBy": ""
+    },
+    "operations_workflow_owner": {
+      "source": "operator_attested_target",
+      "status": "pending",
+      "evidenceSha256": "",
+      "testedAt": "",
+      "attestedBy": ""
+    },
+    "finance_rules_owner": {
+      "source": "operator_attested_target",
+      "status": "pending",
+      "evidenceSha256": "",
+      "testedAt": "",
+      "attestedBy": ""
+    },
+    "https_trusted_proxy_live": {
+      "source": "operator_attested_target",
+      "status": "pending",
+      "evidenceSha256": "",
+      "testedAt": "",
+      "attestedBy": ""
+    },
+    "session_iam_mfa_review": {
+      "source": "operator_attested_target",
+      "status": "pending",
+      "evidenceSha256": "",
+      "testedAt": "",
+      "attestedBy": ""
+    },
+    "secrets_kms_rotation_review": {
+      "source": "operator_attested_target",
+      "status": "pending",
+      "evidenceSha256": "",
+      "testedAt": "",
+      "attestedBy": ""
+    },
+    "private_clamd_eicar_signature_test": {
+      "source": "operator_attested_target",
+      "status": "pending",
+      "evidenceSha256": "",
+      "testedAt": "",
+      "attestedBy": ""
+    },
+    "tenant_privilege_review": {
+      "source": "operator_attested_target",
+      "status": "pending",
+      "evidenceSha256": "",
+      "testedAt": "",
+      "attestedBy": ""
+    },
+    "next_proxy_csrf_and_rollback_test": {
+      "source": "operator_attested_target",
+      "status": "pending",
+      "evidenceSha256": "",
+      "testedAt": "",
+      "attestedBy": ""
+    },
+    "encrypted_offsite_physical_backup_target": {
+      "source": "operator_attested_target",
+      "status": "pending",
+      "evidenceSha256": "",
+      "testedAt": "",
+      "attestedBy": ""
+    },
+    "production_wal_archiving_pitr_restore": {
+      "source": "operator_attested_target",
+      "status": "pending",
+      "evidenceSha256": "",
+      "testedAt": "",
+      "attestedBy": ""
+    },
+    "measured_operator_approved_rpo_rto": {
+      "source": "operator_attested_target",
+      "status": "pending",
+      "evidenceSha256": "",
+      "testedAt": "",
+      "attestedBy": ""
+    },
+    "pg18_disk_wal_backup_alerting": {
+      "source": "operator_attested_target",
+      "status": "pending",
+      "evidenceSha256": "",
+      "testedAt": "",
+      "attestedBy": ""
+    },
+    "external_pager_delivered_and_acknowledged": {
+      "source": "operator_attested_target",
+      "status": "pending",
+      "evidenceSha256": "",
+      "testedAt": "",
+      "attestedBy": ""
+    },
+    "signed_rollback_and_release_change": {
+      "source": "operator_attested_target",
+      "status": "pending",
+      "evidenceSha256": "",
+      "testedAt": "",
+      "attestedBy": ""
+    }
+  }
+}

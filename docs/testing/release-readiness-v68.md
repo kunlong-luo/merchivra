@@ -2,6 +2,8 @@
 
 > **现行执行策略（V108 / 2026-11-08）**：本手册列出了仍然有效的生产安全与恢复阻塞项，但 V68 的“CI 自动运行”属于当时的记录；现在 **普通 PR 仅跑快速 CI**，完整 PostgreSQL 18/Flyway、一次性 Mock 恢复/HTTP 安全、Chromium 和容器链由 [MVP milestone full validation](https://github.com/kunlong-luo/merchivra/actions/workflows/milestone-validation.yml) 集中运行，或按风险手动触发。首次 [V108 集中合成数据基线](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593) 已通过，但不等于真实数据/生产安全认证。必须结合 [V108 现行上线计划](../roadmap/mvp-freeze-release-v108.md) 阅读，G1/G2/G3 仍未批准。
 
+> **V143 现行生产放行前置检查**：参阅 [G1/G2/G3 配置与运营证据 fail-closed 预检](../operations/v143-production-release-preflight.md)。V142 合成 PITR+内网告警通过不等于真实环境的外部签章、PITR 和真实值班通知完成。预检不会授予生产发布许可。
+
 **2026-11-01，产品里程碑 V68；不是新的 Flyway 版本。** 本项目当前运行 Java 25 / Spring Boot 4.1.2 / Gradle Wrapper / PostgreSQL 18 / Node 24 / React 19。下文严格区分代码、CI 隔离环境演练、真实授权联调与生产批准。
 
 ## 1. 已有隔离测试能力（现按里程碑集中执行）

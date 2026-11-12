@@ -473,6 +473,18 @@ jobs:
             exit 1
           fi
           echo 'PASS V142 fail-closed: non-CI/real execution refused before Docker or SQL'
+      - name: V143 fail-closed production readiness and human approval contracts
+        run: |
+          python3 -m py_compile scripts/check_production_gate_v143.py
+          python3 -m unittest discover -s scripts -p 'test_production_gate_v143.py' -v
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('ops/release/v143-production-evidence-template.json').read_text())
+          assert not d['productionApproved'] and not d['deploymentPermitted']
+          assert all(x['status']=='pending' for x in d['controls'].values())
+          print('PASS V143 pending-only release evidence template (no synthetic approvals)')
+          PY
       - name: V135 EXPLAIN JSON and plan assertions (no database needed)
         run: |
           python3 -m py_compile scripts/check_lot_query_plans_v135.py
@@ -503,4 +515,47 @@ jobs:
             -f deploy/compose.production.yaml -f deploy/compose.next.yaml \
             config --format json |
             python3 scripts/check_next_runtime_v122.py --compose --production
+          # V143: verify the real evaluated production+Next overlay remains
+          # BLOCKED with a demo .env and no external signoffs. The JSON input
+          # may contain secrets; ONLY bounded, redacted check codes are saved.
+          set +e
+          docker compose --env-file .env.example -f deploy/compose.yaml \
+            -f deploy/compose.production.yaml -f deploy/compose.next.yaml \
+            --profile optional-cache config --format json |
+            python3 scripts/check_production_gate_v143.py --compose-stdin \
+              --candidate-sha "$GITHUB_SHA" \
+              > /tmp/merchivra-v143-production-gate-blocked.json
+          v143_status=$?
+          set -e
+          test "$v143_status" -eq 2 || {
+            echo 'V143 release gate unexpectedly bypassed or errored' >&2
+            exit 1
+          }
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('/tmp/merchivra-v143-production-gate-blocked.json').read_text())
+          assert r['status']=='BLOCKED'
+          assert r['productionApproved'] is False
+          assert r['deploymentPermitted'] is False
+          assert r['automaticReleasePossible'] is False
+          assert r['operatorEvidenceIsSelfAttested'] is True
+          for k in ('PRIVATE_AV_HOST_CONFIGURED',
+                    'DB_BOOTSTRAP_SECRET_NOT_PLACEHOLDER'):
+              assert k in r['blockedChecks']['compose'],k
+          assert 'external_pager_delivered_and_acknowledged' in r['blockedChecks']['operatorEvidence']
+          assert 'production_wal_archiving_pitr_restore' in r['blockedChecks']['operatorEvidence']
+          assert 'product_scope_owner' in r['blockedChecks']['operatorEvidence']
+          assert 'https_trusted_proxy_live' in r['blockedChecks']['operatorEvidence']
+          print('PASS V143 actual merged compose: G1/G2/G3 and missing target infra BLOCKED, no deployed runtime')
+          PY
           echo "PASS: three bundled services, optional Redis, external spark-db reuse, production overlay"
+      - name: V143 redacted G1/G2/G3 release-block evidence (no secrets)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v143-release-preflight-blocked
+          path: /tmp/merchivra-v143-production-gate-blocked.json
+          if-no-files-found: warn
+          retention-days: 7
+
