@@ -95,12 +95,26 @@ findings, headers = parsed("/api/v1/operations/findings?filter=ACTIVE")
 assert isinstance(findings, list)
 assert "no-store" in headers.get("Cache-Control", "").lower()
 
-# Authenticated HTML itself must not server-render a user's tenant or token.
-page, _ = call("/finance")
-assert viewer["activeTenantId"].encode() not in page
-assert viewer["userId"].encode() not in page
-assert token.encode() not in page
-assert form["password"].encode() not in page
+# V144: all 11 real Next App Router workbenches must resolve through
+# the SAME real Spring/PG18 session. The HTML response must NOT SSR private
+# user, tenant, session, or authorization details even on direct deep links.
+# These are module route checks; data/RBAC authority remains on Spring.
+module_paths=("/", "/core", "/orders", "/catalog", "/inventory",
+              "/purchasing", "/ops", "/finance", "/connections",
+              "/team", "/sync")
+for path in module_paths:
+    page, response_headers=call(path)
+    assert b"Merchivra ERP" in page,(path,"not a Next workbench response")
+    for secret in (viewer["activeTenantId"],viewer["userId"],
+                   token,form["password"]):
+        assert secret.encode() not in page,(path,"SSR private session leak")
+call("/v144-unknown-workbench",expected=404)
+
+# V144: a separate anonymous browser must not receive any server-side
+# session just because it requests the same private module HTML path.
+anonymous_html,_=call("/purchasing",client=anonymous_client)
+for secret in (viewer["activeTenantId"],viewer["userId"],token):
+    assert secret.encode() not in anonymous_html
 
 # Spring must reject writes without the anti-forgery header through Next.
 call("/api/v1/operations/scan", method="POST", body={}, expected=403)
@@ -110,6 +124,6 @@ call("/api/v1/auth/logout", method="POST",
      csrf=csrf_response["token"], expected=204)
 call("/api/v1/auth/me", expected=401)
 call("/api/v1/operations/findings", expected=401)
-print("PASS V101 Next proxy: real Spring login, HttpOnly/SameSite session, "
-      "CSRF deny/allow, tenant isolation, logout invalidation, no SSR user data "
-      "(disposable PG18 backend only)")
+print("PASS V144 Next 11 routes: real Spring login, HttpOnly/SameSite "
+      "session, no SSR tenant/user/CSRF/password, separate anonymous browser, "
+      "CSRF deny/allow and logout invalidation (disposable PG18 only)")
