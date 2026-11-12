@@ -1,3 +1,6 @@
+# V144: exact main-SHA full A3: 11 actual Next/PG18 session routes,
+# cross-session TanStack isolation, all P0 purchasing cursor regression,
+# V143 production approval remains blocked.
 # V143: exact main-SHA A3 includes G1/G2/G3 secret-safe release preflight
 # proving production stays BLOCKED without verified target and signoffs.
 # V142: exact-main-SHA A3 validates real disposable PG18 physical WAL
@@ -49,7 +52,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V143-A3-failclosed-G1-G2-G3-production-preflight' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V144-A3-session-cache-11-Next-routes-purchasing-P0' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -89,6 +92,7 @@ on:
           - V141-A3-PG18-WAL-disk-restore-observability
           - V142-A3-isolated-PG18-PITR-Alertmanager-delivery
           - V143-A3-failclosed-G1-G2-G3-production-preflight
+          - V144-A3-session-cache-11-Next-routes-purchasing-P0
 
 permissions:
   contents: read
