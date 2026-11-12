@@ -1,0 +1,32 @@
+# V142 — Real isolated PG18 point-in-time recovery + private Alertmanager delivery
+
+Baseline **V141**: main `5dd16065a75e6230d167d8290057b143cad6ec17`, [exact-SHA A3 #43194745294](https://github.com/kunlong-luo/merchivra/actions/runs/43194745294) **7/7 success**. That verified actual filesystem/WAL observations and a 163-table disposable logical pg_dump/pg_restore with hashes but correctly reported `archive_mode=off`, `productionApproved=false` and `alertReceiverVerified=false`. A logical pg_dump restore is **not** continuous WAL archiving or PITR; rule templates do **not** demonstrate real delivery.
+
+## What V142 actually tests
+
+**True, destructive-only-to-disposable test environments**, never production:
+
+1. `scripts/smoke_pg18_pitr_v142.sh` **refuses** any execution without GitHub Actions, explicit `MERCHIVRA_V142_DISPOSABLE_ONLY=true`, known fictional localhost PG18 DB/environment, Amazon disabled and the disposable CI password. It launches a **separate**, no-host-port PostgreSQL 18-alpine source container on Docker `--network none`. Source enables `wal_level=replica`, `archive_mode=on`, `archive_command=cp %p /archive/%f` to an **isolated synthetic local directory** and a short `archive_timeout`. None of this reconfigures the regular CI PostgreSQL service, an external DB or production.
+2. Source creates a fictional `v142_pitr_marker` table with row 1, takes a **true physical streaming `pg_basebackup -Fp -Xs`** (not a SQL dump), then commits row 2, reads the **database server's clock** as `recovery_target_time`, waits, commits row 3, calls `pg_switch_wal()` and confirms the switched WAL segment is actually archived. Source originally contains all **three** rows.
+3. The **second** separate PostgreSQL 18 container starts from that physical base backup with read-only archive access, `recovery.signal`, `restore_command`, `recovery_target_time` and `recovery_target_action=pause`. The test will not pass unless PostgreSQL enters recovery, pauses at the target and contains **exactly the first two committed records**, with the later row excluded. This proves actual time-based WAL replay of synthetic data, not simply starting a restored logical dump. Recovery is never promoted as an ERP database; no Amazon, stock ledger or original evidence is touched.
+4. `scripts/smoke_alertmanager_v142.sh` starts **real `prom/alertmanager:v0.28.1`** and `python:3.13-alpine` webhook receiver on a private `docker network create --internal`, without published ports, internet egress, SMTP/PagerDuty/Webhook credentials or any actual on-call contacts. A fixed synthetic critical alert is submitted to Alertmanager's **v2 API**, then the receiver must actually observe a **firing** event with the expected group and route. Merely receiving HTTP 200 from the API is not acceptance. `scripts/v142_alert_loopback.py` stores only fixed invented status fields, not raw notifications or tenant data.
+5. Full A3 publishes only sanitized small JSON results, NOT archived WAL, physical base backups, real pg_dump archives or notification body. `productionPitrApproved=false`, `externalRecipientVerified=false` and `productionApproved=false` are explicit. All temporary volumes/networks/containers are removed at the end.
+
+The real A3 also continues V141 collector, V68 163-table isolated restore, V140 proof history and warnings, V135 synthetic query-plan regression, Java 25, React/Next/Chromium, HTTP Session+CSRF and Compose checks. This work introduces **no Flyway migration, ERP business API, Seller/Ads OAuth, remote write, original-file deletion, or scheduled worker**.
+
+## How to interpret results
+
+| Evidence | Proven | Still NOT proven |
+|---|---|---|
+| Postgres source archived a WAL segment after commit | PG18 archive_command and local WAL files function in an ephemeral isolated data directory | Durable independent encrypted archive destination, archive retention, replica/walreceiver and real target monitoring |
+| Recovery stopped at an exact SQL-server timestamp | True synthetic PG18 `recovery_target_time` replay preserved earlier commit, excluded later commit | Actual production RPO/RTO, encrypted remote physical backups, real object-store/pgBackRest/WAL-G retention and recovery point consistency |
+| Alertmanager v2 delivered synthetic firing alert to internal recipient | Actual private webhook delivery path and grouping work with fixed synthetic labels | Real Prometheus rule evaluation, installed/exporter routing, secret-managed SMTP/PagerDuty/Slack recipient, paging/on-call acknowledgement, repeated retry or external delivery |
+| Full A3 successful | Technical regression at one immutable, merged main SHA | Production deployment approval or readiness of the user's infrastructure |
+
+No application configuration pretends to enable production PITR. The V141 `productionApproved=false` and `alertReceiverVerified=false` gates remain intact. An external recipient must still be configured **by an authorized operator locally**, with a controlled warning/critical/stale notification and explicit human acknowledgement. Prometheus and node_exporter must be provisioned in the actual environment and verified to route the real `ops/monitoring/merchivra-pg18-v141.rules.yml` rules to that recipient. No secret should enter GitHub files, URLs, CI logs or chat.
+
+## Production operator acceptance remains G1–G3 only
+
+Before production: verify actual PostgreSQL 18 instance and trusted network; immutable encrypted off-site physical base backups and WAL archive (e.g. pgBackRest/WAL-G) with appropriate key management; restore into an independently isolated target at **multiple** timestamp boundaries; compare Flyway, tenant ownership, signed stock, immutable evidence hashes and audit streams; rehearse RPO/RTO plus disk-full/archiver-down and rollback. Deploy real Prometheus/Alertmanager with targets, labels and notification routes; run a controlled e2e page, verify human receipt and escalation, then recover safely. Verify real clamd signatures/clamd fail closed, backup/disk/WAL thresholds, TLS/Session, IAM/PITR, approved legal retention. Never clean up V52 originals, WAL or backups to silence an alert.
+
+Current automated testing is synthetic CI only. Keep [issue #62](https://github.com/kunlong-luo/merchivra/issues/62) and [issue #63](https://github.com/kunlong-luo/merchivra/issues/63) OPEN until a human-approved production deployment and locally authorized Amazon workflows have been independently validated. Public GitHub Pages remains a read-only fictional showcase.
