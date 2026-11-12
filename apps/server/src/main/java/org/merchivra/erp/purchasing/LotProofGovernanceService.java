@@ -29,6 +29,10 @@ public class LotProofGovernanceService {
         String disposalState,String disposalRequestedBy,String disposalReviewedBy) {}
     public record Capacity(long fileCount,long originalBytes,long heldFiles,
         long retentionUnsetFiles,long pendingRetentionFiles,long reviewedDisposalFiles) {}
+    /** No file bytes; immutable, tenant-and-proof-scoped review history. */
+    public record HistoryEvent(String id,String action,String actorUserId,
+        String reason,String retentionCandidate,String recordedAt) {}
+
     private record Original(UUID fileId,UUID uploadedBy) {}
     private record State(boolean held,UUID holdBy,UUID releaseBy,
         OffsetDateTime until,OffsetDateTime proposedUntil,UUID proposedBy,
@@ -130,6 +134,55 @@ public class LotProofGovernanceService {
                 rs.getLong("held"),rs.getLong("unset"),
                 rs.getLong("pending"),rs.getLong("reviewed")),tenant)
             .getFirst();
+    }
+
+    /**
+     * V140: stable (recorded_at DESC,id DESC) cursor over V88's existing index.
+     * The cursor is bound to tenant, proof and purpose; invalid or cross-tenant
+     * cursors are HTTP 400 before constructing any SQL query.
+     */
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<HistoryEvent> historyPage(
+        UUID tenant,UUID proofId,int pageSize,String cursor) {
+        int limit=LocalKeysetPage.limit(pageSize);
+        if(proofId==null)throw bad("Proof required");
+        String[] parts=LocalKeysetPage.decode(cursor,5);
+        OffsetDateTime before=null;
+        UUID lastId=null;
+        if(parts!=null){
+            if(!"V140_PROOF_GOV_AUDIT".equals(parts[0])
+                ||!tenant.toString().equals(parts[1])
+                ||!proofId.toString().equals(parts[2]))
+                throw bad("Governance history cursor scope mismatch");
+            try {
+                before=OffsetDateTime.parse(parts[3]);
+                lastId=UUID.fromString(parts[4]);
+            } catch(IllegalArgumentException e) {
+                throw bad("Invalid governance history cursor timestamp or id");
+            }
+        }
+        // Check proof existence with current Owner tenant even for empty pages.
+        original(tenant,proofId);
+        String query="""
+            SELECT id,action,actor_user_id,reason,retention_candidate,recorded_at
+            FROM erp_lot_proof_file_governance_audit
+            WHERE tenant_id=? AND proof_id=?
+            """+(parts==null?"":"""
+              AND (recorded_at,id)<(?,?)
+            """)+"""
+            ORDER BY recorded_at DESC,id DESC LIMIT ?
+            """;
+        Object[] params=parts==null
+            ?new Object[]{tenant,proofId,limit+1}
+            :new Object[]{tenant,proofId,before,lastId,limit+1};
+        List<HistoryEvent> rows=jdbc.query(query,(rs,i)->new HistoryEvent(
+            id(rs.getObject("id",UUID.class)),rs.getString("action"),
+            id(rs.getObject("actor_user_id",UUID.class)),rs.getString("reason"),
+            date(rs.getObject("retention_candidate",OffsetDateTime.class)),
+            date(rs.getObject("recorded_at",OffsetDateTime.class))),params);
+        return LocalKeysetPage.pack(rows,limit,item->LocalKeysetPage.encode(
+            "V140_PROOF_GOV_AUDIT",tenant.toString(),proofId.toString(),
+            item.recordedAt(),item.id()));
     }
 
     private void persist(UUID tenant,UUID proofId,UUID fileId,State next){
