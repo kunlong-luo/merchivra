@@ -2,13 +2,16 @@
 # V146: synthetic local CA + actual Nginx TLS -> Next + Vite rollback + Spring.
 # Absolutely no production host, custom public address or real secrets.
 set -Eeuo pipefail
+# Unset secrets must refuse cleanly under bash -u rather than expand an
+# unset length before reaching the explicit CI-only safety check.
+synthetic_password="${MERCHIVRA_BOOTSTRAP_PASSWORD:-}"
 if [[ "${GITHUB_ACTIONS:-}" != true ||
       "${MERCHIVRA_V146_DISPOSABLE_ONLY:-}" != true ||
       "${MERCHIVRA_SPAPI_ENABLED:-}" != false ||
       "${MERCHIVRA_SPAPI_OAUTH_ENABLED:-}" != false ||
       "${MERCHIVRA_SPAPI_ALLOW_WRITES:-}" != false ||
       "${MERCHIVRA_BOOTSTRAP_USERNAME:-}" != local-smoke-admin ||
-      ${#MERCHIVRA_BOOTSTRAP_PASSWORD} -lt 16 ]]; then
+      ${#synthetic_password} -lt 16 ]]; then
   echo 'V146 HTTPS smoke REFUSED: disposable CI synthetic identity required' >&2
   exit 2
 fi
