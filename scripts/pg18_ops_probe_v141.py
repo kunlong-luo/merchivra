@@ -78,7 +78,7 @@ def evaluate(db: dict[str,Any], disk: dict[str,Any],
     if mode=="production" and backup.get("source")!="operator_attested_restore":
         raise ValueError("missing_independent_operator_attestation")
 
-    version=integer(db.get("pg_version_num"),"pg_version",180000)
+    version=integer(db.get("pg_version_num"),"pg_version",1)
     if version//10000!=18:
         raise ValueError("postgres18_required")
     database=integer(db.get("database_bytes"),"database_bytes")
