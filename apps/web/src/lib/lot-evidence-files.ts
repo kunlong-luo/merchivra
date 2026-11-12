@@ -32,6 +32,32 @@ const capacity=z.object({
  p.pendingRetentionFiles<=p.fileCount&&p.reviewedDisposalFiles<=p.fileCount,{
  message:'租户私有证据容量统计不一致'
 })
+const governanceHistoryEvent=z.object({
+ id,action:z.enum(['PLACE_HOLD','REQUEST_HOLD_RELEASE','APPROVE_HOLD_RELEASE',
+  'PROPOSE_RETENTION','APPROVE_RETENTION','REQUEST_DISPOSAL','REVIEW_DISPOSAL']),
+ actorUserId:id,reason:z.string().min(10).max(500),
+ retentionCandidate:z.string().datetime({offset:true}).nullable(),
+ recordedAt:z.string().datetime({offset:true})
+})
+const governanceHistoryPage=z.object({
+ items:z.array(governanceHistoryEvent).max(50),
+ nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.literal(50)
+}).refine(p=>(!p.hasMore||!!p.nextCursor),{
+ message:'治理审计页缺少服务器游标'
+})
+const capacityAlert=z.object({
+ status:z.enum(['UNCONFIGURED','NORMAL','WARNING']),
+ warningBytes:z.number().int().min(1048576).max(1099511627776).nullable(),
+ originalBytes:z.number().int().nonnegative(),
+ fileCount:z.number().int().nonnegative(),
+ advisoryOnly:z.literal(true)
+}).refine(p=>(p.status==='UNCONFIGURED')===(p.warningBytes===null)&&
+ (p.warningBytes===null||p.status===(p.originalBytes>=p.warningBytes?
+  'WARNING':'NORMAL')),{message:'租户证据容量警告状态不一致'})
+export type LotProofHistoryEvent=z.infer<typeof governanceHistoryEvent>
+export type LotProofHistoryPage=z.infer<typeof governanceHistoryPage>
+export type LotProofCapacityAlert=z.infer<typeof capacityAlert>
 export type LotProofGovernance=z.infer<typeof governance>
 export type LotProofCapacity=z.infer<typeof capacity>
 export type LotProofGovernanceAction='PLACE_HOLD'|'REQUEST_HOLD_RELEASE'|
@@ -75,6 +101,17 @@ export async function uploadProofFile(proofId:string,requestKey:string,file:File
 export function proofDownloadHref(proofId:string){
  return fileRoot+'/'+encodeURIComponent(proofId)+'/download'
 }
+export const fetchProofHistory=(proofId:string,cursor:string|null=null)=>{
+ const query=new URLSearchParams({limit:'50'})
+ if(cursor)query.set('cursor',cursor)
+ return request(governanceRoot+'/'+id.parse(proofId)+'/history/page?'+query,
+  governanceHistoryPage)
+}
+export const fetchProofCapacityAlert=()=>request(
+ governanceRoot+'/capacity-alert',capacityAlert)
+export const changeProofCapacityThreshold=(body:{
+ action:'SET'|'DISABLE';warningBytes?:number|null;reason:string
+})=>request(governanceRoot+'/capacity-threshold',capacityAlert,'POST',body)
 export const fetchProofGovernance=(proofId:string)=>request(
  governanceRoot+'/'+id.parse(proofId),governance)
 export const fetchProofCapacity=()=>request(governanceRoot+'/capacity',capacity)
