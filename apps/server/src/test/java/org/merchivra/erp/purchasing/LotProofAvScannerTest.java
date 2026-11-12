@@ -22,6 +22,10 @@ class LotProofAvScannerTest {
     }
 
     private static void fakeClamd(String verdict, HttpStatus denial) throws Exception {
+        fakeClamd(verdict,denial,true);
+    }
+    private static void fakeClamd(String verdict,HttpStatus denial,boolean framed)
+        throws Exception {
         try(ServerSocket server=new ServerSocket(0,1,
             InetAddress.getByName("127.0.0.1"))) {
             var received=new AtomicReference<byte[]>();
@@ -45,7 +49,8 @@ class LotProofAvScannerTest {
                     assertTrue(chunks>=3);
                     received.set(body.toByteArray());
                     client.getOutputStream().write(
-                        (verdict+"\0").getBytes(StandardCharsets.US_ASCII));
+                        (framed?verdict+"\0":verdict)
+                            .getBytes(StandardCharsets.US_ASCII));
                     client.getOutputStream().flush();
                 }catch(Throwable e){failed.set(e);}
             });
@@ -70,6 +75,10 @@ class LotProofAvScannerTest {
     }
     @Test void knownMalwareDeniesOriginalWithoutExposingSignature() throws Exception {
         fakeClamd("stream: Synthetic-Signature FOUND",HttpStatus.UNPROCESSABLE_ENTITY);
+    }
+    @Test void truncatedOkWithoutNullTerminatorIsNotAValidCleanVerdict()
+        throws Exception {
+        fakeClamd("stream: OK",HttpStatus.SERVICE_UNAVAILABLE,false);
     }
     @Test void scannerErrorDeniesOriginal() throws Exception {
         fakeClamd("stream: INSTREAM size limit exceeded. ERROR",
