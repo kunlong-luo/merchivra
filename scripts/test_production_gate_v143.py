@@ -227,7 +227,14 @@ class V143ProductionGateTests(unittest.TestCase):
             self.assertEqual(json.loads(r.stdout)["status"],"BLOCKED")
             self.assertNotIn("ONLY_FAKE_MOCK_VALUE_123456",r.stdout+r.stderr)
             file=Path(d)/"claims.json"
-            file.write_text(json.dumps(evidence()))
+            # CLI uses the runner's real clock; the pure unit evaluator
+            # intentionally uses a frozen clock. Supply fresh UTC metadata
+            # rather than disabling the rejection of future attestations.
+            claims=evidence()
+            current=datetime.now(timezone.utc).isoformat()
+            for entry in claims["controls"].values():
+                entry["testedAt"]=current
+            file.write_text(json.dumps(claims))
             r=subprocess.run([sys.executable,str(script),"--compose-stdin",
                 "--candidate-sha",SHA,"--evidence-json",str(file)],
                 input=json.dumps(compose()),capture_output=True,text=True,timeout=9)
