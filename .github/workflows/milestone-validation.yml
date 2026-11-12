@@ -1,3 +1,5 @@
+# V138: exact-main-SHA full A3 after V52 private original retention,
+# instant holds, dual-Owner no-delete reviews and PG18 Flyway V88 HTTP.
 # V137: exact-main-SHA A3 after ClamAV INSTREAM production fail-closed
 # private original upload/download gate, with synthetic Demo-only bypass.
 # V136: rerun exact-main-SHA full A3 after index-first V133/V134 pages
@@ -35,7 +37,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V137-A3-private-evidence-av-fail-closed' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V138-A3-private-proof-governance-no-delete' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -69,6 +71,7 @@ on:
           - V135-A3-large-tenant-lot-query-plans
           - V136-A3-index-first-lot-query-plans
           - V137-A3-private-evidence-av-fail-closed
+          - V138-A3-private-proof-governance-no-delete
 
 permissions:
   contents: read
