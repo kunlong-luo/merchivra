@@ -187,10 +187,12 @@ def evidence_checks(evidence: Any, expected_sha: str,
     if not isinstance(controls,dict) or not isinstance(reviews,dict):
         return checks
     leads=[]
+    fingerprints=[]
     for group,codes in CONTROL_GROUPS.items():
         reviewer=reviews.get(group)
         if isinstance(reviewer,str) and REVIEWER.fullmatch(reviewer):
             leads.append(reviewer)
+        group_attesters=[]
         for code in codes:
             record=controls.get(code)
             if not isinstance(record,dict):continue
@@ -207,6 +209,16 @@ def evidence_checks(evidence: Any, expected_sha: str,
                 and timestamp(record.get("testedAt"),now,days)
                 and record.get("source")=="operator_attested_target"
             )
+            if checks[code]:
+                fingerprints.append(record["evidenceSha256"])
+                group_attesters.append(reviewer_id)
+        # Avoid one person attesting all controls for a full G1/G2/G3 gate.
+        if len(set(group_attesters))<2:
+            for code in codes:checks[code]=False
+    # A repeated digest across unrelated controls is not independent
+    # documentary evidence, even if operator metadata says "verified".
+    if len(set(fingerprints))!=len(fingerprints):
+        for code in ALL_CODES:checks[code]=False
     # A lead for each gate must be distinct. The individual control attestant
     # cannot be their own group's lead. Neither is a verified signature.
     checks["INDEPENDENT_GATE_REVIEWERS"]=(
@@ -214,7 +226,7 @@ def evidence_checks(evidence: Any, expected_sha: str,
     return checks
 
 def inspect(compose: Any,evidence: Any,sha: str,now: datetime) -> dict[str,Any]:
-    if not isinstance(sha,str) or not SHA.fullmatch(sha):
+    if not isinstance(sha,str) or not SHA.fullmatch(sha) or sha=="0"*40:
         raise ValueError("invalid_candidate_sha")
     if now.tzinfo is None:
         raise ValueError("naive_current_time")
@@ -252,7 +264,7 @@ def cli() -> int:
     parser.add_argument("--candidate-sha",required=True)
     args=parser.parse_args()
     try:
-        if not SHA.fullmatch(args.candidate_sha):
+        if not SHA.fullmatch(args.candidate_sha) or args.candidate_sha=="0"*40:
             raise ValueError("invalid_candidate_sha")
         source=sys.stdin.buffer.read(1024*1024+1)
         if len(source)>1024*1024:
