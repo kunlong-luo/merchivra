@@ -63,11 +63,13 @@ class LotProofGovernanceHistoryV140Test {
             assertTrue(sql.contains("WHERE tenant_id=? AND proof_id=?"));
             assertTrue(sql.contains("ORDER BY recorded_at DESC,id DESC LIMIT ?"));
             assertFalse(sql.toLowerCase().contains("delete "));
-            Object[] params=inv.getArgument(2);
-            assertEquals(3,params.length);
-            assertEquals(tenant,params[0]);
-            assertEquals(proof,params[1]);
-            assertEquals(51,params[2]);
+            // Mockito exposes JDBC Object... args as expanded invocation
+            // arguments: SQL, mapper, tenant, proof, lookahead limit.
+            Object[] params=inv.getArguments();
+            assertEquals(5,params.length);
+            assertEquals(tenant,params[2]);
+            assertEquals(proof,params[3]);
+            assertEquals(51,params[4]);
             RowMapper<?> mapper=inv.getArgument(1);
             var result=new ArrayList<>();
             for(int i=0;i<51;i++){
@@ -99,11 +101,13 @@ class LotProofGovernanceHistoryV140Test {
             any(RowMapper.class),any(Object[].class))).thenAnswer(inv->{
             String sql=inv.getArgument(0);
             assertTrue(sql.contains("(recorded_at,id)<(?,?)"));
-            Object[] args=inv.getArgument(2);
-            assertEquals(5,args.length);
-            assertEquals(OffsetDateTime.parse("2026-11-12T01:02:03Z"),args[2]);
-            assertEquals(file,args[3]);
-            assertEquals(51,args[4]);
+            Object[] args=inv.getArguments();
+            assertEquals(7,args.length);
+            assertEquals(tenant,args[2]);
+            assertEquals(proof,args[3]);
+            assertEquals(OffsetDateTime.parse("2026-11-12T01:02:03Z"),args[4]);
+            assertEquals(file,args[5]);
+            assertEquals(51,args[6]);
             return List.of();
         });
         String cursor=LocalKeysetPage.encode("V140_PROOF_GOV_AUDIT",
