@@ -25,7 +25,7 @@ export default function LotEvidenceFilesPanel({tenantId,currentUserId,warehouses
  const [retentionDate,setRetentionDate]=useState('')
  const [auditCursor,setAuditCursor]=useState<string|null>(null)
  const [auditPrevious,setAuditPrevious]=useState<(string|null)[]>([])
- const [warningMib,setWarningMib]=useState('64')
+ const [warningMib,setWarningMib]=useState('')
  const [warningAction,setWarningAction]=useState<'SET'|'DISABLE'>('SET')
  const [warningReason,setWarningReason]=useState('')
 
