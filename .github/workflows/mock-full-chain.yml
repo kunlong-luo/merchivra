@@ -200,6 +200,71 @@ jobs:
           MERCHIVRA_SPAPI_OAUTH_ENABLED=false \
             python3 scripts/smoke_next_session_csrf_v101.py
           echo "PASS V122: Next 16 standalone Docker real same-origin PG18 session/CSRF"
+      # V146: only AFTER all HTTP Session/CSRF tests pass, recreate the same
+      # disposable Spring server with Secure cookies enabled. This allows a
+      # real CA-verified HTTPS Nginx canary to test the same-session Vite
+      # rollback under TLS rather than pretending local HTTP is production.
+      - name: V146 synthetic TLS validated Next-to-Vite-to-Next cutover
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "${GITHUB_ACTIONS:-}" = true
+          docker compose --env-file .env \
+            -f deploy/compose.yaml -f deploy/compose.next.yaml \
+            -f deploy/compose.v146-synthetic-https.yaml config -q
+          docker compose --env-file .env \
+            -f deploy/compose.yaml -f deploy/compose.next.yaml \
+            -f deploy/compose.v146-synthetic-https.yaml \
+            up -d --no-deps server
+          docker compose --env-file .env \
+            -f deploy/compose.yaml -f deploy/compose.next.yaml \
+            -f deploy/compose.v146-synthetic-https.yaml \
+            exec -T server sh -c \
+            'test "$MERCHIVRA_SESSION_COOKIE_SECURE" = true && test "$MERCHIVRA_SPAPI_ENABLED" = false && test "$MERCHIVRA_SPAPI_OAUTH_ENABLED" = false'
+          ready=0
+          for i in $(seq 1 60); do
+            if curl -fsS --max-time 3 http://127.0.0.1:3001/api/v1/ping \
+              >/dev/null 2>&1; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ready" = 1
+          set -a
+          . ./.env
+          set +a
+          export MERCHIVRA_SPAPI_ENABLED=false
+          export MERCHIVRA_SPAPI_OAUTH_ENABLED=false
+          export MERCHIVRA_SPAPI_ALLOW_WRITES=false
+          MERCHIVRA_V146_DISPOSABLE_ONLY=true \
+            bash scripts/smoke_https_cutover_v146.sh \
+            > /tmp/merchivra-v146-tls-cutover.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('/tmp/merchivra-v146-tls-cutover.json').read_text())
+          assert r['mode']=='disposable_tls_only'
+          assert r['tlsVerifiedBySyntheticLocalCa'] is True
+          assert r['allNextWorkbenchRoutes']==11
+          for key in ('secureHttpOnlySameSiteSession','anonymousIsolation',
+                     'hostHeaderRejection','spoofedForwardedHeadersOverridden',
+                     'csrfUnsafeWriteRejected','viteRollbackSameSession',
+                     'nextRollforwardSameSession','logoutRevokedSession'):
+              assert r[key] is True,key
+          assert r['externalTlsVerified'] is False
+          assert r['productionApproved'] is False
+          assert r['amazonLiveEnabled'] is False
+          print('PASS V146 full A3: disposable CA-verified HTTPS, Secure Session, Next/Vite same-cookie cutover; no external ingress or release')
+          PY
+      - name: V146 synthetic TLS cutover evidence (never keys/cookies)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v146-local-https-cutover-evidence
+          path: /tmp/merchivra-v146-tls-cutover.json
+          if-no-files-found: warn
+          retention-days: 7
       - name: Diagnostics
         if: failure()
         run: docker compose --env-file .env -f deploy/compose.yaml logs --no-color --tail=150

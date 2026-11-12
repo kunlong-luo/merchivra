@@ -1,3 +1,6 @@
+# V146: exact-main-SHA A3 adds REAL disposable CA-verified local HTTPS
+# Nginx with Spring Secure Session, 11 Next workbenches, same-cookie
+# Vite rollback and Next rollforward; NO production TLS claim or OAuth.
 # V145: exact-main-SHA A3 verifies actual Springdoc/Orval FBA PO/ASN link
 # contracts with existing PG18 HTTP, Session/CSRF and Chromium flows.
 # V144: exact main-SHA full A3: 11 actual Next/PG18 session routes,
@@ -54,7 +57,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V145-A3-FBA-PO-ASN-generated-contracts' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V146-A3-disposable-HTTPS-Next-Vite-session-cutover' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -96,6 +99,7 @@ on:
           - V143-A3-failclosed-G1-G2-G3-production-preflight
           - V144-A3-session-cache-11-Next-routes-purchasing-P0
           - V145-A3-FBA-PO-ASN-generated-contracts
+          - V146-A3-disposable-HTTPS-Next-Vite-session-cutover
 
 permissions:
   contents: read

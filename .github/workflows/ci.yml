@@ -473,6 +473,17 @@ jobs:
             exit 1
           fi
           echo 'PASS V142 fail-closed: non-CI/real execution refused before Docker or SQL'
+      - name: V146 HTTPS localhost-only Nginx cutover contracts and refuse-prod tests
+        run: |
+          bash -n scripts/smoke_https_cutover_v146.sh
+          python3 -m py_compile scripts/smoke_https_cutover_v146.py
+          python3 -m unittest discover -s scripts -p 'test_https_cutover_v146.py' -v
+          if env -u GITHUB_ACTIONS MERCHIVRA_V146_DISPOSABLE_ONLY=true \
+            bash scripts/smoke_https_cutover_v146.sh; then
+            echo 'V146 unacceptable: non-CI HTTPS canary accepted' >&2
+            exit 1
+          fi
+          echo 'PASS V146 refusal + only fixed localhost TLS and safe backend switches'
       - name: V143 fail-closed production readiness and human approval contracts
         run: |
           python3 -m py_compile scripts/check_production_gate_v143.py
@@ -496,6 +507,9 @@ jobs:
         run: |
           set -euo pipefail
           docker compose --env-file .env.example -f deploy/compose.yaml config -q
+          docker compose --env-file .env.example -f deploy/compose.yaml \
+            -f deploy/compose.next.yaml \
+            -f deploy/compose.v146-synthetic-https.yaml config -q
           bundled=$(docker compose --env-file .env.example -f deploy/compose.yaml config --services | sort | tr '\n' ' ')
           test "$bundled" = "postgres server web "
           docker compose --env-file .env.example -f deploy/compose.yaml --profile optional-cache config -q
