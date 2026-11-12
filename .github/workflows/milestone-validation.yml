@@ -1,3 +1,5 @@
+# V137: exact-main-SHA A3 after ClamAV INSTREAM production fail-closed
+# private original upload/download gate, with synthetic Demo-only bypass.
 # V136: rerun exact-main-SHA full A3 after index-first V133/V134 pages
 # fixed the V135 PG18 12k-position plan gate failure; retain all probes.
 # V135: one exact-main-SHA full A3 after PG18 12k-position/6k-action
@@ -33,7 +35,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V136-A3-index-first-lot-query-plans' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V137-A3-private-evidence-av-fail-closed' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -66,6 +68,7 @@ on:
           - V134-A3-warehouse-expiry-alert-full-keyset
           - V135-A3-large-tenant-lot-query-plans
           - V136-A3-index-first-lot-query-plans
+          - V137-A3-private-evidence-av-fail-closed
 
 permissions:
   contents: read

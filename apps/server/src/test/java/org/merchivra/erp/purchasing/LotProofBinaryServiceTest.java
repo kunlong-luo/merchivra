@@ -14,7 +14,8 @@ import static org.mockito.Mockito.*;
 
 class LotProofBinaryServiceTest {
     private final JdbcTemplate jdbc=mock(JdbcTemplate.class);
-    private final LotProofBinaryService service=new LotProofBinaryService(jdbc);
+    private final LotProofAvScanner scanner=mock(LotProofAvScanner.class);
+    private final LotProofBinaryService service=new LotProofBinaryService(jdbc,scanner);
     private final UUID tenant=UUID.fromString("11111111-1111-4111-8111-111111111111");
     private final UUID actor=UUID.fromString("22222222-2222-4222-8222-222222222222");
     private final UUID proof=UUID.fromString("33333333-3333-4333-8333-333333333333");
@@ -78,6 +79,31 @@ class LotProofBinaryServiceTest {
             org.mockito.AdditionalMatchers.aryEq(PDF),eq(PDF.length),eq(LotProofBinaryService.digest(PDF)),eq(actor));
     }
 
+    @Test void scannerFailureMustRefuseProofBeforeAnyTenantQueryOrByteInsert(){
+        doThrow(new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+            "Private evidence malware screening unavailable"))
+            .when(scanner).scan(org.mockito.AdditionalMatchers.aryEq(PDF));
+        assertEquals(HttpStatus.SERVICE_UNAVAILABLE,
+            assertThrows(ResponseStatusException.class,
+                ()->service.upload(tenant,actor,proof,key,PDF)).getStatusCode());
+        verifyNoInteractions(jdbc);
+    }
+    @Test void approvedUploadMustHavePassedOriginalByteScanner() throws Exception{
+        tenantActive();source("PENDING_REVIEW",LotProofBinaryService.digest(PDF));
+        var info=new LotProofBinaryService.FileInfo(fileId.toString(),proof.toString(),
+            "application/pdf",PDF.length,LotProofBinaryService.digest(PDF),actor.toString());
+        when(jdbc.query(contains("FROM erp_local_lot_disposition_proof_file"),
+            any(RowMapper.class),eq(tenant),eq(proof))).thenReturn(List.of(info));
+        service.upload(tenant,actor,proof,key,PDF);
+        var order=inOrder(scanner,jdbc);
+        order.verify(scanner).scan(org.mockito.AdditionalMatchers.aryEq(PDF));
+        order.verify(jdbc).queryForList(contains("FROM tenant"),eq(UUID.class),eq(tenant));
+        order.verify(jdbc).update(contains("INSERT INTO erp_local_lot_disposition_proof_file"),
+            any(UUID.class),eq(tenant),eq(proof),eq(key),eq("application/pdf"),
+            org.mockito.AdditionalMatchers.aryEq(PDF),eq(PDF.length),
+            eq(LotProofBinaryService.digest(PDF)),eq(actor));
+    }
+
     // V129: only deliver checked binary bytes after the current Owner's
     // tenant-scoped download event has been persisted in the same transaction.
     private void storedFile(byte[] savedBytes, String storedSha) throws Exception {
@@ -113,6 +139,21 @@ class LotProofBinaryServiceTest {
         verify(jdbc).update(contains("INSERT INTO erp_local_lot_proof_file_download_audit"),
             any(UUID.class),eq(tenant),eq(proof),eq(fileId),eq(actor),eq(sha));
     }
+    @Test void olderOriginalDownloadMustScanBeforeCommittingAccessAudit() throws Exception {
+        String sha=LotProofBinaryService.digest(PDF);
+        storedFile(PDF,sha);
+        doThrow(new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY,
+            "Private original file failed malware screening"))
+            .when(scanner).scan(org.mockito.AdditionalMatchers.aryEq(PDF));
+        assertEquals(HttpStatus.UNPROCESSABLE_ENTITY,
+            assertThrows(ResponseStatusException.class,
+                ()->service.download(tenant,actor,proof)).getStatusCode());
+        verify(jdbc,never()).update(contains("INSERT INTO erp_local_lot_proof_file_download_audit"),
+            any(UUID.class),any(UUID.class),any(UUID.class),
+            any(UUID.class),any(UUID.class),anyString());
+        verify(scanner).scan(org.mockito.AdditionalMatchers.aryEq(PDF));
+    }
+
     @Test void auditWriteFailureMustBlockBinaryDelivery() throws Exception {
         storedFile(PDF,LotProofBinaryService.digest(PDF));
         // Unsuccessful write count is fail-closed; a thrown JDBC error also

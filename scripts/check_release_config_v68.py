@@ -21,6 +21,7 @@ required={
     "MERCHIVRA_SPAPI_VERIFICATION_ENABLED":"false",
     "MERCHIVRA_ORDERS_SYNC_ENABLED":"false",
     "MERCHIVRA_ORDERS_SYNC_LIVE_APPROVED":"false",
+    "MERCHIVRA_EVIDENCE_AV_REQUIRED":"true",
 }
 for key,expected in required.items():
     assert str(env.get(key,"")).lower()==expected, f"Production overlay default unsafe: {key}"
@@ -37,4 +38,10 @@ for service in ("server","web"):
     for port in ports:
         assert port.get("host_ip")=="127.0.0.1",f"{service} binds a non-loopback host port"
 
-print("PASS V68 Compose: PG18, optional Redis noeviction, production cookie secure, Demo/Seller egress off, loopback only")
+assert "MERCHIVRA_EVIDENCE_AV_HOST" in env, "V137 private clamd hostname must be configurable"
+port=env.get("MERCHIVRA_EVIDENCE_AV_PORT","3310")
+assert str(port).isdigit() and 1<=int(port)<=65535, "Invalid clamd internal TCP port"
+# An absent host is an intentional *runtime* startup blocker until operations
+# provisions a private scanner. Do not invent external ingress or a public port.
+assert not services.get("clamav",{}).get("ports"), "ClamAV must never publish an external TCP port"
+print("PASS V68/V137 Compose: PG18, Demo/Seller off, secure Session, internal AV required, loopback-only ingress")
