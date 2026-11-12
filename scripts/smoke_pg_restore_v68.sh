@@ -30,6 +30,9 @@ major="$(psql "${opts[@]}" -d "$DB_NAME" -X -At -v ON_ERROR_STOP=1 -c 'SHOW serv
 pg_dump "${opts[@]}" -d "$DB_NAME" -Fc --no-owner --no-acl \
   -f "$dir/backup.dump"
 test -s "$dir/backup.dump"
+# V141: record the time the disposable PostgreSQL 18 backup is complete,
+# before validating its restore. This is NOT a production backup agent.
+v141_backup_time="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
 pg_restore --list "$dir/backup.dump" >/dev/null
 createdb "${opts[@]}" --template=template0 "$restored_db"
 pg_restore "${opts[@]}" --dbname="$restored_db" --exit-on-error \
@@ -64,4 +67,22 @@ for name in ops_finding_assignment_v65 ops_finding_snooze_v65 ads_reviewed_recen
     "SELECT COUNT(*) FROM pg_catalog.pg_indexes WHERE schemaname='public' AND indexname='$name'")"
   [[ "$found" == 1 ]] || { echo "Missing restored index: $name" >&2; exit 1; }
 done
+# V141: optional, explicit CI-only machine-readable evidence that a backup
+# was restored into a separate temporary database and fully compared. Do NOT
+# emit archive bytes, table rows or user secrets. Fail closed on missing tool.
+if [[ -n "${MERCHIVRA_V141_ATTESTATION_FILE:-}" ]]; then
+  case "$MERCHIVRA_V141_ATTESTATION_FILE" in
+    /tmp/merchivra-v141-attest-*.json) ;;
+    *) echo 'V141 attestation target must be a disposable /tmp path' >&2; exit 2 ;;
+  esac
+  command -v sha256sum >/dev/null
+  command -v stat >/dev/null
+  archive_sha="$(sha256sum "$dir/backup.dump" | awk '{print $1}')"
+  archive_size="$(stat -c %s "$dir/backup.dump")"
+  restore_time="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  umask 077
+  printf '{"source":"ci_disposable_v68_verified","archiveBytes":%s,"archiveSha256":"%s","backupCompletedAt":"%s","restoreVerifiedAt":"%s","restoredTables":%s,"restoreVerified":true,"schemaVerified":true}\n' \
+    "$archive_size" "$archive_sha" "$v141_backup_time" "$restore_time" "$count" \
+    > "$MERCHIVRA_V141_ATTESTATION_FILE"
+fi
 echo "PASS V68: PG18 custom-format archive + isolated atomic restore of $count public tables, full row fingerprints, Flyway history and constraints"

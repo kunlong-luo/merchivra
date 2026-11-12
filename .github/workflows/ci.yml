@@ -341,9 +341,50 @@ jobs:
             MERCHIVRA_V101_DISPOSABLE_ONLY=true python3 \
               ../../scripts/smoke_next_session_csrf_v101.py
           )
-          MERCHIVRA_V68_DISPOSABLE_ONLY=true bash scripts/smoke_pg_restore_v68.sh
+          # V141: actual PG18 service-container filesystem, actual read-only
+          # pg_catalog WAL/database bytes and the successful isolated V68 restore.
+          # This is a disposable sample, NOT a production readiness grant.
+          v141_attest="$(mktemp /tmp/merchivra-v141-attest-XXXXXX.json)"
+          v141_disk="$(mktemp /tmp/merchivra-v141-disk-XXXXXX.json)"
+          MERCHIVRA_V141_ATTESTATION_FILE="$v141_attest" \
+            MERCHIVRA_V68_DISPOSABLE_ONLY=true bash scripts/smoke_pg_restore_v68.sh
+          docker exec -i "${{ job.services.postgres.id }}" sh -s \
+            < scripts/collect_pg18_disk_v141.sh > "$v141_disk"
+          python3 scripts/pg18_ops_probe_v141.py --mode disposable \
+            --disk-json "$v141_disk" --backup-json "$v141_attest" \
+            --disk-warn-percent 20 --disk-critical-percent 10 \
+            --wal-warn-bytes 536870912 --wal-critical-bytes 2147483648 \
+            --backup-max-age-hours 24 --restore-max-age-hours 24 \
+            --prometheus-file /tmp/merchivra-v141-pg18.prom \
+            > /tmp/merchivra-v141-ops.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('/tmp/merchivra-v141-ops.json').read_text())
+          assert r['mode']=='disposable' and r['productionApproved'] is False
+          assert r['alertReceiverVerified'] is False
+          assert r['measurements']['databaseBytes']>0
+          assert r['measurements']['walDirectoryBytes']>0
+          assert r['measurements']['filesystemAvailableBytes']>0
+          assert any(c['code']=='PITR_WAL_ARCHIVING' and c['status']=='BLOCKED'
+                     for c in r['checks']), 'Disposable pg_dump is NOT PITR'
+          metrics=Path('/tmp/merchivra-v141-pg18.prom').read_text()
+          assert 'merchivra_pg18_ops_production_approved 0' in metrics
+          print('PASS V141 disposable local PG18 ops: measured disk/WAL, verified restore, never production approval')
+          PY
+          rm -f -- "$v141_attest" "$v141_disk"
           echo "PostgreSQL 18 / Flyway / actual finance + FBA OpenAPI and local mock chain verified"
           kill "$app_pid" 2>/dev/null || true
+      - name: Preserve V141 disposable disk/WAL/PITR-not-ready metrics (no credentials)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v141-disposable-pg18-ops-evidence
+          path: |
+            /tmp/merchivra-v141-ops.json
+            /tmp/merchivra-v141-pg18.prom
+          if-no-files-found: warn
+          retention-days: 7
       - name: Preserve verified V65 OpenAPI contract for Orval review
         uses: actions/upload-artifact@v4
         with:
@@ -369,6 +410,12 @@ jobs:
         run: python3 scripts/check_docs_consistency_v109.py
       - name: V140 synthetic Owner HTTP smoke Python syntax
         run: python3 -m py_compile scripts/smoke_proof_monitor_v140.py
+      - name: V141 read-only disk/WAL/backup readiness probe contracts
+        run: |
+          sh -n scripts/collect_pg18_disk_v141.sh
+          bash -n scripts/smoke_pg_restore_v68.sh
+          python3 -m py_compile scripts/pg18_ops_probe_v141.py
+          python3 -m unittest discover -s scripts -p 'test_pg18_ops_v141.py' -v
       - name: V135 EXPLAIN JSON and plan assertions (no database needed)
         run: |
           python3 -m py_compile scripts/check_lot_query_plans_v135.py

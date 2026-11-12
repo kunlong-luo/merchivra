@@ -1,3 +1,6 @@
+# V141: exact-main-SHA full A3 includes actual PG18 service-container
+# filesystem/WAL collector, read-only SQL, V68 isolated restore attestation,
+# explicit archive/PITR and external alert delivery NOT approved in CI.
 # V140: exact-main-SHA full A3 with V88 governance audit full keyset,
 # V89 per-tenant advisory original-byte threshold and 138-event PG18 HTTP.
 # V139: exact-main-SHA full A3 after refreshing the authenticated V138
@@ -41,7 +44,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V140-A3-proof-audit-capacity-warning' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V141-A3-PG18-WAL-disk-restore-observability' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -78,6 +81,7 @@ on:
           - V138-A3-private-proof-governance-no-delete
           - V139-A3-V138-owner-CSRF-refresh
           - V140-A3-proof-audit-capacity-warning
+          - V141-A3-PG18-WAL-disk-restore-observability
 
 permissions:
   contents: read

@@ -1,0 +1,47 @@
+# V141: OPTIONAL Prometheus rules for a locally installed node_exporter
+# textfile collector. No receiver, external endpoint or secret is included.
+# Operators MUST configure real Alertmanager routing and send test alerts
+# before calling an alert channel "working". PgBackRest/WAL-G PITR are separate.
+groups:
+  - name: merchivra-pg18-read-only-ops
+    rules:
+      - alert: MerchivraPg18OpsProbeMissing
+        expr: absent_over_time(merchivra_pg18_ops_observation_known[20m])
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL 18 ops probe observations missing"
+          description: "Check the collector, local service account, container PGDATA mapping, node_exporter textfile mount and Alertmanager delivery."
+      - alert: MerchivraPg18OpsProbeUnknown
+        expr: merchivra_pg18_ops_observation_known == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL 18 ops probe could not verify all sources"
+          description: "Do not treat absent privileges, missing backup attestation or filesystem reads as a healthy database."
+      - alert: MerchivraPg18OpsProbeStale
+        expr: (time() - merchivra_pg18_ops_observed_at_seconds) > 1800
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL 18 ops observation is older than 30 minutes"
+          description: "The probe may have stopped. Investigate separately from database reachability."
+      - alert: MerchivraPg18OpsCritical
+        expr: merchivra_pg18_ops_critical == 1
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "PostgreSQL 18 disk/WAL/backup/PITR operations gate blocked"
+          description: "Inspect read-only V141 report; validate disk, WAL archive, latest backup and independently verified restore. Never auto-delete original evidence or WAL files."
+      - alert: MerchivraPg18OpsWarning
+        expr: merchivra_pg18_ops_warning == 1
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "PostgreSQL 18 disk/WAL threshold warning"
+          description: "Inspect the V141 report and operator-approved thresholds, and assess filesystem, replication slots and WAL retention."
