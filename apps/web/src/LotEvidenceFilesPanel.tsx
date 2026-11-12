@@ -5,8 +5,9 @@ import type {LocalWarehouse} from './lib/purchasing'
 import {fetchDispositionProofs} from './lib/lot-disposition-proofs'
 import {fetchLotDispositions} from './lib/lot-reconciliation'
 import {fetchProofFileInfo,uploadProofFile,proofDownloadHref,
+ fetchProofGovernance,fetchProofCapacity,commandProofGovernance,
  fetchSupplierReturnTraces,reportSupplierReturnDispatch,
- reportSupplierReturnReceipt} from './lib/lot-evidence-files'
+ reportSupplierReturnReceipt,type LotProofGovernanceAction} from './lib/lot-evidence-files'
 
 const noteOk=(text:string)=>text.trim().length>=5&&text.trim().length<=300
 export default function LotEvidenceFilesPanel({tenantId,currentUserId,warehouses}:{
@@ -17,6 +18,10 @@ export default function LotEvidenceFilesPanel({tenantId,currentUserId,warehouses
  const [proofId,setProofId]=useState('')
  const [file,setFile]=useState<File|null>(null)
  const [uploadKey,setUploadKey]=useState(()=>crypto.randomUUID())
+ const [governanceAction,setGovernanceAction]=useState<LotProofGovernanceAction>('PLACE_HOLD')
+ const [governanceReason,setGovernanceReason]=useState('')
+ const [retentionDate,setRetentionDate]=useState('')
+
  const [dispositionId,setDispositionId]=useState('')
  const [carrierReference,setCarrierReference]=useState('')
  const [dispatchReason,setDispatchReason]=useState('')
@@ -30,6 +35,11 @@ export default function LotEvidenceFilesPanel({tenantId,currentUserId,warehouses
   queryFn:()=>fetchDispositionProofs(warehouse),enabled:!!warehouse,retry:false})
  const stored=useQuery({queryKey:[...root,'proof-file',proofId],
   queryFn:()=>fetchProofFileInfo(proofId),enabled:!!proofId,retry:false})
+ const governance=useQuery({queryKey:[...root,'proof-governance',proofId],
+  queryFn:()=>fetchProofGovernance(proofId),
+  enabled:!!proofId&&!!stored.data,retry:false})
+ const storage=useQuery({queryKey:[...root,'proof-capacity'],
+  queryFn:fetchProofCapacity,enabled:!!warehouse,retry:false})
  const dispositions=useQuery({queryKey:[...root,'lot-dispositions',warehouse],
   queryFn:()=>fetchLotDispositions(warehouse),enabled:!!warehouse,retry:false})
  const returns=useQuery({queryKey:[...root,'supplier-return-trace',warehouse],
@@ -45,6 +55,14 @@ export default function LotEvidenceFilesPanel({tenantId,currentUserId,warehouses
    '；这并不是供应商或承运商验真。')
    setFailure('');setUploadKey(crypto.randomUUID());setFile(null);refresh()},
   onError:(error:Error)=>setFailure(error.message)})
+ const governanceChange=useMutation({mutationFn:()=>commandProofGovernance(proofId,{
+  action:governanceAction,reason:governanceReason.trim(),
+  ...(governanceAction==='PROPOSE_RETENTION'&&retentionDate?
+   {retentionUntil:new Date(retentionDate).toISOString()}:{})
+ }),onSuccess:()=>{
+  setMessage('私有证据保留/保全审批记录已写入审计；未执行任何原件删除')
+  setFailure('');setGovernanceReason('');refresh()
+ },onError:(error:Error)=>setFailure(error.message)})
  const dispatch=useMutation({mutationFn:()=>reportSupplierReturnDispatch({
   requestKey:dispatchKey,dispositionId,carrierReference:carrierReference.trim(),
   reason:dispatchReason.trim()}),
@@ -110,6 +128,65 @@ export default function LotEvidenceFilesPanel({tenantId,currentUserId,warehouses
      上传私有原件并校验 SHA-256
     </button>
    </form>
+   <h3>原件容量、法律保全与保留审批（V138）</h3>
+   <p className="setup-hint">目前只记录容量及经两位 Owner 分别申请、审查的保留与处置意见。
+    未经正式保留政策和运维审批，不启用自动删除，也没有删除 API。</p>
+   {storage.data&&<p className="setup-hint">
+    当前租户原件 {storage.data.fileCount} 份，
+    原始字节总计 {storage.data.originalBytes.toLocaleString()}，
+    法律保全 {storage.data.heldFiles} 份，
+    尚无获批保留期限 {storage.data.retentionUnsetFiles} 份，
+    待审保留方案 {storage.data.pendingRetentionFiles} 份，
+    已完成不删除处置审查 {storage.data.reviewedDisposalFiles} 份。
+   </p>}
+   {storage.isError&&<p className="setup-error" role="alert">
+    无法取得租户原件容量统计：{String(storage.error)}</p>}
+   {!!stored.data&&governance.data&&<form className="team-invite-form" onSubmit={e=>{
+    e.preventDefault()
+    if(!proofId||!noteOk(governanceReason)||governanceReason.trim().length<10
+       ||governanceChange.isPending)return
+    if(governanceAction==='PROPOSE_RETENTION'&&
+       (!retentionDate||!Number.isFinite(new Date(retentionDate).getTime())))return
+    if(window.confirm('确认登记原件治理状态？仅记录保全/保留/人工处置审批，绝不删除文件。'))
+     governanceChange.mutate()
+   }}>
+    <p className="setup-hint">
+     当前原件 {governance.data.fileId.slice(0,8)}；
+     法律保全：{governance.data.legalHold?'已生效':'未设置'}；
+     已批准保留到期：{governance.data.retentionUntil??'尚未批准（不可进入处置审查）'}；
+     待审保留期限：{governance.data.retentionProposedUntil??'无'}；
+     处置审查：{governance.data.disposalState==='REVIEWED_NO_DELETE'?
+      '已审核，不代表允许删除':governance.data.disposalState==='REQUESTED'?
+      '待另一位 Owner 审核':'未申请'}。
+    </p>
+    <label htmlFor="v138-action">保全、保留或处置审查操作</label>
+    <select id="v138-action" value={governanceAction}
+      onChange={e=>setGovernanceAction(e.target.value as LotProofGovernanceAction)}>
+     <option value="PLACE_HOLD">立即设置法律保全（阻止处置）</option>
+     <option value="REQUEST_HOLD_RELEASE">申请解除保全（需另一名 Owner）</option>
+     <option value="APPROVE_HOLD_RELEASE">审核解除保全（不得自己审批）</option>
+     <option value="PROPOSE_RETENTION">提议保留期限（不自动到期删除）</option>
+     <option value="APPROVE_RETENTION">独立审核保留期限</option>
+     <option value="REQUEST_DISPOSAL">保留期届满后申请处置审查</option>
+     <option value="REVIEW_DISPOSAL">独立审核处置申请（仅记录，不删除）</option>
+    </select>
+    {governanceAction==='PROPOSE_RETENTION'&&<>
+     <label htmlFor="v138-retain-until">建议保留到期时间</label>
+     <input id="v138-retain-until" type="datetime-local"
+      value={retentionDate} onChange={e=>setRetentionDate(e.target.value)}/>
+    </>}
+    <label htmlFor="v138-reason">审批原因（10–500 字符，勿填敏感内容）</label>
+    <input id="v138-reason" value={governanceReason} minLength={10}
+      maxLength={500} onChange={e=>setGovernanceReason(e.target.value)}/>
+    <button className="primary-button" type="submit"
+      disabled={governanceChange.isPending||governanceReason.trim().length<10||
+       governanceReason.trim().length>500||
+       (governanceAction==='PROPOSE_RETENTION'&&!retentionDate)}>
+     提交治理记录（不删除原件）
+    </button>
+   </form>}
+   {governance.isError&&!!stored.data&&<p className="setup-error" role="alert">
+    无法验证原件治理状态：{String(governance.error)}</p>}
    <h3>2. 与原采购订单供应商关联的退货发运</h3>
    <p className="setup-hint">来源从原始采购实收、采购订单和供应商记录自动推导，
     不使用 V44 的拒收品退货数量重复计算已放行过期品。</p>
