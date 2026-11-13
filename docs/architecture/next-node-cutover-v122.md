@@ -60,3 +60,21 @@ V128 只把 `/api/v1/ping` 的 **HTTP 200** 视为健康：如果 Next rewrite �
 `scripts/test_next_health_v153.mjs` 从 `docker compose config --format json` 获取**实际折叠后的健康检查 JavaScript**，在本地 Node 虚拟隔离上下文中模拟 12 类响应，不访问网络；`scripts/check_next_runtime_v122.py` 对真实 Compose 配置检查固定 loopback、禁凭据、实际 Spring JSON 身份和拒绝跳转。PR 进行分层快速 CI；因为修改了运行中的 Next 容器健康规则，**合并后必须对精确 main SHA 跑完整 A3**，核实真实隔离 PG18、Spring、Next Node Compose health、CSRF、Chromium 和 HTTPS 回滚链路。通过 A3 仍不能关闭 #63/#104 或开启生产 Seller/Ads。
 
 **V128 提交只运行快速 PR CI；如最终生产候选 SHA 因合并而变化，必须针对该新 SHA 重新执行完整 A3 里程碑，不能挪用旧 V126 结果冒充对新镜像的完整验证。**
+
+
+## V154 — Next Node PostgreSQL-aware 容器就绪（2026-11-13）
+
+V153 的合成 A3 [#43372166884](https://github.com/kunlong-luo/merchivra/actions/runs/43372166884) 在合并代码 SHA `d3cd12aa357f73049d5e5ca7fd73d652835b6063` 上首次 **7/7 SUCCESS**，证明 Next standalone / Spring Session + CSRF / PG18 / Chromium 与隔离 CA-verified HTTPS 回切有效；**不等于实际生产批准**。V153 的健康探针只验证 Spring 的 `/api/v1/ping` 服务身份，仍可能在数据库运行时失效后误报健康。
+
+**V154 直接复用现有 Spring Boot Actuator JDBC 健康指标**，不新造监控框架、路由或数据库探针。Next 容器每 15 秒在受限的 5 秒健康检查里执行两个无凭据只读 GET：
+
+1. 经 Next 自身 `http://127.0.0.1:3000/api/v1/ping` 校验 HTTP 200、JSON Content-Type 和 `service=merchivra/status=ok/stage=M0`，证明同源 rewrite 仍指向正确 Spring 业务服务。
+2. **仅通过容器内部 Compose DNS** `http://server:8080/actuator/health` 校验 HTTP 200、JSON Content-Type 和 `status=UP`。原有 Actuator health 含 Spring JDBC/DataSource 自动健康指标，PG18 不可用时应返回 DOWN/非 200；Redis 仍按现有默认单实例/显式启用方案选择是否纳入健康。
+
+两个请求共用一次 3 秒 AbortSignal，均不跟随 302、不使用 HTTP 缓存、不携带 Cookie、Session、数据库密码、Seller/Ads 或用户数据。只有两个检查都通过才退出 0；错误后端/HTML 200、PG18 DOWN、503、无效 JSON、错误重定向、连接失败均退出 1。Compose 保留 `start_period=60s`、`retries=6` 和 Vite 可回退路径。
+
+**重要访问边界：** Actuator **没有**新增到 `apps/web/next.config.ts` 的 rewrite 或开放 Next `/actuator/health` 路由；Spring 直连端口仍仅绑定宿主机 `127.0.0.1:8080`，容器内走私有网络。新健康探针只可用于所选私有 Compose 部署，**不能**证实备份/PITR、历史数据、存储灾备、外部认证、真实 TLS/IAM、目标负载均衡摘流或值班响应。
+
+新增离线测试 `scripts/test_next_health_v153.mjs` 从**实际 Compose 输出**执行健康表达式，覆盖 22 个真假服务、DOWN/错误 JSON/503/重定向/断连等场景；完整 A3 Compose 作业额外验证真实 PostgreSQL 18 环境下 Spring Actuator 状态 UP、Next `/actuator/health` 返回 404，且保持 Session/CSRF 和隔离 HTTPS 同会话 Next→Vite→Next 回切。由于变更实际 Next 容器就绪规则，需在**最终合并 main 的精确 SHA**上重新执行完整 A3，不得使用 V153 A3 冒充 V154 结果。
+
+仍需满足 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 的真实目标 TLS/Ingress、外部 KMS/IAM/MFA、实际 PG18 离站 PITR、ClamAV、Alertmanager 外部 ACK 与 G1/G2/G3 人工签署。此更改不打开任何生产 Amazon Seller/Ads OAuth/写入，也不部署真实 ERP。
