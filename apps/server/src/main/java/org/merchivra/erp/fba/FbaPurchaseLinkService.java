@@ -135,7 +135,7 @@ public class FbaPurchaseLinkService {
         try {
             return new LinkAfter(OffsetDateTime.ofInstant(Instant.parse(parts[5]),ZoneOffset.UTC),
                 UUID.fromString(parts[6]));
-        }catch(IllegalArgumentException ex) {throw bad("Invalid FBA link cursor");}
+        }catch(IllegalArgumentException | java.time.format.DateTimeParseException ex) {throw bad("Invalid FBA link cursor");}
     }
     private static CandidateAfter candidateAfter(String cursor,UUID tenant,UUID marketplace,
                                                   UUID shipment,UUID inboundLine,UUID poLine) {
@@ -148,7 +148,7 @@ public class FbaPurchaseLinkService {
         try {
             return new CandidateAfter(OffsetDateTime.ofInstant(Instant.parse(parts[5]),ZoneOffset.UTC),
                 UUID.fromString(parts[6]),UUID.fromString(parts[7]),UUID.fromString(parts[8]));
-        }catch(IllegalArgumentException ex){throw bad("Invalid FBA candidate cursor");}
+        }catch(IllegalArgumentException | java.time.format.DateTimeParseException ex){throw bad("Invalid FBA candidate cursor");}
     }
 
     private static final String LINK_QUERY = """
