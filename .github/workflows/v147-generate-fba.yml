@@ -1,0 +1,39 @@
+name: Temporary V147 regenerate official FBA Orval client
+on:
+  push:
+    branches:
+      - feat/v147-fba-purchase-keyset
+    paths:
+      - .github/workflows/v147-generate-fba.yml
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    if: github.ref == 'refs/heads/feat/v147-fba-purchase-keyset'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+          package-manager-cache: false
+      - name: Install only locked frontend dependencies
+        working-directory: apps/web
+        run: npm ci --no-audit --no-fund
+      - name: Regenerate FBA client from reviewed local OpenAPI
+        working-directory: apps/web
+        run: npm run api:generate:fba
+      - name: Commit generated sources to this isolated feature branch
+        run: |
+          git add apps/web/src/generated/fba-inbound.ts apps/web/src/generated/fba-models
+          if ! git diff --cached --quiet; then
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'chore(v147): regenerate FBA Orval from reviewed OpenAPI'
+            git push origin HEAD:refs/heads/feat/v147-fba-purchase-keyset
+          fi
