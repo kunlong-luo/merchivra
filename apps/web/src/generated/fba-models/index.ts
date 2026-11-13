@@ -7,12 +7,16 @@
  */
 
 export * from './candidate.ts';
+export * from './candidatePage.ts';
 export * from './create.ts';
 export * from './detail.ts';
 export * from './line.ts';
 export * from './lineInput.ts';
 export * from './linked.ts';
+export * from './linkedPage.ts';
 export * from './listFbaInboundShipmentPageParams.ts';
+export * from './listFbaPurchaseCandidatesPageParams.ts';
+export * from './listFbaPurchaseLinksPageParams.ts';
 export * from './propose.ts';
 export * from './reason.ts';
 export * from './receipt.ts';
