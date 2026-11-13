@@ -1,0 +1,11 @@
+# Temporary, isolated 2-frontends Chromium test for V147 test fixture correction.
+name: Temporary V147 full Chromium fixture regression
+on:
+  push:
+    branches: [fix/v147-browser-paged-fba-fixture]
+    paths: [.github/workflows/v147-browser-regression.yml]
+permissions:
+  contents: read
+jobs:
+  full-browser:
+    uses: ./.github/workflows/browser-layout-smoke.yml
