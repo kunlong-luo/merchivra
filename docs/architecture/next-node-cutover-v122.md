@@ -51,4 +51,12 @@ docker compose --env-file .env -f deploy/compose.yaml \
 
 在一次性合成环境运行 `docker compose --env-file .env -f deploy/compose.yaml -f deploy/compose.next.yaml ps` 查看 `next-web` 是否 `healthy`；完整 A3 Compose 脚本会在现有 HTTP/Session/CSRF 检查以外核实这个状态。若 Spring 中断，Next 服务可能仍在监听端口，但应被标记为 `unhealthy`，发布代理/部署平台不得只依赖 TCP 存活作流量切换判断。是否将此健康探针绑定到目标 ingress 的流量摘除机制，必须在真实部署环境另行验证。
 
+## V153 — Next Node 容器健康探针拒绝假 200（2026-11-13）
+
+V128 只把 `/api/v1/ping` 的 **HTTP 200** 视为健康：如果 Next rewrite 被错误的默认代理、静态 HTML 或其他服务的 Ping 200 取代，这个探针可能错误地允许调度平台继续向 Next 实例派流量。V152 的运维目标观测工具已经对这一类误判建立门槛，本轮将**相同的后端身份约束应用到实际 Node standalone 容器**。
+
+`deploy/compose.next.yaml` 的 healthcheck 继续通过**容器内、无身份/无凭据的** Node 24 原生 fetch，固定访问 `http://127.0.0.1:3000/api/v1/ping`，3 秒超时，不跟随重定向，不允许响应缓存。只有同时满足 HTTP 200、JSON Content-Type、实际 Spring `PingController` JSON `service=merchivra`、`status=ok`、`stage=M0` 才退出 0；HTML 200、错误服务/状态/阶段、302、401/503、无效 JSON 或连接失败都会退出 1，随后由 Compose 按 `retries=6` 标记为 unhealthy。**探针不是公开 API 授权、真实库存/财务、IAM、TLS 证书、完整数据库状态或生产发版许可。**
+
+`scripts/test_next_health_v153.mjs` 从 `docker compose config --format json` 获取**实际折叠后的健康检查 JavaScript**，在本地 Node 虚拟隔离上下文中模拟 12 类响应，不访问网络；`scripts/check_next_runtime_v122.py` 对真实 Compose 配置检查固定 loopback、禁凭据、实际 Spring JSON 身份和拒绝跳转。PR 进行分层快速 CI；因为修改了运行中的 Next 容器健康规则，**合并后必须对精确 main SHA 跑完整 A3**，核实真实隔离 PG18、Spring、Next Node Compose health、CSRF、Chromium 和 HTTPS 回滚链路。通过 A3 仍不能关闭 #63/#104 或开启生产 Seller/Ads。
+
 **V128 提交只运行快速 PR CI；如最终生产候选 SHA 因合并而变化，必须针对该新 SHA 重新执行完整 A3 里程碑，不能挪用旧 V126 结果冒充对新镜像的完整验证。**
