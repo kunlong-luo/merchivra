@@ -1,5 +1,16 @@
 # V108 — MVP 收尾、集中测试与上线准入（2026-11-08）
 
+## 2026-11-13 / V150 最终合成技术验收（现行最新证据）
+
+> **精确已验收代码主线 SHA**：[`2e96bf421d1b8e0c2a2999ab63a236d80ea3a9d9`](https://github.com/kunlong-luo/merchivra/commit/2e96bf421d1b8e0c2a2999ab63a236d80ea3a9d9)。[V150 完整 A3 #43361557152](https://github.com/kunlong-luo/merchivra/actions/runs/43361557152) **第 1 次尝试 7/7 SUCCESS**：真实一次性 PostgreSQL 18/Flyway/HTTP、Java 25/Gradle、Next/Vite Chromium、Docker Compose 和临时本地 CA 验证的 HTTPS 切流。技术合成测试不能代表目标生产环境，也不能代替逐需求 G1/G2/G3 签字。
+
+- [PR #118](https://github.com/kunlong-luo/merchivra/pull/118) 在可登录的 Next→Vite→Next 合成 HTTPS 测试前，新增独立匿名 CookieJar 的**真实安全会话就绪检查**：匿名 /auth/me 401、/auth/csrf 200 且有令牌、JSESSIONID 必须 Secure/HttpOnly/SameSite=Strict。只对启动期临时 502/503/504 或连接中断进行有上限重试；证书不受信、CSRF 异常、错误授权状态或不安全 Cookie 均立即 fail-closed。沿用 V149 脱敏失败阶段诊断。
+- [#115](https://github.com/kunlong-luo/merchivra/issues/115) **仍开放**：V148 A3 首次 HTTPS AssertionError 具体根因无法从当时仅含异常类型的日志确认；V150 是就绪检查加固且本次首次运行成功，**不构成历史问题已定位/已根治的证明**。
+- 采购/仓储 [#62](https://github.com/kunlong-luo/merchivra/issues/62) 和 FBA 来源分页 [#108](https://github.com/kunlong-luo/merchivra/issues/108) 维持合成技术验收 CLOSED。Next 目标环境受控切流 [#63](https://github.com/kunlong-luo/merchivra/issues/63)、实际生产 G1/G2/G3/PITR/KMS/Alertmanager [#104](https://github.com/kunlong-luo/merchivra/issues/104)、维护者本地真实 Seller/Ads 只读 OAuth 和数据核验均仍 BLOCKED；未向公网发布真实 ERP，未进行真实 Amazon 写入。
+- [RTM-002](../requirements/implementation-acceptance-rtm-v148.md) 的 25 个 P0 代码/test 入口与人审缺项继续生效；本次 A3 只验证此 SHA 的**合成技术**，非每一条 FR 在真实店铺上完成产品/财务签署。
+
+---
+
 ## 2026-11-13 / V149 主线回归（最新技术证据）
 
 > **精确主线 SHA** [`57d55b6e54e07cac1473259763ce48e4d96e9816`](https://github.com/kunlong-luo/merchivra/commit/57d55b6e54e07cac1473259763ce48e4d96e9816)：[完整 V149 A3 #43358590421](https://github.com/kunlong-luo/merchivra/actions/runs/43358590421) **第 1 次运行 7/7 SUCCESS**（Java25/Gradle、Next/Vite/Chromium、隔离 PG18/Flyway/真实 HTTP、Compose、CA 验证的本地 HTTPS 代理与同会话 Next→Vite→Next 回滚）。[PR #116](https://github.com/kunlong-luo/merchivra/pull/116) 仅加入 HTTPS canary **固定阶段、无敏感内容**的失败诊断及脱敏单测，并未更改匿名拒绝/CSRF/Secure Cookie/真实 OAuth 安全门槛。

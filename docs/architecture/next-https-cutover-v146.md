@@ -4,6 +4,12 @@
 
 基线：V145 main `f05b1ccf0aaa38cf9baa1d8a82db6eab8ed8893c`，[完整 A3 #43222832240](https://github.com/kunlong-luo/merchivra/actions/runs/43222832240) 在第二次（失败 Compose 重试）达到 **7/7 success**。首次 Compose 构建因容器内 Gradle 依赖仓库下载失败而未通过；不能用其初次结果证明稳定性。V145 真 FBA PO/ASN Orval、V144 采购 P0、Session 缓存隔离和 11 个 Next 入口继续保留。
 
+## V150 合成 HTTPS 就绪加固（2026-11-13）
+
+[PR #118](https://github.com/kunlong-luo/merchivra/pull/118) 在正式合成登录和 Next→Vite→Next 回切前添加**独立匿名 CookieJar** 的真实 HTTPS 安全 Session 就绪探针：先通过临时 CA 验证的固定 127.0.0.1:3443，确认 `/api/v1/auth/me` 必须返回 401、`/api/v1/auth/csrf` 返回有效令牌，并检查服务器生成的 `JSESSIONID` 必须是 Secure、HttpOnly、SameSite=Strict。**只有**临时连接失败或 502/503/504 允许有限重试；错误身份状态、缺失 CSRF、Cookie 不安全或证书验证失败直接阻塞。沿用 V149 静态脱敏失败阶段；不得输出真实 Cookie、用户/租户 ID 或 TLS 私钥。
+
+**实际合成技术证据**：[精确 main SHA `2e96bf421d1b8e0c2a2999ab63a236d80ea3a9d9`](https://github.com/kunlong-luo/merchivra/commit/2e96bf421d1b8e0c2a2999ab63a236d80ea3a9d9) / [完整 A3 #43361557152](https://github.com/kunlong-luo/merchivra/actions/runs/43361557152) **run_attempt=1，7/7 SUCCESS**，含真实隔离 PG18、Next/Vite Chromium、Spring HTTP 和本地 TLS 回切。V148 第一次 A3 的 HTTPS AssertionError 当时未有具体阶段信息，**不能证明 V150 加固就是其根因修复**；保留 [#115](https://github.com/kunlong-luo/merchivra/issues/115) 继续追踪。真实域名、机构 CA、Ingress/IAM、证书轮换及 G1/G2/G3 仍由 [#63](https://github.com/kunlong-luo/merchivra/issues/63) 和 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 等待人工目标环境验收。
+
 ## 实现细节
 
 `deploy/compose.v146-synthetic-https.yaml` 是只供测试的 Compose 覆盖层：仅对原有隔离 Spring 设置 `MERCHIVRA_SESSION_COOKIE_SECURE=true` 且强制 SP-API、OAuth 和远程写入保持 `false`。不能拿它替代 `deploy/compose.production.yaml`、ClamAV、可信代理或组织证书。
