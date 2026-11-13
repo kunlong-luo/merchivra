@@ -33,6 +33,9 @@ services:
   server:
     build:
       context: ../apps/server
+      args:
+        # Blank in dev/CI; a trusted release builder must set a reviewed main SHA.
+        MERCHIVRA_BUILD_REVISION: ${MERCHIVRA_BUILD_REVISION:-}
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
