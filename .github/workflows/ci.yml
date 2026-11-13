@@ -511,6 +511,11 @@ jobs:
           python3 -m py_compile scripts/production_evidence_worklist_v158.py
           python3 -m unittest discover -s scripts -p 'test_production_evidence_worklist_v158.py' -v
           echo 'PASS V158: fixed role worklist from redacted V143 result; never grants production'
+      - name: V160 read-only image ID and OCI source/revision gates
+        run: |
+          python3 -m py_compile scripts/check_target_image_ids_v160.py
+          python3 -m unittest discover -s scripts -p 'test_target_image_ids_v160.py' -v
+          echo 'PASS V160: operator-only fixed Docker metadata; every result remains NO-GO'
       - name: V135 EXPLAIN JSON and plan assertions (no database needed)
         run: |
           python3 -m py_compile scripts/check_lot_query_plans_v135.py
