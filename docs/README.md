@@ -1,18 +1,18 @@
 # Merchivra ERP · 文档导航与事实基线
 
-> **当前文档入口（2026-11-13 / main V146 复核）。** 本页用于区分已经实现的代码、模拟测试、尚未批准的设计方案及真正的生产发布条件。早期 G1/G2 评审文件和 V1–V92 阶段记录仍保留原始历史意义，不再作为当前工程状态的依据。
+> **当前文档入口（2026-11-13 / main V148 合成技术验收复核）。** 本页用于区分已经实现的代码、模拟测试、尚未批准的设计方案及真正的生产发布条件。早期 G1/G2 评审文件和 V1–V92 阶段记录仍保留原始历史意义，不再作为当前工程状态的依据。
 
 ## 从这里开始
 
 | 想了解什么 | 当前权威文档 | 注意 |
 | --- | --- | --- |
-| 最新 P0 优先级、MVP 冻结与上线顺序 | [V108 MVP 收尾与集中验收计划](roadmap/mvp-freeze-release-v108.md) | **现行执行原则 + 顶部 V146 状态补丁**；覆盖历史 roadmap 的“当前/下一步” |
+| 最新 P0 优先级、MVP 冻结与上线顺序 | [V108 MVP 收尾与集中验收计划](roadmap/mvp-freeze-release-v108.md) | **现行执行原则 + 顶部 V148 准确主线状态**；覆盖历史 roadmap 的“当前/下一步” |
 | 采购订单 V110 服务端分页实施与证据边界 | [订单游标/筛选契约](purchasing/purchase-order-pages-v110.md) | V110–V144 已完成主要采购、供应商、仓储全库分页；[#62](https://github.com/kunlong-luo/merchivra/issues/62) 已关闭 |
 | 成熟开源 ERP 源码对标与复用决策 | [BENCH-001 · Wimoor / ERPNext / metasfresh / Amazon SDK](architecture/open-source-erp-benchmark-2026-11-08.md) | 以当前后端查询与权限事实作差距判断；不复制 GPL 源码、不盲目扩充 P0 |
-| 各模块代码/真实来源/验收状态 | [V109 文档审计与状态索引](governance/docs-audit-v109.md) · [V86 旧版功能审计](testing/core-coverage-audit-v86.md) | V86 是历史快照，不可当最新状态矩阵 |
+| 各模块代码/真实来源/验收状态 | [RTM-002 V148 代码与验收追踪](requirements/implementation-acceptance-rtm-v148.md) · [V109 文档审计](governance/docs-audit-v109.md) | 25 条 P0 分离代码/测试/真实来源/签署；V86 仅历史快照 |
 | 当前架构、模块与依赖 | [总体架构](architecture/overview.md) · [V99–V100 Next 迁移门槛](architecture/next16-ab-migration-v99.md) | Next 16 已有真实 App Router，但还没有取代默认 Vite/Nginx 部署 |
 | 本地运行、开发和环境变量 | [开发指南](development.md) · [Docker/PG18 部署](deployment/local-spark-db.md) | Java 25 / Gradle / PostgreSQL **18** / React 19 |
-| FBA 采购来源合同 V145 | [PO/ASN 本地关联](inventory/fba-purchase-link-v75.md) | [V145 旧合同](inventory/fba-purchase-link-v75.md) 保持兼容；[V147 完整分页候选](inventory/fba-purchase-pagination-v147.md) 已在分支 PG18 验证，合并后的主线 A3 待验收；[#108](https://github.com/kunlong-luo/merchivra/issues/108) 仍跟踪 |
+| FBA 采购来源 V147–V148 | [V147 真实分页及范围](inventory/fba-purchase-pagination-v147.md) · [V75 本地证据](inventory/fba-purchase-link-v75.md) | [V148 A3 #43356548084](https://github.com/kunlong-luo/merchivra/actions/runs/43356548084) 二次尝试 7/7；[#108](https://github.com/kunlong-luo/merchivra/issues/108) 合成技术关闭，真实 Amazon 来源未验收 |
 | API 代码生成与原始合同 | [API 文档入口](api/README.md) · [Orval/真实 Controller](architecture/mature-tool-first-api-client-2026-11-01.md) | 设计版 OpenAPI JSON **不是**当前全量后端契约 |
 | GitHub Actions 测试与质量门槛 | [V108 CI 策略](testing/ci-policy.md) · [发布安全/恢复清单](testing/release-readiness-v68.md) | 普通 PR 快速检查；[完整里程碑 workflow](https://github.com/kunlong-luo/merchivra/actions/workflows/milestone-validation.yml) 手动集中执行 |
 | 本地权限、凭据与生产前安全 | [Security Policy](../SECURITY.md) · [Seller OAuth](security/seller-oauth.md) · [安全门槛](testing/release-readiness-v68.md) | Seller/Ads 真实授权与远程写入默认关闭 |
@@ -26,7 +26,7 @@
 
 **部署差别**：默认私有 ERP 是 React/Vite 构建 + Nginx、Spring Boot 和 PostgreSQL 18；Next 16 正式生产切换为 [P0 Issue #63](https://github.com/kunlong-luo/merchivra/issues/63)。[GitHub Pages](https://kunlong-luo.github.io/merchivra/) 只托管不含真实账号/数据库/业务写入的合成数据展示页，并不是 SaaS 或可登录 ERP。
 
-**证据分级**：设计提案 → 代码实现 → 快速 CI → 隔离 PG18/Compose/Chromium 模拟验收 → 用户本地真实接口联调 → 业务、安全、生产正式批准。任何较早级别都不能自动升级为较晚级别。最新完整合成里程碑：[V146 main SHA 945ffb299f · A3 7/7 success](https://github.com/kunlong-luo/merchivra/actions/runs/43284799417)（仅代表该 SHA 和隔离环境）。当前剩余 P0：[FBA 来源分页 #108](https://github.com/kunlong-luo/merchivra/issues/108)、[目标 Next 切流 #63](https://github.com/kunlong-luo/merchivra/issues/63)、[生产签署 #104](https://github.com/kunlong-luo/merchivra/issues/104)。
+**证据分级**：设计提案 → 代码实现 → 快速 CI → 隔离 PG18/Compose/Chromium 模拟验收 → 用户本地真实接口联调 → 业务、安全、生产正式批准。任何较早级别都不能自动升级为较晚级别。最新完整合成里程碑：[V148 main SHA a09fc4b2 · A3 run_attempt=2 7/7 success](https://github.com/kunlong-luo/merchivra/actions/runs/43356548084)（首次 V146 HTTPS canary 失败已在现行计划中保留，仅代表同一 SHA 的隔离环境）。FBA 来源分页 [#108](https://github.com/kunlong-luo/merchivra/issues/108) 已按技术范围关闭；当前仍需 [目标 Next 切流 #63](https://github.com/kunlong-luo/merchivra/issues/63)、[生产签署 #104](https://github.com/kunlong-luo/merchivra/issues/104)。
 
 ## 设计与决策文件（作为评审资料，未被自动签署）
 

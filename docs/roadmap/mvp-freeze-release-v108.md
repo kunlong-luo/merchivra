@@ -1,5 +1,16 @@
 # V108 — MVP 收尾、集中测试与上线准入（2026-11-08）
 
+## 2026-11-13 / V148 技术验收结论（覆盖下方 V146/V147 历史当前状态）
+
+> **当前精确主线 SHA**：[`a09fc4b2c8fa49b843e28642fb0fb39b7f114a5e`](https://github.com/kunlong-luo/merchivra/commit/a09fc4b2c8fa49b843e28642fb0fb39b7f114a5e)。[V148 完整 A3 #43356548084](https://github.com/kunlong-luo/merchivra/actions/runs/43356548084) 第 **2 次尝试 7/7 jobs SUCCESS**；包括 Java25/Gradle、Next/Vite/Chromium、隔离 PostgreSQL18/Flyway/HTTP/Compose、V146 本地 CA-verified HTTPS 下一致 Session 回滚。**首次尝试 V146 HTTPS canary 发生 fail-closed AssertionError（A3 曾失败），必须保留此不稳定性记录**，不得写成一次就成功。
+
+- **P0 #62** 采购/供应商/仓储分页 V144 技术关闭；**P0 [#108](https://github.com/kunlong-luo/merchivra/issues/108)** V147 FBA PO/ASN 来源历史/候选 keyset（原 LIMIT 200/100）由 [PR #110](https://github.com/kunlong-luo/merchivra/pull/110) 实现，V148 [PR #111](https://github.com/kunlong-luo/merchivra/pull/111) 修复旧浏览器 fixture、[PR #113](https://github.com/kunlong-luo/merchivra/pull/113) 触发准确主线 A3；在二次完整 A3 7/7 后 **#108 已按合成技术范围关闭**。
+- **当前 RTM**：[RTM-002 P0 代码/测试/真实来源/签署追踪](../requirements/implementation-acceptance-rtm-v148.md)。25 个 P0、3 个 P1、1 个 P2 需求均有当前代码/test 入口映射或明确欠缺；**代码/CI 存在不自动代表逐 AC 全验收**，真实 Seller/Ads/银行来源与产品/财务签署仍待用户/负责人独立执行。
+- **当前真正阻塞**：[Next.js 目标生产切流 #63](https://github.com/kunlong-luo/merchivra/issues/63)、[G1/G2/G3 真实 IAM/HTTPS/KMS/PG18 PITR/告警及签署 #104](https://github.com/kunlong-luo/merchivra/issues/104)、用户本地真实 Amazon Seller/Ads **只读**授权联调，仍全部不因合成 A3 自动变为通过。下一阶段需先落实有权限的**目标环境验收条件**；不可自动启用生产 OAuth 或远程写。
+- **维护原则**：任何后续业务/高风险改动都要在新 SHA 上重新验收。V148 的 CI 首次 TLS 断言失败应另行复查并对失败阶段添加无敏感信息诊断；重试成功不能作为生产可用性统计上的“零故障”。
+
+---
+
 ## 2026-11-13 主线 V146 状态补丁（本文件现行优先级，V108 以下为历史执行记录）
 
 > **核查基线**：`main` [`945ffb299f8dccfe321c6792960cb461d5c4bf30`](https://github.com/kunlong-luo/merchivra/commit/945ffb299f8dccfe321c6792960cb461d5c4bf30)（V146 / PR #107）；[相同 SHA 的快速 CI #43284799168](https://github.com/kunlong-luo/merchivra/actions/runs/43284799168) **success**、[完整 A3 #43284799417](https://github.com/kunlong-luo/merchivra/actions/runs/43284799417) **7/7 jobs success**。后者确实运行 Java 25/Gradle、React/Vite、Next/Chromium、隔离 PostgreSQL 18 + Flyway + HTTP/恢复及 Compose；**只证明该 SHA 的合成技术验收**，不等于真实 Amazon/Ads/银行、目标生产部署、正式业务/财务验收或 G1/G2/G3 签署。后续合并新代码必须用**新 SHA**重验。
