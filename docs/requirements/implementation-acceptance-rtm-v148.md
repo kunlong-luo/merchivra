@@ -4,6 +4,8 @@
 
 > **V149 最新技术证据（2026-11-13）**：[main `57d55b6e54e07cac1473259763ce48e4d96e9816`](https://github.com/kunlong-luo/merchivra/commit/57d55b6e54e07cac1473259763ce48e4d96e9816) 的 [完整 A3 #43358590421](https://github.com/kunlong-luo/merchivra/actions/runs/43358590421) **第 1 次运行尝试 7/7 SUCCESS**。V149 仅增脱敏 HTTPS canary 阶段定位；此前 V148 第一次失败根因未明的 [#115](https://github.com/kunlong-luo/merchivra/issues/115) 保持 OPEN。此证据属于整个合成回归，并**不能**把以下逐 FR 的真实 Seller/Ads/银行来源或正式 G1/G2/G3 批准列为通过。后文 V148 SHA 仍作为上一轮专项功能验收历史。
 
+> **V150 精确 SHA 合成技术验收（2026-11-13）**：[main `2e96bf421d1b8e0c2a2999ab63a236d80ea3a9d9`](https://github.com/kunlong-luo/merchivra/commit/2e96bf421d1b8e0c2a2999ab63a236d80ea3a9d9) 的 [完整 A3 #43361557152](https://github.com/kunlong-luo/merchivra/actions/runs/43361557152) **首次 7/7 SUCCESS**。V150 仅为隔离 HTTPS canary 新增匿名 401/CSRF/Secure Session 就绪预检与负例测试；[历史 V148 TLS 不稳定性 #115](https://github.com/kunlong-luo/merchivra/issues/115) 仍未确证根因。RTM 下面各 FR 的真实 Seller/Ads/财务、G1/G2/G3、人审状态**保持未批准**；原 V148/V149 SHA 留作历史技术证据。
+
 ## 与发布候选的绑定
 
 - **代码基线**：V148 `main` [`a09fc4b2c8fa49b843e28642fb0fb39b7f114a5e`](https://github.com/kunlong-luo/merchivra/commit/a09fc4b2c8fa49b843e28642fb0fb39b7f114a5e)，相对 V147 增加合成 Chromium 新 /page 接口 fixture 修复与 A3 触发。
