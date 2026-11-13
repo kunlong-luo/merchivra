@@ -26,8 +26,11 @@ HOST = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-
 CHECKS = (
     "TLS_CHAIN_AND_HOSTNAME_VERIFIED",
     "NEXT_INGRESS_PING_200",
+    "SPRING_PING_IDENTITY",
+    "NEXT_APP_ROUTER_HTML",
     "ANONYMOUS_ME_401",
     "ANONYMOUS_CSRF_200_VALID",
+    "ANONYMOUS_CSRF_NO_STORE",
     "SESSION_SECURE_HTTPONLY_SAMESITE_STRICT",
     "INVALID_HOST_REJECTED",
 )
@@ -65,7 +68,7 @@ def request_https(host: str, path: str, context: ssl.SSLContext,
                   forged_host: bool = False) -> Observation:
     # Fixed HTTPS host, port and routes. No redirects, Cookie, bearer
     # credentials, arbitrary headers or user-supplied path; never POST.
-    if path not in ("/api/v1/ping", "/api/v1/auth/me", "/api/v1/auth/csrf"):
+    if path not in ("/api/v1/ping", "/api/v1/auth/me", "/api/v1/auth/csrf", "/orders"):
         raise ValueError("invalid_fixed_probe_path")
     conn = http.client.HTTPSConnection(host=host, port=443, context=context, timeout=5)
     try:
@@ -75,12 +78,41 @@ def request_https(host: str, path: str, context: ssl.SSLContext,
                      "Accept": "application/json", "Connection": "close"},
         )
         response = conn.getresponse()
-        body = response.read(16385)
-        if len(body) > 16384:
+        # The one approved Next HTML GET can be larger than the API JSON.
+        max_bytes = 262144 if path == "/orders" else 16384
+        body = response.read(max_bytes + 1)
+        if len(body) > max_bytes:
             raise ValueError("response_limit_exceeded")
         return Observation(response.status, tuple(response.getheaders()), body)
     finally:
         conn.close()
+
+def no_store(headers: tuple[tuple[str, str], ...]) -> bool:
+    return any(key.lower() == "cache-control"
+               and "no-store" in value.lower().split(",")
+               for key, value in headers)
+
+
+def spring_ping_valid(body: bytes) -> bool:
+    try:
+        data = json.loads(body)
+    except (ValueError, UnicodeError):
+        return False
+    return (isinstance(data, dict)
+            and data.get("service") == "merchivra"
+            and data.get("status") == "ok"
+            and data.get("stage") == "M0")
+
+
+def next_html_valid(body: bytes, headers: tuple[tuple[str, str], ...]) -> bool:
+    # This discriminates Next's real App Router HTML from Vite's /assets/
+    # fallback, static Nginx 200, a generic splash page or an API mock.
+    return (any(k.lower() == "content-type"
+                and v.lower().split(";", 1)[0].strip() == "text/html"
+                for k, v in headers)
+            and b"Merchivra ERP" in body
+            and b"/_next/static/" in body)
+
 
 def session_flags(headers: tuple[tuple[str, str], ...]) -> bool:
     cookies = []
@@ -133,7 +165,17 @@ def inspect(host: str, fetch, tls_validated: bool) -> dict:
         ping = fetch(host, "/api/v1/ping", False)
         checks["TLS_CHAIN_AND_HOSTNAME_VERIFIED"] = tls_validated
         checks["NEXT_INGRESS_PING_200"] = ping.status == 200
-        if not checks["NEXT_INGRESS_PING_200"]:
+        checks["SPRING_PING_IDENTITY"] = (ping.status == 200
+                                          and spring_ping_valid(ping.body))
+        if not checks["SPRING_PING_IDENTITY"]:
+            return report(checks)
+        # /api can work identically through Vite and Next; verify the actual
+        # App Router response before asserting a target Next cutover.
+        next_page = fetch(host, "/orders", False)
+        checks["NEXT_APP_ROUTER_HTML"] = (next_page.status == 200
+                                          and next_html_valid(next_page.body,
+                                                              next_page.headers))
+        if not checks["NEXT_APP_ROUTER_HTML"]:
             return report(checks)
         me = fetch(host, "/api/v1/auth/me", False)
         checks["ANONYMOUS_ME_401"] = me.status == 401
@@ -141,9 +183,11 @@ def inspect(host: str, fetch, tls_validated: bool) -> dict:
             return report(checks)
         csrf = fetch(host, "/api/v1/auth/csrf", False)
         checks["ANONYMOUS_CSRF_200_VALID"] = (csrf.status == 200 and csrf_valid(csrf.body))
+        checks["ANONYMOUS_CSRF_NO_STORE"] = (csrf.status == 200 and no_store(csrf.headers))
         checks["SESSION_SECURE_HTTPONLY_SAMESITE_STRICT"] = (
             csrf.status == 200 and session_flags(csrf.headers))
         if not (checks["ANONYMOUS_CSRF_200_VALID"]
+                and checks["ANONYMOUS_CSRF_NO_STORE"]
                 and checks["SESSION_SECURE_HTTPONLY_SAMESITE_STRICT"]):
             return report(checks)
         host_probe = fetch(host, "/api/v1/ping", True)
