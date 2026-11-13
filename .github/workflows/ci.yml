@@ -506,6 +506,11 @@ jobs:
           assert all(x['status']=='pending' for x in d['controls'].values())
           print('PASS V143 pending-only release evidence template (no synthetic approvals)')
           PY
+      - name: V158 redacted-only production evidence owner worklist (always NO-GO)
+        run: |
+          python3 -m py_compile scripts/production_evidence_worklist_v158.py
+          python3 -m unittest discover -s scripts -p 'test_production_evidence_worklist_v158.py' -v
+          echo 'PASS V158: fixed role worklist from redacted V143 result; never grants production'
       - name: V135 EXPLAIN JSON and plan assertions (no database needed)
         run: |
           python3 -m py_compile scripts/check_lot_query_plans_v135.py
