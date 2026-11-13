@@ -22,7 +22,7 @@ import sys
 from dataclasses import dataclass
 from urllib.parse import urlsplit
 
-HOST = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\\Z")
+HOST = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\Z")
 CHECKS = (
     "TLS_CHAIN_AND_HOSTNAME_VERIFIED",
     "NEXT_INGRESS_PING_200",
@@ -52,7 +52,8 @@ def parse_origin(value: str) -> str:
     if (u.scheme != "https" or not host or u.username is not None
             or u.password is not None or u.query or u.fragment
             or u.path not in ("", "/") or port not in (None, 443)
-            or not HOST.fullmatch(host) or host.endswith(REJECT_SUFFIXES)):
+            or not HOST.fullmatch(host) or host.endswith(REJECT_SUFFIXES)
+            or host in ("example.com", "example.net", "example.org")):
         raise ValueError("invalid_origin")
     try:
         ipaddress.ip_address(host)
@@ -89,7 +90,8 @@ def session_flags(headers: tuple[tuple[str, str], ...]) -> bool:
         parts = [p.strip() for p in value.split(";")]
         if parts and parts[0].split("=", 1)[0] == "JSESSIONID":
             cookies.append(parts)
-    if len(cookies) != 1 or "=" not in cookies[0][0]:
+    if (len(cookies) != 1 or "=" not in cookies[0][0]
+            or not cookies[0][0].split("=", 1)[1]):
         return False
     attrs = {p.lower() for p in cookies[0][1:]}
     return ("secure" in attrs and "httponly" in attrs
