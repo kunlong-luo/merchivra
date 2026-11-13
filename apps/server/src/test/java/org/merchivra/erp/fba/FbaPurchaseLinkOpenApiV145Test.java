@@ -55,6 +55,31 @@ class FbaPurchaseLinkOpenApiV145Test {
                 assertTrue(actual.has("requestBody"));
             }
         }
+        // V147 adds separate whole-store source pages; older array reads remain compatible.
+        String[][] pages={
+            {root+"/page","listFbaPurchaseLinksPage","marketplaceId,shipmentId",
+                "limit,state,inboundLineId,cursor"},
+            {root+"/lines/{lineId}/candidates/page","listFbaPurchaseCandidatesPage",
+                "marketplaceId,shipmentId,lineId","limit,purchaseLineId,cursor"}
+        };
+        for(var page:pages){
+            var op=paths.path(page[0]).path("get");
+            assertEquals(page[1],op.path("operationId").asText());
+            Set<String> pathParams=new HashSet<>(),queryParams=new HashSet<>();
+            for(var p:op.path("parameters")){
+                if("path".equals(p.path("in").asText())){
+                    pathParams.add(p.path("name").asText());
+                    assertEquals("uuid",p.path("schema").path("format").asText());
+                }else if("query".equals(p.path("in").asText()))
+                    queryParams.add(p.path("name").asText());
+            }
+            assertEquals(Set.of(page[2].split(",")),pathParams);
+            assertEquals(Set.of(page[3].split(",")),queryParams);
+            String schemaRef=op.path("responses").path("200").path("content")
+                .path("*/*").path("schema").path("$ref").asText();
+            assertTrue(schemaRef.startsWith("#/components/schemas/"),schemaRef);
+            assertTrue(schemaRef.contains("Page"),schemaRef);
+        }
         var schemas=doc.path("components").path("schemas");
         for(String name:new String[]{"Propose","Candidate","Linked"}){
             var asnType=schemas.path(name).path("properties").path("asnId").path("type");
