@@ -1,6 +1,6 @@
 # V147 · FBA 本地 PO/ASN 来源历史与候选完整游标分页（开发中）
 
-> **状态：PR [#110](https://github.com/kunlong-luo/merchivra/pull/110)，代码及验证须以实际分支 SHA / Actions 为准。** 本文不构成正式生产发布、真实 Amazon 关联、财务核销或 G1/G2/G3 的批准。当前 [#108](https://github.com/kunlong-luo/merchivra/issues/108) 仍开放；V144 关闭的采购/供应商/仓库分页 [#62](https://github.com/kunlong-luo/merchivra/issues/62) 不重复建设。
+> **状态：V147 PR [#110](https://github.com/kunlong-luo/merchivra/pull/110)，分支完整隔离 PG18/HTTP + Java/React/Next/Compose 验证已成功；合并后的精确 main-SHA A3 和生产批准仍需独立确认。** 本文不构成正式生产发布、真实 Amazon 关联、财务核销或 G1/G2/G3 的批准。当前 [#108](https://github.com/kunlong-luo/merchivra/issues/108) 仍开放；V144 关闭的采购/供应商/仓库分页 [#62](https://github.com/kunlong-luo/merchivra/issues/62) 不重复建设。
 
 ## 为什么要改
 
@@ -34,4 +34,6 @@ React 入口对关联历史、候选采购行及所选 PO 行的 ASN 单独分�
 - 完整 A3 `full_suite`：仅在 `127.0.0.1` 与一次性 PostgreSQL 18/Flyway 上合成数据，真 SQL 注入 225 个 REVOKED 历史 + 1 个原 CONFIRMED，HTTP 应为五页 226；同一显式映射 Seller SKU 注入 125 个额外批准 PO 行，联同原 SHIPPED ASN 形成 126 候选、三页；校验错筛选/货件/行游标、无效路径、ASN NULL 及无库存写。不可将此测试用于生产数据。
 - 版本合并后再次对**精确主线 SHA**执行完整 A3；生产目标 TLS/IAM/PITR/Alertmanager、真实 Seller/Ads 由 #63/#104 和维护者本地验收独立处理。
 
-结果与运行链接未出之前，一律记为**待验证**，不能关闭 #108 或把 PR 从草稿改为可合并。
+**分支实测证据（2026-11-13）**：[完整 full_suite #43354930355](https://github.com/kunlong-luo/merchivra/actions/runs/43354930355) 的 4 项工作均成功，包含真实 PostgreSQL 18/Flyway V90、226 条来源历史（5 页）、126 条候选（3 页）、非法筛选/跨货件游标 HTTP 400、明确的可空 ASN、无 FBA 库存写入，以及 Java 25 / React/Vite/Next / Compose。V142 独立 PITR 曾在容器初始化暂态 SELECT 时出现关闭竞态，已要求数据库真实 post-init 就绪后再继续，最终同次 full_suite 通过。此完整验证仅属于 synthetic disposable 工作流，**不等于生产 PostgreSQL PITR、真实 Amazon 或外部 Alertmanager 验收**。
+
+**合并与关闭条件**：先清理临时 CI workflow、确认常规 PR CI 正常，再合并至 main 并以该**精确 main commit**重新运行完整 A3。成功前保留 #108 的技术验收 OPEN，不自动放行 Next 生产切流 #63、G1/G2/G3 #104 或用户本地 Seller/Ads OAuth。
