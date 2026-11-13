@@ -27,14 +27,14 @@ def next_probe():
         b'<html><title>Merchivra ERP</title><script src="/_next/static/chunks/main.js"></script></html>')
 
 def secure_probe():
-    return observation(
+    return target.Observation(
         200,
-        json.dumps({"headerName": "X-CSRF-TOKEN", "token": PRIVATE_CSRF}).encode(),
-        (f"JSESSIONID={PRIVATE_COOKIE}; Path=/; Secure; HttpOnly; SameSite=Strict",),
-    ).__class__(200, (
-        ("Set-Cookie", f"JSESSIONID={PRIVATE_COOKIE}; Path=/; Secure; HttpOnly; SameSite=Strict"),
-        ("Cache-Control", "no-store"),
-    ), json.dumps({"headerName": "X-CSRF-TOKEN", "token": PRIVATE_CSRF}).encode())
+        (("Set-Cookie",
+          f"JSESSIONID={PRIVATE_COOKIE}; Path=/; Secure; HttpOnly; SameSite=Strict"),
+         ("Cache-Control", "no-store")),
+        json.dumps({"headerName": "X-CSRF-TOKEN",
+                    "token": PRIVATE_CSRF}).encode(),
+    )
 
 class V151OperatorTargetIngressTests(unittest.TestCase):
     def test_only_explicit_secure_dns_origin_without_credentials_or_paths(self):
