@@ -16,6 +16,7 @@
 | API 代码生成与原始合同 | [API 文档入口](api/README.md) · [Orval/真实 Controller](architecture/mature-tool-first-api-client-2026-11-01.md) | 设计版 OpenAPI JSON **不是**当前全量后端契约 |
 | GitHub Actions 测试与质量门槛 | [V108 CI 策略](testing/ci-policy.md) · [发布安全/恢复清单](testing/release-readiness-v68.md) | 普通 PR 快速检查；[完整里程碑 workflow](https://github.com/kunlong-luo/merchivra/actions/workflows/milestone-validation.yml) 手动集中执行 |
 | 本地权限、凭据与生产前安全 | [Security Policy](../SECURITY.md) · [Seller OAuth](security/seller-oauth.md) · [安全门槛](testing/release-readiness-v68.md) | Seller/Ads 真实授权与远程写入默认关闭 |
+| 目标环境 Next HTTPS 匿名入口预检 | [V151 目标 TLS/Ingress 只读核查](architecture/next-target-ingress-v151.md) | **仅授权运维手工调用**；CI 不访问目标，退出 3 也不代表可部署 |
 | 本地可复现的合成端到端 | [Compose Mock 全链路](testing/mock-full-chain.md) · [Chromium UI 冒烟](testing/browser-ui.md) | 合成数据不能替代 Amazon/Ads/银行真数据联调 |
 
 ## 当前已实现与仍需验证的边界
