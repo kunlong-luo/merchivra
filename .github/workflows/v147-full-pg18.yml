@@ -1,0 +1,14 @@
+name: Temporary V147 isolated PostgreSQL 18 full-suite test
+on:
+  push:
+    branches:
+      - feat/v147-fba-purchase-keyset
+    paths:
+      - .github/workflows/v147-full-pg18.yml
+permissions:
+  contents: read
+jobs:
+  full-ci:
+    uses: ./.github/workflows/ci.yml
+    with:
+      full_suite: true
