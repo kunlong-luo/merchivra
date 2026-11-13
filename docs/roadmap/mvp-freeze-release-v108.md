@@ -1,6 +1,16 @@
 # V108 — MVP 收尾、集中测试与上线准入（2026-11-08）
 
-## 2026-11-13 / V158 目标生产证据分工（**当前权威状态**）
+## 2026-11-13 / V159 目标 HTTPS 预检证据质量（**当前权威状态**）
+
+> **已验收基线分开记录**：最近一次**完整 A3** 为 [V157 main 5ac412dab7e71a0703c4887614bfba17fbe2eb25](https://github.com/kunlong-luo/merchivra/commit/5ac412dab7e71a0703c4887614bfba17fbe2eb25) / [#43422914368](https://github.com/kunlong-luo/merchivra/actions/runs/43422914368) 首次 7/7 SUCCESS（仅隔离 PG18、Next/Vite、HTTPS 技术测试）。最近一次**主线快速 CI** 为 V158 [main c911c7c9659cb1d4031d896a8586d61b32b00ee7](https://github.com/kunlong-luo/merchivra/commit/c911c7c9659cb1d4031d896a8586d61b32b00ee7) / [#43424933763](https://github.com/kunlong-luo/merchivra/actions/runs/43424933763) 首次 SUCCESS。V159 的 PR/验收必须另行记录，不能沿用上一个 SHA 宣称本次通过。
+
+- **V159 范围**：[V151–V159 目标 HTTPS 只读核查](../architecture/next-target-ingress-v151.md) 强制 Spring Ping/CSRF API 的 `Content-Type` 必须单一且为 `application/json`；要求受权运维提供 `--candidate-sha` 以供审计对照，但`operatorClaimedCandidateSha` **不是**目标实际运行镜像的独立验证。保持不向 CI 访问外网、匿名 GET/验证 TLS/禁止真实 Amazon、无自动发布和所有隐私脱敏。
+- **生产依旧 NO-GO**：[G1/G2/G3 #104](https://github.com/kunlong-luo/merchivra/issues/104) 缺真实目标 TLS/IAM/KMS/ClamAV/PG18 离站 PITR/外部告警人类 ACK 和三组正式签署；[#63](https://github.com/kunlong-luo/merchivra/issues/63) 已由维护者按技术范围关闭并非正式生产上线，[#115](https://github.com/kunlong-luo/merchivra/issues/115) 历史 HTTPS 根因仍待可靠证据。
+- **回归策略**：本阶段只修改目标只读审计探针、测试与说明，不修改运行时服务；快速 CI 中的专项负例和文档静态一致性必须通过。不为只读运维脚本重复完整 A3；如未来改真实部署/认证、DB、安全运行时，要重新做风险对应验证。
+
+---
+
+## 2026-11-13 / V158 目标生产证据分工（历史 V158 记录）
 
 > **最近已完整验收的代码主线是 V157**：[main `5ac412dab7e71a0703c4887614bfba17fbe2eb25`](https://github.com/kunlong-luo/merchivra/commit/5ac412dab7e71a0703c4887614bfba17fbe2eb25)，[完整 A3 #43422914368](https://github.com/kunlong-luo/merchivra/actions/runs/43422914368) **首次执行 7/7 SUCCESS**（隔离 PG18/Flyway/HTTP、Next/Vite Chromium、真实合成 CA HTTPS Next→Vite→Next 回切、Java25/Gradle/Compose）。此证据仅属于该 SHA 的**隔离技术验收**。V158 为**只读证据清单和文档纠偏**，不能把 V157 的 A3 当成 V158 改动的新 SHA 验收，也无需仅为文档清单重复完整 A3。
 
