@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """V146 offline, deterministic TLS configuration and fail-closed entry tests."""
 import os
+import ssl
 import io
 import contextlib
 import subprocess
@@ -8,7 +9,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock,patch
 import smoke_https_cutover_v146 as smoke
 
 FAKE={
@@ -109,6 +110,73 @@ class V146SafeHttpsTests(unittest.TestCase):
                       diagnostic.getvalue())
         self.assertNotIn("synthetic-private-token-NEVER-PRINT",
                          diagnostic.getvalue())
+
+    def _secure_probe(self,anonymous_status=401,csrf_status=200,secure=True,
+                      httponly=True,samesite="Strict"):
+        # Mock only the verified HTTPS transport; never contact live systems.
+        cookie=Mock()
+        cookie.name="JSESSIONID"
+        cookie.secure=secure
+        cookie.has_nonstandard_attr.side_effect=lambda key: (
+            key=="HttpOnly" and httponly)
+        cookie.get_nonstandard_attr.side_effect=lambda key,default: (
+            samesite if key=="SameSite" else default)
+        probe=Mock()
+        probe.cookies=[cookie]
+        probe.call.side_effect=[
+            (anonymous_status,b"",{}),
+            (csrf_status,b'{"token":"fixed-local-csrf","headerName":"X-CSRF-TOKEN"}',{})
+        ]
+        return probe
+
+    def test_secure_auth_probe_requires_401_csrf_and_strict_cookie(self):
+        probe=self._secure_probe()
+        with patch.object(smoke,"Client",return_value=probe):
+            smoke.wait_for_secure_auth("/synthetic-ca",attempts=1)
+        self.assertEqual(probe.call.call_count,2)
+        self.assertEqual(probe.call.call_args.args[0],"/api/v1/auth/csrf")
+
+    def test_secure_auth_probe_never_retries_insecure_cookie_or_auth_change(self):
+        for problem,probe in [
+            ("insecure",self._secure_probe(secure=False)),
+            ("missing-http-only",self._secure_probe(httponly=False)),
+            ("wrong-samesite",self._secure_probe(samesite="Lax")),
+            ("anonymous-granted",self._secure_probe(anonymous_status=200)),
+            ("anonymous-forbidden",self._secure_probe(anonymous_status=403)),
+            ("csrf-rejected",self._secure_probe(csrf_status=403)),
+        ]:
+            with (self.subTest(problem=problem),
+                  patch.object(smoke,"Client",return_value=probe) as factory,
+                  patch.object(smoke.time,"sleep") as sleeper,
+                  self.assertRaises(AssertionError)):
+                smoke.wait_for_secure_auth("/synthetic-ca",attempts=4)
+            factory.assert_called_once()
+            sleeper.assert_not_called()
+
+    def test_secure_auth_probe_only_retries_bounded_startup_errors(self):
+        unavailable=Mock()
+        unavailable.call.return_value=(503,b"synthetic 503 content",{})
+        working=self._secure_probe()
+        with (patch.object(smoke,"Client",side_effect=[unavailable,working]) as factory,
+              patch.object(smoke.time,"sleep") as sleeper):
+            smoke.wait_for_secure_auth("/synthetic-ca",attempts=2)
+        self.assertEqual(factory.call_count,2)
+        sleeper.assert_called_once_with(.25)
+        # A permanently unavailable backend must remain a hard failure.
+        with (patch.object(smoke,"Client",return_value=unavailable),
+              patch.object(smoke.time,"sleep") as sleeper,
+              self.assertRaises(RuntimeError)):
+            smoke.wait_for_secure_auth("/synthetic-ca",attempts=2)
+        sleeper.assert_called_once_with(.25)
+
+    def test_secure_auth_probe_refuses_bad_tls_without_retry(self):
+        with (patch.object(smoke,"Client",
+                           side_effect=ssl.SSLCertVerificationError("synthetic-bad-ca")) as factory,
+              patch.object(smoke.time,"sleep") as sleeper,
+              self.assertRaises(ssl.SSLError)):
+            smoke.wait_for_secure_auth("/synthetic-ca",attempts=4)
+        factory.assert_called_once()
+        sleeper.assert_not_called()
 
     def test_no_production_claim_or_external_host_in_success_evidence(self):
         source=Path(__file__).with_name("smoke_https_cutover_v146.py").read_text()
