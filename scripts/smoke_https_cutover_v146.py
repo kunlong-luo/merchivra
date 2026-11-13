@@ -20,7 +20,7 @@ import time
 from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import (
-    HTTPCookieProcessor, HTTPSHandler, Request, build_opener
+    HTTPCookieProcessor, HTTPRedirectHandler, HTTPSHandler, Request, build_opener
 )
 
 BASE="https://127.0.0.1:3443"
@@ -110,12 +110,20 @@ def write_config(config_path:Path,target:str)->None:
     temporary.chmod(0o600)
     temporary.replace(config_path)
 
+class RefuseRedirects(HTTPRedirectHandler):
+    # The disposable probe must never follow a proxy redirect to another
+    # path or host and mistake the final 200 for an ingress success.
+    def redirect_request(self,request,fp,code,msg,headers,newurl):
+        return None
+
+
 class Client:
     def __init__(self,certificate:str):
         self.context=ssl.create_default_context(cafile=certificate)
         self.cookies=http.cookiejar.CookieJar()
         self.http=build_opener(HTTPCookieProcessor(self.cookies),
-                              HTTPSHandler(context=self.context))
+                              HTTPSHandler(context=self.context),
+                              RefuseRedirects())
 
     def call(self,path:str,method="GET",body=None,csrf=None,expected=200,
              extra_headers=None):
@@ -147,6 +155,69 @@ class Client:
     def json(self,path,expected=200,**kwargs):
         body,headers=self.expect(path,expected=expected,**kwargs)
         return json.loads(body),headers
+
+
+def is_wrapped_tls_failure(exc:OSError)->bool:
+    """urllib may wrap certificate/handshake failures inside URLError.reason."""
+    return isinstance(getattr(exc,"reason",None),ssl.SSLError)
+
+
+def wait_for_ingress(client:Client,target:str,previous:str|None=None,
+                     attempts:int=40)->None:
+    """V157: only transient loopback startup/reload may be retried.
+
+    Never treat a bad CA, invalid Spring identity, HTML/redirect, or an
+    unexpected upstream as readiness. During an Nginx reload, a previously
+    verified candidate may briefly answer; retry it with a fixed bound, but
+    only after authenticating the real Spring Ping JSON first.
+    """
+    if (target not in PORTS or attempts<1 or attempts>40
+            or (previous is not None
+                and (previous not in PORTS or previous==target))):
+        raise ValueError("invalid_fixed_ingress_target_or_attempts")
+    for index in range(attempts):
+        try:
+            status,body,headers=client.call("/api/v1/ping")
+        except ssl.SSLError:
+            # Never retry a failed TLS trust/hostname/handshake check.
+            raise
+        except OSError as exc:
+            if is_wrapped_tls_failure(exc):
+                raise AssertionError("ingress_tls_verification_failed") from exc
+            if index+1==attempts:
+                raise RuntimeError("loopback_tls_transport_unavailable") from exc
+            time.sleep(.25)
+            continue
+        if status in (502,503,504):
+            if index+1==attempts:
+                raise RuntimeError("loopback_tls_backend_unavailable")
+            time.sleep(.25)
+            continue
+        if status!=200:
+            raise AssertionError("loopback_tls_unexpected_status")
+        media=(headers.get("Content-Type") or "").split(";",1)[0].strip().lower()
+        if media!="application/json":
+            raise AssertionError("loopback_tls_wrong_media_type")
+        try:
+            ping=json.loads(body)
+        except (ValueError,UnicodeError) as exc:
+            raise AssertionError("loopback_tls_invalid_json") from exc
+        if (not isinstance(ping,dict)
+                or ping.get("service")!="merchivra"
+                or ping.get("status")!="ok"
+                or ping.get("stage")!="M0"):
+            raise AssertionError("loopback_tls_wrong_spring_identity")
+        candidate=headers.get("X-Merchivra-V146-Candidate")
+        if candidate==target:
+            return
+        if previous is None or candidate!=previous:
+            raise AssertionError("loopback_tls_wrong_upstream")
+        if index+1==attempts:
+            raise RuntimeError("loopback_tls_reload_not_applied")
+        time.sleep(.25)
+    raise RuntimeError("loopback_tls_ingress_not_ready")
+
+
 
 def wait_for_secure_auth(certificate:str,attempts:int=40)->None:
     """V150: wait for the RESTARTED secure Spring Session, not ping alone.
@@ -197,6 +268,10 @@ def wait_for_secure_auth(certificate:str,attempts:int=40)->None:
             # Invalid CA / hostname is a security failure, NOT a startup race.
             raise
         except OSError as exc:
+            if is_wrapped_tls_failure(exc):
+                # urllib wraps certificate failures in URLError, an OSError.
+                # V150's bare SSLError handler cannot catch that wrapper.
+                raise AssertionError("secure_auth_tls_verification_failed") from exc
             if index+1>=attempts:
                 raise RuntimeError("secure_auth_transport_unavailable") from exc
             time.sleep(.25)
@@ -211,20 +286,12 @@ def run_synthetic(certificate:str,config_path:Path,container:str):
     client=Client(certificate)
     public=Client(certificate)
 
-    def validate_ingress(target:str):
-        for attempt in range(40):
-            try:
-                ping,headers=client.json("/api/v1/ping")
-                if (ping.get("service")=="merchivra"
-                        and ping.get("status")=="ok"
-                        and headers.get("X-Merchivra-V146-Candidate")==target):
-                    return
-            except (OSError,ValueError,AssertionError):
-                pass
-            time.sleep(.25)
-        raise RuntimeError("loopback_tls_ingress_not_ready_"+target)
+    current="next"
 
     def switch(target:str):
+        nonlocal current
+        if target==current:
+            raise ValueError("invalid_redundant_cutover")
         write_config(config_path,target)
         # The running container can read only the mounted /v146 directory.
         # No docker compose, production files or arbitrary config targets.
@@ -236,10 +303,11 @@ def run_synthetic(certificate:str,config_path:Path,container:str):
             if result.returncode!=0:
                 # Never echo stdout/stderr from a proxy containing request data.
                 raise RuntimeError("synthetic_ingress_reload_failed")
-        validate_ingress(target)
+        wait_for_ingress(client,target,previous=current)
+        current=target
 
     mark_stage("ingress-next")
-    validate_ingress("next")
+    wait_for_ingress(client,"next")
     mark_stage("secure-auth-readiness")
     wait_for_secure_auth(certificate)
     mark_stage("anonymous-access")
