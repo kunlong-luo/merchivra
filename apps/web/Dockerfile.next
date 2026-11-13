@@ -15,6 +15,10 @@ ENV MERCHIVRA_API_INTERNAL_URL=${MERCHIVRA_API_INTERNAL_URL}
 RUN npm run build:next
 
 FROM node:24-alpine AS runtime
+# V160: build metadata only; target operator must check immutable image IDs.
+ARG MERCHIVRA_BUILD_REVISION=""
+LABEL org.opencontainers.image.source="https://github.com/kunlong-luo/merchivra" \
+      org.opencontainers.image.revision="${MERCHIVRA_BUILD_REVISION}"
 ENV NODE_ENV=production \
     HOSTNAME=0.0.0.0 \
     PORT=3000 \
