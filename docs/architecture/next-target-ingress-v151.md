@@ -1,4 +1,4 @@
-# V151 — Next.js 目标域名 HTTPS / Ingress 只读核查工具（人工运行）
+# V151–V152 — Next.js 目标域名 HTTPS / Ingress 只读核查工具（人工运行）
 
 > **状态：已实现核查工具和离线测试，不代表真实目标环境已存在、已测试或已经批准上线。** 跟踪 [Next 正式切流 #63](https://github.com/kunlong-luo/merchivra/issues/63)、[生产 G1/G2/G3 #104](https://github.com/kunlong-luo/merchivra/issues/104)。本工具无法替代 V143 G1/G2/G3 线下审批，不能独立签发放行令。
 
@@ -11,12 +11,13 @@ V146–V150 的真实 HTTP、PG18、Next Node、Vite 回滚及本地 CA-verified
 | 检查 | 要求 | 不能据此声称 |
 | --- | --- | --- |
 | HTTPS 证书、域名 | Python 标准库 TLS 完整证书链及主机名验证，最低 TLS 1.2；可选私有受信 CA 文件 | 证书轮换、HSTS 和目标基础设施安全性已批准 |
-| Next/Spring 同源 | `GET /api/v1/ping` 返回 200 | Next 是唯一上线 runtime、负载均衡已正确回源 |
+| Spring 真后端识别 | `GET /api/v1/ping` 返回 HTTP 200，JSON 必须是 `service=merchivra`、`status=ok`、`stage=M0` | 仅仅是 200 的静态页/缓存/错误网关不再被误认为 Spring；不能证明数据库、真实业务数据已通过 |
+| Next App Router 前端识别 | 匿名 `GET /orders` 必须返回 HTTP 200、`text/html`、`Merchivra ERP` 与 `/_next/static/` 标记 | 可区分旧 Vite SPA、静态默认页和 Next HTML；页面指纹不是签名镜像/真实运维发布版本证明 |
 | 匿名隔离 | `GET /api/v1/auth/me` 必须返回 401 | MFA/IAM 已完成，其他权限都正确 |
-| CSRF 与 Session | `GET /api/v1/auth/csrf` 为 200 且含有效 token；`JSESSIONID` 必须有 `Secure; HttpOnly; SameSite=Strict; Path=/` | 已验证带权限用户、所有敏感写入和实际 Session 失效 |
+| CSRF 与 Session | `GET /api/v1/auth/csrf` 为 200，`Cache-Control` 含 `no-store`、JSON 有有效 token；`JSESSIONID` 必须有 `Secure; HttpOnly; SameSite=Strict; Path=/` | 已验证带权限用户、所有敏感写入和实际 Session 失效 |
 | 异常 Host | 对同一 TLS 目标以固定 `Host: untrusted.invalid` 请求 `/api/v1/ping`，须返回 400/403/404/421 | 已审查全部 Forwarded 信任链、WAF、日志脱敏 |
 
-严格限制：仅 `https://`、有合法 DNS 名的目标、443 端口、不可包含用户信息、路径、查询串或片段；拒绝 localhost/原始 IP/示例或保留测试域名。固定只用匿名 GET（不会发 Cookie、Authorization、客户端凭据、Seller/Ads Token）；不跟随跳转，任何 302/登录跳转都会阻止核查。CSRF GET **可能在目标 Spring Session store 创建一个匿名 Session**，但不会进行业务写入；运维应在获授权的私有受控目标执行。
+严格限制：仅 `https://`、有合法 DNS 名的目标、443 端口、不可包含用户信息、路径、查询串或片段；拒绝 localhost/原始 IP/示例或保留测试域名。V152 使用**五次固定匿名 GET**（真正 Spring `/ping`、Next `/orders`、匿名 `/auth/me`、`/auth/csrf`、故意错误 Host 的 `/ping`）；不会发 Cookie、Authorization、客户端凭据、Seller/Ads Token；不跟随跳转，任何 302/登录跳转都会阻止核查。接收正文大小受限，内部仅做布尔断言，输出绝不含原始 HTML、令牌和目标域名。CSRF GET **可能在目标 Spring Session store 创建一个匿名 Session**，但不会进行业务写入；运维应在获授权的私有受控目标执行。
 
 ## 仅由获授权运维在真实目标执行
 
@@ -42,5 +43,7 @@ python3 scripts/check_next_target_ingress_v151.py \
 ## 依然需要独立完成
 
 人工记录真实发布候选镜像摘要和 SHA、同源 Next→Vite→Next 带登录 Session 回滚和浏览器截图、目标域名的证书更新测试、可信代理/WAF/Forwarded 策略、IAM/MFA 和审批；以及 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 的目标环境真实 PG18 加密离站物理备份/WAL/PITR、真实 Alertmanager 外部 ACK、私网 ClamAV/EICAR、G1/G2/G3 独立签署。真实 Seller/Ads 用户本地 OAuth 与只读 API 联调仍需单独批准，远程写权限保持关闭。
+
+V151 首版仅要求 `/api/v1/ping` 返回 200，可能把 Vite/Nginx 旧入口或返回 200 的假代理判断为 Next。**V152 修复了这种误判**：增加 Spring 正式 Ping JSON、Next HTML 静态指纹、CSRF `no-store` 的 fail-closed 检查与纯离线负例。即使 V152 全部通过，也不能从 HTML 指纹认定镜像 SHA、认证身份、正式证书轮换或生产审批已完成。
 
 本工具的成功只能作为目标 HTTPS **匿名入口的一个小范围现场观察证据**，不代表已验证可登录生产环境。不要上传报告里可能关联内部基础设施的旁证到公共仓库；证据原件存放在维护者授权的私有系统。
