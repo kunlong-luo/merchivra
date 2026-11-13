@@ -1,3 +1,4 @@
+# V147 exact-branch disposable PG18 rerun after live 17-op normalized contract.
 name: Temporary V147 isolated PostgreSQL 18 full-suite test
 on:
   push:
