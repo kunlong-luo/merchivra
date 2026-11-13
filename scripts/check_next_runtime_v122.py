@@ -89,6 +89,9 @@ if args.compose:
         "http://server:8080/actuator/health",
         "health.status !== 200",
         "health.headers.get('content-type')",
+        "media === 'application/json'",
+        "media === 'application/vnd.spring-boot.actuator.v3+json'",
+        "media === 'application/vnd.spring-boot.actuator.v2+json'",
         "health.json()",
         "state.status === 'UP'",
         "redirect: 'manual'",
@@ -110,5 +113,5 @@ if args.compose:
             assert env.get(var,"").lower() == "false", f"Unsafe {var}"
         assert env["MERCHIVRA_SESSION_COOKIE_SECURE"] == "true"
 
-print("PASS V122/V128/V153/V154: nonroot Node standalone, private API proxy, safe rollback "
+print("PASS V122/V128/V153/V154/V155: nonroot Node standalone, private API proxy, safe rollback "
       "and loopback-only Next container")
