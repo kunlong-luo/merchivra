@@ -1,63 +1,86 @@
 #!/usr/bin/env node
 /**
- * V153: test the ACTUAL effective Compose healthcheck JS, offline.
- * Every response is mocked; this script must not contact a running service.
- * Input: 'docker compose ... config --format json' on stdin.
+ * V153/V154: execute the ACTUAL effective Compose healthcheck expression
+ * against offline fake Spring and Actuator replies. No network, credentials
+ * or Docker runtime is required beyond docker compose config --format json.
  */
 import assert from 'node:assert/strict'
 import {readFileSync} from 'node:fs'
 import {runInNewContext} from 'node:vm'
 
-const config=JSON.parse(readFileSync(0,'utf8'))
-const cmd=config.services?.['next-web']?.healthcheck?.test
+const compose=JSON.parse(readFileSync(0,'utf8'))
+const cmd=compose.services?.['next-web']?.healthcheck?.test
 assert.deepEqual(cmd?.slice(0,3),['CMD','node','-e'])
 assert.equal(cmd?.length,4)
-const probe=cmd[3]
-assert.equal(typeof probe,'string')
+const program=cmd[3]
+assert.equal(typeof program,'string')
+const PING_URL='http://127.0.0.1:3000/api/v1/ping'
+const HEALTH_URL='http://server:8080/actuator/health'
+const correctPing={service:'merchivra',status:'ok',stage:'M0'}
+const ready={status:'UP'}
 const cases=[
-  {label:'real Spring PingController',status:200,json:{service:'merchivra',status:'ok',stage:'M0'},expected:0},
-  {label:'Next or Nginx HTML with HTTP 200',status:200,type:'text/html',json:{service:'merchivra',status:'ok',stage:'M0'},expected:1},
-  {label:'unexpected backend identity',status:200,json:{service:'other',status:'ok',stage:'M0'},expected:1},
-  {label:'missing stage',status:200,json:{service:'merchivra',status:'ok'},expected:1},
-  {label:'wrong stage',status:200,json:{service:'merchivra',status:'ok',stage:'MOCK'},expected:1},
-  {label:'Spring no longer ready',status:200,json:{service:'merchivra',status:'degraded',stage:'M0'},expected:1},
-  {label:'backend 503',status:503,json:{service:'merchivra',status:'ok',stage:'M0'},expected:1},
-  {label:'backend 401',status:401,json:{service:'merchivra',status:'ok',stage:'M0'},expected:1},
-  {label:'redirect to login',status:302,json:{service:'merchivra',status:'ok',stage:'M0'},expected:1},
-  {label:'empty JSON',status:200,json:null,expected:1},
-  {label:'malformed JSON body',status:200,rejectJson:true,expected:1},
-  {label:'backend disconnected',rejectFetch:true,expected:1},
+  {label:'Spring identity and PostgreSQL-backed Actuator UP',expected:0,requests:2},
+  {label:'Next or nginx HTML 200 cannot fake Spring',pingType:'text/html',expected:1,requests:1},
+  {label:'wrong Spring identity',pingJson:{service:'other',status:'ok',stage:'M0'},expected:1,requests:1},
+  {label:'missing Spring stage',pingJson:{service:'merchivra',status:'ok'},expected:1,requests:1},
+  {label:'wrong Spring stage',pingJson:{service:'merchivra',status:'ok',stage:'MOCK'},expected:1,requests:1},
+  {label:'Spring Ping degraded',pingJson:{service:'merchivra',status:'degraded',stage:'M0'},expected:1,requests:1},
+  {label:'Spring 503',pingStatus:503,expected:1,requests:1},
+  {label:'Spring 401',pingStatus:401,expected:1,requests:1},
+  {label:'Spring redirect',pingStatus:302,expected:1,requests:1},
+  {label:'Spring empty JSON',pingJson:null,expected:1,requests:1},
+  {label:'Spring malformed JSON',badJsonAt:'ping',expected:1,requests:1},
+  {label:'Spring disconnected',errorAt:'ping',expected:1,requests:1},
+  {label:'PostgreSQL disconnected returns Actuator DOWN',healthJson:{status:'DOWN'},healthStatus:503,expected:1,requests:2},
+  {label:'PostgreSQL down but gateway reports HTTP 200',healthJson:{status:'DOWN'},expected:1,requests:2},
+  {label:'Actuator missing status',healthJson:{},expected:1,requests:2},
+  {label:'Actuator invalid HTML 200',healthType:'text/html',expected:1,requests:2},
+  {label:'Actuator redirect',healthStatus:302,expected:1,requests:2},
+  {label:'Actuator unauthorized',healthStatus:401,expected:1,requests:2},
+  {label:'Actuator unavailable',healthStatus:503,expected:1,requests:2},
+  {label:'Actuator malformed JSON',badJsonAt:'health',expected:1,requests:2},
+  {label:'Actuator transport error',errorAt:'health',expected:1,requests:2},
+  {label:'Actuator null response',healthJson:null,expected:1,requests:2},
 ]
-for(const c of cases){
-  let seen=0
-  let resolveExit
-  const done=new Promise(resolve=>{resolveExit=resolve})
+for(const scenario of cases){
+  const requested=[]
+  let finish
+  const done=new Promise(resolve=>{finish=resolve})
   const fetch=async(url,options)=>{
-    seen++
-    assert.equal(url,'http://127.0.0.1:3000/api/v1/ping')
+    requested.push(url)
+    assert.ok(url===PING_URL||url===HEALTH_URL,
+      'Only fixed internal proxy and Spring DNS requests are permitted')
     assert.equal(options.redirect,'manual')
     assert.equal(options.cache,'no-store')
     assert.ok(options.signal instanceof AbortSignal)
-    if(c.rejectFetch)throw new Error('synthetic connection failure')
+    assert.ok(requested.length<=2,'No retries or unexpected extra requests')
+    const isHealth=url===HEALTH_URL
+    if(isHealth)assert.equal(requested[0],PING_URL,
+      'Cannot probe private Actuator until Spring identity is validated')
+    if(scenario.errorAt===(isHealth?'health':'ping'))throw Error('offline injected transport error')
+    const status=isHealth?(scenario.healthStatus??200):(scenario.pingStatus??200)
     return {
-      status:c.status,
+      status,
       headers:{get(key){
         assert.equal(key,'content-type')
-        return c.type??'application/json;charset=UTF-8'
+        return (isHealth?scenario.healthType:scenario.pingType)??'application/json;charset=utf-8'
       }},
       async json(){
-        if(c.rejectJson)throw new SyntaxError('synthetic invalid JSON')
-        return c.json
+        if(scenario.badJsonAt===(isHealth?'health':'ping'))
+          throw new SyntaxError('offline invalid JSON')
+        return isHealth?(scenario.healthJson===undefined?ready:scenario.healthJson):
+                        (scenario.pingJson===undefined?correctPing:scenario.pingJson)
       }
     }
   }
-  runInNewContext(probe,{fetch,AbortSignal,process:{exit(code){resolveExit(code)}}},
+  runInNewContext(program,{fetch,AbortSignal,process:{exit(code){finish(code)}}},
     {timeout:1500})
   const timeout=new Promise((_,reject)=>{
-    setTimeout(()=>reject(new Error('Probe omitted process.exit for '+c.label)),1500).unref?.()
+    setTimeout(()=>reject(new Error('Health probe omitted exit: '+scenario.label)),1500).unref?.()
   })
-  const exitCode=await Promise.race([done,timeout])
-  assert.equal(exitCode,c.expected,'Unexpected readiness for '+c.label)
-  assert.equal(seen,1,'Expected exactly one bounded local fetch: '+c.label)
+  const result=await Promise.race([done,timeout])
+  assert.equal(result,scenario.expected,scenario.label)
+  assert.deepEqual(requested,scenario.requests===2?[PING_URL,HEALTH_URL]:[PING_URL],
+    'Health probe did not run only expected endpoints: '+scenario.label)
 }
-console.log('PASS V153: 12 offline Node healthcheck cases; only real Spring JSON is healthy')
+console.log('PASS V154: 22 offline Compose healthcheck cases; Spring identity AND private Actuator UP required')
