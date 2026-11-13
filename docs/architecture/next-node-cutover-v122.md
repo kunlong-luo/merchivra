@@ -78,3 +78,10 @@ V153 的合成 A3 [#43372166884](https://github.com/kunlong-luo/merchivra/action
 新增离线测试 `scripts/test_next_health_v153.mjs` 从**实际 Compose 输出**执行健康表达式，覆盖 22 个真假服务、DOWN/错误 JSON/503/重定向/断连等场景；完整 A3 Compose 作业额外验证真实 PostgreSQL 18 环境下 Spring Actuator 状态 UP、Next `/actuator/health` 返回 404，且保持 Session/CSRF 和隔离 HTTPS 同会话 Next→Vite→Next 回切。由于变更实际 Next 容器就绪规则，需在**最终合并 main 的精确 SHA**上重新执行完整 A3，不得使用 V153 A3 冒充 V154 结果。
 
 仍需满足 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 的真实目标 TLS/Ingress、外部 KMS/IAM/MFA、实际 PG18 离站 PITR、ClamAV、Alertmanager 外部 ACK 与 G1/G2/G3 人工签署。此更改不打开任何生产 Amazon Seller/Ads OAuth/写入，也不部署真实 ERP。
+
+
+### V155 — 修正 Spring Actuator 官方 vendor JSON 响应
+
+V154 初版容器探针检查了 PostgreSQL-backed `/actuator/health`，但误把 HTTP Content-Type 固定为 `application/json`。Spring Boot Actuator 真实响应还可能采用官方 `application/vnd.spring-boot.actuator.v3+json`（或兼容 v2）；如果只凭普通 JSON 类型判断，即使数据库健康，也会把 Next 错误标为 `unhealthy`。**V155 保留全部原有 fail-closed 检查，只把接受的 Content-Type 限定为三种官方精确类型**：`application/json`、`application/vnd.spring-boot.actuator.v3+json`、`application/vnd.spring-boot.actuator.v2+json`；兼容大小写/charset 参数，拒绝任意 vendor 名称、text/json、JSONP、HTML/重定向与不在允许范围内的版本。
+
+仍要求同源 Spring `PingController` 验证后才调用内部私有 Actuator、HTTP 200 且 `status=UP`；PostgreSQL DOWN 仍 fail-closed。离线测试已扩至 30 个场景，其中包括真实 vendor Content-Type 与错误类型；完整 A3 必须重新绑定 **V155 合并后的精确 main SHA**，V154 A3（不论结果）不能替代。无新增公开路由、OAuth、真实生产请求或 G1/G2/G3 授权。
