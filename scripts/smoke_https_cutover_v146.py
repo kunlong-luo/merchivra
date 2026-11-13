@@ -20,7 +20,7 @@ import time
 from urllib.error import HTTPError
 from urllib.parse import urlencode
 from urllib.request import (
-    HTTPCookieProcessor, HTTPSHandler, Request, build_opener
+    HTTPCookieProcessor, HTTPRedirectHandler, HTTPSHandler, Request, build_opener
 )
 
 BASE="https://127.0.0.1:3443"
@@ -110,12 +110,20 @@ def write_config(config_path:Path,target:str)->None:
     temporary.chmod(0o600)
     temporary.replace(config_path)
 
+class RefuseRedirects(HTTPRedirectHandler):
+    # The disposable probe must never follow a proxy redirect to another
+    # path or host and mistake the final 200 for an ingress success.
+    def redirect_request(self,request,fp,code,msg,headers,newurl):
+        return None
+
+
 class Client:
     def __init__(self,certificate:str):
         self.context=ssl.create_default_context(cafile=certificate)
         self.cookies=http.cookiejar.CookieJar()
         self.http=build_opener(HTTPCookieProcessor(self.cookies),
-                              HTTPSHandler(context=self.context))
+                              HTTPSHandler(context=self.context),
+                              RefuseRedirects())
 
     def call(self,path:str,method="GET",body=None,csrf=None,expected=200,
              extra_headers=None):
