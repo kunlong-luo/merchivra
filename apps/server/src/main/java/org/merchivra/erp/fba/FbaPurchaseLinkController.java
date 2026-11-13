@@ -6,7 +6,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.security.TenantAccessService;
-import org.merchivra.erp.purchasing.LocalKeysetPage;
 import org.springframework.http.CacheControl;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -43,7 +42,7 @@ public class FbaPurchaseLinkController {
     /** V147: all tenant- and shipment-scoped local identity proof rows. */
     @Operation(operationId="listFbaPurchaseLinksPage")
     @GetMapping("/page")
-    public ResponseEntity<LocalKeysetPage.Page<FbaPurchaseLinkService.Linked>> linksPage(
+    public ResponseEntity<FbaPurchaseLinkService.LinkedPage> linksPage(
         @Parameter(hidden=true) Authentication auth,
         @Parameter(hidden=true) HttpServletRequest req,@PathVariable UUID marketplaceId,
         @PathVariable UUID shipmentId,
@@ -59,7 +58,7 @@ public class FbaPurchaseLinkController {
     /** V147: approved PO candidates, each distinct optional SHIPPED ASN row included. */
     @Operation(operationId="listFbaPurchaseCandidatesPage")
     @GetMapping("/lines/{lineId}/candidates/page")
-    public ResponseEntity<LocalKeysetPage.Page<FbaPurchaseLinkService.Candidate>> candidatesPage(
+    public ResponseEntity<FbaPurchaseLinkService.CandidatePage> candidatesPage(
         @Parameter(hidden=true) Authentication auth,
         @Parameter(hidden=true) HttpServletRequest req,@PathVariable UUID marketplaceId,
         @PathVariable UUID shipmentId,@PathVariable UUID lineId,
