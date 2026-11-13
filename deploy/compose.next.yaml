@@ -21,16 +21,27 @@ services:
       HOSTNAME: 0.0.0.0
       PORT: '3000'
       NEXT_TELEMETRY_DISABLED: '1'
-    # Readiness requires the compiled Next same-origin proxy AND Spring API.
-    # Node 24 provides fetch; no curl, shell, application credentials or secrets.
+    # V153: a bare HTTP 200 is insufficient (a default Nginx/HTML success
+    # page or wrong service could otherwise mark Next as healthy).
+    # Verify Spring's exact bounded same-origin PingController identity.
+    # Node 24 fetch only; never send credentials or call external targets.
     healthcheck:
       test:
         - CMD
         - node
         - -e
         - >-
-          fetch('http://127.0.0.1:3000/api/v1/ping', {signal: AbortSignal.timeout(3000)})
-          .then(response => process.exit(response.status === 200 ? 0 : 1))
+          fetch('http://127.0.0.1:3000/api/v1/ping',
+          {signal: AbortSignal.timeout(3000), redirect: 'manual', cache: 'no-store'})
+          .then(async response => {
+          if (response.status !== 200
+          || !response.headers.get('content-type')?.toLowerCase().includes('application/json'))
+          return false;
+          const ping = await response.json();
+          return ping && ping.service === 'merchivra'
+          && ping.status === 'ok' && ping.stage === 'M0';
+          })
+          .then(ok => process.exit(ok ? 0 : 1))
           .catch(() => process.exit(1));
       interval: 15s
       timeout: 5s

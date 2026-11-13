@@ -72,7 +72,22 @@ if args.compose:
     assert len(probe) == 4
     assert "http://127.0.0.1:3000/api/v1/ping" in probe[3], "Next health must traverse Spring"
     assert "AbortSignal.timeout(3000)" in probe[3], "Next health must be time bounded"
-    assert "response.status === 200" in probe[3], "Next health must reject non-200"
+    # V153: HTTP 200 alone can come from a default proxy or stale SPA.
+    # Readiness must verify the real Spring PingController JSON contract;
+    # redirects and cacheable gateway responses cannot silently pass.
+    for expected in (
+        "response.status !== 200",
+        "response.headers.get('content-type')",
+        "application/json",
+        "response.json()",
+        "ping.service === 'merchivra'",
+        "ping.status === 'ok'",
+        "ping.stage === 'M0'",
+        "redirect: 'manual'",
+        "cache: 'no-store'",
+        "process.exit(ok ? 0 : 1)",
+    ):
+        assert expected in probe[3], f"Next health must fail closed: missing {expected}"
     assert int(health.get("retries", 0)) >= 3
     assert services["web"]["build"]["context"], "Lost Vite rollback"
     assert services["postgres"]["image"].startswith("postgres:18-")
@@ -87,5 +102,5 @@ if args.compose:
             assert env.get(var,"").lower() == "false", f"Unsafe {var}"
         assert env["MERCHIVRA_SESSION_COOKIE_SECURE"] == "true"
 
-print("PASS V122/V128: nonroot Node standalone, private API proxy, safe rollback "
+print("PASS V122/V128/V153: nonroot Node standalone, private API proxy, safe rollback "
       "and loopback-only Next container")

@@ -535,6 +535,11 @@ jobs:
           docker compose --env-file .env.example -f deploy/compose.yaml \
             -f deploy/compose.next.yaml config --format json |
             python3 scripts/check_next_runtime_v122.py --compose
+          # V153: execute the exact YAML healthcheck Node expression with
+          # mocked responses; CI must never contact a real target.
+          docker compose --env-file .env.example -f deploy/compose.yaml \
+            -f deploy/compose.next.yaml config --format json |
+            node scripts/test_next_health_v153.mjs
           docker compose --env-file .env.example -f deploy/compose.yaml \
             -f deploy/compose.production.yaml -f deploy/compose.next.yaml \
             config --format json |

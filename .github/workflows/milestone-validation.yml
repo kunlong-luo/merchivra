@@ -1,3 +1,6 @@
+# V153: exact-main-SHA A3 on actual Node standalone Compose readiness:
+# HTTP 200 MUST include real Spring Ping JSON, no redirect, no static fallback.
+# Retain all signed G1/G2/G3 and real Amazon production blocks.
 # V150: exact-main-SHA A3 after validating anonymous 401/CSRF/Secure
 # Session readiness over CA-verified local HTTPS before the cutover canary.
 # V149: exact-main-SHA A3 after secret-safe V146 HTTPS canary stage logging.
@@ -66,7 +69,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V150-A3-HTTPS-secure-auth-readiness-gate' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V153-A3-Next-Node-Spring-identity-healthcheck' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -113,6 +116,7 @@ on:
           - V148-A3-FBA-keyset-Chromium-fixture-recheck
           - V149-A3-local-HTTPS-canary-safe-stage-diagnostics
           - V150-A3-HTTPS-secure-auth-readiness-gate
+          - V153-A3-Next-Node-Spring-identity-healthcheck
 
 permissions:
   contents: read
