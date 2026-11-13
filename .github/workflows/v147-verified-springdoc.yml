@@ -1,0 +1,46 @@
+name: Temporary V147 real Springdoc to Orval regeneration
+on:
+  push:
+    branches:
+      - feat/v147-fba-purchase-keyset
+    paths:
+      - .github/workflows/v147-verified-springdoc.yml
+permissions:
+  contents: write
+jobs:
+  verified-contract:
+    if: github.ref == 'refs/heads/feat/v147-fba-purchase-keyset'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: true
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Export REAL Springdoc from updated FBA controllers
+        run: ./apps/server/gradlew -p apps/server --no-daemon --console plain test --tests org.merchivra.erp.fba.FbaPurchaseLinkOpenApiV145Test
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: apps/web/package-lock.json
+          package-manager-cache: false
+      - name: Normalize verified 17-operation Springdoc contract
+        run: node scripts/normalize-fba-openapi.mjs apps/server/build/fba-openapi-v145.json apps/web/openapi/fba-inbound.json
+      - name: Install locked frontend dependencies
+        working-directory: apps/web
+        run: npm ci --no-audit --no-fund
+      - name: Regenerate actual Orval output
+        working-directory: apps/web
+        run: npm run api:generate:fba
+      - name: Save generated spec and typed client to feature branch
+        run: |
+          git add apps/web/openapi/fba-inbound.json apps/web/src/generated/fba-inbound.ts apps/web/src/generated/fba-models
+          if ! git diff --cached --quiet; then
+            git -c user.name='github-actions[bot]' -c user.email='41898282+github-actions[bot]@users.noreply.github.com' commit -m 'chore(v147): regenerate FBA 17 operations from real Springdoc'
+            git push origin HEAD:refs/heads/feat/v147-fba-purchase-keyset
+          fi
