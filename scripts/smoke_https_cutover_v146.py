@@ -27,6 +27,21 @@ BASE="https://127.0.0.1:3443"
 ROUTES=("/", "/core", "/orders", "/catalog", "/inventory", "/purchasing",
         "/ops", "/finance", "/connections", "/team", "/sync")
 PORTS={"next":3001,"vite":3000}
+# V149: only fixed non-sensitive diagnostic stages may appear in CI stderr.
+# Never print exception text, URLs, response bodies, session or credential data.
+SAFE_STAGES=frozenset((
+    "preflight","ingress-next","anonymous-access","csrf-init",
+    "login-guard","login-real","session-cookie","next-routes",
+    "vite-rollback","next-rollforward","logout"
+))
+CURRENT_STAGE="preflight"
+
+def mark_stage(stage:str)->None:
+    if stage not in SAFE_STAGES:
+        raise ValueError("invalid_static_canary_stage")
+    global CURRENT_STAGE
+    CURRENT_STAGE=stage
+
 CONTAINER=re.compile(r"v146-https-[0-9]+\Z")
 LOCAL_PATH=re.compile(r"/tmp/merchivra-v146-[a-zA-Z0-9_-]+/nginx.conf\Z")
 CONFIG_TEMPLATE="""worker_processes 1;
@@ -166,19 +181,24 @@ def run_synthetic(certificate:str,config_path:Path,container:str):
                 raise RuntimeError("synthetic_ingress_reload_failed")
         validate_ingress(target)
 
+    mark_stage("ingress-next")
     validate_ingress("next")
+    mark_stage("anonymous-access")
     anon,_=public.expect("/api/v1/auth/me",expected=401)
     if anon not in (b"",None):
         # Error pages are permitted, but may not include a real tenant UUID.
         pass
+    mark_stage("csrf-init")
     csrf,_=client.json("/api/v1/auth/csrf")
     if csrf.get("headerName")!="X-CSRF-TOKEN":
         raise AssertionError("csrf_header_missing")
     password=os.environ["MERCHIVRA_BOOTSTRAP_PASSWORD"]
     username=os.environ["MERCHIVRA_BOOTSTRAP_USERNAME"]
+    mark_stage("login-guard")
     client.expect("/api/v1/auth/login",method="POST",
                   body={"username":username,"password":password},
                   expected=(401,403))
+    mark_stage("login-real")
     client.expect("/api/v1/auth/login",method="POST",
                   body={"username":username,"password":password},
                   csrf=csrf["token"],extra_headers={
@@ -186,6 +206,7 @@ def run_synthetic(certificate:str,config_path:Path,container:str):
                       "Forwarded":"for=203.0.113.42;proto=http;host=evil.invalid",
                       "X-Forwarded-Host":"evil.invalid"
                   })
+    mark_stage("session-cookie")
     viewer,headers=client.json("/api/v1/auth/me")
     if not viewer.get("isOwner") or not viewer.get("activeTenantId"):
         raise AssertionError("real_session_not_authenticated")
@@ -201,6 +222,7 @@ def run_synthetic(certificate:str,config_path:Path,container:str):
     # A crafted Host header must be rejected at the exact synthetic ingress.
     client.expect("/api/v1/ping",expected=421,
                   extra_headers={"Host":"evil.invalid"})
+    mark_stage("next-routes")
     for path in ROUTES:
         html,headers=client.expect(path)
         if b"Merchivra ERP" not in html:
@@ -218,6 +240,7 @@ def run_synthetic(certificate:str,config_path:Path,container:str):
 
     # Same origin, same secure HttpOnly cookie, same Spring Session:
     # Vite rollback must keep identity without a new login or a copied token.
+    mark_stage("vite-rollback")
     switch("vite")
     viewer_vite,_=client.json("/api/v1/auth/me")
     if viewer_vite.get("userId")!=viewer["userId"]:
@@ -232,10 +255,12 @@ def run_synthetic(certificate:str,config_path:Path,container:str):
                   body={},expected=403)
 
     # Roll forward after verifying Vite: identity still in same Spring store.
+    mark_stage("next-rollforward")
     switch("next")
     viewer_next,_=client.json("/api/v1/auth/me")
     if viewer_next.get("userId")!=viewer["userId"]:
         raise AssertionError("next_rollforward_lost_session")
+    mark_stage("logout")
     new_csrf,_=client.json("/api/v1/auth/csrf")
     client.expect("/api/v1/auth/logout",method="POST",
                   csrf=new_csrf["token"],expected=204)
@@ -272,6 +297,7 @@ def main():
     parser.add_argument("--container")
     args=parser.parse_args()
     try:
+        mark_stage("preflight")
         guard()
         config=Path(args.config)
         if args.mode=="initial-config":
@@ -285,8 +311,9 @@ def main():
     except (AssertionError,RuntimeError,ValueError,OSError,
             subprocess.TimeoutExpired) as error:
         # Avoid leaking exception payloads that may include secret content.
-        print("V146 TLS canary BLOCKED: "+type(error).__name__,
-              file=sys.stderr)
+        # Only emit a known static stage and exception class, not str(error).
+        print("V146 TLS canary BLOCKED: "+type(error).__name__
+              +" stage="+CURRENT_STAGE, file=sys.stderr)
         return 2
 
 if __name__=="__main__":
