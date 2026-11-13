@@ -84,6 +84,8 @@ services:
   web:
     build:
       context: ../apps/web
+      args:
+        MERCHIVRA_BUILD_REVISION: ${MERCHIVRA_BUILD_REVISION:-}
     ports:
       - "127.0.0.1:3000:80"
     depends_on:
