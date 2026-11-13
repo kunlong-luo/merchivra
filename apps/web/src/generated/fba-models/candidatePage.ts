@@ -3,14 +3,14 @@
  * Do not edit manually.
  * Merchivra verified local FBA inbound API
  * Owner Session; MOCK/MANUAL_UNVERIFIED evidence only. No Amazon writes.
- * OpenAPI spec version: 145.0.0
+ * OpenAPI spec version: 147.0.0
  */
 import type { Candidate } from './candidate.ts';
 
 export interface CandidatePage {
+  hasMore?: boolean;
   items?: Candidate[];
   /** @nullable */
   nextCursor?: string | null;
-  hasMore?: boolean;
   pageSize?: number;
 }
