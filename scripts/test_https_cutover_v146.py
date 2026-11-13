@@ -334,6 +334,23 @@ class V146SafeHttpsTests(unittest.TestCase):
         factory.assert_called_once()
         sleeper.assert_not_called()
 
+    def test_v157_real_http_opener_refuses_all_redirects(self):
+        # urllib defaults to following 302/307; that could turn a bogus
+        # proxy redirect into a trusted-looking final HTTP 200.
+        with patch.object(smoke.ssl,"create_default_context",return_value=Mock()):
+            client=smoke.Client("/synthetic-ca")
+        handlers=[
+            handler for handler in client.http.handlers
+            if isinstance(handler,smoke.RefuseRedirects)
+        ]
+        self.assertEqual(len(handlers),1)
+        for code in (301,302,303,307,308):
+            self.assertIsNone(
+                handlers[0].redirect_request(
+                    None,None,code,"synthetic",{},"https://evil.invalid/"
+                )
+            )
+
     def test_v157_invalid_target_previous_or_attempt_budget_is_refused(self):
         probe=Mock()
         for target,previous,attempts in (
