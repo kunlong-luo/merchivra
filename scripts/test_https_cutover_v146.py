@@ -178,6 +178,43 @@ class V146SafeHttpsTests(unittest.TestCase):
         factory.assert_called_once()
         sleeper.assert_not_called()
 
+    def test_v156_rollback_phase_diagnostics_are_static_and_secret_free(self):
+        # The V148 first-attempt AssertionError had no stage, so neither
+        # its precise failure point nor root cause can be reconstructed.
+        # Future failures distinguish reload, identity, page and security
+        # assertions without revealing exception payloads or principals.
+        boundaries=(
+            ("vite-switch", 'switch("vite")'),
+            ("vite-auth", 'viewer_vite,_=client.json("/api/v1/auth/me")'),
+            ("vite-page", 'fallback_html,headers=client.expect("/purchasing")'),
+            ("vite-access-control", 'public.expect("/api/v1/auth/me",expected=401)'),
+            ("next-switch", 'switch("next")'),
+            ("next-auth", 'viewer_next,_=client.json("/api/v1/auth/me")'),
+        )
+        source=Path(__file__).with_name("smoke_https_cutover_v146.py").read_text()
+        for stage,operation in boundaries:
+            with self.subTest(stage=stage):
+                self.assertIn(stage,smoke.SAFE_STAGES)
+                self.assertIn('mark_stage("'+stage+'")\n    '+operation,source)
+                diagnostic=io.StringIO()
+                def masked_failure(*_):
+                    smoke.mark_stage(stage)
+                    raise AssertionError("synthetic-secret-session-id-never-log")
+                with (patch.dict(os.environ,FAKE,clear=True),
+                      patch.object(sys,"argv",[
+                          "smoke_https_cutover_v146.py","verify",
+                          "--config","/tmp/merchivra-v146-test/nginx.conf",
+                          "--cert","/tmp/merchivra-v146-test/cert.pem",
+                          "--container","v146-https-123"]),
+                      patch.object(smoke,"run_synthetic",side_effect=masked_failure),
+                      contextlib.redirect_stderr(diagnostic)):
+                    self.assertEqual(smoke.main(),2)
+                self.assertEqual(
+                    diagnostic.getvalue(),
+                    "V146 TLS canary BLOCKED: AssertionError stage="+stage+"\n"
+                )
+                self.assertNotIn("synthetic-secret-session-id",diagnostic.getvalue())
+
     def test_no_production_claim_or_external_host_in_success_evidence(self):
         source=Path(__file__).with_name("smoke_https_cutover_v146.py").read_text()
         for expected in ('"productionApproved":False',
