@@ -31,7 +31,7 @@ result.components??={}
 // V147 retains V75 provenance writes and adds full PO/ASN keyset source pages.
 const modelNames=new Set(['Create','Detail','Line','LineInput',
   'Receipt','ReceiptEvent','Resolve','Shipment','ShipmentPage','TransitRow',
-  'Candidate','Linked','Propose','Reason'])
+  'Candidate','Linked','LinkedPage','CandidatePage','Propose','Reason'])
 result.components.schemas=Object.fromEntries(Object.entries(result.components.schemas??{})
   .filter(([name])=>modelNames.has(name)))
 // Fail closed if extending the endpoint set leaves a dangling DTO reference.
