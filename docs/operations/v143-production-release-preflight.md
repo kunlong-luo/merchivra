@@ -13,6 +13,8 @@
 
 V143 不创建新的 Amazon 凭证、外部账号、Webhook URL、DB 用户或部署基础设施；不能通过硬编码 CI/示例凭据使生产预检通过。
 
+V158 新增 [脱敏证据缺项与责任人清单](v158-production-evidence-worklist.md)：它**只读取本程序已经脱敏的输出**，用于分派目标环境证据，不接受原始 Compose 配置，也不会判断真实签署有效或授权部署。
+
 ## G1 / G2 / G3 负责人应提供的实际证据
 
 | 门禁 | 需要线下复核的事实 | 必须由谁批准 |
@@ -23,7 +25,7 @@ V143 不创建新的 Amazon 凭证、外部账号、Webhook URL、DB 用户或�
 
 模板 [`ops/release/v143-production-evidence-template.json`](../../ops/release/v143-production-evidence-template.json) **所有项初始均为 `pending`**。它不能作为生产证明，也不能把包含真实签名或实名人员/密钥的文件提交到 Git、GitHub Issues、公共 CI 或公开演示站。实际审核资料与证据文件在受信安全系统中保存；模板只说明需要的字段。上传的摘要是文件指纹，不是已验证的外部电子签章。
 
-两项现有 GitHub Issues：[#62](https://github.com/kunlong-luo/merchivra/issues/62) 实际标题涉及采购/供应商/仓库分页，[#63](https://github.com/kunlong-luo/merchivra/issues/63) 实际标题涉及 Next.js 正式运行切换。它们保持 OPEN 且是**技术待办**；不得将它们误称为 G1/G2/G3 的正式批准记录。治理文档 [G1 静态审查](../governance/g1-review-2026-10-30.md)、[G2 静态审查](../governance/g2-review-2026-10-30.md)、[未决决策](../governance/decision-register.md)均明确仍待负责人签署。
+两项历史技术跟踪 Issues：[#62](https://github.com/kunlong-luo/merchivra/issues/62)（采购/供应商/仓库分页）和 [#63](https://github.com/kunlong-luo/merchivra/issues/63)（Next.js 运行切换）都已由维护者 **CLOSED**；**这只是技术跟踪状态，不代表真实外部 Next 受控切流、目标 IAM/TLS/KMS 或 G1/G2/G3 获得独立签署**。正式生产阻塞仍由 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 追踪。治理文档 [G1 静态审查](../governance/g1-review-2026-10-30.md)、[G2 静态审查](../governance/g2-review-2026-10-30.md)、[未决决策](../governance/decision-register.md)均明确仍待负责人签署。
 
 ## 运维在自己的受信环境执行（**不启动生产 Compose**）
 
