@@ -23,13 +23,16 @@ from dataclasses import dataclass
 from urllib.parse import urlsplit
 
 HOST = re.compile(r"(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\Z")
+SHA = re.compile(r"[a-f0-9]{40}\Z")
 CHECKS = (
     "TLS_CHAIN_AND_HOSTNAME_VERIFIED",
     "NEXT_INGRESS_PING_200",
     "SPRING_PING_IDENTITY",
+    "SPRING_PING_JSON_CONTENT_TYPE",
     "NEXT_APP_ROUTER_HTML",
     "ANONYMOUS_ME_401",
     "ANONYMOUS_CSRF_200_VALID",
+    "ANONYMOUS_CSRF_JSON_CONTENT_TYPE",
     "ANONYMOUS_CSRF_NO_STORE",
     "SESSION_SECURE_HTTPONLY_SAMESITE_STRICT",
     "INVALID_HOST_REJECTED",
@@ -87,6 +90,17 @@ def request_https(host: str, path: str, context: ssl.SSLContext,
         return Observation(response.status, tuple(response.getheaders()), body)
     finally:
         conn.close()
+
+def json_media_valid(headers: tuple[tuple[str, str], ...]) -> bool:
+    """V159: reject ambiguous, absent or non-JSON responses at fixed API GETs.
+
+    Media type is checked without recording headers, body, or target data.
+    Exactly one Content-Type must be application/json; charset is permitted.
+    """
+    values = [v for k, v in headers if k.lower() == "content-type"]
+    return (len(values) == 1
+            and values[0].split(";", 1)[0].strip().lower() == "application/json")
+
 
 def no_store(headers: tuple[tuple[str, str], ...]) -> bool:
     return any(key.lower() == "cache-control"
@@ -155,6 +169,8 @@ def report(checks: dict[str, bool], error: str | None = None) -> dict:
         "realSellerAdsAuthorized": False,
         "credentialsSent": False,
         "automatedDeploymentPossible": False,
+        # A claimed repository SHA is NOT a verified deployed image digest.
+        "targetDeploymentShaIndependentlyVerified": False,
     }
     if error is not None:
         result["errorCode"] = error
@@ -167,8 +183,11 @@ def inspect(host: str, fetch, tls_validated: bool) -> dict:
         ping = fetch(host, "/api/v1/ping", False)
         checks["TLS_CHAIN_AND_HOSTNAME_VERIFIED"] = tls_validated
         checks["NEXT_INGRESS_PING_200"] = ping.status == 200
-        checks["SPRING_PING_IDENTITY"] = (ping.status == 200
-                                          and spring_ping_valid(ping.body))
+        checks["SPRING_PING_JSON_CONTENT_TYPE"] = (
+            ping.status == 200 and json_media_valid(ping.headers))
+        checks["SPRING_PING_IDENTITY"] = (
+            checks["SPRING_PING_JSON_CONTENT_TYPE"]
+            and spring_ping_valid(ping.body))
         if not checks["SPRING_PING_IDENTITY"]:
             return report(checks)
         # /api can work identically through Vite and Next; verify the actual
@@ -184,7 +203,10 @@ def inspect(host: str, fetch, tls_validated: bool) -> dict:
         if not checks["ANONYMOUS_ME_401"]:
             return report(checks)
         csrf = fetch(host, "/api/v1/auth/csrf", False)
-        checks["ANONYMOUS_CSRF_200_VALID"] = (csrf.status == 200 and csrf_valid(csrf.body))
+        checks["ANONYMOUS_CSRF_JSON_CONTENT_TYPE"] = (
+            csrf.status == 200 and json_media_valid(csrf.headers))
+        checks["ANONYMOUS_CSRF_200_VALID"] = (
+            checks["ANONYMOUS_CSRF_JSON_CONTENT_TYPE"] and csrf_valid(csrf.body))
         checks["ANONYMOUS_CSRF_NO_STORE"] = (csrf.status == 200 and no_store(csrf.headers))
         checks["SESSION_SECURE_HTTPONLY_SAMESITE_STRICT"] = (
             csrf.status == 200 and session_flags(csrf.headers))
@@ -204,6 +226,8 @@ def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--origin", required=True,
                         help="Explicit HTTPS origin of your OWN reviewed target, port 443 only")
+    parser.add_argument("--candidate-sha", required=True,
+                        help="Operator-claimed reviewed main commit SHA (NOT verified deployed image)")
     parser.add_argument("--operator-authorized-target", action="store_true",
                         help="Confirm authority to read-only probe this actual target")
     parser.add_argument("--ca-file", help="Optional trusted private CA PEM file, never uploaded")
@@ -212,6 +236,9 @@ def main(argv=None) -> int:
         if (os.getenv("GITHUB_ACTIONS") == "true"
                 or not args.operator_authorized_target):
             raise ValueError("unauthorized_target_check")
+        if (not SHA.fullmatch(args.candidate_sha)
+                or args.candidate_sha == "0" * 40):
+            raise ValueError("invalid_candidate_sha")
         host = parse_origin(args.origin)
         context = ssl.create_default_context(cafile=args.ca_file)
         context.minimum_version = ssl.TLSVersion.TLSv1_2
@@ -219,6 +246,9 @@ def main(argv=None) -> int:
             host, lambda h, p, forged: request_https(h, p, context, forged),
             tls_validated=True,
         )
+        # Only an operator assertion. The probe does NOT read a deployed
+        # container digest, signed provenance or real main SHA from target.
+        result["operatorClaimedCandidateSha"] = args.candidate_sha
     except (OSError, ssl.SSLError, ValueError, TypeError):
         # Never print path or content of --ca-file or --origin.
         result = report({code: False for code in CHECKS}, "PRECONDITIONS_NOT_MET")

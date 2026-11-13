@@ -11,13 +11,15 @@ from unittest.mock import Mock, patch
 import check_next_target_ingress_v151 as target
 
 HOST = "erp.private.internal"
+SHA = "9"*40
 PRIVATE_CSRF = "synthetic-secret-csrf-NOT-OUTPUT"
 PRIVATE_COOKIE = "synthetic-session-value-NOT-OUTPUT"
 
 def observation(status, body=b"", cookies=()):
-    return target.Observation(
-        status, tuple(("Set-Cookie", cookie) for cookie in cookies), body
-    )
+    headers = tuple(("Set-Cookie", cookie) for cookie in cookies)
+    if status == 200:
+        headers += (("Content-Type", "application/json; charset=UTF-8"),)
+    return target.Observation(status, headers, body)
 
 def ping_probe():
     return observation(200, b'{"service":"merchivra","status":"ok","stage":"M0"}')
@@ -31,7 +33,8 @@ def secure_probe():
         200,
         (("Set-Cookie",
           f"JSESSIONID={PRIVATE_COOKIE}; Path=/; Secure; HttpOnly; SameSite=Strict"),
-         ("Cache-Control", "no-store")),
+         ("Cache-Control", "no-store"),
+         ("Content-Type", "application/json; charset=UTF-8")),
         json.dumps({"headerName": "X-CSRF-TOKEN",
                     "token": PRIVATE_CSRF}).encode(),
     )
@@ -87,6 +90,7 @@ class V151OperatorTargetIngressTests(unittest.TestCase):
         self.assertFalse(result["deploymentPermitted"])
         self.assertFalse(result["credentialsSent"])
         self.assertFalse(result["realSellerAdsAuthorized"])
+        self.assertFalse(result["targetDeploymentShaIndependentlyVerified"])
         encoded = json.dumps(result)
         for private in (PRIVATE_CSRF, PRIVATE_COOKIE, HOST):
             self.assertNotIn(private, encoded)
@@ -106,6 +110,47 @@ class V151OperatorTargetIngressTests(unittest.TestCase):
                 self.assertTrue(result["checks"]["NEXT_INGRESS_PING_200"])
                 self.assertFalse(result["checks"]["SPRING_PING_IDENTITY"])
                 self.assertEqual(calls, ["/api/v1/ping"])
+
+    def test_v159_api_media_type_requires_single_exact_json_header(self):
+        self.assertTrue(target.json_media_valid(
+            (("Content-Type", "application/json; charset=UTF-8"),)))
+        for headers in (
+            (), (("Content-Type", "text/html"),),
+            (("Content-Type", "application/problem+json"),),
+            (("Content-Type", "application/json, text/html"),),
+            (("Content-Type", "application/json"),
+             ("Content-Type", "application/json")),
+        ):
+            with self.subTest(headers=headers):
+                self.assertFalse(target.json_media_valid(headers))
+                p = target.Observation(200,headers,ping_probe().body)
+                calls=[]
+                def fetch(_,path,forged):
+                    calls.append(path)
+                    return p
+                result=target.inspect(HOST,fetch,tls_validated=True)
+                self.assertEqual(result["status"],"BLOCKED")
+                self.assertFalse(result["checks"]["SPRING_PING_JSON_CONTENT_TYPE"])
+                self.assertFalse(result["checks"]["SPRING_PING_IDENTITY"])
+                self.assertEqual(calls,["/api/v1/ping"])
+
+    def test_v159_csrf_wrong_media_fails_even_if_json_token_looks_valid(self):
+        secure=secure_probe()
+        for headers in (
+            tuple((k,v) for k,v in secure.headers if k!="Content-Type"),
+            tuple((k,("text/html" if k=="Content-Type" else v))
+                  for k,v in secure.headers),
+            secure.headers+(("Content-Type","application/json"),),
+        ):
+            responses=iter((
+                ping_probe(),next_probe(),observation(401),
+                target.Observation(200,headers,secure.body),
+            ))
+            result=target.inspect(HOST,lambda *_:next(responses),
+                                  tls_validated=True)
+            self.assertFalse(result["checks"]["ANONYMOUS_CSRF_JSON_CONTENT_TYPE"])
+            self.assertFalse(result["checks"]["ANONYMOUS_CSRF_200_VALID"])
+            self.assertEqual(result["status"],"BLOCKED")
 
     def test_vite_spa_and_generic_html_cannot_pass_as_next_app_router(self):
         examples = (
@@ -258,8 +303,8 @@ class V151OperatorTargetIngressTests(unittest.TestCase):
 
     def test_refuses_ci_and_unapproved_operator_before_any_network(self):
         for args, env in (
-            (["--origin", f"https://{HOST}"], {}),
-            (["--origin", f"https://{HOST}", "--operator-authorized-target"],
+            (["--origin", f"https://{HOST}", "--candidate-sha", SHA], {}),
+            (["--origin", f"https://{HOST}", "--candidate-sha", SHA, "--operator-authorized-target"],
              {"GITHUB_ACTIONS": "true"}),
         ):
             buf = io.StringIO()
@@ -275,6 +320,25 @@ class V151OperatorTargetIngressTests(unittest.TestCase):
             self.assertFalse(result["productionApproved"])
             self.assertNotIn(HOST, buf.getvalue())
 
+    def test_v159_bad_or_missing_candidate_does_not_issue_https_request(self):
+        for bad_sha in ("", "0"*40, "n"*40, "a"*39, "A"*40):
+            with self.subTest(sha=bad_sha):
+                output=io.StringIO()
+                with (patch.dict(os.environ,{},clear=True),
+                      patch.object(target,"request_https") as outbound,
+                      contextlib.redirect_stdout(output)):
+                    exit_code=target.main([
+                        "--origin",f"https://{HOST}",
+                        "--candidate-sha",bad_sha,
+                        "--operator-authorized-target",
+                    ])
+                outbound.assert_not_called()
+                self.assertEqual(exit_code,2)
+                report=json.loads(output.getvalue())
+                self.assertEqual(report["status"],"BLOCKED")
+                self.assertNotIn("operatorClaimedCandidateSha",report)
+                self.assertNotIn(HOST,output.getvalue())
+
     def test_authorized_cli_never_returns_deployment_success(self):
         responses = iter((ping_probe(), next_probe(), observation(401),
                           secure_probe(), observation(400)))
@@ -284,6 +348,7 @@ class V151OperatorTargetIngressTests(unittest.TestCase):
                            side_effect=lambda *_: next(responses)),
               contextlib.redirect_stdout(result_stream)):
             status = target.main(["--origin", f"https://{HOST}",
+                                  "--candidate-sha", SHA,
                                   "--operator-authorized-target"])
         self.assertEqual(status, 3)
         observed = json.loads(result_stream.getvalue())
@@ -291,6 +356,8 @@ class V151OperatorTargetIngressTests(unittest.TestCase):
         for secret in (PRIVATE_CSRF, PRIVATE_COOKIE, HOST):
             self.assertNotIn(secret, result_stream.getvalue())
         self.assertFalse(observed["productionApproved"])
+        self.assertFalse(observed["targetDeploymentShaIndependentlyVerified"])
+        self.assertEqual(observed["operatorClaimedCandidateSha"],SHA)
 
 if __name__ == "__main__":
     unittest.main()
