@@ -5,10 +5,10 @@
 ## 与发布候选的绑定
 
 - **代码基线**：V148 `main` [`a09fc4b2c8fa49b843e28642fb0fb39b7f114a5e`](https://github.com/kunlong-luo/merchivra/commit/a09fc4b2c8fa49b843e28642fb0fb39b7f114a5e)，相对 V147 增加合成 Chromium 新 /page 接口 fixture 修复与 A3 触发。
-- **本次完整 A3**：[运行 #43356548084](https://github.com/kunlong-luo/merchivra/actions/runs/43356548084) — **待最终状态登记**；若任何一项失败，整体状态必须保持未通过。
-- **特定容量合同**：[V144 采购全库 #62](https://github.com/kunlong-luo/merchivra/issues/62) 已关闭；[V147 FBA PO/ASN 来源 #108](https://github.com/kunlong-luo/merchivra/issues/108) 仍以全 A3 完成作为技术关闭门槛。
+- **本次完整 A3**：[运行 #43356548084](https://github.com/kunlong-luo/merchivra/actions/runs/43356548084) — **run_attempt=2 最终 7/7 SUCCESS**，且 7 个 job 均属于提交 `a09fc4b2`；首次尝试 V146 本地 HTTPS canary 遇到 fail-closed `AssertionError`，绝不能隐瞒这个历史失败或把重验成功理解为完全没有不稳定性。覆盖 Java 25/Gradle、React/Vite、Next/Chromium、隔离 PG18/Flyway/真实 HTTP/Compose、同源 HTTPS 回滚；仍非真实生产批准。
+- **特定容量合同**：[V144 采购全库 #62](https://github.com/kunlong-luo/merchivra/issues/62) 已关闭；[V147 FBA PO/ASN 来源 #108](https://github.com/kunlong-luo/merchivra/issues/108) 已基于 V148 同一 SHA 的 A3 **技术范围关闭**。
 - **真实生产阻塞**：[Next/HTTPS #63](https://github.com/kunlong-luo/merchivra/issues/63)、[G1/G2/G3/IAM/PITR/值班 #104](https://github.com/kunlong-luo/merchivra/issues/104) 保持 OPEN；Seller/Ads 真实 OAuth/外部数据不得进入 CI 或公众演示。
-- **证据分级**：实现路径（存在）→ 相关测试（可能部分覆盖）→ 当前 SHA 的真实隔离 PG18/HTTP/Chromium（待正式核实）→ 用户本地只读真 API（未执行）→ G1/G2/G3 授权签署（未执行）。没有具体用例/采样和签署，不得从左列自动推导右列。
+- **证据分级**：实现路径（存在）→ 相关测试（可能部分覆盖）→ 当前 SHA 的真实隔离 PG18/HTTP/Chromium（仅合成技术层已验证，不逐 FR 自动放行）→ 用户本地只读真 API（未执行）→ G1/G2/G3 授权签署（未执行）。没有具体用例/采样和签署，不得从左列自动推导右列。
 
 ## 按功能需求逐条登记
 
@@ -40,7 +40,7 @@
 | FR-MOCK-01 | P0 | 无凭据的纯合成演示 | [`DemoCoreImporter.java`](../../apps/server/src/main/java/org/merchivra/erp/demo/DemoCoreImporter.java) | [`DemoSyncServiceTest.java`](../../apps/server/src/test/java/org/merchivra/erp/demo/DemoSyncServiceTest.java) | 确保公开 Pages 无登录/写入/生产秘密 | 未签署 |
 | FR-API-01 | P0 | HTTP / 401/403/409 / 游标/审计 | [`SecurityConfig.java`](../../apps/server/src/main/java/org/merchivra/erp/security/SecurityConfig.java) | [`LocalKeysetPageTest.java`](../../apps/server/src/test/java/org/merchivra/erp/purchasing/LocalKeysetPageTest.java) | 各模块逐条契约证据与目标生产安全签署 | 未签署 |
 | FR-PO-01 | P1 | 供应商/采购/收货/仓储 | [`PurchasingService.java`](../../apps/server/src/main/java/org/merchivra/erp/purchasing/PurchasingService.java) | [`PurchasingWarehouseReceiptTest.java`](../../apps/server/src/test/java/org/merchivra/erp/purchasing/PurchasingWarehouseReceiptTest.java) | 独立业务签署；#62 合成分页已关闭 | 未签署 |
-| FR-FBA-01 | P1 | 货件/入仓/采购来源关联 | [`FbaPurchaseLinkService.java`](../../apps/server/src/main/java/org/merchivra/erp/fba/FbaPurchaseLinkService.java) | [`FbaPurchaseLinkV147PageTest.java`](../../apps/server/src/test/java/org/merchivra/erp/fba/FbaPurchaseLinkV147PageTest.java) | V147/V148 A3 技术证据待确认；真实 FBA 来源由用户本地批准 | 未签署 |
+| FR-FBA-01 | P1 | 货件/入仓/采购来源关联 | [`FbaPurchaseLinkService.java`](../../apps/server/src/main/java/org/merchivra/erp/fba/FbaPurchaseLinkService.java) | [`FbaPurchaseLinkV147PageTest.java`](../../apps/server/src/test/java/org/merchivra/erp/fba/FbaPurchaseLinkV147PageTest.java) | V148 A3 7/7 仅合成技术通过；真实 FBA 来源由用户本地批准 | 未签署 |
 | FR-ADS-01 | P1 | 广告报表与来源隔离 | [`AdsReportService.java`](../../apps/server/src/main/java/org/merchivra/erp/ads/AdsReportService.java) | [`AdSpendAttributionEngineTest.java`](../../apps/server/src/test/java/org/merchivra/erp/finance/AdSpendAttributionEngineTest.java) | 独立 Ads OAuth/原币报表与人工归因确认 | 未签署 |
 | FR-AUTO-01 | P2 | 规则/补货建议/异常自动化 | [`OperationsAutomationService.java`](../../apps/server/src/main/java/org/merchivra/erp/operations/OperationsAutomationService.java) | [`OperationsFbaExceptionBoundaryTest.java`](../../apps/server/src/test/java/org/merchivra/erp/operations/OperationsFbaExceptionBoundaryTest.java) | 生产自动写入仍禁止；G1 批准后再决定开放范围 | 未签署 |
 
