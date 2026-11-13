@@ -1,0 +1,54 @@
+# RTM-002 · V148 P0 代码与验收证据追踪（待正式签署）
+
+> **状态：2026-11-13 静态代码/测试入口核查，不是逐 FR 已验收报告，也不是 G1/G2/G3 批准。** 追踪范围取自 [FR-001](functional.md) 与 [原始设计 RTM](traceability.md)；仓库路径已按本次 `main` 递归文件树检查存在性。**文件存在 ≠ 需求全部满足；相关测试类存在 ≠ 每个验收 AC 覆盖；合成 A3 绿灯 ≠ 真实 Amazon/银行或生产证书、IAM、PITR 验收。** 使用此表由责任人逐行追加真实证据，不得直接将“未签署”改为通过。
+
+## 与发布候选的绑定
+
+- **代码基线**：V148 `main` [`a09fc4b2c8fa49b843e28642fb0fb39b7f114a5e`](https://github.com/kunlong-luo/merchivra/commit/a09fc4b2c8fa49b843e28642fb0fb39b7f114a5e)，相对 V147 增加合成 Chromium 新 /page 接口 fixture 修复与 A3 触发。
+- **本次完整 A3**：[运行 #43356548084](https://github.com/kunlong-luo/merchivra/actions/runs/43356548084) — **待最终状态登记**；若任何一项失败，整体状态必须保持未通过。
+- **特定容量合同**：[V144 采购全库 #62](https://github.com/kunlong-luo/merchivra/issues/62) 已关闭；[V147 FBA PO/ASN 来源 #108](https://github.com/kunlong-luo/merchivra/issues/108) 仍以全 A3 完成作为技术关闭门槛。
+- **真实生产阻塞**：[Next/HTTPS #63](https://github.com/kunlong-luo/merchivra/issues/63)、[G1/G2/G3/IAM/PITR/值班 #104](https://github.com/kunlong-luo/merchivra/issues/104) 保持 OPEN；Seller/Ads 真实 OAuth/外部数据不得进入 CI 或公众演示。
+- **证据分级**：实现路径（存在）→ 相关测试（可能部分覆盖）→ 当前 SHA 的真实隔离 PG18/HTTP/Chromium（待正式核实）→ 用户本地只读真 API（未执行）→ G1/G2/G3 授权签署（未执行）。没有具体用例/采样和签署，不得从左列自动推导右列。
+
+## 按功能需求逐条登记
+
+| FR ID | 分层 | 范围 | 现有实现位置（不代表完整） | 对应测试代码入口（待审用例） | 真实来源/目标环境仍缺失的验收 | 签署 |
+| --- | --- | --- | --- | --- | --- | --- |
+| FR-SYS-01 | P0 | 组织/成员/角色与租户拒绝 | [`LocalTeamService.java`](../../apps/server/src/main/java/org/merchivra/erp/security/LocalTeamService.java) | [`TenantAccessServiceTest.java`](../../apps/server/src/test/java/org/merchivra/erp/security/TenantAccessServiceTest.java) | 独立安全/RBAC 与真实多租户验收 | 未签署 |
+| FR-SYS-02 | P0 | 登录/退出/Session/CSRF | [`AuthController.java`](../../apps/server/src/main/java/org/merchivra/erp/security/AuthController.java) | 未归集专属用例；需核对全链 HTTP | 目标 TLS/身份环境与失效策略验收 | 未签署 |
+| FR-SYS-03 | P0 | 首次 Owner 安全初始化 | [`LocalAdminBootstrap.java`](../../apps/server/src/main/java/org/merchivra/erp/security/LocalAdminBootstrap.java) | 未归集专属用例；需核对全链 HTTP | 用户目标部署的一次性初始化/回收验收 | 未签署 |
+| FR-SHOP-01 | P0 | Seller 授权/撤销状态 | [`SellerOauthService.java`](../../apps/server/src/main/java/org/merchivra/erp/spapi/SellerOauthService.java) | [`SellerOauthCallbackTest.java`](../../apps/server/src/test/java/org/merchivra/erp/spapi/SellerOauthCallbackTest.java) | 用户本地真实 Seller OAuth/撤销/角色审批 | 未签署 |
+| FR-SHOP-02 | P0 | Seller / Marketplace 地区绑定 | [`SellerConnectionVerificationService.java`](../../apps/server/src/main/java/org/merchivra/erp/spapi/SellerConnectionVerificationService.java) | [`SellerConnectionVerificationServiceTest.java`](../../apps/server/src/test/java/org/merchivra/erp/spapi/SellerConnectionVerificationServiceTest.java) | 用户本地已授权 Marketplace/地区核验 | 未签署 |
+| FR-CAT-01 | P0 | 内部 SKU 主数据 | [`ProductCatalogService.java`](../../apps/server/src/main/java/org/merchivra/erp/catalog/ProductCatalogService.java) | 未归集专属用例；需核对全链 HTTP | G1 真实 SKU 样本、唯一性和历史保留复核 | 未签署 |
+| FR-CAT-02 | P0 | Listing 读取/映射/来源 | [`CatalogSyncService.java`](../../apps/server/src/main/java/org/merchivra/erp/catalogsync/CatalogSyncService.java) | [`TypedCatalogSdkReaderTest.java`](../../apps/server/src/test/java/org/merchivra/erp/catalogsync/TypedCatalogSdkReaderTest.java) | 真实 Seller Listing/冲突与限流逐页验证 | 未签署 |
+| FR-CAT-03 | P0 | 映射版本及未知来源保留 | [`MarketplaceReadController.java`](../../apps/server/src/main/java/org/merchivra/erp/catalog/MarketplaceReadController.java) | [`MarketplaceReadControllerTest.java`](../../apps/server/src/test/java/org/merchivra/erp/catalog/MarketplaceReadControllerTest.java) | 真实映射变更和未映射样本验收 | 未签署 |
+| FR-ORD-01 | P0 | 订单增量、幂等与游标 | [`OrdersSyncService.java`](../../apps/server/src/main/java/org/merchivra/erp/orderssync/OrdersSyncService.java) | [`OrdersSyncServiceTest.java`](../../apps/server/src/test/java/org/merchivra/erp/orderssync/OrdersSyncServiceTest.java) | 真实 Orders API/限流/断点、跨天补单验收 | 未签署 |
+| FR-ORD-02 | P0 | 订单查询/明细及 PII 限制 | [`MarketplaceReadController.java`](../../apps/server/src/main/java/org/merchivra/erp/catalog/MarketplaceReadController.java) | [`MarketplaceReadControllerTest.java`](../../apps/server/src/test/java/org/merchivra/erp/catalog/MarketplaceReadControllerTest.java) | 实际员工权限与生产 PII 最小暴露验收 | 未签署 |
+| FR-ORD-03 | P0 | 退款/取消关联与孤立事件 | [`RefundItemReviewService.java`](../../apps/server/src/main/java/org/merchivra/erp/finance/RefundItemReviewService.java) | [`RefundRecoveryServiceTest.java`](../../apps/server/src/test/java/org/merchivra/erp/finance/RefundRecoveryServiceTest.java) | 真实退款/迟到交易及原订单关联复核 | 未签署 |
+| FR-ORD-04 | P0 | 履约、退款与财务状态分离 | [`OrdersSyncService.java`](../../apps/server/src/main/java/org/merchivra/erp/orderssync/OrdersSyncService.java) | [`OrdersSyncModesTest.java`](../../apps/server/src/test/java/org/merchivra/erp/orderssync/OrdersSyncModesTest.java) | 真实 FBA/FBM、部分退款独立状态验收 | 未签署 |
+| FR-INV-01 | P0 | FBA 库存快照与桶 | [`CatalogSyncService.java`](../../apps/server/src/main/java/org/merchivra/erp/catalogsync/CatalogSyncService.java) | [`TypedCatalogSdkReaderTest.java`](../../apps/server/src/test/java/org/merchivra/erp/catalogsync/TypedCatalogSdkReaderTest.java) | 真实 FBA 每 SKU 库存与时效验证 | 未签署 |
+| FR-INV-02 | P0 | 库存阈值/提醒 | [`ReplenishmentService.java`](../../apps/server/src/main/java/org/merchivra/erp/inventory/ReplenishmentService.java) | [`ReplenishmentDecisionTest.java`](../../apps/server/src/test/java/org/merchivra/erp/inventory/ReplenishmentDecisionTest.java) | G1 确定库存阈值/提醒范围并完成真实快照验收 | 未签署 |
+| FR-INV-03 | P0 | UNKNOWN / ZERO / STALE 防混淆 | [`MarketplaceReadController.java`](../../apps/server/src/main/java/org/merchivra/erp/catalog/MarketplaceReadController.java) | [`MarketplaceReadControllerTest.java`](../../apps/server/src/test/java/org/merchivra/erp/catalog/MarketplaceReadControllerTest.java) | 生产缺失快照、已观测 0、过期来源实测 | 未签署 |
+| FR-COST-01 | P0 | SKU 历史成本版本 | [`SkuCostService.java`](../../apps/server/src/main/java/org/merchivra/erp/catalog/SkuCostService.java) | [`OrderCostEngineTest.java`](../../apps/server/src/test/java/org/merchivra/erp/finance/OrderCostEngineTest.java) | 财务签署真实币种、历史日期及退款成本 | 未签署 |
+| FR-FIN-01 | P0 | 财务来源同步与分类 | [`FinancesSyncService.java`](../../apps/server/src/main/java/org/merchivra/erp/finance/FinancesSyncService.java) | [`TypedFinancesSdkReaderTest.java`](../../apps/server/src/test/java/org/merchivra/erp/finance/TypedFinancesSdkReaderTest.java) | 真实 Finances 已批准角色与金额/费用原币核对 | 未签署 |
+| FR-FIN-02 | P0 | 期间贡献/预估利润报告 | [`ProfitReportJobService.java`](../../apps/server/src/main/java/org/merchivra/erp/finance/ProfitReportJobService.java) | [`ProfitReportJobServiceTest.java`](../../apps/server/src/test/java/org/merchivra/erp/finance/ProfitReportJobServiceTest.java) | 财务确认范围/不完整来源标记；不得冒称净利润 | 未签署 |
+| FR-FIN-03 | P0 | 优先级/防重复/结算对账 | [`SettlementReportImportService.java`](../../apps/server/src/main/java/org/merchivra/erp/finance/SettlementReportImportService.java) | [`SettlementReportComparisonServiceTest.java`](../../apps/server/src/test/java/org/merchivra/erp/finance/SettlementReportComparisonServiceTest.java) | 真实结算文件、退款与银行来源审核，G1 签署 | 未签署 |
+| FR-SYNC-01 | P0 | 手工/定时同步及失败处理 | [`OrdersSyncService.java`](../../apps/server/src/main/java/org/merchivra/erp/orderssync/OrdersSyncService.java) | [`OrdersSyncServiceTest.java`](../../apps/server/src/test/java/org/merchivra/erp/orderssync/OrdersSyncServiceTest.java) | 真实 API 429/5xx/撤销、恢复观测 | 未签署 |
+| FR-SYNC-02 | P0 | 任务监控和重试 | [`SyncTaskMonitorService.java`](../../apps/server/src/main/java/org/merchivra/erp/operations/SyncTaskMonitorService.java) | [`SyncTaskMonitorServiceTest.java`](../../apps/server/src/test/java/org/merchivra/erp/operations/SyncTaskMonitorServiceTest.java) | 目标环境运行时告警/任务责任人 | 未签署 |
+| FR-SYNC-03 | P0 | 持久化高水位与 Lease | [`OrdersSyncService.java`](../../apps/server/src/main/java/org/merchivra/erp/orderssync/OrdersSyncService.java) | [`OrdersSyncDueLeaseRecoveryTest.java`](../../apps/server/src/test/java/org/merchivra/erp/orderssync/OrdersSyncDueLeaseRecoveryTest.java) | 目标多实例竞争、重启/漂移的验收 | 未签署 |
+| FR-DASH-01 | P0 | 经营总览、来源质量与导出 | [`BusinessOverviewService.java`](../../apps/server/src/main/java/org/merchivra/erp/finance/BusinessOverviewService.java) | [`BusinessOverviewServiceTest.java`](../../apps/server/src/test/java/org/merchivra/erp/finance/BusinessOverviewServiceTest.java) | 币种不混算；真实来源/财务口径 G1 签署 | 未签署 |
+| FR-MOCK-01 | P0 | 无凭据的纯合成演示 | [`DemoCoreImporter.java`](../../apps/server/src/main/java/org/merchivra/erp/demo/DemoCoreImporter.java) | [`DemoSyncServiceTest.java`](../../apps/server/src/test/java/org/merchivra/erp/demo/DemoSyncServiceTest.java) | 确保公开 Pages 无登录/写入/生产秘密 | 未签署 |
+| FR-API-01 | P0 | HTTP / 401/403/409 / 游标/审计 | [`SecurityConfig.java`](../../apps/server/src/main/java/org/merchivra/erp/security/SecurityConfig.java) | [`LocalKeysetPageTest.java`](../../apps/server/src/test/java/org/merchivra/erp/purchasing/LocalKeysetPageTest.java) | 各模块逐条契约证据与目标生产安全签署 | 未签署 |
+| FR-PO-01 | P1 | 供应商/采购/收货/仓储 | [`PurchasingService.java`](../../apps/server/src/main/java/org/merchivra/erp/purchasing/PurchasingService.java) | [`PurchasingWarehouseReceiptTest.java`](../../apps/server/src/test/java/org/merchivra/erp/purchasing/PurchasingWarehouseReceiptTest.java) | 独立业务签署；#62 合成分页已关闭 | 未签署 |
+| FR-FBA-01 | P1 | 货件/入仓/采购来源关联 | [`FbaPurchaseLinkService.java`](../../apps/server/src/main/java/org/merchivra/erp/fba/FbaPurchaseLinkService.java) | [`FbaPurchaseLinkV147PageTest.java`](../../apps/server/src/test/java/org/merchivra/erp/fba/FbaPurchaseLinkV147PageTest.java) | V147/V148 A3 技术证据待确认；真实 FBA 来源由用户本地批准 | 未签署 |
+| FR-ADS-01 | P1 | 广告报表与来源隔离 | [`AdsReportService.java`](../../apps/server/src/main/java/org/merchivra/erp/ads/AdsReportService.java) | [`AdSpendAttributionEngineTest.java`](../../apps/server/src/test/java/org/merchivra/erp/finance/AdSpendAttributionEngineTest.java) | 独立 Ads OAuth/原币报表与人工归因确认 | 未签署 |
+| FR-AUTO-01 | P2 | 规则/补货建议/异常自动化 | [`OperationsAutomationService.java`](../../apps/server/src/main/java/org/merchivra/erp/operations/OperationsAutomationService.java) | [`OperationsFbaExceptionBoundaryTest.java`](../../apps/server/src/test/java/org/merchivra/erp/operations/OperationsFbaExceptionBoundaryTest.java) | 生产自动写入仍禁止；G1 批准后再决定开放范围 | 未签署 |
+
+## 关闭规则及填写责任
+
+1. **工程负责人**：每条 FR 填写对应 Controller/Service/OpenAPI/前端路径、运行的用例 ID、SQL/HTTP/浏览器日志位置及**精确候选 SHA**；不能只写“V148 已做”。
+2. **维护者 / 业务 G1**：确认首个 Seller/Marketplace/FBM/FBA 范围、真实采购与广告来源、金额/税费/成本/退货/币种口径；财务负责人独立验证财务列。没有测试来源或正式批准时一律保留“未验收”。
+3. **安全与架构 G2**：在有权限的目标环境验证 Session/MFA/IAM、租户与员工隔离、可信代理、密钥、ClamAV 真实签名、日志/隐私；不得以 GitHub 模拟凭据代替。
+4. **运维/发布 G3**：提供真实目标 PG18 离站备份、WAL/PITR/RPO/RTO、外部 Alertmanager 投递/ACK、部署/回滚和应急方案的非敏感审批引用。CI V142/V146 隔离证据只允许作为准备工作。
+5. **关闭门禁**：A3 技术通过仅能对对应缺口关闭技术 Issue（例如 #108），不能关闭 #63/#104 或签发生产许可。新增版本更改关键代码后，原 A3 不能替代新 SHA。此表后续应逐条增加“实际用例/执行日/批准人/审批位置”，没有用户真实授权之前不得填写通过。
+
