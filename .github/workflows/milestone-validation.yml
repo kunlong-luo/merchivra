@@ -1,3 +1,5 @@
+# V150: exact-main-SHA A3 after validating anonymous 401/CSRF/Secure
+# Session readiness over CA-verified local HTTPS before the cutover canary.
 # V149: exact-main-SHA A3 after secret-safe V146 HTTPS canary stage logging.
 # This is diagnostics only; no production or external TLS approval.
 # V148: exact-main-SHA A3 after PR #111 repairs synthetic Chromium V75
@@ -64,7 +66,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V149-A3-local-HTTPS-canary-safe-stage-diagnostics' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V150-A3-HTTPS-secure-auth-readiness-gate' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -110,6 +112,7 @@ on:
           - V147-A3-FBA-PO-ASN-full-source-keysets
           - V148-A3-FBA-keyset-Chromium-fixture-recheck
           - V149-A3-local-HTTPS-canary-safe-stage-diagnostics
+          - V150-A3-HTTPS-secure-auth-readiness-gate
 
 permissions:
   contents: read
