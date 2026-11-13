@@ -1,5 +1,33 @@
 # V108 — MVP 收尾、集中测试与上线准入（2026-11-08）
 
+## 2026-11-13 主线 V146 状态补丁（本文件现行优先级，V108 以下为历史执行记录）
+
+> **核查基线**：`main` [`945ffb299f8dccfe321c6792960cb461d5c4bf30`](https://github.com/kunlong-luo/merchivra/commit/945ffb299f8dccfe321c6792960cb461d5c4bf30)（V146 / PR #107）；[相同 SHA 的快速 CI #43284799168](https://github.com/kunlong-luo/merchivra/actions/runs/43284799168) **success**、[完整 A3 #43284799417](https://github.com/kunlong-luo/merchivra/actions/runs/43284799417) **7/7 jobs success**。后者确实运行 Java 25/Gradle、React/Vite、Next/Chromium、隔离 PostgreSQL 18 + Flyway + HTTP/恢复及 Compose；**只证明该 SHA 的合成技术验收**，不等于真实 Amazon/Ads/银行、目标生产部署、正式业务/财务验收或 G1/G2/G3 签署。后续合并新代码必须用**新 SHA**重验。
+
+### 现行执行状态（取代下文 V108–V145 的“当前”“待做”历史快照）
+
+| 阶段 / 优先级 | 截至 V146 的真实状态 | 继续执行 / 关闭条件 |
+| --- | --- | --- |
+| A0 / CI 分层 | **已落地**：快速 PR CI + 显式完整里程碑检查 | 继续风险分层；生产风险变更需专项 PG18 / 安全检查，不因减少重复测试而跳过 |
+| A1 / 采购供应商仓储分页 P0 [#62](https://github.com/kunlong-luo/merchivra/issues/62) | **已关闭（V144）**：采购、供应商、仓储目录/余额/待收货/流水及相关关键选择器均已实现 keyset；[V144 A3 #43221779773](https://github.com/kunlong-luo/merchivra/actions/runs/43221779773) 7/7 通过，包含超过旧 LIMIT 的真实隔离 PG18 HTTP | 不能再把 #62 原始 LIMIT 100/200/500 缺口当作仍未开发；旧数组端点仅供兼容，未来新增功能另立审计 |
+| A1 / FBA 来源关联 P0 [#108](https://github.com/kunlong-luo/merchivra/issues/108) | **未完成**：V145 将 15 个 FBA 入仓相关操作纳入生成合同，但 PO/ASN 关联历史仍 `LIMIT 200`、候选仍 `LIMIT 100`；前端对应 Orval 数组和 Zod 上限仍在 | V147 优先实现两类服务端完整 keyset、tenant/marketplace/shipment/inboundLine 与筛选游标绑定、NULL ASN、安全边界、前端分页、>200/>100 PG18 HTTP + 浏览器证据；主线更新后重新 A3 |
+| A2 / Next 私有 ERP [#63](https://github.com/kunlong-luo/merchivra/issues/63) | **部分完成**：Node 24 standalone、真实 Spring Session/CSRF/PG18 Compose；V144 覆盖 11 条 Next 工作台与跨登录缓存边界；V146 完成隔离 CA 验证的本地 HTTPS、Secure Cookie、同 Origin Next → Vite → Next 保持 Session 的回退测试 | **仍开放**：真实目标域名/CA、可信代理、证书轮换、MFA/IAM、正式 ingress、真实环境回滚/截图审阅、切流授权。详见 [V146](../architecture/next-https-cutover-v146.md) |
+| A3 / 合成技术验收 | **V146 当前 main 已完整 7/7 通过**，不等于“剩余 P0 全部完成”或产品/生产签字 | #108 等最后代码修订后锁定候选 commit，并再次执行完整 A3；建立每个 P0 FR 的代码、合同、模拟测试、真实来源、批准人和未完成事项的逐项 RTM，不能只沿用 V86 静态快照 |
+| A4 / 真实 Seller、Ads 与外部数据 | **未开始生产授权验收**；已有官方 SDK/读取代码和 Mock/隔离测试 | 维护者**仅在本地**用自有账户和已获批准的角色逐项只读 OAuth/SP-API/Ads、429/撤销/游标/订单/财务数据对账；银行/外部物流需要单独界定来源、范围和批准；远程写入另行审批 |
+| A5 / 生产发布 [#104](https://github.com/kunlong-luo/merchivra/issues/104) | **BLOCKED**：V142 仅隔离 PITR/内部 webhook；V143 只读发布预检无法自行批准；V146 HTTPS 也仅本地受控测试 | G1 产品/财务、G2 安全/架构、G3 运维/发布**真实独立签署**；目标环境 TLS/IAM/KMS、真实加密离站备份和 PITR/RPO/RTO、实际 Alertmanager 外部送达 ACK、ClamAV、容量/回滚及审计均须验证。参见 [V143 预检](../operations/v143-production-release-preflight.md) |
+
+### 当前未兑现的交付物与责任边界
+
+1. **代码 P0**：先关闭 #108 FBA PO/ASN 来源历史/候选的全库分页安全断点；V145 只迁移合同、没有修复数组上限；禁止把原先已关闭的 #62 重开或重复建设采购分页。
+2. **正式验收文档 P0**：`docs/requirements/traceability.md` 目前仍是设计矩阵，缺少按 FR 列出的“实现代码 / 模拟 SHA / 真实授权 / 负责人签署 / 放行状态”新鲜证据。A3 功能候选冻结前需补正式 RTM；无证据填“待验证”，不可按版本号自动填“通过”。
+3. **真实目标环境 P0**：#63 和 #104 的 HTTPS/IAM/密钥、PostgreSQL 18 真实生产恢复、外部告警、业务财务规则和人工作业签署必须由维护者/有权限负责人执行；CI 不得持有真实 Seller/Ads/银行密钥，GitHub Pages 只能是只读合成展示。
+4. **非首发 P1**：真实银行/外部物流、完整净利润与正式会计回转、进一步自动采购/预测/通知，均须先经 G1 决定首发范围、来源与口径；不能因为某个模块有 UI/模拟流程就标为正式集成完成。老 Issue #2–#24 的 OPEN 状态也不等于代码未开发，后续应逐条按合并 PR/实际代码核对并关闭或重定范围。
+
+**下一个客观顺序**：#108 代码/安全/专项 PG18 → 新 main SHA 全 A3 + RTM 状态记录 → #63 受控目标 Next 切流/回滚 → 用户本地 Seller/Ads 及外部来源只读试点 → #104 独立 G1/G2/G3 与目标基础设施签署 → 明确批准后 Beta/正式部署。没有经过这些验收就**不能承诺上线日期**。本段是**计划/状态纠偏**，不表示 V147 代码已经实现或有人代替用户批准真实生产授权。
+
+---
+
+
 > **唯一现行执行计划。** 覆盖 `docs/roadmap.md` 中 V92 及更早阶段的“当前/下一步”历史表述；旧版里程碑记录仍留存，不应作为现行版本信息。此计划明确由项目维护者批准：先补完 P0 功能，再集中运行完整回归；正式 Amazon Seller/Ads 授权最后在用户本地进行。此决策**不是**生产发布批准、G1/G2/G3 的业务签署，也不代表所有功能已完成。
 
 ## 基线与状态口径
@@ -80,7 +108,7 @@
 
 > **A3 / V123 集中测试实测发现（2026-11-09）**：V122 main `08dce7a` 首轮 [A3 #42602507335](https://github.com/kunlong-luo/merchivra/actions/runs/42602507335) **失败**，必须保持发布阻塞。Compose 三服务 + **Next16 standalone Node ↔ Spring ↔ PG18 真实 Session/CSRF** 全链通过，但 Chromium 的 V72 合成 Mock 未适配 V119 的 `/delivery/summary` 与 `/lines/page`，PG18 `/pending-receipts/page` 的状态+搜索 SQL 意外拼接 `$2AND` 引发 HTTP 500；V119/V120 真 PG18 冒烟到达并通过。V123 修复这些确诊断点并加入 SQL 拼接单测，合并后通过更新的 milestone workflow **再次在新的 main SHA 运行完整 PG18/Chromium/Compose**。详见 [V123 失败证据与修复记录](../testing/a3-regression-v123.md)。未全绿之前任何快速 CI 或历史测试均不能替代 A3；真实 Amazon 授权与正式生产仍关闭。
 
-## 第一批可执行 P0 核查清单
+## 第一批可执行 P0 核查清单（V108 历史基线；采购分页现已完成，参见顶部 V146 状态）
 
 | 核查对象 | 当前有证据的缺口 | 下一步 |
 | --- | --- | --- |
@@ -93,4 +121,4 @@
 **上线时间**：可把私人 Beta 作为 A4 的近期目标，但任何“2–4 周”只能是预算估计，不能在真实授权/安全/业务验收尚未做完时承诺日历上线日期。正式公网发布日期暂不设定。
 
 
-> **A1 / V145（2026-11-12）**：FBA 本地 PO/ASN 来源关联的五条现有接口纳入真实 Springdoc/Orval，FBA 入仓合同累计 15 项操作。前端移除手写请求并保留 UUID、Zod、CSRF/no-store；见 [V75/V145 合同与测试范围](../inventory/fba-purchase-link-v75.md)。关联历史 200 条与候选 100 条硬上限仍存在，不能据此关闭 #62。新提交完整 A3 需实查；#63 Next 切流与 #104 目标生产签署、真实 Amazon 本地授权仍未完成。
+> **A1 / V145（2026-11-12）**：FBA 本地 PO/ASN 来源关联的五条现有接口纳入真实 Springdoc/Orval，FBA 入仓合同累计 15 项操作。前端移除手写请求并保留 UUID、Zod、CSRF/no-store；见 [V75/V145 合同与测试范围](../inventory/fba-purchase-link-v75.md)。关联历史 200 条与候选 100 条硬上限仍存在，另由 #108 跟踪；#62 已按 V144 验收关闭。新提交完整 A3 需实查；#108 记录后续 FBA 分页缺口；#63 Next 切流与 #104 目标生产签署、真实 Amazon 本地授权仍未完成。
