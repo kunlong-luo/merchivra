@@ -331,9 +331,13 @@ const server = createServer(async (req, res) => {
         decision:null,reviewedBy:null,reviewNote:null,reviewedAt:null}],
       receipts:[],amazonVerified:false,fbaStockCredited:false
     })
+  // V147: the real V75 proof workbench now uses server paging, rather than
+  // the old one-shot 200/100 element arrays. Keep legacy routes for consumers.
   if (url.pathname === '/api/v1/fba/marketplaces/' + market +
-      '/shipments/abcd1111-1111-4111-8111-111111111111/purchase-links')
-    return respond(res,[{
+      '/shipments/abcd1111-1111-4111-8111-111111111111/purchase-links' ||
+      url.pathname === '/api/v1/fba/marketplaces/' + market +
+      '/shipments/abcd1111-1111-4111-8111-111111111111/purchase-links/page') {
+    const links=[{
       id:'abcd3333-3333-4333-8333-333333333333',
       shipmentId:'abcd1111-1111-4111-8111-111111111111',
       inboundLineId:'abcd2222-2222-4222-8222-222222222222',
@@ -347,15 +351,29 @@ const server = createServer(async (req, res) => {
       state:'PROPOSED',proofReference:'V75 synthetic proof is NOT Amazon evidence',
       proposedBy:'abcd6666-6666-4666-8666-666666666666',
       confirmedBy:null,createdAt:'2026-11-02T00:00:00Z',confirmedAt:null
-    }])
-  if (url.pathname.endsWith('/purchase-links/lines/abcd2222-2222-4222-8222-222222222222/candidates'))
-    return respond(res,[{
+    }]
+    const state=url.searchParams.get('state')??'ALL'
+    const line=url.searchParams.get('inboundLineId')
+    const filtered=links.filter(x=>(state==='ALL'||x.state===state)
+      && (!line||x.inboundLineId===line))
+    return respond(res,url.pathname.endsWith('/page')?
+      emptyCursorPage(filtered):filtered)
+  }
+  if (url.pathname.endsWith('/purchase-links/lines/abcd2222-2222-4222-8222-222222222222/candidates') ||
+      url.pathname.endsWith('/purchase-links/lines/abcd2222-2222-4222-8222-222222222222/candidates/page')) {
+    const candidates=[{
       purchaseOrderId:'abcd4444-4444-4444-8444-444444444444',
       purchaseOrderLineId:'abcd5555-5555-4555-8555-555555555555',
       orderNumber:'PO-V75-LOCAL',supplierName:'V75 mock supplier',
       orderedQuantity:20,localReceivedQuantity:4,asnId:null,
       asnStatus:null,asnQuantity:null,asnReceivedQuantity:0
-    }])
+    }]
+    const purchaseLineId=url.searchParams.get('purchaseLineId')
+    const filtered=candidates.filter(x=>!purchaseLineId||
+      x.purchaseOrderLineId===purchaseLineId)
+    return respond(res,url.pathname.endsWith('/page')?
+      emptyCursorPage(filtered):filtered)
+  }
   if (url.pathname === '/api/v1/purchasing/supplier-performance/scorecards'
       || url.pathname === '/api/v1/purchasing/supplier-performance/scorecards/page') {
     const scorecards=[{
