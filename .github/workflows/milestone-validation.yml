@@ -1,3 +1,6 @@
+# V157: strict loopback TLS ingress readiness: hard-fail bad TLS (even
+# urllib wrapped), malformed/fake Spring identity, redirects or wrong upstream;
+# retry only bounded transport/502-504/stale verified cutover. NO production GO.
 # V156: exact-main A3 after safe substage diagnostics for synthetic TLS
 # Vite rollback/Next rollforward; historical V148 root cause unproven.
 # Never equate this with production G1/G2/G3 release approval.
@@ -77,7 +80,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V156-A3-HTTPS-cutover-safe-substage-diagnostics' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V157-A3-strict-loopback-TLS-ingress-readiness' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -128,6 +131,7 @@ on:
           - V154-A3-Next-PG18-Actuator-private-readiness
           - V155-A3-Actuator-vendor-JSON-private-PG18-readiness
           - V156-A3-HTTPS-cutover-safe-substage-diagnostics
+          - V157-A3-strict-loopback-TLS-ingress-readiness
 
 permissions:
   contents: read
