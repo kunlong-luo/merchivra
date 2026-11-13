@@ -12,7 +12,7 @@
 | 各模块代码/真实来源/验收状态 | [V109 文档审计与状态索引](governance/docs-audit-v109.md) · [V86 旧版功能审计](testing/core-coverage-audit-v86.md) | V86 是历史快照，不可当最新状态矩阵 |
 | 当前架构、模块与依赖 | [总体架构](architecture/overview.md) · [V99–V100 Next 迁移门槛](architecture/next16-ab-migration-v99.md) | Next 16 已有真实 App Router，但还没有取代默认 Vite/Nginx 部署 |
 | 本地运行、开发和环境变量 | [开发指南](development.md) · [Docker/PG18 部署](deployment/local-spark-db.md) | Java 25 / Gradle / PostgreSQL **18** / React 19 |
-| FBA 采购来源合同 V145 | [PO/ASN 本地关联](inventory/fba-purchase-link-v75.md) | 15 项 FBA 生成操作；关联历史 200/候选 100 的上限由 [#108](https://github.com/kunlong-luo/merchivra/issues/108) 跟踪 |
+| FBA 采购来源合同 V145 | [PO/ASN 本地关联](inventory/fba-purchase-link-v75.md) | [V145 旧合同](inventory/fba-purchase-link-v75.md) 保持兼容；[V147 完整分页候选](inventory/fba-purchase-pagination-v147.md) 已在分支 PG18 验证，合并后的主线 A3 待验收；[#108](https://github.com/kunlong-luo/merchivra/issues/108) 仍跟踪 |
 | API 代码生成与原始合同 | [API 文档入口](api/README.md) · [Orval/真实 Controller](architecture/mature-tool-first-api-client-2026-11-01.md) | 设计版 OpenAPI JSON **不是**当前全量后端契约 |
 | GitHub Actions 测试与质量门槛 | [V108 CI 策略](testing/ci-policy.md) · [发布安全/恢复清单](testing/release-readiness-v68.md) | 普通 PR 快速检查；[完整里程碑 workflow](https://github.com/kunlong-luo/merchivra/actions/workflows/milestone-validation.yml) 手动集中执行 |
 | 本地权限、凭据与生产前安全 | [Security Policy](../SECURITY.md) · [Seller OAuth](security/seller-oauth.md) · [安全门槛](testing/release-readiness-v68.md) | Seller/Ads 真实授权与远程写入默认关闭 |

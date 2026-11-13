@@ -39,6 +39,37 @@ public class FbaPurchaseLinkController {
         return ResponseEntity.ok().cacheControl(CacheControl.noStore())
             .body(proof.candidates(access.currentTenant(auth,req),marketplaceId,shipmentId,lineId));
     }
+    /** V147: all tenant- and shipment-scoped local identity proof rows. */
+    @Operation(operationId="listFbaPurchaseLinksPage")
+    @GetMapping("/page")
+    public ResponseEntity<FbaPurchaseLinkService.LinkedPage> linksPage(
+        @Parameter(hidden=true) Authentication auth,
+        @Parameter(hidden=true) HttpServletRequest req,@PathVariable UUID marketplaceId,
+        @PathVariable UUID shipmentId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(defaultValue="ALL") String state,
+        @RequestParam(required=false) UUID inboundLineId,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(proof.linksPage(access.currentTenant(auth,req),marketplaceId,shipmentId,
+                inboundLineId,state,limit,cursor));
+    }
+
+    /** V147: approved PO candidates, each distinct optional SHIPPED ASN row included. */
+    @Operation(operationId="listFbaPurchaseCandidatesPage")
+    @GetMapping("/lines/{lineId}/candidates/page")
+    public ResponseEntity<FbaPurchaseLinkService.CandidatePage> candidatesPage(
+        @Parameter(hidden=true) Authentication auth,
+        @Parameter(hidden=true) HttpServletRequest req,@PathVariable UUID marketplaceId,
+        @PathVariable UUID shipmentId,@PathVariable UUID lineId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(required=false) UUID purchaseLineId,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(proof.candidatesPage(access.currentTenant(auth,req),marketplaceId,shipmentId,
+                lineId,purchaseLineId,limit,cursor));
+    }
+
     @Operation(operationId="proposeFbaPurchaseLink")
     @PostMapping
     public FbaPurchaseLinkService.Linked propose(@Parameter(hidden=true) Authentication auth,

@@ -43,10 +43,32 @@ sql_source() {
   docker exec -u postgres "$src" psql -X -q -A -t -v ON_ERROR_STOP=1 \
     -U postgres -d postgres -c "$1"
 }
+# PostgreSQL 18's official image briefly starts a bootstrap server and stops it
+# before the final post-init server starts. A transient successful SELECT during
+# bootstrap is NOT a usable source for basebackup; wait for init's final marker.
+initialized=false
 for _ in $(seq 1 50); do
-  if sql_source 'SELECT 1' >/dev/null 2>&1; then break; fi
+  if docker logs "$src" 2>&1 |
+      grep -F 'PostgreSQL init process complete; ready for start up.' >/dev/null; then
+    initialized=true
+    break
+  fi
   sleep 1
 done
+[[ "$initialized" == true ]] || {
+  echo 'V142 isolated source PostgreSQL did not finish initial bootstrap' >&2
+  docker logs "$src" 2>&1 | tail -50 >&2 || true
+  exit 1
+}
+ready=false
+for _ in $(seq 1 50); do
+  if [[ "$(sql_source 'SELECT 1' 2>/dev/null || true)" == 1 ]]; then
+    ready=true
+    break
+  fi
+  sleep 1
+done
+[[ "$ready" == true ]] || { echo 'V142 post-init PostgreSQL not ready' >&2; exit 1; }
 test "$(sql_source 'SHOW server_version_num' | cut -c1-2)" = 18
 sql_source "CREATE TABLE public.v142_pitr_marker(
  id INTEGER PRIMARY KEY, marker VARCHAR(60) NOT NULL)" >/dev/null

@@ -1,5 +1,6 @@
 import {afterEach,describe,expect,it,vi} from 'vitest'
 import {purchaseLinkSchema,getPurchaseLinks,getPurchaseCandidates,
+ getPurchaseLinksPage,getPurchaseCandidatesPage,
  proposePurchaseLink,confirmPurchaseLink,revokePurchaseLink} from './fba-purchase-links'
 
 afterEach(()=>vi.unstubAllGlobals())
@@ -131,6 +132,74 @@ describe('V75 explicit local FBA-to-PO/ASN identity proof',()=>{
    asnId:null,asnStatus:null,asnQuantity:null,asnReceivedQuantity:0
   }])))
   await expect(getPurchaseCandidates(mp,shipment,line)).rejects.toThrow()
+ })
+
+
+ it('pages 225 local link histories without truncating after 200 rows',async()=>{
+  const fetch=vi.fn(async(url:string)=>{
+   const search=new URL(url,'http://localhost').searchParams
+   const page=Number(search.get('cursor')??'0')
+   const count=page===4?25:50
+   const items=Array.from({length:count},(_,i)=>({
+    ...link,id:'00000000-0000-4000-8000-'+(page*50+i+1).toString(16).padStart(12,'0')
+   }))
+   return Response.json({items,pageSize:50,hasMore:page<4,
+    nextCursor:page<4?String(page+1):null})
+  })
+  vi.stubGlobal('fetch',fetch)
+  const ids=new Set<string>()
+  let cursor:string|null=null
+  for(let i=0;i<5;i++){
+   const page=await getPurchaseLinksPage(mp,shipment,cursor)
+   expect(page.items.length).toBe(i===4?25:50)
+   page.items.forEach(x=>ids.add(x.id))
+   cursor=page.nextCursor
+   expect(page.hasMore).toBe(i<4)
+  }
+  expect(ids.size).toBe(225)
+  expect(fetch).toHaveBeenCalledTimes(5)
+ })
+ it('pages 125 candidate rows and allows an exact PO-line ASN filter',async()=>{
+  const fetch=vi.fn(async(url:string)=>{
+   const search=new URL(url,'http://localhost').searchParams
+   const page=Number(search.get('cursor')??'0')
+   expect(search.get('purchaseLineId')).toBe(po)
+   const count=page===2?25:50
+   return Response.json({items:Array.from({length:count},(_,i)=>({
+    purchaseOrderId:po,
+    purchaseOrderLineId:po,
+    orderNumber:'PO-CAND-'+(page*50+i),supplierName:'Fictional supplier',
+    orderedQuantity:20,localReceivedQuantity:0,asnId:null,
+    asnStatus:null,asnQuantity:null,asnReceivedQuantity:0
+   })),pageSize:50,hasMore:page<2,nextCursor:page<2?String(page+1):null})
+  })
+  vi.stubGlobal('fetch',fetch)
+  let cursor:string|null=null,read=0
+  for(let i=0;i<3;i++){
+   const page=await getPurchaseCandidatesPage(mp,shipment,line,cursor,po)
+   read+=page.items.length;cursor=page.nextCursor
+  }
+  expect(read).toBe(125)
+  expect(fetch).toHaveBeenCalledTimes(3)
+ })
+ it('rejects inconsistent page flags, overflow and invalid UUID before network',async()=>{
+  const fetch=vi.fn(async()=>Response.json({items:[link],pageSize:50,
+   hasMore:true,nextCursor:null}))
+  vi.stubGlobal('fetch',fetch)
+  await expect(getPurchaseLinksPage(mp,shipment)).rejects.toThrow()
+  fetch.mockImplementationOnce(async()=>Response.json({items:[link],pageSize:1,
+    hasMore:false,nextCursor:'next'}))
+  await expect(getPurchaseLinksPage(mp,shipment)).rejects.toThrow()
+  fetch.mockImplementationOnce(async()=>Response.json({items:[link,link],pageSize:1,
+    hasMore:false,nextCursor:null}))
+  await expect(getPurchaseLinksPage(mp,shipment)).rejects.toThrow()
+  fetch.mockClear()
+  await expect(getPurchaseLinksPage(mp,'not-uuid')).rejects.toThrow()
+  await expect(getPurchaseCandidatesPage(mp,shipment,'not-uuid')).rejects.toThrow()
+  await expect(getPurchaseCandidatesPage(mp,shipment,line,null,'not-uuid')).rejects.toThrow()
+  await expect(getPurchaseLinksPage(mp,shipment,'bad cursor?')).rejects.toThrow()
+  await expect(getPurchaseLinksPage(mp,shipment,null,'ALL',null,101)).rejects.toThrow()
+  expect(fetch).not.toHaveBeenCalled()
  })
 
 })

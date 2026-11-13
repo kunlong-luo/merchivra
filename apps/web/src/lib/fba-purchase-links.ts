@@ -1,5 +1,6 @@
 import {z} from 'zod'
-import {listFbaPurchaseLinks,listFbaPurchaseCandidates,proposeFbaPurchaseLink,
+import {listFbaPurchaseLinks,listFbaPurchaseCandidates,listFbaPurchaseLinksPage,
+ listFbaPurchaseCandidatesPage,proposeFbaPurchaseLink,
  confirmFbaPurchaseLink,revokeFbaPurchaseLink} from '../generated/fba-inbound'
 
 const uuid=z.string().uuid()
@@ -25,6 +26,51 @@ export const purchaseLinkSchema=z.object({
  proposedBy:uuid,confirmedBy:nullableId,createdAt:z.string(),
  confirmedAt:z.string().nullable()
 })
+/** V147: strict complete source pages with explicit completeness metadata. */
+const cursorSchema=z.string().min(1).max(2048).regex(/^[A-Za-z0-9_-]+$/)
+const pageOf=<T extends z.ZodType>(item:T)=>z.object({
+ items:z.array(item).max(100),nextCursor:cursorSchema.nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).superRefine((v,ctx)=>{
+ if(v.items.length>v.pageSize)ctx.addIssue({code:'custom',message:'Page exceeds declared size'})
+ if(v.hasMore&&(!v.nextCursor||v.items.length===0))
+  ctx.addIssue({code:'custom',message:'Page missing next cursor'})
+ if(!v.hasMore&&v.nextCursor)
+  ctx.addIssue({code:'custom',message:'Terminal page must not advertise a cursor'})
+})
+export const purchaseLinkPageSchema=pageOf(purchaseLinkSchema)
+export const purchaseCandidatePageSchema=pageOf(candidateSchema)
+export type PurchaseLinkPage=z.infer<typeof purchaseLinkPageSchema>
+export type PurchaseCandidatePage=z.infer<typeof purchaseCandidatePageSchema>
+const pageLimit=z.number().int().min(1).max(100)
+const linkState=z.enum(['ALL','PROPOSED','CONFIRMED','REVOKED'])
+
+/** New source pages use the actual OpenAPI/Orval client; legacy array calls remain compatible. */
+export async function getPurchaseLinksPage(
+ marketplace:string,shipment:string,cursor:string|null=null,
+ state:'ALL'|'PROPOSED'|'CONFIRMED'|'REVOKED'='ALL',
+ inboundLineId:string|null=null,limit=50):Promise<PurchaseLinkPage>{
+ const params={
+  limit:pageLimit.parse(limit),state:linkState.parse(state),
+  ...(inboundLineId?{inboundLineId:uuid.parse(inboundLineId)}:{}),
+  ...(cursor?{cursor:cursorSchema.parse(cursor)}:{})
+ }
+ const response=await listFbaPurchaseLinksPage(uuid.parse(marketplace),uuid.parse(shipment),params)
+ return purchaseLinkPageSchema.parse(response.data)
+}
+export async function getPurchaseCandidatesPage(
+ marketplace:string,shipment:string,line:string,cursor:string|null=null,
+ purchaseLineId:string|null=null,limit=50):Promise<PurchaseCandidatePage>{
+ const params={
+  limit:pageLimit.parse(limit),
+  ...(purchaseLineId?{purchaseLineId:uuid.parse(purchaseLineId)}:{}),
+  ...(cursor?{cursor:cursorSchema.parse(cursor)}:{})
+ }
+ const response=await listFbaPurchaseCandidatesPage(
+  uuid.parse(marketplace),uuid.parse(shipment),uuid.parse(line),params)
+ return purchaseCandidatePageSchema.parse(response.data)
+}
+
 export type LocalPurchaseLink=z.infer<typeof purchaseLinkSchema>
 export type PurchaseCandidate=z.infer<typeof candidateSchema>
 export type ProposePurchaseLink={

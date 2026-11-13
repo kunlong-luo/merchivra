@@ -2,6 +2,11 @@ package org.merchivra.erp.fba;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import java.sql.ResultSet;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Set;
+import org.merchivra.erp.purchasing.LocalKeysetPage;
 import java.sql.SQLException;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -45,6 +50,10 @@ public class FbaPurchaseLinkService {
         @Schema(types={"string","null"}) String confirmedBy,String createdAt,
         @Schema(types={"string","null"}) String confirmedAt) {}
     public record Changed(String id,String state) {}
+    public record LinkedPage(List<Linked> items,
+        @Schema(types={"string","null"}) String nextCursor,boolean hasMore,int pageSize) {}
+    public record CandidatePage(List<Candidate> items,
+        @Schema(types={"string","null"}) String nextCursor,boolean hasMore,int pageSize) {}
     private static ResponseStatusException bad(String value){
         return new ResponseStatusException(HttpStatus.BAD_REQUEST,value);
     }
@@ -109,6 +118,39 @@ public class FbaPurchaseLinkService {
         OffsetDateTime v=r.getObject(field,OffsetDateTime.class);
         return v==null?null:v.toInstant().toString();
     }
+    /** V147 pages are live local views; cursors are bound to the authenticated scope. */
+    private static final UUID NO_ASN=UUID.fromString("00000000-0000-0000-0000-000000000000");
+    private record LinkAfter(OffsetDateTime createdAt,UUID id) {}
+    private record CandidateAfter(OffsetDateTime updatedAt,UUID po,UUID line,UUID asn) {}
+    private record CandidateRow(Candidate candidate,CandidateAfter position) {}
+
+    private static LinkAfter linkAfter(String cursor,UUID tenant,UUID marketplace,UUID shipment,
+                                       UUID inboundLine,String state) {
+        String[] parts=LocalKeysetPage.decode(cursor,7);
+        if(parts==null)return null;
+        String selected=inboundLine==null?"ALL":inboundLine.toString();
+        if(!tenant.toString().equals(parts[0])||!marketplace.toString().equals(parts[1])
+            ||!shipment.toString().equals(parts[2])||!selected.equals(parts[3])
+            ||!state.equals(parts[4]))throw bad("FBA link cursor scope mismatch");
+        try {
+            return new LinkAfter(OffsetDateTime.ofInstant(Instant.parse(parts[5]),ZoneOffset.UTC),
+                UUID.fromString(parts[6]));
+        }catch(IllegalArgumentException | java.time.format.DateTimeParseException ex) {throw bad("Invalid FBA link cursor");}
+    }
+    private static CandidateAfter candidateAfter(String cursor,UUID tenant,UUID marketplace,
+                                                  UUID shipment,UUID inboundLine,UUID poLine) {
+        String[] parts=LocalKeysetPage.decode(cursor,9);
+        if(parts==null)return null;
+        if(!tenant.toString().equals(parts[0])||!marketplace.toString().equals(parts[1])
+            ||!shipment.toString().equals(parts[2])||!inboundLine.toString().equals(parts[3])
+            ||!(poLine==null?"ALL":poLine.toString()).equals(parts[4]))
+            throw bad("FBA candidate cursor scope mismatch");
+        try {
+            return new CandidateAfter(OffsetDateTime.ofInstant(Instant.parse(parts[5]),ZoneOffset.UTC),
+                UUID.fromString(parts[6]),UUID.fromString(parts[7]),UUID.fromString(parts[8]));
+        }catch(IllegalArgumentException | java.time.format.DateTimeParseException ex){throw bad("Invalid FBA candidate cursor");}
+    }
+
     private static final String LINK_QUERY = """
         SELECT link.id,link.shipment_id,link.inbound_line_id,il.seller_sku,
           sh.state AS shipment_state,sh.evidence_origin,il.planned_quantity,
@@ -213,6 +255,126 @@ public class FbaPurchaseLinkService {
                 r.getLong("asn_received")),
             tenant,marketplace,selected.sku());
     }
+
+    /** Full V147 shipment-link history; legacy LIMIT 200 read is kept for old consumers. */
+    @Transactional(readOnly=true)
+    public LinkedPage linksPage(UUID tenant,UUID marketplace,UUID shipment,
+                                                  UUID inboundLine,String state,int requested,
+                                                  String cursor) {
+        int limit=LocalKeysetPage.limit(requested);
+        String checked=state==null?"ALL":state;
+        if(!Set.of("ALL","PROPOSED","CONFIRMED","REVOKED").contains(checked))
+            throw bad("Invalid FBA link state");
+        LinkAfter after=linkAfter(cursor,tenant,marketplace,shipment,inboundLine,checked);
+        var exists=jdbc.queryForList("""
+            SELECT sh.id FROM fba_inbound_shipment sh JOIN tenant t
+              ON t.id=sh.tenant_id AND t.status='ACTIVE'
+            WHERE sh.tenant_id=? AND sh.seller_marketplace_id=? AND sh.id=?
+            """,UUID.class,tenant,marketplace,shipment);
+        if(exists.size()!=1)throw missing();
+        if(inboundLine!=null)line(tenant,marketplace,shipment,inboundLine,false);
+        List<Object> args=new ArrayList<>(List.of(tenant,marketplace,shipment));
+        StringBuilder sql=new StringBuilder(LINK_QUERY).append(" AND link.shipment_id=?");
+        if(inboundLine!=null){sql.append(" AND link.inbound_line_id=?");args.add(inboundLine);}
+        if(!"ALL".equals(checked)){sql.append(" AND link.state=?");args.add(checked);}
+        if(after!=null){
+            sql.append(" AND (link.created_at,link.id)<(?::timestamptz,?::uuid)");
+            args.add(after.createdAt());args.add(after.id());
+        }
+        sql.append(" ORDER BY link.created_at DESC,link.id DESC LIMIT ?");
+        args.add(limit+1);
+        List<Linked> fetched=jdbc.query(sql.toString(),FbaPurchaseLinkService::map,args.toArray());
+        var page=LocalKeysetPage.pack(fetched,limit,last->LocalKeysetPage.encode(
+            tenant.toString(),marketplace.toString(),shipment.toString(),
+            inboundLine==null?"ALL":inboundLine.toString(),checked,last.createdAt(),last.id()));
+        return new LinkedPage(page.items(),page.nextCursor(),page.hasMore(),page.pageSize());
+    }
+
+    private static CandidateRow mapCandidateRow(ResultSet r,int i)throws SQLException {
+        UUID asn=r.getObject("asn_id",UUID.class);
+        Candidate value=new Candidate(r.getObject("order_id",UUID.class).toString(),
+            r.getObject("line_id",UUID.class).toString(),r.getString("order_number"),
+            r.getString("display_name"),r.getInt("ordered_quantity"),
+            r.getLong("received_quantity"),asn==null?null:asn.toString(),
+            r.getString("asn_status"),(Integer)r.getObject("asn_quantity"),
+            r.getLong("asn_received"));
+        return new CandidateRow(value,new CandidateAfter(
+            r.getObject("position_updated_at",OffsetDateTime.class),
+            r.getObject("order_id",UUID.class),r.getObject("line_id",UUID.class),
+            asn==null?NO_ASN:asn));
+    }
+
+    /** Full approved PO+optional SHIPPED ASN source candidates for one inbound line. */
+    @Transactional(readOnly=true)
+    public CandidatePage candidatesPage(UUID tenant,UUID marketplace,
+                        UUID shipment,UUID inboundLine,UUID purchaseLine,int requested,
+                        String cursor) {
+        int limit=LocalKeysetPage.limit(requested);
+        CandidateAfter after=candidateAfter(cursor,tenant,marketplace,shipment,inboundLine,
+            purchaseLine);
+        Line selected=line(tenant,marketplace,shipment,inboundLine,false);
+        List<Object> args=new ArrayList<>(List.of(tenant,marketplace,selected.sku()));
+        StringBuilder sql=new StringBuilder("""
+            SELECT po.id AS order_id,pl.id AS line_id,po.order_number,
+              sup.display_name,pl.ordered_quantity,po.updated_at AS position_updated_at,
+              COALESCE((SELECT SUM(r.quantity) FROM erp_purchase_receipt r
+                WHERE r.tenant_id=pl.tenant_id AND r.purchase_order_line_id=pl.id),0)
+                ::bigint AS received_quantity,
+              a.id AS asn_id,a.status AS asn_status,a.quantity AS asn_quantity,
+              COALESCE((SELECT SUM(r.quantity) FROM erp_purchase_receipt r
+                WHERE r.tenant_id=a.tenant_id AND r.asn_id=a.id),0)
+                ::bigint AS asn_received
+            FROM erp_purchase_order_line pl
+            JOIN erp_purchase_order po ON po.tenant_id=pl.tenant_id
+              AND po.id=pl.purchase_order_id
+              AND po.status IN ('APPROVED','RECEIVING','RECEIVED')
+            JOIN erp_supplier sup ON sup.tenant_id=po.tenant_id AND sup.id=po.supplier_id
+            LEFT JOIN erp_purchase_asn a ON a.tenant_id=pl.tenant_id
+              AND a.purchase_order_line_id=pl.id AND a.status='SHIPPED'
+            WHERE pl.tenant_id=? AND EXISTS (
+              SELECT 1 FROM marketplace_listing listing
+              JOIN listing_sku_mapping mapping ON mapping.tenant_id=listing.tenant_id
+                AND mapping.listing_id=listing.id AND mapping.status='ACTIVE'
+                AND mapping.valid_to IS NULL
+              JOIN product_sku product ON product.tenant_id=mapping.tenant_id
+                AND product.id=mapping.product_sku_id AND product.status='ACTIVE'
+              WHERE listing.tenant_id=pl.tenant_id AND listing.seller_marketplace_id=?
+                AND listing.seller_sku=? AND listing.mapping_status='ACTIVE'
+                AND mapping.product_sku_id=pl.product_sku_id
+            )
+            """);
+        if(purchaseLine!=null){sql.append(" AND pl.id=? ");args.add(purchaseLine);}
+        if(after!=null){
+            sql.append("""
+             AND (po.updated_at,po.id,pl.id,COALESCE(a.id,
+                     '00000000-0000-0000-0000-000000000000'::uuid))
+                < (?::timestamptz,?::uuid,?::uuid,?::uuid)
+            """);
+            args.add(after.updatedAt());args.add(after.po());args.add(after.line());args.add(after.asn());
+        }
+        sql.append("""
+            ORDER BY po.updated_at DESC,po.id DESC,pl.id DESC,
+              COALESCE(a.id,'00000000-0000-0000-0000-000000000000'::uuid) DESC
+            LIMIT ?
+            """);
+        args.add(limit+1);
+        List<CandidateRow> fetched=jdbc.query(sql.toString(),FbaPurchaseLinkService::mapCandidateRow,
+            args.toArray());
+        boolean more=fetched.size()>limit;
+        List<CandidateRow> page=fetched.subList(0,Math.min(fetched.size(),limit));
+        String next=null;
+        if(more){
+            CandidateAfter last=page.getLast().position();
+            next=LocalKeysetPage.encode(tenant.toString(),marketplace.toString(),
+                shipment.toString(),inboundLine.toString(),
+                purchaseLine==null?"ALL":purchaseLine.toString(),
+                last.updatedAt().toInstant().toString(),last.po().toString(),
+                last.line().toString(),last.asn().toString());
+        }
+        return new CandidatePage(
+            page.stream().map(CandidateRow::candidate).toList(),next,more,limit);
+    }
+
     private void audit(UUID tenant,UUID actor,UUID id,String action,String note){
         jdbc.update("""
             INSERT INTO fba_inbound_purchase_link_audit

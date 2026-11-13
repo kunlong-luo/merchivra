@@ -7,7 +7,8 @@ const expected=[
  'listFbaInboundShipments','listFbaInboundShipmentPage','listFbaInboundTransit','getFbaInboundShipment','createFbaInboundShipment',
  'dispatchFbaInboundShipment','recordFbaInboundReceipt','startFbaInboundReview',
  'resolveFbaInboundVariance','finalizeFbaInboundReconciliation',
- 'listFbaPurchaseLinks','listFbaPurchaseCandidates','proposeFbaPurchaseLink',
+ 'listFbaPurchaseLinks','listFbaPurchaseCandidates','listFbaPurchaseLinksPage',
+ 'listFbaPurchaseCandidatesPage','proposeFbaPurchaseLink',
  'confirmFbaPurchaseLink','revokeFbaPurchaseLink'
 ]
 const methods=['get','post','put','patch','delete']
@@ -20,17 +21,17 @@ for(const name of expected)
  if(actual.filter(x=>x===name).length!==1)throw Error('Missing/duplicate live FBA operation: '+name)
 if(actual.length!==expected.length)throw Error('Unexpected FBA operations: '+actual.join(','))
 const result=structuredClone(raw)
-result.info={title:'Merchivra verified local FBA inbound API',version:'145.0.0',
+result.info={title:'Merchivra verified local FBA inbound API',version:'147.0.0',
  description:'Owner Session; MOCK/MANUAL_UNVERIFIED evidence only. No Amazon writes.'}
 result.paths=selected
 result.servers=[{url:''}]
 result.security=[{sessionCookie:[]}]
 result.components??={}
 // Keep only DTOs reachable from the reviewed local shipment/link operations.
-// V145 includes the existing V75 provenance endpoints in the generated client.
+// V147 retains V75 provenance writes and adds full PO/ASN keyset source pages.
 const modelNames=new Set(['Create','Detail','Line','LineInput',
   'Receipt','ReceiptEvent','Resolve','Shipment','ShipmentPage','TransitRow',
-  'Candidate','Linked','Propose','Reason'])
+  'Candidate','Linked','LinkedPage','CandidatePage','Propose','Reason'])
 result.components.schemas=Object.fromEntries(Object.entries(result.components.schemas??{})
   .filter(([name])=>modelNames.has(name)))
 // Fail closed if extending the endpoint set leaves a dangling DTO reference.

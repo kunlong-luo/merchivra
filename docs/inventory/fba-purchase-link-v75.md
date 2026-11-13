@@ -43,6 +43,6 @@ scripts/smoke_fba_purchase_links_v75.py 使用一次性 127.0.0.1 PostgreSQL18�
 
 `FbaPurchaseLinkOpenApiV145Test` 在一次性随机环回端口启动真实 Springdoc，关闭 Flyway 并模拟首次管理员 bootstrap，核对五项操作、UUID 路径、隐藏认证参数及请求/响应形状；**不是 PG18 集成测试**。输出 `apps/server/build/fba-openapi-v145.json` 可供本地归一化。Vitest 覆盖生成请求的 CSRF、撤销、401/403/409 单次写入、非法路径零请求、来源字段与 NULL 校验。完整 PG18 的现有 V75 真 HTTP 冒烟和合同逐字节检查仍在 `full_suite` 执行，结果须绑定新提交核实。
 
-**仍未解决的容量断点**：`links()` 的 `LIMIT 200`、`candidates()` 的 `LIMIT 100` 继续存在；生成客户端不等于全库分页。超限旧来源仍可能无法在页面选择，Issue #62 继续开放，下一批应补稳定全排序的服务器游标及页面接入。其他 FBA 对账/异常接口也不能因此称为全部已接入 Orval。Next 正式切流 #63、目标环境人工签署 #104 与 Amazon 本地授权均独立保留。
+**仍未解决的容量断点**：`links()` 的 `LIMIT 200`、`candidates()` 的 `LIMIT 100` 继续存在；生成客户端不等于全库分页。此处记载 **V145 历史容量断点**：超限旧来源曾可能无法在页面选择；采购/仓储分页 #62 已于 V144 关闭，FBA 关联分页属于单独的 [#108](https://github.com/kunlong-luo/merchivra/issues/108)，V147 改动及验收状态另见 [V147 全量分页文档](fba-purchase-pagination-v147.md)。旧 V145 限额接口保留兼容，不能视为完整历史。其他 FBA 对账/异常接口也不能因此称为全部已接入 Orval。Next 正式切流 #63、目标环境人工签署 #104 与 Amazon 本地授权均独立保留。
 
 本轮已基于 V144 main `299d7215abda2f0daa08ee42327c4c7d1febbd10` 重放，保留会话缓存隔离和 11 条 Next 路由回归。本地验证：Java 25 Gradle **567 项全部通过**（受限容器以显式 Mockito agent 运行），Vitest **81 文件 / 354 项通过**，React/Next 类型检查及 Vite build 通过；真实 Springdoc 导出归一化通过，移除操作/删除引用 DTO 两个负例均拒绝。以上不包含本地 PG18/Compose/Chromium；最终候选在 GitHub 的同 SHA 完整 A3 结果应另行核实。合并本次 milestone 标记变更会触发一次完整合成回归，不授予生产发布许可。
