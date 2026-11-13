@@ -1,3 +1,4 @@
+# V147 rerun after including both concrete page schemas in allowlist.
 name: Temporary V147 real Springdoc to Orval regeneration
 on:
   push:
