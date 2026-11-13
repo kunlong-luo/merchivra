@@ -1,6 +1,16 @@
 # V108 — MVP 收尾、集中测试与上线准入（2026-11-08）
 
-## 2026-11-13 / V159 目标 HTTPS 预检证据质量（**当前权威状态**）
+## 2026-11-13 / V160 自构建镜像与候选 SHA 绑定（**当前权威状态**）
+
+> V160 是新的**运行时镜像构建配置变更**：Spring、Next 和 Vite 回退最终镜像均支持从受信构建流程注入 `MERCHIVRA_BUILD_REVISION` OCI label（默认空值，不假造源 commit）。[目标运行容器只读核对](../operations/v160-target-image-evidence.md) 要求独立审查过的三份不可变本地 image ID、人工确认的候选 SHA 和明确授权的 Docker context；只读取固定 metadata，决不读取 Env/日志、自动构建、重启或部署。镜像标签和本地 image ID 匹配**不是**签名验证，更不是发布批准。实际目标未经此 PR 访问。
+
+- **风险对应验收**：因为 V160 修改了镜像与 Compose 构建行为，合并到 main 后必须触发**精确新 SHA** 的完整 A3，不能沿用此前 V157 或 V159 CI 代替。V159 最近主线快速 CI [#43427553987](https://github.com/kunlong-luo/merchivra/actions/runs/43427553987) 首次 SUCCESS，V157 最近运行时 A3 [#43422914368](https://github.com/kunlong-luo/merchivra/actions/runs/43422914368) 首次 7/7；二者都不证明 V160 的新镜像。
+- **唯一生产准入**：[G1/G2/G3 #104](https://github.com/kunlong-luo/merchivra/issues/104) 仍 OPEN/NO-GO：缺真正签名或制品可信验证、真实目标 HTTPS/IAM/KMS/ClamAV、离站加密 PG18 PITR/RPO/RTO、外部 Alertmanager 人类 ACK 和组织授权签署。真实 Seller/Ads OAuth 和出站读写全部关闭。[#115](https://github.com/kunlong-luo/merchivra/issues/115) 历史 V148 间歇 HTTPS 故障根因未证实。
+- 本里程碑不生成正式 release、没有生产批准权；只允许受权运维将**安全脱敏元数据**带入线下独立审查。报告始终 `productionApproved=false`、`deploymentPermitted=false`。
+
+---
+
+## 2026-11-13 / V159 目标 HTTPS 预检证据质量（历史 V159 记录）
 
 > **已验收基线分开记录**：最近一次**完整 A3** 为 [V157 main 5ac412dab7e71a0703c4887614bfba17fbe2eb25](https://github.com/kunlong-luo/merchivra/commit/5ac412dab7e71a0703c4887614bfba17fbe2eb25) / [#43422914368](https://github.com/kunlong-luo/merchivra/actions/runs/43422914368) 首次 7/7 SUCCESS（仅隔离 PG18、Next/Vite、HTTPS 技术测试）。最近一次**主线快速 CI** 为 V158 [main c911c7c9659cb1d4031d896a8586d61b32b00ee7](https://github.com/kunlong-luo/merchivra/commit/c911c7c9659cb1d4031d896a8586d61b32b00ee7) / [#43424933763](https://github.com/kunlong-luo/merchivra/actions/runs/43424933763) 首次 SUCCESS。V159 的 PR/验收必须另行记录，不能沿用上一个 SHA 宣称本次通过。
 
