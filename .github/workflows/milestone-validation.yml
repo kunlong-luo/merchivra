@@ -1,3 +1,5 @@
+# V147 Chromium follow-up: refresh legacy V75 synthetic FBA proof responses
+# to new /page contracts on BOTH Vite and Next before exact-main A3 rerun.
 # V147: exact-main-SHA A3 verifies PG18 full FBA PO/ASN keyset pages,
 # actual Springdoc/Orval 17-operation contract, scoped cursor rejection,
 # both frontends, and keeps Amazon/OAuth plus production G1/G2/G3 closed.
@@ -60,7 +62,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V147-A3-FBA-PO-ASN-full-source-keysets' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V147-A3-FBA-keyset-Chromium-fixture-reacceptance' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -104,6 +106,7 @@ on:
           - V145-A3-FBA-PO-ASN-generated-contracts
           - V146-A3-disposable-HTTPS-Next-Vite-session-cutover
           - V147-A3-FBA-PO-ASN-full-source-keysets
+          - V147-A3-FBA-keyset-Chromium-fixture-reacceptance
 
 permissions:
   contents: read
