@@ -1,6 +1,19 @@
 # V108 — MVP 收尾、集中测试与上线准入（2026-11-08）
 
-## 2026-11-13 / V150 最终合成技术验收（现行最新证据）
+## 2026-11-13 / V158 目标生产证据分工（**当前权威状态**）
+
+> **最近已完整验收的代码主线是 V157**：[main `5ac412dab7e71a0703c4887614bfba17fbe2eb25`](https://github.com/kunlong-luo/merchivra/commit/5ac412dab7e71a0703c4887614bfba17fbe2eb25)，[完整 A3 #43422914368](https://github.com/kunlong-luo/merchivra/actions/runs/43422914368) **首次执行 7/7 SUCCESS**（隔离 PG18/Flyway/HTTP、Next/Vite Chromium、真实合成 CA HTTPS Next→Vite→Next 回切、Java25/Gradle/Compose）。此证据仅属于该 SHA 的**隔离技术验收**。V158 为**只读证据清单和文档纠偏**，不能把 V157 的 A3 当成 V158 改动的新 SHA 验收，也无需仅为文档清单重复完整 A3。
+
+- **A0/A1/A2/A3 技术范围**：采购/供应商/仓库分页 [#62](https://github.com/kunlong-luo/merchivra/issues/62) CLOSED；FBA 关联分页 [#108](https://github.com/kunlong-luo/merchivra/issues/108) 按合成技术范围 CLOSED。Next 技术跟踪 [#63](https://github.com/kunlong-luo/merchivra/issues/63) 在 2026-11-13 由维护者标记 CLOSED；**这是项目管理决定，不是实际外部环境已受控切流/真实 TLS/IAM/KMS 验收或上线批准**。
+- **P0 A5 / [#104](https://github.com/kunlong-luo/merchivra/issues/104)** 保持 OPEN、生产 **NO-GO**：G1 产品/运营/财务真实政策和样本、G2 目标 TLS/可信代理/MFA/KMS/ClamAV/租户权限、G3 离站加密 PG18 物理备份/WAL/真实 PITR RPO/RTO/外部告警人工 ACK 与独立签署仍缺目标证据。Amazon Seller/Ads 真实授权与远程读写继续关闭。
+- **V158 工程交付**：[只读生产证据责任清单](../operations/v158-production-evidence-worklist.md) 从 V143 **已脱敏**预检 JSON 生成结构缺项、责任人角色与真实证据需求；任何格式完整的自填声明也始终 **NO-GO/exit 2**。该工具不访问目标环境、不验证签名、不批准或部署。真实证据只在授权人员的受信系统内核验。
+- **P1 / [#115](https://github.com/kunlong-luo/merchivra/issues/115)** 保持 OPEN：V148 HTTPS canary 首轮失败时未记录阶段，故无法事后断定根因；V149–V157 的日志和就绪规则加固、后续一次通过不是历史缺陷已被确证并根治。
+- **当前顺序**：授权人员提供目标 G1/G2/G3 原件与签署 → 运维只读复核/弥补真实基础设施缺口 → 独立发布批准 → 再讨论实际部署与本地受控 Seller/Ads 授权（仍需单独批准）。**不能承诺生产日期**。
+
+---
+
+
+## 历史：2026-11-13 / V150 最终合成技术验收（已由 V157 证据覆盖）
 
 > **精确已验收代码主线 SHA**：[`2e96bf421d1b8e0c2a2999ab63a236d80ea3a9d9`](https://github.com/kunlong-luo/merchivra/commit/2e96bf421d1b8e0c2a2999ab63a236d80ea3a9d9)。[V150 完整 A3 #43361557152](https://github.com/kunlong-luo/merchivra/actions/runs/43361557152) **第 1 次尝试 7/7 SUCCESS**：真实一次性 PostgreSQL 18/Flyway/HTTP、Java 25/Gradle、Next/Vite Chromium、Docker Compose 和临时本地 CA 验证的 HTTPS 切流。技术合成测试不能代表目标生产环境，也不能代替逐需求 G1/G2/G3 签字。
 
