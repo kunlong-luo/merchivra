@@ -343,7 +343,7 @@ public class FbaPurchaseLinkService {
                 AND mapping.product_sku_id=pl.product_sku_id
             )
             """);
-        if(purchaseLine!=null){sql.append(" AND pl.id=?");args.add(purchaseLine);}
+        if(purchaseLine!=null){sql.append(" AND pl.id=? ");args.add(purchaseLine);}
         if(after!=null){
             sql.append("""
              AND (po.updated_at,po.id,pl.id,COALESCE(a.id,
