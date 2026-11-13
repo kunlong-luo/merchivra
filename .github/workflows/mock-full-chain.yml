@@ -181,6 +181,15 @@ jobs:
             docker inspect --format '{{json .State.Health}}' "$next_container"
             exit 1
           fi
+          # V154: the exact Node container healthcheck now also requires
+          # real PostgreSQL-backed Spring Actuator status UP, not just Ping.
+          # Only the host loopback can reach direct Spring/Actuator here.
+          curl --fail --silent --show-error --max-time 5 \
+            http://127.0.0.1:8080/actuator/health |
+            python3 -c 'import json,sys; a=json.load(sys.stdin); assert a.get("status")=="UP"'
+          # /actuator is NOT a public Next rewrite; private backend DNS only.
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            http://127.0.0.1:3001/actuator/health)" = 404
           # V144: all 11 real Next App Router screens, not a seven-route
           # sample. The V101 real-session test then checks no SSR user leak.
           for path in / /core /orders /catalog /inventory /purchasing /ops /finance /connections /team /sync; do

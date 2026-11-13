@@ -36,6 +36,7 @@ assert "MERCHIVRA_API_INTERNAL_URL=http://server:8080" in node
 assert "MERCHIVRA_API_INTERNAL_URL" in next_config
 assert "output:'standalone'" in next_config
 assert "source:'/api/:path*'" in next_config
+assert "/actuator/health" not in next_config, "Actuator must remain private to backend DNS"
 assert not any(secret in overlay for secret in (
     "MERCHIVRA_LWA_CLIENT_SECRET",
     "MERCHIVRA_SPAPI_OAUTH_ENCRYPTION_KEY_BASE64",
@@ -80,9 +81,16 @@ if args.compose:
         "response.headers.get('content-type')",
         "application/json",
         "response.json()",
-        "ping.service === 'merchivra'",
-        "ping.status === 'ok'",
-        "ping.stage === 'M0'",
+        "ping.service !== 'merchivra'",
+        "ping.status !== 'ok'",
+        "ping.stage !== 'M0'",
+        # V154: direct backend Actuator must check DB health, NEVER expose
+        # /actuator/health via public Next's /api rewrite.
+        "http://server:8080/actuator/health",
+        "health.status !== 200",
+        "health.headers.get('content-type')",
+        "health.json()",
+        "state.status === 'UP'",
         "redirect: 'manual'",
         "cache: 'no-store'",
         "process.exit(ok ? 0 : 1)",
@@ -102,5 +110,5 @@ if args.compose:
             assert env.get(var,"").lower() == "false", f"Unsafe {var}"
         assert env["MERCHIVRA_SESSION_COOKIE_SECURE"] == "true"
 
-print("PASS V122/V128/V153: nonroot Node standalone, private API proxy, safe rollback "
+print("PASS V122/V128/V153/V154: nonroot Node standalone, private API proxy, safe rollback "
       "and loopback-only Next container")
