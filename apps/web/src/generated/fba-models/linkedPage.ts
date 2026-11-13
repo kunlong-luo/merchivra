@@ -5,13 +5,12 @@
  * Owner Session; MOCK/MANUAL_UNVERIFIED evidence only. No Amazon writes.
  * OpenAPI spec version: 145.0.0
  */
-
 import type { Linked } from './linked.ts';
 
 export interface LinkedPage {
-  hasMore?: boolean;
   items?: Linked[];
   /** @nullable */
   nextCursor?: string | null;
+  hasMore?: boolean;
   pageSize?: number;
 }
