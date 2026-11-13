@@ -193,6 +193,39 @@ class V151OperatorTargetIngressTests(unittest.TestCase):
                 self.assertEqual(result["status"], "BLOCKED")
                 self.assertFalse(result["checks"]["INVALID_HOST_REJECTED"])
 
+    def test_csrf_no_store_parses_combined_cache_directives_without_raw_output(self):
+        self.assertTrue(target.no_store((("Cache-Control", "private, no-store"),)))
+        self.assertTrue(target.no_store((("cache-control", "NO-STORE, max-age=0"),)))
+        self.assertFalse(target.no_store((("Cache-Control", "private, max-age=0"),)))
+        self.assertFalse(target.no_store((("Cache-Control", "no-store-unsafe"),)))
+
+    def test_orders_html_transport_is_bounded_and_accepts_no_credentials(self):
+        captured = []
+        class PageConnection:
+            def __init__(self, **kwargs):
+                captured.append(("connection", kwargs))
+            def request(self, method, path, headers):
+                captured.append(("request", method, path, headers))
+            def getresponse(self):
+                result = Mock()
+                result.status = 200
+                result.getheaders.return_value = [("Content-Type", "text/html")]
+                result.read.return_value = b"<html>Merchivra ERP</html>"
+                return result
+            def close(self):
+                captured.append(("close",))
+        with patch.object(target.http.client, "HTTPSConnection",
+                          side_effect=lambda **kw: PageConnection(**kw)):
+            page = target.request_https(HOST, "/orders", ssl.create_default_context())
+        self.assertEqual(page.status, 200)
+        self.assertEqual(captured[1][1:3], ("GET", "/orders"))
+        headers = captured[1][3]
+        self.assertEqual(headers["Accept"], "text/html")
+        self.assertEqual(headers["Host"], HOST)
+        self.assertFalse(any(key.lower() in ("cookie", "authorization")
+                             for key in headers))
+        self.assertEqual(captured[-1], ("close",))
+
     def test_connection_uses_verified_tls_fixed_host_get_only(self):
         captured = []
         class SyntheticConnection:
