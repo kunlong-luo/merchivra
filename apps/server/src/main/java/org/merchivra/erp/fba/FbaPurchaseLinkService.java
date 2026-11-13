@@ -50,6 +50,10 @@ public class FbaPurchaseLinkService {
         @Schema(types={"string","null"}) String confirmedBy,String createdAt,
         @Schema(types={"string","null"}) String confirmedAt) {}
     public record Changed(String id,String state) {}
+    public record LinkedPage(List<Linked> items,
+        @Schema(types={"string","null"}) String nextCursor,boolean hasMore,int pageSize) {}
+    public record CandidatePage(List<Candidate> items,
+        @Schema(types={"string","null"}) String nextCursor,boolean hasMore,int pageSize) {}
     private static ResponseStatusException bad(String value){
         return new ResponseStatusException(HttpStatus.BAD_REQUEST,value);
     }
@@ -254,7 +258,7 @@ public class FbaPurchaseLinkService {
 
     /** Full V147 shipment-link history; legacy LIMIT 200 read is kept for old consumers. */
     @Transactional(readOnly=true)
-    public LocalKeysetPage.Page<Linked> linksPage(UUID tenant,UUID marketplace,UUID shipment,
+    public LinkedPage linksPage(UUID tenant,UUID marketplace,UUID shipment,
                                                   UUID inboundLine,String state,int requested,
                                                   String cursor) {
         int limit=LocalKeysetPage.limit(requested);
@@ -280,9 +284,10 @@ public class FbaPurchaseLinkService {
         sql.append(" ORDER BY link.created_at DESC,link.id DESC LIMIT ?");
         args.add(limit+1);
         List<Linked> fetched=jdbc.query(sql.toString(),FbaPurchaseLinkService::map,args.toArray());
-        return LocalKeysetPage.pack(fetched,limit,last->LocalKeysetPage.encode(
+        var page=LocalKeysetPage.pack(fetched,limit,last->LocalKeysetPage.encode(
             tenant.toString(),marketplace.toString(),shipment.toString(),
             inboundLine==null?"ALL":inboundLine.toString(),checked,last.createdAt(),last.id()));
+        return new LinkedPage(page.items(),page.nextCursor(),page.hasMore(),page.pageSize());
     }
 
     private static CandidateRow mapCandidateRow(ResultSet r,int i)throws SQLException {
@@ -301,7 +306,7 @@ public class FbaPurchaseLinkService {
 
     /** Full approved PO+optional SHIPPED ASN source candidates for one inbound line. */
     @Transactional(readOnly=true)
-    public LocalKeysetPage.Page<Candidate> candidatesPage(UUID tenant,UUID marketplace,
+    public CandidatePage candidatesPage(UUID tenant,UUID marketplace,
                         UUID shipment,UUID inboundLine,UUID purchaseLine,int requested,
                         String cursor) {
         int limit=LocalKeysetPage.limit(requested);
@@ -366,7 +371,7 @@ public class FbaPurchaseLinkService {
                 last.updatedAt().toInstant().toString(),last.po().toString(),
                 last.line().toString(),last.asn().toString());
         }
-        return new LocalKeysetPage.Page<>(
+        return new CandidatePage(
             page.stream().map(CandidateRow::candidate).toList(),next,more,limit);
     }
 
