@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""V151: operator-only target TLS/Next ingress observations, not a release gate.
+"""V151/V152: operator-only target TLS/Next ingress observations, not a release gate.
 
-No authentication, Seller/Ads, writes, or deployment. Three fixed anonymous
+No authentication, Seller/Ads, writes, or deployment. Four fixed anonymous
 GET routes plus a deliberately invalid Host on /api/v1/ping. This can create
 only an anonymous CSRF session in the target Spring Session store. DO NOT run
 against a target without authorization. No network is used by tests or CI.
@@ -89,7 +89,8 @@ def request_https(host: str, path: str, context: ssl.SSLContext,
 
 def no_store(headers: tuple[tuple[str, str], ...]) -> bool:
     return any(key.lower() == "cache-control"
-               and "no-store" in value.lower().split(",")
+               and any(item.strip().split("=", 1)[0] == "no-store"
+                       for item in value.lower().split(","))
                for key, value in headers)
 
 
