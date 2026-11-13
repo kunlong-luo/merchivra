@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """V146 offline, deterministic TLS configuration and fail-closed entry tests."""
 import os
+import io
+import contextlib
 import subprocess
 import sys
 import tempfile
@@ -86,6 +88,27 @@ class V146SafeHttpsTests(unittest.TestCase):
             self.assertNotIn("synthetic-v146-bootstrap-credential",
                              run.stdout+run.stderr)
             self.assertIn("BLOCKED",run.stderr)
+
+    def test_failure_stage_is_static_and_redacts_private_exception_payload(self):
+        with self.assertRaisesRegex(ValueError,"invalid_static_canary_stage"):
+            smoke.mark_stage("../secret_injected_phase")
+        diagnostic=io.StringIO()
+        def masked_failure(*_):
+            smoke.mark_stage("session-cookie")
+            raise AssertionError("synthetic-private-token-NEVER-PRINT")
+        with (patch.dict(os.environ,FAKE,clear=True),
+              patch.object(sys,"argv",[
+                  "smoke_https_cutover_v146.py","verify",
+                  "--config","/tmp/merchivra-v146-test/nginx.conf",
+                  "--cert","/tmp/merchivra-v146-test/cert.pem",
+                  "--container","v146-https-123"]),
+              patch.object(smoke,"run_synthetic",side_effect=masked_failure),
+              contextlib.redirect_stderr(diagnostic)):
+            self.assertEqual(smoke.main(),2)
+        self.assertIn("BLOCKED: AssertionError stage=session-cookie",
+                      diagnostic.getvalue())
+        self.assertNotIn("synthetic-private-token-NEVER-PRINT",
+                         diagnostic.getvalue())
 
     def test_no_production_claim_or_external_host_in_success_evidence(self):
         source=Path(__file__).with_name("smoke_https_cutover_v146.py").read_text()
