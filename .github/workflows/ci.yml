@@ -489,6 +489,11 @@ jobs:
             exit 1
           fi
           echo 'PASS V146 refusal + only fixed localhost TLS and safe backend switches'
+      - name: V151 operator-only target ingress guard and offline HTTPS checks
+        run: |
+          python3 -m py_compile scripts/check_next_target_ingress_v151.py
+          python3 -m unittest discover -s scripts -p 'test_next_target_ingress_v151.py' -v
+          echo 'PASS V151: operator-only target HTTPS observations; no external requests in CI'
       - name: V143 fail-closed production readiness and human approval contracts
         run: |
           python3 -m py_compile scripts/check_production_gate_v143.py
