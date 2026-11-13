@@ -187,7 +187,11 @@ class TargetImageEvidenceV160Tests(unittest.TestCase):
             with self.subTest(path=path):
                 source=(root/path).read_text()
                 expected=2 if path.endswith("compose.yaml") else 1
-                self.assertEqual(source.count("MERCHIVRA_BUILD_REVISION:"),expected)
+                # The variable also appears inside ${MERCHIVRA_BUILD_REVISION:-}.
+                # Count only YAML keys, not interpolation occurrences.
+                keys = [line for line in source.splitlines()
+                        if line.lstrip().startswith("MERCHIVRA_BUILD_REVISION:")]
+                self.assertEqual(len(keys), expected)
 
 if __name__ == "__main__":
     unittest.main()
