@@ -3,6 +3,7 @@
 import os
 import ssl
 import io
+import json
 import contextlib
 import subprocess
 import sys
@@ -10,6 +11,7 @@ import tempfile
 import unittest
 from pathlib import Path
 from unittest.mock import Mock,patch
+from urllib.error import URLError
 import smoke_https_cutover_v146 as smoke
 
 FAKE={
@@ -214,6 +216,136 @@ class V146SafeHttpsTests(unittest.TestCase):
                     "V146 TLS canary BLOCKED: AssertionError stage="+stage+"\n"
                 )
                 self.assertNotIn("synthetic-secret-session-id",diagnostic.getvalue())
+
+    def _v157_ingress_probe(self,candidate="next",status=200,
+                           content_type="application/json; charset=UTF-8",
+                           payload=None):
+        if payload is None:
+            payload=json.dumps({
+                "service":"merchivra","status":"ok","stage":"M0"
+            }).encode()
+        probe=Mock()
+        probe.call.return_value=(
+            status,payload,{
+                "Content-Type":content_type,
+                "X-Merchivra-V146-Candidate":candidate
+            }
+        )
+        return probe
+
+    def test_v157_ingress_accepts_verified_real_spring_identity(self):
+        probe=self._v157_ingress_probe()
+        smoke.wait_for_ingress(probe,"next",attempts=1)
+        probe.call.assert_called_once_with("/api/v1/ping")
+
+    def test_v157_ingress_retries_only_transport_and_502_503_504(self):
+        for status in (502,503,504):
+            with self.subTest(status=status):
+                probe=self._v157_ingress_probe()
+                healthy=probe.call.return_value
+                probe.call.side_effect=[
+                    OSError("synthetic-transport-private-payload"),
+                    (status,b"synthetic-private-error",{}),healthy
+                ]
+                with patch.object(smoke.time,"sleep") as sleeper:
+                    smoke.wait_for_ingress(probe,"next",attempts=3)
+                self.assertEqual(probe.call.call_count,3)
+                self.assertEqual(sleeper.call_count,2)
+        # Restart never becomes healthy: it is BLOCKED, not accepted.
+        unavailable=self._v157_ingress_probe(status=503)
+        with (patch.object(smoke.time,"sleep") as sleeper,
+              self.assertRaises(RuntimeError)):
+            smoke.wait_for_ingress(unavailable,"next",attempts=2)
+        self.assertEqual(unavailable.call.call_count,2)
+        sleeper.assert_called_once_with(.25)
+
+    def test_v157_previous_verified_backend_only_during_reload(self):
+        stale=self._v157_ingress_probe(candidate="vite").call.return_value
+        ready=self._v157_ingress_probe(candidate="next").call.return_value
+        probe=Mock()
+        probe.call.side_effect=[stale,ready]
+        with patch.object(smoke.time,"sleep") as sleeper:
+            smoke.wait_for_ingress(probe,"next",previous="vite",attempts=2)
+        self.assertEqual(probe.call.call_count,2)
+        sleeper.assert_called_once_with(.25)
+        # An old backend cannot be accepted indefinitely as the new target.
+        stale_only=self._v157_ingress_probe(candidate="vite")
+        with (patch.object(smoke.time,"sleep") as sleeper,
+              self.assertRaises(RuntimeError)):
+            smoke.wait_for_ingress(
+                stale_only,"next",previous="vite",attempts=2
+            )
+        sleeper.assert_called_once_with(.25)
+
+    def test_v157_invalid_status_content_identity_or_upstream_fails_immediately(self):
+        cases=[
+            ("unauthorized",self._v157_ingress_probe(status=401)),
+            ("redirect",self._v157_ingress_probe(status=302)),
+            ("server-error",self._v157_ingress_probe(status=500)),
+            ("fake-html",self._v157_ingress_probe(content_type="text/html")),
+            ("arbitrary-json",self._v157_ingress_probe(
+                content_type="application/vnd.evil+json")),
+            ("malformed-json",self._v157_ingress_probe(payload=b"bad-json")),
+            ("non-dict-json",self._v157_ingress_probe(payload=b"[]")),
+            ("wrong-service",self._v157_ingress_probe(payload=b'{"service":"fake","status":"ok","stage":"M0"}')),
+            ("wrong-stage",self._v157_ingress_probe(payload=b'{"service":"merchivra","status":"ok","stage":"fake"}')),
+            ("wrong-upstream",self._v157_ingress_probe(candidate="rogue")),
+            ("unlabeled-upstream",self._v157_ingress_probe(candidate=None)),
+            ("stale-without-reload",self._v157_ingress_probe(candidate="vite")),
+        ]
+        for description,probe in cases:
+            with (self.subTest(description=description),
+                  patch.object(smoke.time,"sleep") as sleeper,
+                  self.assertRaises(AssertionError)):
+                smoke.wait_for_ingress(probe,"next",attempts=3)
+            probe.call.assert_called_once()
+            sleeper.assert_not_called()
+        # Even a known stale candidate cannot shield a fake Spring identity.
+        fake=self._v157_ingress_probe(
+            candidate="vite",payload=b'{"service":"fake","status":"ok","stage":"M0"}'
+        )
+        with (patch.object(smoke.time,"sleep") as sleeper,
+              self.assertRaises(AssertionError)):
+            smoke.wait_for_ingress(fake,"next",previous="vite",attempts=3)
+        sleeper.assert_not_called()
+
+    def test_v157_urllib_wrapped_cert_error_fails_without_retry(self):
+        certificate=ssl.SSLCertVerificationError("private-ca-failure")
+        # Raw SSL and urllib's OSError wrapper are distinct Python paths.
+        for name,error,raised in [
+            ("raw-ssl",certificate,ssl.SSLError),
+            ("wrapped-ssl",URLError(certificate),AssertionError),
+        ]:
+            probe=Mock()
+            probe.call.side_effect=error
+            with (self.subTest(name=name),
+                  patch.object(smoke.time,"sleep") as sleeper,
+                  self.assertRaises(raised)):
+                smoke.wait_for_ingress(probe,"next",attempts=4)
+            probe.call.assert_called_once()
+            sleeper.assert_not_called()
+        # V150 auth readiness must also reject urllib's wrapped TLS failures.
+        auth=Mock()
+        auth.call.side_effect=URLError(certificate)
+        with (patch.object(smoke,"Client",return_value=auth) as factory,
+              patch.object(smoke.time,"sleep") as sleeper,
+              self.assertRaises(AssertionError)):
+            smoke.wait_for_secure_auth("/synthetic-ca",attempts=4)
+        factory.assert_called_once()
+        sleeper.assert_not_called()
+
+    def test_v157_invalid_target_previous_or_attempt_budget_is_refused(self):
+        probe=Mock()
+        for target,previous,attempts in (
+            ("evil.invalid",None,2),("next","evil.invalid",2),
+            ("next","next",2),("next",None,0),("next",None,41)
+        ):
+            with self.subTest(target=target,previous=previous,attempts=attempts):
+                with self.assertRaises(ValueError):
+                    smoke.wait_for_ingress(
+                        probe,target,previous=previous,attempts=attempts
+                    )
+        probe.call.assert_not_called()
 
     def test_no_production_claim_or_external_host_in_success_evidence(self):
         source=Path(__file__).with_name("smoke_https_cutover_v146.py").read_text()
