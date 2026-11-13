@@ -1,6 +1,6 @@
 # RTM-001 · MVP P0 全链路追踪矩阵（第二轮静态验收）
 
-> **2026-11-13 当前验收状态提醒（V146）**：此文件仍是**旧设计可追溯矩阵，未逐 FR 签署**。现行 [V146 状态补丁](../roadmap/mvp-freeze-release-v108.md) 和 [A3 7/7 合成结果](https://github.com/kunlong-luo/merchivra/actions/runs/43284799417) 已确认采购/供应商/仓储 #62 技术验收关闭，但 **#108 FBA 采购关联全库历史/候选仍需代码与 PG18 验证**；Next 生产切流 #63、生产 G1/G2/G3 #104 和真实 Seller/Ads 试点均未批准。待功能候选冻结时须另行形成按每条 FR 列出实现路径、合同、最新 commit/Actions SHA、模拟/真实 API 证据、负责人、批准时间、阻塞理由的**当前验收 RTM**。未提供独立证据的列一律填“待验证”，不可用本文件的旧关联 AC 或任一绿色 CI 自动填“已验收”。
+> **2026-11-13 当前验收状态提醒（V148）**：本文件仍为**历史设计可追溯矩阵**，已独立建立 [RTM-002 · V148 代码与验收证据](implementation-acceptance-rtm-v148.md) 对照 25 条 P0、3 条 P1、1 条 P2 的现有实现和相关测试入口。[V148 main SHA a09fc4b2 完整 A3 #43356548084](https://github.com/kunlong-luo/merchivra/actions/runs/43356548084) **第二次运行尝试 7/7 成功**，第 1 次 V146 TLS canary 失败的历史不得掩盖。采购/仓储 #62 与 FBA 关联来源分页 #108 均按**合成技术范围**关闭；Next 生产切流 #63、生产 G1/G2/G3 #104、真实 Seller/Ads/银行等**尚未批准**。原始 FR → AC 对照不等于逐条验收或实际人员签署，未核实项必须保持“待验证”。
 
 
 **状态：原始设计追踪矩阵（历史基线）；G1/G2/G3 尚未签署。** 本文的 FR → 文档 → AC 链接属于**需求设计可追溯性**，不能用“尚未实现”概括 V107/V108 已经提交的商品、订单、库存、采购、同步和财务代码。最新 P0/已实现与未验收的分界，请先阅读 [V108 现行计划](../roadmap/mvp-freeze-release-v108.md)、[当前文档中心](../README.md)、[V86 历史功能审计](../testing/core-coverage-audit-v86.md) 和 [V108 采购容量缺口](../testing/p0-purchasing-read-cap-audit-v108.md)。
