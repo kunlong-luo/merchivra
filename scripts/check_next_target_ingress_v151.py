@@ -75,7 +75,8 @@ def request_https(host: str, path: str, context: ssl.SSLContext,
         conn.request(
             "GET", path,
             headers={"Host": "untrusted.invalid" if forged_host else host,
-                     "Accept": "application/json", "Connection": "close"},
+                     "Accept": "text/html" if path == "/orders" else "application/json",
+                     "Connection": "close"},
         )
         response = conn.getresponse()
         # The one approved Next HTML GET can be larger than the API JSON.
