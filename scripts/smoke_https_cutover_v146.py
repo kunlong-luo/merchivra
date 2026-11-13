@@ -33,7 +33,8 @@ SAFE_STAGES=frozenset((
     "preflight","ingress-next","anonymous-access","csrf-init",
     "login-guard","login-real","session-cookie","secure-auth-readiness",
     "next-routes",
-    "vite-rollback","next-rollforward","logout"
+    "vite-switch","vite-auth","vite-page","vite-access-control",
+    "next-switch","next-auth","logout"
 ))
 CURRENT_STAGE="preflight"
 
@@ -298,23 +299,29 @@ def run_synthetic(certificate:str,config_path:Path,container:str):
 
     # Same origin, same secure HttpOnly cookie, same Spring Session:
     # Vite rollback must keep identity without a new login or a copied token.
-    mark_stage("vite-rollback")
+    # V156: distinguish proxy reload from same-cookie identity and page checks.
+    # Only static stage labels reach CI; no URL, tenant, user or cookie content.
+    mark_stage("vite-switch")
     switch("vite")
+    mark_stage("vite-auth")
     viewer_vite,_=client.json("/api/v1/auth/me")
     if viewer_vite.get("userId")!=viewer["userId"]:
         raise AssertionError("vite_rollback_lost_authenticated_principal")
+    mark_stage("vite-page")
     fallback_html,headers=client.expect("/purchasing")
     if headers.get("X-Merchivra-V146-Candidate")!="vite":
         raise AssertionError("rollback_wrong_backend")
     if b"Merchivra" not in fallback_html:
         raise AssertionError("rollback_unavailable")
+    mark_stage("vite-access-control")
     public.expect("/api/v1/auth/me",expected=401)
     client.expect("/api/v1/operations/scan",method="POST",
                   body={},expected=403)
 
     # Roll forward after verifying Vite: identity still in same Spring store.
-    mark_stage("next-rollforward")
+    mark_stage("next-switch")
     switch("next")
+    mark_stage("next-auth")
     viewer_next,_=client.json("/api/v1/auth/me")
     if viewer_next.get("userId")!=viewer["userId"]:
         raise AssertionError("next_rollforward_lost_session")
