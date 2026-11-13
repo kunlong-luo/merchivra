@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * V153/V154: execute the ACTUAL effective Compose healthcheck expression
+ * V153/V154/V155: execute the ACTUAL effective Compose healthcheck expression
  * against offline fake Spring and Actuator replies. No network, credentials
  * or Docker runtime is required beyond docker compose config --format json.
  */
@@ -20,6 +20,16 @@ const correctPing={service:'merchivra',status:'ok',stage:'M0'}
 const ready={status:'UP'}
 const cases=[
   {label:'Spring identity and PostgreSQL-backed Actuator UP',expected:0,requests:2},
+  // Spring Boot Actuator uses vendor-specific JSON by default; never
+  // confuse correct v2/v3 vendor JSON with arbitrary/HTML/JSONP payloads.
+  {label:'Actuator v3 vendor JSON accepted',healthType:'application/vnd.spring-boot.actuator.v3+json',expected:0,requests:2},
+  {label:'Actuator v2 vendor JSON accepted',healthType:'application/vnd.spring-boot.actuator.v2+json',expected:0,requests:2},
+  {label:'Actuator vendor JSON charset and case accepted',healthType:'APPLICATION/VND.SPRING-BOOT.ACTUATOR.V3+JSON; charset=UTF-8',expected:0,requests:2},
+  {label:'Standard JSON charset accepted',healthType:'application/json; charset=utf-8',expected:0,requests:2},
+  {label:'Non-Spring vendor JSON rejected',healthType:'application/vnd.other.actuator.v3+json',expected:1,requests:2},
+  {label:'text-json rejected',healthType:'text/json',expected:1,requests:2},
+  {label:'JSONP content type rejected',healthType:'application/jsonp',expected:1,requests:2},
+  {label:'Unreviewed Actuator v4 rejected',healthType:'application/vnd.spring-boot.actuator.v4+json',expected:1,requests:2},
   {label:'Next or nginx HTML 200 cannot fake Spring',pingType:'text/html',expected:1,requests:1},
   {label:'wrong Spring identity',pingJson:{service:'other',status:'ok',stage:'M0'},expected:1,requests:1},
   {label:'missing Spring stage',pingJson:{service:'merchivra',status:'ok'},expected:1,requests:1},
@@ -83,4 +93,4 @@ for(const scenario of cases){
   assert.deepEqual(requested,scenario.requests===2?[PING_URL,HEALTH_URL]:[PING_URL],
     'Health probe did not run only expected endpoints: '+scenario.label)
 }
-console.log('PASS V154: 22 offline Compose healthcheck cases; Spring identity AND private Actuator UP required')
+console.log('PASS V155: 30 offline Compose healthcheck cases; Spring identity AND private Actuator UP required')
