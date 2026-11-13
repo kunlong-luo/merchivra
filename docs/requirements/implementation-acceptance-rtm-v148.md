@@ -1,5 +1,7 @@
 # RTM-002 · V148 P0 代码与验收证据追踪（待正式签署）
 
+> **当前新增 V158 基线**：完整 A3 最近验收对应 [V157 main 5ac412dab7e71a0703c4887614bfba17fbe2eb25](https://github.com/kunlong-luo/merchivra/commit/5ac412dab7e71a0703c4887614bfba17fbe2eb25)，[A3 #43422914368](https://github.com/kunlong-luo/merchivra/actions/runs/43422914368) **首次 7/7 SUCCESS**；本 RTM 仍是 V148 时建立的**需求与代码入口追踪**，下方 V148/V149/V150 是历史技术基线，**不能据此把任一真实来源验收或 G1/G2/G3 签署改为通过**。技术跟踪 #63 已由维护者关闭，但真实目标 TLS/Next 切流与正式生产准入仍由 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 阻塞；详见 [V158 只读证据工作清单](../operations/v158-production-evidence-worklist.md)。
+
 > **状态：2026-11-13 静态代码/测试入口核查，不是逐 FR 已验收报告，也不是 G1/G2/G3 批准。** 追踪范围取自 [FR-001](functional.md) 与 [原始设计 RTM](traceability.md)；仓库路径已按本次 `main` 递归文件树检查存在性。**文件存在 ≠ 需求全部满足；相关测试类存在 ≠ 每个验收 AC 覆盖；合成 A3 绿灯 ≠ 真实 Amazon/银行或生产证书、IAM、PITR 验收。** 使用此表由责任人逐行追加真实证据，不得直接将“未签署”改为通过。
 
 > **V149 最新技术证据（2026-11-13）**：[main `57d55b6e54e07cac1473259763ce48e4d96e9816`](https://github.com/kunlong-luo/merchivra/commit/57d55b6e54e07cac1473259763ce48e4d96e9816) 的 [完整 A3 #43358590421](https://github.com/kunlong-luo/merchivra/actions/runs/43358590421) **第 1 次运行尝试 7/7 SUCCESS**。V149 仅增脱敏 HTTPS canary 阶段定位；此前 V148 第一次失败根因未明的 [#115](https://github.com/kunlong-luo/merchivra/issues/115) 保持 OPEN。此证据属于整个合成回归，并**不能**把以下逐 FR 的真实 Seller/Ads/银行来源或正式 G1/G2/G3 批准列为通过。后文 V148 SHA 仍作为上一轮专项功能验收历史。
@@ -11,7 +13,7 @@
 - **代码基线**：V148 `main` [`a09fc4b2c8fa49b843e28642fb0fb39b7f114a5e`](https://github.com/kunlong-luo/merchivra/commit/a09fc4b2c8fa49b843e28642fb0fb39b7f114a5e)，相对 V147 增加合成 Chromium 新 /page 接口 fixture 修复与 A3 触发。
 - **本次完整 A3**：[运行 #43356548084](https://github.com/kunlong-luo/merchivra/actions/runs/43356548084) — **run_attempt=2 最终 7/7 SUCCESS**，且 7 个 job 均属于提交 `a09fc4b2`；首次尝试 V146 本地 HTTPS canary 遇到 fail-closed `AssertionError`，绝不能隐瞒这个历史失败或把重验成功理解为完全没有不稳定性。覆盖 Java 25/Gradle、React/Vite、Next/Chromium、隔离 PG18/Flyway/真实 HTTP/Compose、同源 HTTPS 回滚；仍非真实生产批准。
 - **特定容量合同**：[V144 采购全库 #62](https://github.com/kunlong-luo/merchivra/issues/62) 已关闭；[V147 FBA PO/ASN 来源 #108](https://github.com/kunlong-luo/merchivra/issues/108) 已基于 V148 同一 SHA 的 A3 **技术范围关闭**。
-- **真实生产阻塞**：[Next/HTTPS #63](https://github.com/kunlong-luo/merchivra/issues/63)、[G1/G2/G3/IAM/PITR/值班 #104](https://github.com/kunlong-luo/merchivra/issues/104) 保持 OPEN；Seller/Ads 真实 OAuth/外部数据不得进入 CI 或公众演示。
+- **真实生产阻塞**：[Next/HTTPS #63](https://github.com/kunlong-luo/merchivra/issues/63) 已由维护者按技术范围 CLOSED（不代表目标已验收），[G1/G2/G3/IAM/PITR/值班 #104](https://github.com/kunlong-luo/merchivra/issues/104) 仍 OPEN；Seller/Ads 真实 OAuth/外部数据不得进入 CI 或公众演示。
 - **证据分级**：实现路径（存在）→ 相关测试（可能部分覆盖）→ 当前 SHA 的真实隔离 PG18/HTTP/Chromium（仅合成技术层已验证，不逐 FR 自动放行）→ 用户本地只读真 API（未执行）→ G1/G2/G3 授权签署（未执行）。没有具体用例/采样和签署，不得从左列自动推导右列。
 
 ## 按功能需求逐条登记
