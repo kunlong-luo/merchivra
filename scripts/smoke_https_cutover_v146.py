@@ -31,7 +31,8 @@ PORTS={"next":3001,"vite":3000}
 # Never print exception text, URLs, response bodies, session or credential data.
 SAFE_STAGES=frozenset((
     "preflight","ingress-next","anonymous-access","csrf-init",
-    "login-guard","login-real","session-cookie","next-routes",
+    "login-guard","login-real","session-cookie","secure-auth-readiness",
+    "next-routes",
     "vite-rollback","next-rollforward","logout"
 ))
 CURRENT_STAGE="preflight"
@@ -146,6 +147,61 @@ class Client:
         body,headers=self.expect(path,expected=expected,**kwargs)
         return json.loads(body),headers
 
+def wait_for_secure_auth(certificate:str,attempts:int=40)->None:
+    """V150: wait for the RESTARTED secure Spring Session, not ping alone.
+
+    Probe with a distinct anonymous CookieJar, over VERIFIED loopback HTTPS.
+    Only startup transport failures / 502, 503, 504 may be retried briefly.
+    Wrong authorization, missing CSRF, insecure cookies or certificate errors
+    fail immediately: do not hide a security regression behind a retry.
+    """
+    if attempts<1 or attempts>40:
+        raise ValueError("invalid_fixed_readiness_attempts")
+    for index in range(attempts):
+        probe=Client(certificate)
+        try:
+            status,_,_=probe.call("/api/v1/auth/me")
+            if status in (502,503,504):
+                if index+1<attempts:
+                    time.sleep(.25)
+                    continue
+                raise RuntimeError("secure_auth_backend_unavailable")
+            if status!=401:
+                raise AssertionError("secure_auth_anonymous_not_rejected")
+            status,body,_=probe.call("/api/v1/auth/csrf")
+            if status in (502,503,504):
+                if index+1<attempts:
+                    time.sleep(.25)
+                    continue
+                raise RuntimeError("secure_auth_backend_unavailable")
+            if status!=200:
+                raise AssertionError("secure_auth_csrf_status_wrong")
+            try:
+                csrf=json.loads(body)
+            except (ValueError,UnicodeError) as exc:
+                raise AssertionError("secure_auth_csrf_invalid") from exc
+            if (not isinstance(csrf,dict)
+                    or csrf.get("headerName")!="X-CSRF-TOKEN"
+                    or not isinstance(csrf.get("token"),str)
+                    or not csrf["token"]):
+                raise AssertionError("secure_auth_csrf_missing")
+            cookies=[x for x in probe.cookies if x.name=="JSESSIONID"]
+            if len(cookies)!=1 or not cookies[0].secure:
+                raise AssertionError("secure_auth_cookie_not_secure")
+            if (not cookies[0].has_nonstandard_attr("HttpOnly")
+                    or str(cookies[0].get_nonstandard_attr("SameSite","")).lower()!="strict"):
+                raise AssertionError("secure_auth_cookie_flags_invalid")
+            return
+        except ssl.SSLError:
+            # Invalid CA / hostname is a security failure, NOT a startup race.
+            raise
+        except OSError as exc:
+            if index+1>=attempts:
+                raise RuntimeError("secure_auth_transport_unavailable") from exc
+            time.sleep(.25)
+    raise RuntimeError("secure_auth_backend_unavailable")
+
+
 def run_synthetic(certificate:str,config_path:Path,container:str):
     if not CONTAINER.fullmatch(container):
         raise ValueError("invalid_disposable_container")
@@ -183,6 +239,8 @@ def run_synthetic(certificate:str,config_path:Path,container:str):
 
     mark_stage("ingress-next")
     validate_ingress("next")
+    mark_stage("secure-auth-readiness")
+    wait_for_secure_auth(certificate)
     mark_stage("anonymous-access")
     anon,_=public.expect("/api/v1/auth/me",expected=401)
     if anon not in (b"",None):
