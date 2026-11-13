@@ -1,5 +1,16 @@
 # V108 — MVP 收尾、集中测试与上线准入（2026-11-08）
 
+## 2026-11-13 / V149 主线回归（最新技术证据）
+
+> **精确主线 SHA** [`57d55b6e54e07cac1473259763ce48e4d96e9816`](https://github.com/kunlong-luo/merchivra/commit/57d55b6e54e07cac1473259763ce48e4d96e9816)：[完整 V149 A3 #43358590421](https://github.com/kunlong-luo/merchivra/actions/runs/43358590421) **第 1 次运行 7/7 SUCCESS**（Java25/Gradle、Next/Vite/Chromium、隔离 PG18/Flyway/真实 HTTP、Compose、CA 验证的本地 HTTPS 代理与同会话 Next→Vite→Next 回滚）。[PR #116](https://github.com/kunlong-luo/merchivra/pull/116) 仅加入 HTTPS canary **固定阶段、无敏感内容**的失败诊断及脱敏单测，并未更改匿名拒绝/CSRF/Secure Cookie/真实 OAuth 安全门槛。
+
+- #62 与 #108 已依据此前合成技术验收关闭；[RTM-002](../requirements/implementation-acceptance-rtm-v148.md) 提供 25 个 P0 的实际源码/测试入口与仍需人工认可的边界。
+- [#115](https://github.com/kunlong-luo/merchivra/issues/115) **保持开放**：V148 先失败再成功的本地 HTTPS 断言根因未确定；V149 只增强脱敏定位并且本次首次全绿，不代表“零失败”或实际生产 SLA。
+- [#63](https://github.com/kunlong-luo/merchivra/issues/63) 目标生产 Next 受控切流、维护者本地真实 Amazon Seller/Ads 授权与只读来源验收、[#104](https://github.com/kunlong-luo/merchivra/issues/104) 真实 TLS/IAM/KMS/离站 PG18 PITR/Alertmanager 外部值班 ACK/G1/G2/G3 仍**全部未放行**。不在公开 CI 启用真实凭据、生产 API 写入或实际公网 ERP。
+- 后续任何业务、安全或部署代码变更都须重新绑定**新的 main SHA**做风险对应验收；单纯文档说明不得冒充该新 SHA 的全 A3 通过。
+
+---
+
 ## 2026-11-13 / V148 技术验收结论（覆盖下方 V146/V147 历史当前状态）
 
 > **当前精确主线 SHA**：[`a09fc4b2c8fa49b843e28642fb0fb39b7f114a5e`](https://github.com/kunlong-luo/merchivra/commit/a09fc4b2c8fa49b843e28642fb0fb39b7f114a5e)。[V148 完整 A3 #43356548084](https://github.com/kunlong-luo/merchivra/actions/runs/43356548084) 第 **2 次尝试 7/7 jobs SUCCESS**；包括 Java25/Gradle、Next/Vite/Chromium、隔离 PostgreSQL18/Flyway/HTTP/Compose、V146 本地 CA-verified HTTPS 下一致 Session 回滚。**首次尝试 V146 HTTPS canary 发生 fail-closed AssertionError（A3 曾失败），必须保留此不稳定性记录**，不得写成一次就成功。
