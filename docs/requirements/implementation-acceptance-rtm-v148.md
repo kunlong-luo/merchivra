@@ -2,6 +2,8 @@
 
 > **状态：2026-11-13 静态代码/测试入口核查，不是逐 FR 已验收报告，也不是 G1/G2/G3 批准。** 追踪范围取自 [FR-001](functional.md) 与 [原始设计 RTM](traceability.md)；仓库路径已按本次 `main` 递归文件树检查存在性。**文件存在 ≠ 需求全部满足；相关测试类存在 ≠ 每个验收 AC 覆盖；合成 A3 绿灯 ≠ 真实 Amazon/银行或生产证书、IAM、PITR 验收。** 使用此表由责任人逐行追加真实证据，不得直接将“未签署”改为通过。
 
+> **V149 最新技术证据（2026-11-13）**：[main `57d55b6e54e07cac1473259763ce48e4d96e9816`](https://github.com/kunlong-luo/merchivra/commit/57d55b6e54e07cac1473259763ce48e4d96e9816) 的 [完整 A3 #43358590421](https://github.com/kunlong-luo/merchivra/actions/runs/43358590421) **第 1 次运行尝试 7/7 SUCCESS**。V149 仅增脱敏 HTTPS canary 阶段定位；此前 V148 第一次失败根因未明的 [#115](https://github.com/kunlong-luo/merchivra/issues/115) 保持 OPEN。此证据属于整个合成回归，并**不能**把以下逐 FR 的真实 Seller/Ads/银行来源或正式 G1/G2/G3 批准列为通过。后文 V148 SHA 仍作为上一轮专项功能验收历史。
+
 ## 与发布候选的绑定
 
 - **代码基线**：V148 `main` [`a09fc4b2c8fa49b843e28642fb0fb39b7f114a5e`](https://github.com/kunlong-luo/merchivra/commit/a09fc4b2c8fa49b843e28642fb0fb39b7f114a5e)，相对 V147 增加合成 Chromium 新 /page 接口 fixture 修复与 A3 触发。
