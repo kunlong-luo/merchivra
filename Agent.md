@@ -1,3 +1,5 @@
+> **V167 财务交易行证据关联（待专项验收）**：V94 增加 V91 手工费用与 V54 Settlement 具体行的有界、只追加关联及复核。所有分类都是未核验线索；不能凭订单参考编号/金额判定同一笔费用，不能放行 V165 或写 V64/Next 净利润。详见 [V167](docs/finance/settlement-line-evidence-v167.md)。保留真实 Seller/Ads 授权关闭、Next 16 目标和生产 #104 NO-GO。
+
 # Merchivra · Agent 开发策略
 
 > **V109 文档治理规则（2026-11-08）：** 先核对 [当前文档中心](docs/README.md) 和 [P0/历史矛盾审计](docs/governance/docs-audit-v109.md)。维护 README / 开发/部署/安全/CI 文档时，必须与实际 Gradle Java25/Spring Boot4.1.2、PostgreSQL18、React19、Next16 迁移候选、V108 快速 CI + 集中 Mock 里程碑策略一致；早期 PG17/Vue/Maven/未实现声明加历史标签，不能作为当前执行准则。前端/后端/安全或接口改动应更新相关现行文档，并运行 `python3 scripts/check_docs_consistency_v109.py`；该静态检查不代替生产 G1/G2/G3 或真实 Seller 授权。
