@@ -1,4 +1,4 @@
-> **V167 交易行证据关联（尚待 PG18/HTTP 专项验收）**：新增 [V94 持久化来源↔Settlement 交易行关联](apps/server/src/main/resources/db/migration/V94__cost_settlement_line_evidence_links.sql)、`CostSettlementLineEvidenceService` 与 [规则](docs/finance/settlement-line-evidence-v167.md)。只能由 Owner Session 租户/Marketplace 读取既有 V54 具体报告行，数据库复合 FK/原币金额快照/追加审计与独立 Owner 一次性未证实判断必须保留。订单参考编号相似、金额相等、Local LIVE 标志都不是独立扣费同一性证据；不得解除 V165 409、自动写 V162/V64/Next 净利润或打开 Seller/Ads OAuth。V167 的 PR 未经实际 PG18 + HTTP 验收不得宣称完成；#104 仍 NO-GO。
+> **V167 交易行证据关联（合成 PG18/HTTP A3 已通过）**：新增 [V94 持久化来源↔Settlement 交易行关联](apps/server/src/main/resources/db/migration/V94__cost_settlement_line_evidence_links.sql)、`CostSettlementLineEvidenceService` 与 [规则](docs/finance/settlement-line-evidence-v167.md)。只能由 Owner Session 租户/Marketplace 读取既有 V54 具体报告行，数据库复合 FK/原币金额快照/追加审计与独立 Owner 一次性未证实判断必须保留。订单参考编号相似、金额相等、Local LIVE 标志都不是独立扣费同一性证据；不得解除 V165 409、自动写 V162/V64/Next 净利润或打开 Seller/Ads OAuth。PR #143 合并代码 SHA `a57894b6` 的 [完整 A3 #43575075275](https://github.com/kunlong-luo/merchivra/actions/runs/43575075275) 7/7 SUCCESS；仅为合成技术验收，真实账单未核验、V162/V64 真实净利润仍未贯通，#104 NO-GO。
 
 # Merchivra · Agent 开发策略
 
