@@ -293,10 +293,56 @@ sql_denied(f"DELETE FROM finance_cost_settlement_line_audit_v94 "
 assert sql(f"SELECT count(*) FROM finance_cost_settlement_line_audit_v94 "
            f"WHERE tenant_id='{tenant}' AND link_id='{first['id']}'")=="2"
 
+# V168: a concrete report line can be linked to MULTIPLE independent manual
+# costs. This is a dispute over lineage, not automatic proof of double debit.
+c=create("V168-LINE-"+uuid4().hex[:16],uuid4().hex+uuid4().hex,"OTHER_OPERATING")
+c_url=root+"/"+c["id"]
+call(checker,c_url+"/review","POST",{
+    "accept":True,"reason":"Independent synthetic manual source metadata review"})
+before_c=call(owner,c_url+"/identity-check")
+assert not before_c["approvalHeld"] and before_c["sharedSettlementLineCount"]==0
+c_path,c_batch=allocate(c)
+c_link=call(owner,c_url+"/settlement-line-links","POST",{
+    "reportId":report_id,"lineNumber":2})  # line 2 already belongs to b
+assert c_link["similarity"] in ("UNRELATED_LINE_NO_EVIDENCE",
+                               "AMOUNT_ONLY_NO_IDENTITY")
+shared=call(owner,c_url+"/identity-check")
+assert shared["status"]=="POTENTIAL_SETTLEMENT_LINE_COLLISION_HOLD"
+assert shared["approvalHeld"] and shared["linkedSettlementLineCount"]==1
+assert shared["sharedSettlementLineCount"]==1
+assert not shared["lineChargeOwnershipVerified"]
+assert len(shared["signals"])==8 and not any(signals(shared).values())
+drill=call(owner,c_url+"/identity-check/shared-settlement-lines")
+assert drill["sharedLineCount"]==1 and drill["totalLinkedLines"]==1
+assert drill["examplesTruncated"] is False
+assert len(drill["examples"])==1
+assert drill["examples"][0]["reportId"]==report_id
+assert drill["examples"][0]["lineNumber"]==2
+assert drill["examples"][0]["otherManualSourceCount"]==1
+assert not drill["duplicateChargeVerified"] and not drill["accountingReleaseAllowed"]
+assert call(owner,url_b+"/identity-check")["sharedSettlementLineCount"]>=1
+call(checker,c_path+"/"+c_batch+"/decision","POST",{
+    "accept":True,"reason":"Cannot approve the same settlement line twice"},expected=409)
+assert call(owner,c_path)[0]["state"]=="PENDING_REVIEW"
+# Even bypassing the app directly is rejected by the V95 database trigger.
+sql_denied(f"""UPDATE finance_cost_allocation_batch_v92
+ SET state='APPROVED_UNVERIFIED',reviewed_by='{peer['userId']}',
+ reviewed_at=now(),review_reason='Independent synthetic direct SQL review'
+ WHERE tenant_id='{tenant}' AND source_id='{c['id']}'
+   AND id='{c_batch}'""")
+sql_denied(f"""UPDATE spapi_settlement_report_line
+ SET external_order_id='MUTATED-NOT-ALLOWED'
+ WHERE tenant_id='{tenant}' AND report_id='{report_id}' AND line_number=2""")
+sql_denied(f"""DELETE FROM spapi_settlement_report_line
+ WHERE tenant_id='{tenant}' AND report_id='{report_id}' AND line_number=2""")
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}"
+    f"/cost-sources/{c['id']}/identity-check/shared-settlement-lines",
+    expected=404)
+
 after=[sql("SELECT count(*) FROM "+t) for t in
     ("finance_profit_report_job","bank_payout_observation","ads_report_reviewed_cost")]
 assert before==after,"Manual identity scan may not post finance/bank/Ads"
-print("PASS V165/V166/V167 PG18+HTTP: 8-family source preview, audited "
+print("PASS V165/V166/V167/V168 PG18+HTTP: 8-family source preview, audited "
       "settlement-line scoped links and independent unverified review; equal "
       "amount/different key NOT duplication; same Ads key holds approval 409; "
       "no self/unauthorized leak; later claimed-document collision signaled; "

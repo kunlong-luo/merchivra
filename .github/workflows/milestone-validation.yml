@@ -1,3 +1,6 @@
+# V168 exact merged SHA: PG18 V95 shared Settlement line reverse lineage,
+# approval 409 even without V165 key overlap, linked-line immutability.
+# A3 synthetic evidence is NOT verified Amazon charges or production GO.
 # V167 exact merged-main A3: PG18 V94 scoped Settlement line links,
 # immutable snapshots, independent Owner triage, no verified double debit or net profit.
 # No production G1/G2/G3 or Seller/Ads OAuth approval is implied.
@@ -107,7 +110,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V167-A3-PG18-settlement-line-evidence-review' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V168-A3-PG18-shared-line-provenance-hold' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -168,6 +171,7 @@ on:
           - V165-A3-unique-synthetic-evidence-and-identity-guard
           - V166-A3-PG18-collision-case-maker-checker-audit
           - V167-A3-PG18-settlement-line-evidence-review
+          - V168-A3-PG18-shared-line-provenance-hold
 
 permissions:
   contents: read

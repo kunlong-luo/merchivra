@@ -20,6 +20,17 @@ public class CostIdentityReconciliationController {
                                                 CostIdentityReconciliationService service) {
         this.access=access;this.service=service;
     }
+    @Operation(operationId="previewManualCostSharedSettlementLines")
+    @GetMapping("/shared-settlement-lines")
+    public ResponseEntity<CostIdentityReconciliationService.SharedLinePreview>
+        sharedSettlementLines(@Parameter(hidden=true) Authentication auth,
+        @Parameter(hidden=true) HttpServletRequest request,
+        @PathVariable UUID marketplaceId,@PathVariable UUID sourceId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.sharedLinePreview(access.currentTenant(auth,request),
+                marketplaceId,sourceId));
+    }
+
     @Operation(operationId="previewManualCostIdentityOverlap")
     @GetMapping
     public ResponseEntity<CostIdentityReconciliationService.Preview> preview(
