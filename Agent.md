@@ -1,3 +1,5 @@
+> **V169 已完成合成技术 A3（不等于实账验收）**：PR #147 功能、PR #148 完整分类金额验证修复，原始失败 A3 #43587863847 保留，合并 SHA `8c12e042161d4eb0369fd64873eec9f91c30b7ac` 的 [最终 A3 #43588250536](https://github.com/kunlong-luo/merchivra/actions/runs/43588250536) 7/7 SUCCESS。按 [财务规则](docs/finance/cost-profit-readiness-v169.md) 显示人工成本原币/类别/余额/未核验及 Next 可见页面；没有真实费用认证、全成本净利润或生产授权；#104 NO-GO。
+
 > **V169（待技术验收）**：按 [全成本人工来源准备度](docs/finance/cost-profit-readiness-v169.md) 按月份及站点查看八类成本真实存储汇总、已批准但未核验分摊、余额和共享行冲突；Next16 财务工作台已接入。不得把元数据审核视为真实平台扣费认证，不得自动影响 V162/V64，#104 继续 NO-GO。
 
 > **V168（合成 A3 已技术验收）**：同一 V54 Settlement 具体行被两份 V91 费用来源关联时，按 [V168 规则](docs/finance/shared-settlement-line-collision-v168.md) 展示反向来源数量并保守阻断 V164 分摊批准，V95 保护已链接报告行不可变。共享关联不证明重复扣费；PR #145 合并代码 `c2f0c72c` 的 [完整 A3 #43586824346](https://github.com/kunlong-luo/merchivra/actions/runs/43586824346) 首次 7/7 SUCCESS；不等于实际重复扣费证明、不改 V162/V64/Next 利润或 Seller/Ads OAuth，#104 继续 NO-GO。
