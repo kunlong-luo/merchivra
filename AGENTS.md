@@ -1,5 +1,7 @@
 # Merchivra · Agent 开发策略
 
+> **V162 成本核算安全底线**：已落地纯 Java [`FullCostCoverageEngine`](apps/server/src/main/java/org/merchivra/erp/finance/FullCostCoverageEngine.java) 和 [八类费用规则](docs/finance/full-cost-coverage-v162.md)。仅允许外部受审且明确不在 V33 Finances/签名 Amazon/FBA 费中的正费用降低已知贡献预览；缺失/手工未审/多币种/重复来源/退款负费用一律不准作为确认净利润。所有 G1 凭证签署、来源持久化、SKU/订单/期间分摊和 V64 集成仍未实现；测试成功≠真实净利润。
+>
 > **V161 利润优先与前端统一决策（2026-11-14）**：产品首要 P0 是**全成本来源核算→订单/SKU/店铺/站点利润→多维报表与缺项追溯**；订单、采购、库存、FBA/FBM、广告、结算是上游证据。已有 V33/V61/V64 **仅是已知费用范围的贡献估算**，不允许把未核对的广告、头程/仓储、退货退款、税费、汇兑/银行费用默认为 0 或称“真实净利润”。所有新增利润计算须按原币/来源/期间/生效版本、金额守恒、无双计、跨期退款、费用分摊与财务 G1 决策做测试，并优先给 Next 利润中心展示成本覆盖率与不可计算原因。详见 [V161 利润优先产品规划](docs/product/profit-first-next-primary-v161.md)。
 >
 > **前端唯一长期目标：React 19 + Next.js 16 App Router**，仍保留 Spring Boot/Gradle/PG18 业务后端。当前的 Vite/Nginx 是**尚未完成真实目标切流前的默认旧部署及短期回退**，不是正式最终前端，也不能直接删除导致回退丢失。后续仅在 Next 业务/利润入口、真实目标 TLS/Session/CSRF/Owner、多维 UI/回退受控验收并独立批准后调整默认部署，最终退休 Vite 业务构建。技术 Issue #63 已关闭不代表生产 TLS/G1/G2/G3 获批；[#104](https://github.com/kunlong-luo/merchivra/issues/104) 仍 NO-GO，Seller/Ads 真实 OAuth 和远程读写继续关闭。旧文档关于 Vite/Vue/Maven 的技术选型只作历史记录。
