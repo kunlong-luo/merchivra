@@ -18,7 +18,8 @@ BEGIN
   ) THEN
     RAISE EXCEPTION 'Settlement report lines with expense links are immutable';
   END IF;
-  RETURN CASE WHEN TG_OP='DELETE' THEN OLD ELSE NEW END;
+  IF TG_OP='DELETE' THEN RETURN OLD; END IF;
+  RETURN NEW;
 END;
 $$;
 CREATE TRIGGER finance_settlement_line_linked_immutable_trigger_v95
