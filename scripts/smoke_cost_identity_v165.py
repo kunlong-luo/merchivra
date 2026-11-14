@@ -339,10 +339,82 @@ call(owner,f"/api/v1/finance/marketplaces/{uuid4()}"
     f"/cost-sources/{c['id']}/identity-check/shared-settlement-lines",
     expected=404)
 
+# V169: all-cost readiness is read-only. A V91 manual cost is only an
+# original-currency claimed expense, even with V92 independent allocation.
+readiness_url=f"/api/v1/finance/marketplaces/{mp}/cost-profit-readiness"
+period_q="?periodStart=2026-11-01&periodEndExclusive=2026-12-01"
+call(sess(),readiness_url+period_q,expected=401)
+call(owner,readiness_url+"?periodStart=2026-11-01"
+     "&periodEndExclusive=2026-11-01",expected=400)
+call(owner,readiness_url+"?periodStart=2025-01-01"
+     "&periodEndExclusive=2026-12-01",expected=400)
+call(owner,readiness_url+period_q+"&beforeDate=2026-11-09",expected=400)
+call(owner,readiness_url+period_q+"&beforeDate=2026-10-31"
+     f"&beforeId={uuid4()}",expected=400)
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}/cost-profit-readiness"
+     +period_q,expected=404)
+r=call(owner,readiness_url+period_q)
+assert r["periodStart"]=="2026-11-01"
+assert r["periodEndExclusive"]=="2026-12-01"
+assert not r["fullCostCovered"] and not r["bankReconciled"]
+assert not r["realizedNetProfitVerified"] and r["realizedNetProfit"] is None
+assert len(r["categoriesWithoutVerifiedExternalCoverage"])==8
+assert not r["hasMore"]
+assert r["nextBeforeDate"] is None and r["nextBeforeId"] is None
+rows={x["sourceId"]:x for x in r["sources"]}
+assert set((a["id"],b["id"],c["id"])).issubset(rows)
+assert rows[a["id"]]["activeAllocationState"]=="PENDING_REVIEW"
+assert rows[a["id"]]["approvedUnverifiedAllocationAmount"] is None
+assert rows[b["id"]]["activeAllocationState"]=="APPROVED_UNVERIFIED"
+assert rows[b["id"]]["approvedUnverifiedAllocationAmount"]=="7.250000"
+assert rows[b["id"]]["approvedUnverifiedUnallocatedAmount"]=="2.750000"
+assert rows[b["id"]]["approvalHeld"] and rows[b["id"]]["sharedSettlementLineCount"]>=1
+assert rows[c["id"]]["approvalHeld"]
+for s in rows.values():
+    assert not s["externallyVerified"] and not s["allowedToDeductFromProfit"]
+for bkt in r["buckets"]:
+    assert not bkt["externallyVerified"] and not bkt["allowedToDeductFromProfit"]
+    # Single-period original-currency sources; the full report is grouped by
+    # currency and category rather than silently mixing USD/EUR.
+    assert bkt["currency"]==currency
+assert all(bkt["approvedUnverifiedAllocationAmount"]=="0.000000"
+           for bkt in r["buckets"] if bkt["category"]!="INBOUND_FREIGHT")
+b_bucket=next(x for x in r["buckets"] if x["category"]=="INBOUND_FREIGHT")
+assert b_bucket["approvedUnverifiedAllocationAmount"]=="7.250000"
+assert b_bucket["approvedUnverifiedUnallocatedAmount"]=="2.750000"
+assert not call(owner,readiness_url+
+    "?periodStart=2026-12-01&periodEndExclusive=2027-01-01")["buckets"]
+# Stable keyset + unbounded grouped totals: add 52 synthetic manual sources
+# directly to disposable PG18; never pretend these SQL fixtures are LIVE fees.
+salt=uuid4().hex[:10]
+sql(f"""INSERT INTO finance_cost_source_v91(
+ id,tenant_id,seller_marketplace_id,category,source_kind,source_key,
+ source_document_sha256,business_date,currency_code,amount,created_by)
+ SELECT gen_random_uuid(),'{tenant}','{mp}','OTHER_OPERATING','MANUAL_OTHER',
+ 'V169-SYN-{salt}-'||to_char(g,'FM0000'),
+ md5('V169-{salt}-'||g::text)||md5('OTHER-{salt}-'||g::text),
+ '2026-11-09','{currency}',0.100000,'{user}'
+ FROM generate_series(1,52) g""")
+r1=call(owner,readiness_url+period_q)
+assert len(r1["sources"])==50 and r1["hasMore"]
+assert r1["nextBeforeDate"]=="2026-11-09" and r1["nextBeforeId"]
+params=(period_q+"&beforeDate="+r1["nextBeforeDate"]+
+        "&beforeId="+r1["nextBeforeId"])
+r2=call(owner,readiness_url+params)
+assert r2["sources"] and not r2["hasMore"]
+assert not ({x["sourceId"] for x in r1["sources"]}&
+            {x["sourceId"] for x in r2["sources"]})
+assert r1["buckets"]==r2["buckets"]  # full-range buckets, no page truncation
+assert len(r1["sources"])+len(r2["sources"])==int(sql(f"""
+ SELECT count(*) FROM finance_cost_source_v91
+ WHERE tenant_id='{tenant}' AND seller_marketplace_id='{mp}'
+ AND business_date>='2026-11-01' AND business_date<'2026-12-01'"""))
+assert not r2["realizedNetProfitVerified"] and r2["realizedNetProfit"] is None
+
 after=[sql("SELECT count(*) FROM "+t) for t in
     ("finance_profit_report_job","bank_payout_observation","ads_report_reviewed_cost")]
 assert before==after,"Manual identity scan may not post finance/bank/Ads"
-print("PASS V165/V166/V167/V168 PG18+HTTP: 8-family source preview, audited "
+print("PASS V165/V166/V167/V168/V169 PG18+HTTP: 8-family source preview, audited "
       "settlement-line scoped links and independent unverified review; equal "
       "amount/different key NOT duplication; same Ads key holds approval 409; "
       "no self/unauthorized leak; later claimed-document collision signaled; "
