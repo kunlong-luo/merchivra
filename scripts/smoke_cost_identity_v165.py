@@ -117,6 +117,39 @@ held=call(owner,url_a+"/identity-check")
 assert held["status"]=="POTENTIAL_IDENTITY_COLLISION_HOLD"
 assert held["approvalHeld"]
 assert signals(held)["MANUAL_ADS_SPEND_SAME_KEY"]
+# V166: persist exact candidate UUID, independent one-shot triage and audit.
+# Triaging any of these local hypotheses must NEVER clear V165's hold.
+cases_url=url_a+"/collision-cases"
+call(sess(),cases_url,expected=401)
+cases=call(owner,cases_url+"/scan","POST")
+ads_cases=[x for x in cases if x["signalCode"]=="MANUAL_ADS_SPEND_SAME_KEY"]
+assert len(ads_cases)==1
+case=ads_cases[0]
+assert case["state"]=="OPEN" and case["evidenceOrigin"]=="LOCAL_IDENTITY_ONLY"
+assert not case["canClearFinancialHold"] and not case["externalProofVerified"]
+assert len(case["candidateId"])==36
+assert call(owner,cases_url+"/scan","POST")==cases  # idempotent, no audit replay
+assert len(call(owner,cases_url))==len(cases)
+case_review=cases_url+"/"+case["id"]+"/review"
+call(owner,case_review,"POST",{"disposition":"POTENTIAL_DUPLICATE",
+    "reason":"Maker cannot certify a potential duplicate"},expected=403)
+call(checker,case_review,"POST",{"disposition":"CLEAR",
+    "reason":"Unsafe attempt to clear unverified financial hold"},expected=400)
+reviewed_case=call(checker,case_review,"POST",{
+    "disposition":"POTENTIAL_DUPLICATE",
+    "reason":"Independent triage found a matching local Ads reference only"})
+assert reviewed_case["state"]=="POTENTIAL_DUPLICATE"
+assert not reviewed_case["canClearFinancialHold"]
+call(checker,case_review,"POST",{
+    "disposition":"POTENTIAL_DUPLICATE",
+    "reason":"Repeated review must not replace audit"},expected=409)
+assert [x["action"] for x in call(owner,cases_url+"/"+case["id"]+"/audit")]==[
+    "POTENTIAL_DUPLICATE","OPEN"]
+assert call(owner,url_a+"/identity-check")["approvalHeld"]
+call(checker,cases_url+"/scan","POST")
+assert [x["action"] for x in call(owner,cases_url+"/"+case["id"]+"/audit")]==[
+    "POTENTIAL_DUPLICATE","OPEN"]
+
 assert not signals(call(owner,url_b+"/identity-check"))["MANUAL_ADS_SPEND_SAME_KEY"]
 assert call(owner,url_b+"/identity-check")["status"]=="NO_LOCAL_IDENTITY_MATCH_UNVERIFIED"
 
@@ -145,14 +178,43 @@ later=create("V165-DOC-"+uuid4().hex[:16],sha_b,"OTHER_OPERATING")
 after_import=call(owner,url_b+"/identity-check")
 assert after_import["approvalHeld"]
 assert signals(after_import)["OTHER_MANUAL_COST_SAME_CLAIMED_DOCUMENT"]
+late_cases=call(owner,url_b+"/collision-cases/scan","POST")
+late=[x for x in late_cases
+      if x["signalCode"]=="OTHER_MANUAL_COST_SAME_CLAIMED_DOCUMENT"]
+assert len(late)==1
+assert late[0]["state"]=="OPEN"
+b_case_url=url_b+"/collision-cases/"+late[0]["id"]
+unverified=call(checker,b_case_url+"/review","POST",{
+    "disposition":"NOT_SAME_CHARGE_UNVERIFIED",
+    "reason":"Manual triage cannot verify original invoice contents"})
+assert unverified["state"]=="NOT_SAME_CHARGE_UNVERIFIED"
+assert not unverified["canClearFinancialHold"]
+assert call(owner,url_b+"/identity-check")["approvalHeld"]
+
 assert call(owner,b_path)[0]["state"]=="APPROVED_UNVERIFIED"
 assert not call(owner,b_path)[0]["recognizedProfitAllowed"]
 assert sql(f"""SELECT count(*) FROM finance_cost_allocation_audit_v92
  WHERE tenant_id='{tenant}' AND batch_id='{a_batch}'""")=="1"
+# Try to rewrite SQL case facts and audited decisions directly; DB must reject.
+def sql_denied(q):
+    p=subprocess.run(["psql","-X","-q","-v","ON_ERROR_STOP=1",
+        "-h","127.0.0.1","-U","merchivra","-d","merchivra","-Atc",q],
+        capture_output=True,text=True,timeout=20,
+        env={**os.environ,"PGPASSWORD":os.environ["DB_PASSWORD"]})
+    assert p.returncode!=0,"V166 immutable collision audit unexpectedly mutable"
+
+sql_denied(f"UPDATE finance_cost_identity_case_v93 SET state='OPEN' "
+           f"WHERE tenant_id='{tenant}' AND id='{case['id']}'")
+sql_denied(f"DELETE FROM finance_cost_identity_case_v93 "
+           f"WHERE tenant_id='{tenant}' AND id='{case['id']}'")
+sql_denied(f"DELETE FROM finance_cost_identity_case_audit_v93 "
+           f"WHERE tenant_id='{tenant}' AND case_id='{case['id']}'")
+assert sql(f"SELECT count(*) FROM finance_cost_identity_case_audit_v93 "
+           f"WHERE tenant_id='{tenant}' AND case_id='{case['id']}'")=="2"
 after=[sql("SELECT count(*) FROM "+t) for t in
     ("finance_profit_report_job","bank_payout_observation","ads_report_reviewed_cost")]
 assert before==after,"Manual identity scan may not post finance/bank/Ads"
-print("PASS V165 PG18+HTTP: scoped 8-family source identity preview; equal "
+print("PASS V165/V166 PG18+HTTP: scoped 8-family source identity preview; equal "
       "amount/different key NOT duplication; same Ads key holds approval 409; "
       "no self/unauthorized leak; later claimed-document collision signaled; "
       "all manual allocations remain unverified, no profit/bank/Ads posting")
