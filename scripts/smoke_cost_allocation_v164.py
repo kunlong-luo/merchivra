@@ -100,7 +100,7 @@ assert reviewer["activeTenantId"]==tenant
 
 source_key="V164-MANUAL-"+uuid4().hex[:12]
 draft={"category":"INBOUND_FREIGHT","sourceKind":"MANUAL_INVOICE",
-    "sourceKey":source_key,"documentSha256":"a"*64,
+    "sourceKey":source_key,"documentSha256":uuid4().hex+uuid4().hex,
     "businessDate":"2026-11-07","amount":"10.000000","currency":currency}
 src=call(owner,root,"POST",draft)
 sid=src["id"]

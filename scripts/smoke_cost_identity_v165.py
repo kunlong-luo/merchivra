@@ -78,14 +78,16 @@ before=[sql("SELECT count(*) FROM "+t) for t in
 def create(name,doc,category):
     return call(owner,root,"POST",{"category":category,
         "sourceKind":"MANUAL_INVOICE","sourceKey":name,
-        "documentSha256":doc*64,"businessDate":"2026-11-09",
+        "documentSha256":doc,"businessDate":"2026-11-09",
         "currency":currency,"amount":"10.000000"})
 def signals(p):
     return {x["code"]:x["exactLocalIdentityOverlap"] for x in p["signals"]}
 key_a="V165-ADS-"+uuid4().hex[:16]
 key_b="V165-FREIGHT-"+uuid4().hex[:12]
-a=create(key_a,"b","ADS_SPEND")
-b=create(key_b,"c","INBOUND_FREIGHT")
+sha_a=uuid4().hex+uuid4().hex
+sha_b=uuid4().hex+uuid4().hex
+a=create(key_a,sha_a,"ADS_SPEND")
+b=create(key_b,sha_b,"INBOUND_FREIGHT")
 url_a=root+"/"+a["id"]
 url_b=root+"/"+b["id"]
 p_a=call(owner,url_a+"/identity-check")
@@ -139,7 +141,7 @@ assert not good["sourceExternallyVerified"] and not good["recognizedProfitAllowe
 
 # Later same-document evidence creates a potential hold in the *current*
 # read-only snapshot. No retroactive claims of bank/GL clearance are made.
-later=create("V165-DOC-"+uuid4().hex[:16],"c","OTHER_OPERATING")
+later=create("V165-DOC-"+uuid4().hex[:16],sha_b,"OTHER_OPERATING")
 after_import=call(owner,url_b+"/identity-check")
 assert after_import["approvalHeld"]
 assert signals(after_import)["OTHER_MANUAL_COST_SAME_CLAIMED_DOCUMENT"]
