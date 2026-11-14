@@ -1,3 +1,7 @@
+# V165 fix: full PG18 A3 correctly held a V164 mock invoice with claimed
+# SHA a*64 also used by V98 synthetic Settlement mock. Unique per-fixture
+# SHA allows unrelated tests; dedicated V165 exact-hash hold must still fail.
+# V165 first exact-main run #43570834637 remains 6/7 FAILED.
 # V165 exact-main A3: current PG18/HTTP local cost identity overlap
 # must block manual allocation approval, but equal amounts alone do not.
 # Same source references in different namespaces are candidate signals,
@@ -97,7 +101,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V165-A3-cross-source-identity-collision-hold' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V165-A3-unique-synthetic-evidence-and-identity-guard' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -155,6 +159,7 @@ on:
           - V164-A3-PG18-cost-allocation-amount-conservation
           - V164-A3-exact-six-decimal-amounts-and-cost-allocation
           - V165-A3-cross-source-identity-collision-hold
+          - V165-A3-unique-synthetic-evidence-and-identity-guard
 
 permissions:
   contents: read
