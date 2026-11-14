@@ -21,7 +21,11 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class CostAllocationService {
     private final JdbcTemplate jdbc;
-    public CostAllocationService(JdbcTemplate jdbc) {this.jdbc=jdbc;}
+    private final CostIdentityReconciliationService identity;
+    public CostAllocationService(JdbcTemplate jdbc,
+                                 CostIdentityReconciliationService identity) {
+        this.jdbc=jdbc;this.identity=identity;
+    }
 
     public record Draft(UUID requestKey,String targetKind,String currency,List<Line> lines) {}
     public record Plan(String id,String sourceId,String requestKey,String targetKind,
@@ -218,6 +222,12 @@ public class CostAllocationService {
             throw conflict("Source review changed");
         var submitted=lines(tenant,batchId);
         if(accept) {
+            // V165: live snapshot of local cross-family source identities.
+            // An overlap is not proof of double billing, but never approve
+            // ambiguous manual allocations automatically. Re-scan on EVERY
+            // approval; previously approved proposals stay unverified and
+            // future imports may create new collisions for report readers.
+            identity.requireNoPotentialOverlap(tenant,mp,sourceId);
             try {CostAllocationEngine.evaluate(src.amount().toPlainString(),
                 src.currency(),current.targetKind(),submitted);}
             catch(IllegalArgumentException invalid) {
