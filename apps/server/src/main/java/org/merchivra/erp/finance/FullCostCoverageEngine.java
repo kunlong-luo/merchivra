@@ -98,7 +98,7 @@ public final class FullCostCoverageEngine {
                 || item.sourceType().length() > 32
                 || !item.sourceType().matches("[A-Z_]+")
                 || Set.of("FINANCES", "SETTLEMENT", "ORDERS").contains(item.sourceType())
-                || !uniqueSources.add(item.sourceType() + "\u0000" + item.sourceId()))
+                || !uniqueSources.add(item.sourceType() + ":" + item.sourceId()))
                 throw new IllegalArgumentException("Invalid, overlapping or duplicate cost provenance");
 
             if (item.state() == State.REVIEWED_NOT_APPLICABLE) {
