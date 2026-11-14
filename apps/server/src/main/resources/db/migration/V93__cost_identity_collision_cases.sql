@@ -41,6 +41,7 @@ CREATE TABLE finance_cost_identity_case_v93 (
     OR
     (state<>'OPEN' AND reviewed_by IS NOT NULL
        AND reviewed_by<>opened_by AND reviewed_at IS NOT NULL
+       AND review_note IS NOT NULL
        AND length(btrim(review_note)) BETWEEN 10 AND 500
        AND position(chr(10) IN review_note)=0
        AND position(chr(13) IN review_note)=0)
