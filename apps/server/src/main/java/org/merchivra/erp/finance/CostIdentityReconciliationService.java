@@ -3,6 +3,7 @@ package org.merchivra.erp.finance;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -136,6 +137,52 @@ public class CostIdentityReconciliationService {
             tenant,marketplace,sourceId);
         if(found.size()!=1)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         return found.getFirst();
+    }
+
+    /** Reverse lineage for the latest shared-line examples, without leaking
+     *  the other source's keys, original order IDs, invoices or PII. Counts are
+     *  across all stored links; samples are explicitly bounded at 100.
+     *  The read-only transaction makes count and sample share one snapshot.
+     */
+    public record SharedLine(String reportId,int lineNumber,
+        long otherManualSourceCount,String localEvidenceState) {}
+    public record SharedLinePreview(String sourceId,long totalLinkedLines,
+        long sharedLineCount,List<SharedLine> examples,
+        boolean examplesTruncated,boolean duplicateChargeVerified,
+        boolean accountingReleaseAllowed) {}
+
+    @Transactional(readOnly=true,
+        isolation=org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
+    public SharedLinePreview sharedLinePreview(UUID tenant,UUID marketplace,
+        UUID sourceId) {
+        Preview summary=preview(tenant,marketplace,sourceId); // scoped 404
+        var matches=jdbc.query("""
+            SELECT x.report_id,x.line_number,x.state,
+              (SELECT count(*) FROM finance_cost_settlement_line_link_v94 y
+               WHERE y.tenant_id=x.tenant_id
+                 AND y.seller_marketplace_id=x.seller_marketplace_id
+                 AND y.report_id=x.report_id AND y.line_number=x.line_number
+                 AND y.source_id<>x.source_id) AS other_source_count
+            FROM finance_cost_settlement_line_link_v94 x
+            WHERE x.tenant_id=? AND x.seller_marketplace_id=?
+              AND x.source_id=?
+              AND EXISTS (
+                SELECT 1 FROM finance_cost_settlement_line_link_v94 y
+                WHERE y.tenant_id=x.tenant_id
+                  AND y.seller_marketplace_id=x.seller_marketplace_id
+                  AND y.report_id=x.report_id
+                  AND y.line_number=x.line_number
+                  AND y.source_id<>x.source_id)
+            ORDER BY x.recorded_at DESC,x.id DESC
+            LIMIT 101
+            """,(r,i)->new SharedLine(
+                r.getObject(1,UUID.class).toString(),r.getInt(2),
+                r.getLong(4),r.getString(3)),tenant,marketplace,sourceId);
+        return new SharedLinePreview(sourceId.toString(),
+            summary.linkedSettlementLineCount(),
+            summary.sharedSettlementLineCount(),
+            List.copyOf(matches.subList(0,Math.min(100,matches.size()))),
+            matches.size()>100,false,false);
     }
 
     /** Re-evaluate under the caller's V164 transaction/source lock at decision.
