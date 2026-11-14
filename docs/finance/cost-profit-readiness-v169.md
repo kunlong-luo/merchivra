@@ -1,5 +1,13 @@
 # V169 · Marketplace 按业务月的全成本费用准备度（Next.js 可见）
 
+## V169 精确 SHA 技术验收（2026-11-14）
+
+[PR #147](https://github.com/kunlong-luo/merchivra/pull/147) 功能合并提交 `38d269a8c9ce05526a01bb08f8e110ead52b6068` 的首轮 [A3 #43587863847](https://github.com/kunlong-luo/merchivra/actions/runs/43587863847) **FAILED**：V169 PG18 合成用例错将一个来源的已分摊 7.25 断言为整类 INBOUND_FREIGHT 的合计，忽略前序 A3 测试留下的同类别其他有效来源；这是错误的**验收比较基准**，不能用来否定或证明业务 SQL。
+
+[PR #148](https://github.com/kunlong-luo/merchivra/pull/148) 将其修改为：逐来源仍精确核验 7.250000 + 2.750000；整类别/原币的金额，独立使用 PostgreSQL 18 查询整个日期范围所有 `APPROVED_UNVERIFIED` V92 分摊，逐科目比对 API 的已批准未核验金额与未分配余额。修复合并提交 `8c12e042161d4eb0369fd64873eec9f91c30b7ac` 的 [完整 A3 #43588250536](https://github.com/kunlong-luo/merchivra/actions/runs/43588250536) **run_attempt=1，7/7 SUCCESS**：Java25/Gradle、PG18/Flyway、Spring HTTP、Next/Vite/Chromium、Compose 全部通过。修复 PR 快速 CI [#43588161941](https://github.com/kunlong-luo/merchivra/actions/runs/43588161941) 亦成功。
+
+**只代表本地合成技术验收**；没有独立外部费用真实性签署、Finances/Ads/Bank 实际对账、G1 口径批准、真实净利润或生产 #104 放行。
+
 ## 本轮交付
 
 在已有 V163–V168（费用原始来源、审核、分摊、8 类身份碰撞、Settlement 行关联/共享行碰撞）之上，新增一个**经营者真正可读**的成本清单和分类报表。它读取 PostgreSQL 的 V91/V92/V94 真实持久化事实，而非造一个演示利润数字。不新增账本或会计凭证；无数据库结构迁移，沿用 Flyway V95 的模型和索引。
