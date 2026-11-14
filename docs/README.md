@@ -7,6 +7,7 @@
 | 想了解什么 | 当前权威文档 | 注意 |
 | --- | --- | --- |
 | 最新 P0 优先级、MVP 冻结与上线顺序 | [V108 MVP 收尾与集中验收计划](roadmap/mvp-freeze-release-v108.md) | **现行执行原则 + 顶部 V161 利润优先产品主线**；覆盖历史 roadmap 的“当前/下一步” |
+| V163 手工成本来源、双人复核与审计 | [V163 成本凭证入库及复核](finance/cost-source-review-v163.md) | Flyway V91、OWNER Session/CSRF、唯一凭证键和不可变来源；审核仍未验证真实发票/自动入利润 |
 | V162 已实现的额外成本核算预览引擎 | [V162 全成本覆盖与金额防重](finance/full-cost-coverage-v162.md) | 8 类费用状态、原币和来源去重、已知费用扣除预览；**没有**真实来源自动归集/最终净利润/前端财务接入 |
 | **利润优先、全成本核算及 Next 单一前端目标** | [V161 利润优先产品计划](product/profit-first-next-primary-v161.md) · [财务口径 G1 候选](product/finance-rulebook.md) | 现有 V33/V61/V64 是贡献预览，不是已经完成全成本净利润；目标正式 ERP 采用 Next，Vite 暂作回滚 |
 | 采购订单 V110 服务端分页实施与证据边界 | [订单游标/筛选契约](purchasing/purchase-order-pages-v110.md) | V110–V144 已完成主要采购、供应商、仓储全库分页；[#62](https://github.com/kunlong-luo/merchivra/issues/62) 已关闭 |
