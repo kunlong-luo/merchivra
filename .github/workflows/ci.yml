@@ -296,6 +296,11 @@ jobs:
           python3 scripts/smoke_supplier_case_pages_v96.py
           python3 scripts/smoke_supplier_finance_settlement_pages_v97.py
           python3 scripts/smoke_finance_audit_pages_v98.py
+          # V164: actual isolated PG18/HTTP manual cost proposal/approval,
+          # source+allocation audit immutability and exact unallocated remainder.
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='91' AND success")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='92' AND success")" = "1"
+          MERCHIVRA_V164_DISPOSABLE_ONLY=true python3 scripts/smoke_cost_allocation_v164.py
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='81' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='80' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='79' AND success")" = "1"
