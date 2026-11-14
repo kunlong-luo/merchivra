@@ -53,8 +53,26 @@ class CostAllocationEngineTest {
         var t=CostAllocationEngine.evaluate("10","USD","PERIOD",
             List.of(period(date,date.plusDays(30),"3.00"),
                 period(date.plusDays(30),date.plusDays(60),"7.00")));
-        assertEquals("0.00",t.unallocatedAmount());
+        assertEquals("0.000000",t.unallocatedAmount());
+        assertEquals("10.000000",t.sourceAmount());
+        assertEquals("10.000000",t.allocatedAmount());
+        assertEquals("0.000000",o.unallocatedAmount());
         assertFalse(t.externalCostVerified());
+    }
+    @Test void exactAmountSerializationNeverRoundsOrVariesWithInputScale() {
+        UUID x=UUID.randomUUID(),y=UUID.randomUUID();
+        var shortScale=CostAllocationEngine.evaluate("10","USD","SKU",
+            List.of(sku(x,"3.25"),sku(y,"4.0")));
+        var fullScale=CostAllocationEngine.evaluate("10.000000","USD","SKU",
+            List.of(sku(x,"3.250000"),sku(y,"4.000000")));
+        assertEquals(shortScale,fullScale);
+        assertEquals("7.250000",shortScale.allocatedAmount());
+        assertEquals("2.750000",shortScale.unallocatedAmount());
+        assertEquals("10.000000",shortScale.sourceAmount());
+        var six=CostAllocationEngine.evaluate("0.000002","USD","SKU",
+            List.of(sku(x,"0.000001")));
+        assertEquals("0.000001",six.allocatedAmount());
+        assertEquals("0.000001",six.unallocatedAmount());
     }
     @Test void failOnOverAllocationDuplicatesAndMixedDimensions() {
         UUID id=UUID.randomUUID();
