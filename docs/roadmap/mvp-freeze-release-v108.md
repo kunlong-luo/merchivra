@@ -1,6 +1,10 @@
 # V108 — MVP 收尾、集中测试与上线准入（2026-11-08）
 
-## 2026-11-14 / V166 费用来源身份冲突案件审计（**当前工程阶段**）
+## 2026-11-14 / V166 费用来源身份冲突案件审计（**最新已验收技术基线**）
+
+> [PR #141](https://github.com/kunlong-luo/merchivra/pull/141) 已合并代码 SHA `7425547766a1854bb30c23a8dfb24c78326ac31f`。[同 SHA 完整 A3 #43573659587](https://github.com/kunlong-luo/merchivra/actions/runs/43573659587) **run_attempt=1、7/7 SUCCESS**，真实 PG18/Flyway V93 + Spring HTTP 双 Owner 扫描、候选 UUID、幂等、独立初判、SQL 不可变审计，以及 Next/Chromium/HTTPS 合成回切通过；[同 SHA 快速 CI #43573659582](https://github.com/kunlong-luo/merchivra/actions/runs/43573659582) SUCCESS。V166 的研判状态**没有解除 V165 409 的能力**，未完成真实第三方票据、行级费用同一性、可撤销财务裁决、全成本净利润或 G1 签署。#12 OPEN，#104 NO-GO，#115 历史 TLS 根因未证实。
+
+## 2026-11-14 / V166 费用来源身份冲突案件审计（V166 交付内容）
 
 > 本轮新增 [V166 冲突候选案件与不可变双人审核](../finance/cost-collision-cases-v166.md)：PostgreSQL 18 Flyway **V93** 存储服务器发现的具体候选 UUID、8 类固定冲突编码、案件创建人及时间。可幂等扫描、独立 Owner 一次性研判、只追加审计、不可改写事实。审批时**仍由 V165 旧规则 409 持续阻断**，不提供只靠人工判断解除财务不确定性的放行按钮。
 

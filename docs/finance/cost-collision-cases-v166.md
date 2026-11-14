@@ -25,7 +25,7 @@
 
 [实际 PG18/HTTP 测试 `smoke_cost_identity_v165.py`](../../scripts/smoke_cost_identity_v165.py) 扩充 V166：生成与手工 Ads 来源键一致的候选，`POST /scan` 创建含真实候选 UUID 的单一案件，重复扫描不生成重复审计；原 Owner 自审 403、伪造 `CLEAR` 400、独立 Owner 作出初步判断后再次审核 409；PG18 SQL UPDATE/DELETE 案件与审计均失败。随后即使另一张自称相同 SHA 的单据被人工标为 `NOT_SAME_CHARGE_UNVERIFIED`，V165 仍报告候选重叠，**不得自动解除风险**。V164 金额守恒和未分摊余额保持。
 
-**真实完整 A3 的精确 SHA 结果必须在通过后补写**。快速 CI 只能证明 Java 25/Next/Compose 编译和单测，不是 PG18 V93 的实际验收。
+**实际 A3 已验收**：PR #141 合并代码 SHA `7425547766a1854bb30c23a8dfb24c78326ac31f` 的 [完整 A3 #43573659587](https://github.com/kunlong-luo/merchivra/actions/runs/43573659587) **run_attempt=1、7/7 SUCCESS**。真实 PG18/Flyway V93、Owner HTTP 两位合成用户、V36 候选 UUID 持久化与幂等扫描、自审 403、伪造 `CLEAR` 400、独立初判后重复 409、PG18 SQL 案件和审计 UPDATE/DELETE 拒绝、晚到同 SHA 仍保留 V165 阻断均通过。Java25、Next16/Vite Chromium 和合成 HTTPS 回退也通过。[同 SHA 主线快速 CI #43573659582](https://github.com/kunlong-luo/merchivra/actions/runs/43573659582) 首次 SUCCESS。这仍**不代表真实发票/交易已核验、净利润正确或生产批准**。
 
 ## 尚未完成
 
