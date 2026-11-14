@@ -31,6 +31,12 @@
 - `POST /{allocationId}/decision`：`{"accept":true,"reason":"Independent invoice distribution review"}`；不可自审/重复审核，失败不应修改已冻结来源。
 - `GET /{allocationId}/audit`：最近 100 条追加审计动作。
 
+## V164 实际验收记录（2026-11-14）
+
+首次代码主线 `d2d38296e00e908d8f52e2ada05ab48d5d7f9c2d` 的 [完整 A3 #43568896651](https://github.com/kunlong-luo/merchivra/actions/runs/43568896651) **6/7 成功、1 项真实 PG18 HTTP 断言失败**：分摊总额数值正确，但输出 `7.25`，没有对齐固定六位小数的 `7.250000`。修复 [PR #136](https://github.com/kunlong-luo/merchivra/pull/136) 把 `sourceAmount` / `allocatedAmount` / `unallocatedAmount` 统一用 `BigDecimal.setScale(6, UNNECESSARY)`，不舍入。
+
+最终计算代码 SHA `a68564e4ec4649727844073d66fa5eca096e24b2` 的 [完整 A3 #43569333074](https://github.com/kunlong-luo/merchivra/actions/runs/43569333074) **首次 7/7 成功**；真实 PG18/Flyway/Session/CSRF/两名 Owner 的 HTTP 合成链路走通了 10.000000 = 7.250000 + 2.750000、不可变来源/明细/审计负例与原有安全回归。它不等于真实 Ads/Finances、正式会计净利润和 G1/G2/G3 准入。
+
 ## 测试与剩余风险
 
 `CostAllocationEngineTest` 覆盖 BigDecimal 部分与全部守恒、重复目标、超额、混用 SKU/ORDER/PERIOD、非法期间/精度、零与负数、Owner Session/no-store、来源创建人及方案提交人都不可审批，以及 DDL 防篡改约束。

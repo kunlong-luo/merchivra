@@ -1,14 +1,17 @@
 # V108 — MVP 收尾、集中测试与上线准入（2026-11-08）
 
-## 2026-11-14 / V164 分摊金额格式与 PG18 实际回归修复（**验收跟踪**）
+## 2026-11-14 / V164 成本分摊与原币金额守恒（**最新已验收技术基线**）
 
-- [PR #135](https://github.com/kunlong-luo/merchivra/pull/135) 已合并 `d2d38296e00e908d8f52e2ada05ab48d5d7f9c2d`，但 [首次完整 A3 #43568896651](https://github.com/kunlong-luo/merchivra/actions/runs/43568896651) 的真实 PG18 HTTP 分摊脚本检测到 **7.25 与 7.250000 的序列化格式不一致**。真实 Flyway V92 与 HTTP 操作已到成本金额断言处，这个失败不得被忽略。
-- 后续修复在 `CostAllocationEngine` 将原币金额用 `BigDecimal.setScale(6, UNNECESSARY)` 统一成精确 6 位小数，绝不四舍五入，并通过同一金额不同输入 scale、小到 0.000001 的负例验证。必须合并到新 SHA 后再次执行完整 A3 且七项首次成功才可标为技术验收通过。
-- 这仍然不是实际 Amazon/Ads/银行来源核验、V64 全成本利润或 G1 生产批准。#104 NO-GO，#115 历史 TLS 根因未证实。
+> **实际交付与验收**：[PR #135](https://github.com/kunlong-luo/merchivra/pull/135) Flyway V92 及 SKU/订单/期间成本分摊、未分摊余额、Owner 独立审批/审计；[修复 PR #136](https://github.com/kunlong-luo/merchivra/pull/136) 使用 `BigDecimal.setScale(6, UNNECESSARY)` 确保精确、无舍入、统一六位小数的金额 API。
+
+- **保留首次真实失败**：#135 的主线 `d2d38296e00e908d8f52e2ada05ab48d5d7f9c2d`，[完整 A3 #43568896651](https://github.com/kunlong-luo/merchivra/actions/runs/43568896651) **首次 6/7 SUCCESS、1 FAILED**，真实 PG18 HTTP 触发 7.25 与 7.250000 输出 scale 不匹配。金额实际相等，但财务接口序列化不稳定，故验收不能通过。
+- **修复验收通过**：#136 合并主线 `a68564e4ec4649727844073d66fa5eca096e24b2`，[精确主线完整 A3 #43569333074](https://github.com/kunlong-luo/merchivra/actions/runs/43569333074) **run_attempt=1、7/7 SUCCESS**，包括**真实独立 PostgreSQL 18/Flyway、两位独立 Owner HTTP、Session/CSRF、原始人工费用 10.000000 = 已分摊 7.250000 + 未分摊 2.750000、拒绝超额/重复/自审、SQL 不可变来源与审计守卫**，以及 Java 25、Next/Vite Chromium 与合成 CA HTTPS 回退。[同 SHA 快速 CI #43569332781](https://github.com/kunlong-luo/merchivra/actions/runs/43569332781) 首次 SUCCESS。
+- **P0 业务仍未完成**：这仅验证本地 `MANUAL_UNVERIFIED` 来源的 `APPROVED_UNVERIFIED` 分摊，**不代表真实 Ads/Finances/Settlement 成本来源核验、防双计、完整净利润或银行/法定会计签署**。下一阶段 V165 优先做独立来源身份对账与费用归属异常隔离，再将受信成本接入 V162/V64 和 Next 多维利润报表；[#12](https://github.com/kunlong-luo/merchivra/issues/12) 保持 OPEN。
+- **生产依旧 NO-GO**：[#104](https://github.com/kunlong-luo/merchivra/issues/104) G1/G2/G3 未批准；[#115](https://github.com/kunlong-luo/merchivra/issues/115) 历史 TLS 间歇问题根因未证实，Seller/Ads 实际授权/远程读写继续关闭；正式 ERP 前端目标 Next.js 16，Vite 暂留回滚。
 
 ---
 
-## 2026-11-14 / V164 手工成本凭证分摊和金额守恒（V164 已合并但首次 A3 未通过）
+## 2026-11-14 / V164 手工成本凭证分摊和金额守恒（V164 实现记录）
 
 > 当前 P0 重点已从来源存证推进到有确定金额守恒的 **SKU/订单/期间单一维度成本分摊**。本轮实现 Flyway **V92**、不可变正金额分摊明细、未分摊余额、同一来源一个待审/已审方案、被驳回方案历史、第二名 Owner 与原凭证 maker 和提案人相互独立的一次性批准/驳回、只读审计与 Owner/Session/CSRF/no-store API。见 [V164 实施与边界](../finance/cost-allocation-v164.md)。
 
