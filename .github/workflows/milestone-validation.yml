@@ -1,3 +1,6 @@
+# V169 exact merged-main A3: PG18/V91-V95 period cost readiness read model,
+# original-currency category totals, pending-null, 50-row keyset and Next UI.
+# This is source exposure, NEVER verified net profit or production release.
 # V168 exact merged SHA: PG18 V95 shared Settlement line reverse lineage,
 # approval 409 even without V165 key overlap, linked-line immutability.
 # A3 synthetic evidence is NOT verified Amazon charges or production GO.
@@ -110,7 +113,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V168-A3-PG18-shared-line-provenance-hold' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V169-A3-PG18-cost-profit-readiness' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -171,7 +174,7 @@ on:
           - V165-A3-unique-synthetic-evidence-and-identity-guard
           - V166-A3-PG18-collision-case-maker-checker-audit
           - V167-A3-PG18-settlement-line-evidence-review
-          - V168-A3-PG18-shared-line-provenance-hold
+          - V169-A3-PG18-cost-profit-readiness
 
 permissions:
   contents: read
