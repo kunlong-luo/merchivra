@@ -1,6 +1,14 @@
 # V108 — MVP 收尾、集中测试与上线准入（2026-11-08）
 
-## 2026-11-14 / V165 本地成本来源身份冲突隔离（**当前实施里程碑**）
+## 2026-11-14 / V165 首轮真实 PG18 发现合成跨用例身份重叠（**验收跟踪**）
+
+- [V165 PR #138](https://github.com/kunlong-luo/merchivra/pull/138) 已合并 `4e95dc019b13aa84f71590bb46d7d61ac3bc4749`。但 [首次完整 A3 #43570834637](https://github.com/kunlong-luo/merchivra/actions/runs/43570834637) **run_attempt=1，6/7 SUCCESS、1 FAILED**：V164 的手工费用单据在隔离 PG18 中用固定自称 SHA `a*64`，与此前 V98 合成 Settlement 报告摘要相同。V165 扫描正确地标记了跨来源候选冲突，导致旧 V164 测试原本预期的批准返回 HTTP 409 而非 200。**不能为使测试通过而移除身份拦截**。
+- 修正两个合成脚本：不相关 V164/V165 手工凭证每次使用独立 64 位十六进制合成摘要；V165 专门的“确实相同来源键或 SHA”场景仍保持跨来源 409 和新导入同单据风险标记。修正测试数据后必须对**新的精确 main SHA**运行完整 PG18/HTTP + Next/Vite 合成 HTTPS 七项 A3，第一次失败的记录保留。
+- 仍没有真实 Amazon Seller/Ads OAuth、外部发票或财务 G1 的真实性证明。P0 [#12](https://github.com/kunlong-luo/merchivra/issues/12) OPEN，生产 #104 NO-GO，TLS 历史 #115 OPEN。
+
+---
+
+## 2026-11-14 / V165 本地成本来源身份冲突隔离（V165 初次工程实施）
 
 > 在 V164 精确金额守恒后，增加 [V165 8 类本地来源身份重叠扫描/审批时 409 保守拦截](../finance/cost-identity-collision-v165.md)：同租户、同 Marketplace、按**来源键与人工宣称的文件摘要**精确匹配 V91/V36/V64/Finances/Settlement 数据，而不是按金额/日期猜测重复。新增 Owner no-store 只读 HTTP，V164 单一来源费用分摊审核 `accept=true` 的事务内重新扫描；若有精确身份重叠保留待审、不追加批准审计。事后新导入来源可使已批方案重新出现风险，但批准依旧 `APPROVED_UNVERIFIED`。
 
