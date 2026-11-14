@@ -1,5 +1,7 @@
 # Merchivra · Agent 开发策略
 
+> **V164 成本分摊金额守恒**：新增 [V92 PG18 费用分摊](apps/server/src/main/resources/db/migration/V92__cost_allocation_conservation.sql)、[`CostAllocationEngine`](apps/server/src/main/java/org/merchivra/erp/finance/CostAllocationEngine.java)、[`CostAllocationService`](apps/server/src/main/java/org/merchivra/erp/finance/CostAllocationService.java) 与 [规则](docs/finance/cost-allocation-v164.md)。只能基于 V163 `REVIEWED_UNVERIFIED` 的手工原币来源提案，SKU/ORDER/PERIOD 维度互斥，精确金额不超过来源、保留不可分配余额、数据库行永不修改、来源 maker 与提案者均不能批准、禁止第二个有效方案。**仅审核分摊方案 ≠ 核验第三方实际费用 ≠ 全成本净利润**，不得静默扣入 V33/V64、混合不同币种或绕过 Amazon Seller/Ads 离线限制。合并后按风险执行 PG18/HTTP/CSRF/Next A3。
+>
 > **V163 原始成本凭证/审核安全门禁**：新增 [V91 PG18 数据来源表](apps/server/src/main/resources/db/migration/V91__manual_cost_source_review.sql)、[`CostSourceReviewService`](apps/server/src/main/java/org/merchivra/erp/finance/CostSourceReviewService.java) 与 [接口](apps/server/src/main/java/org/merchivra/erp/finance/CostSourceReviewController.java)。成本登记须以租户/Marketplace 复合外键、唯一来源键、数据库不可变字段、单次审核终态及不同 Owner 双人复核；`REVIEWED_UNVERIFIED` 仍是**人工不可信第三方来源**，绝不能自动入 V162/V64、真实 Ads/Finances、银行回款或净利润。目标财务系统变更应跑真实 PG18/Flyway/Session/CSRF 专项；生产 #104 仍 NO-GO。详见 [V163 文档](docs/finance/cost-source-review-v163.md)。
 >
 > **V162 成本核算安全底线**：已落地纯 Java [`FullCostCoverageEngine`](apps/server/src/main/java/org/merchivra/erp/finance/FullCostCoverageEngine.java) 和 [八类费用规则](docs/finance/full-cost-coverage-v162.md)。仅允许外部受审且明确不在 V33 Finances/签名 Amazon/FBA 费中的正费用降低已知贡献预览；缺失/手工未审/多币种/重复来源/退款负费用一律不准作为确认净利润。所有 G1 凭证签署、来源持久化、SKU/订单/期间分摊和 V64 集成仍未实现；测试成功≠真实净利润。
