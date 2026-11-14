@@ -18,20 +18,21 @@ import {workbenchPath} from '../lib/workbench-routes'
  */
 const modules:{view:WorkbenchView;label:string;Icon:LucideIcon}[]=[
   {view:'overview',label:'经营总览',Icon:LayoutDashboard},
+  {view:'finance',label:'利润与成本报表',Icon:Wallet},
   {view:'core',label:'核心业务数据',Icon:Database},
   {view:'orders',label:'订单管理',Icon:ShoppingCart},
   {view:'catalog',label:'商品与 Listing',Icon:Package},
   {view:'inventory',label:'FBA 库存',Icon:Boxes},
   {view:'purchasing',label:'采购与供应商',Icon:Truck},
   {view:'ops',label:'运营自动化',Icon:TriangleAlert},
-  {view:'finance',label:'财务与对账',Icon:Wallet},
+
   {view:'connections',label:'卖家授权',Icon:KeyRound},
   {view:'team',label:'团队与权限',Icon:Users},
   {view:'sync',label:'模拟同步',Icon:RefreshCw}
 ]
 const groups=[
-  {title:'经营与商品',views:['overview','core','orders','catalog','inventory']},
-  {title:'供应链与对账',views:['purchasing','ops','finance']},
+  {title:'经营与利润',views:['overview','finance','core','orders','catalog','inventory']},
+  {title:'供应链与运营',views:['purchasing','ops']},
   {title:'协作与设置',views:['connections','team','sync']}
 ] as const
 
