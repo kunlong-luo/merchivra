@@ -78,7 +78,7 @@ before=[sql("SELECT count(*) FROM "+t) for t in
 def create(name,doc,category):
     return call(owner,root,"POST",{"category":category,
         "sourceKind":"MANUAL_INVOICE","sourceKey":name,
-        "documentSha256":doc*64,"businessDate":"2026-11-09",
+        "documentSha256":doc,"businessDate":"2026-11-09",
         "currency":currency,"amount":"10.000000"})
 def signals(p):
     return {x["code"]:x["exactLocalIdentityOverlap"] for x in p["signals"]}
