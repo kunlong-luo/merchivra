@@ -1,6 +1,6 @@
 # V167 · 费用来源与 Settlement 交易行的可审计本地关联（未核销）
 
-> **状态：代码候选，待 PR CI、Flyway PostgreSQL 18/HTTP 真实验证。**
+> **状态：已在 [PR #143](https://github.com/kunlong-luo/merchivra/pull/143) 合并，代码 SHA `a57894b66d9f0ed9956931dfcb44c1ac4d6850fc` 的 [完整 A3 #43575075275](https://github.com/kunlong-luo/merchivra/actions/runs/43575075275) 首次 7/7 SUCCESS（合成 PG18／HTTP／Next／Vite／Compose）。技术验收通过，真实平台费用同一性与 G1 财务核销仍未完成。**
 > 这是 V166 冲突案件后的增量，不把 V166 的人工初判等同于本次交易行证据。
 
 ## 为什么需要这一层
@@ -50,6 +50,6 @@ Flyway `V94__cost_settlement_line_evidence_links.sql`：
 1. 批量/游标方式检查完整结算、Finances 与 Ads 费用交易行（当前 V54 行库最多 10,000 行/报告）；引入平台扣费事件的**交易级主键**、实际账单行与负载摘要的版本证据，避免把订单 ID 当成扣费 ID。
 2. 建立独立外部凭证验证的事实类型、费用归属时间/订单/SKU、重复/冲正/税/汇兑/退款规则、冲突消解与不可变撤销及期间冻结；先完成真正「同一笔扣费」证据认定，才能决定唯一财务扣费归属。
 3. 将通过独立核验且符合 V33 基线去重的金额明确接入 V162 八类完整性判断与 V64 版本化报表/CSV；Next.js 16 利润中心必须区分已知贡献、待核对费用、未知、不可计算原因和原币，不得混币种。
-4. 通过 Flyway PG18、真实 Session/CSRF/双 Owner/重复请求/跨租户/跨 Marketplace/行号伪造和并发验证后，才考虑合并。G1 财务规则、G2/G3、真实 Seller/Ads 联调均须维护者本地单独批准。
+4. 已合并并完成当前代码 SHA 的 Flyway PG18、真实 Session/CSRF/双 Owner、重复请求、错误 Marketplace/行号、不可变 SQL 合成 A3 验证。完整跨租户攻击矩阵、未来并发导入冻结及真实外部费用凭证核对仍待专项补齐。G1 财务规则、G2/G3 和 Seller/Ads 真实联调必须由维护者本地单独批准。
 
-**验收状态**：离线 JUnit 只覆盖分类、独立复核、接口作用域和 DDL 约束静态断言。未运行 PG18/HTTP/Next 浏览器实机测试之前不得称 V167 验收完成。生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 仍 OPEN/NO-GO，Seller/Ads OAuth 继续关闭，Next.js 16 为正式前端目标，Vite 仅用于受控回退。
+**验收状态（2026-11-14）**：PR #143 合并提交 `a57894b66d9f0ed9956931dfcb44c1ac4d6850fc` 的 [完整 A3 #43575075275](https://github.com/kunlong-luo/merchivra/actions/runs/43575075275) run_attempt=1，**7/7 SUCCESS**。包括真实 PG18/Flyway V94、合成双 Owner HTTP/Session/CSRF、引用及金额分类、一次性人工复核、SQL 不可变审计、Next16/Vite Chromium 与 Compose 回归。这是技术/合成场景通过，**不是**真实 Amazon 账单认证、财务净利润核销或生产 GO。生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 仍 OPEN/NO-GO，Seller/Ads OAuth 继续关闭，Next.js 16 为正式前端目标，Vite 仅用于受控回退。
