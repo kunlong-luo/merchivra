@@ -132,7 +132,7 @@ class CostAllocationEngineTest {
     }
     @Test void malformedDraftAndReviewReasonFailBeforeDatabase() {
         var jdbc=mock(JdbcTemplate.class);
-        var service=new CostAllocationService(jdbc);
+        var service=new CostAllocationService(jdbc,new CostIdentityReconciliationService(jdbc));
         UUID tenant=UUID.randomUUID(),mp=UUID.randomUUID(),source=UUID.randomUUID();
         UUID user=UUID.randomUUID();
         assertEquals(HttpStatus.UNAUTHORIZED,
