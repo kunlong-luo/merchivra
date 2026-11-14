@@ -7,6 +7,7 @@
 | 想了解什么 | 当前权威文档 | 注意 |
 | --- | --- | --- |
 | 最新 P0 优先级、MVP 冻结与上线顺序 | [V108 MVP 收尾与集中验收计划](roadmap/mvp-freeze-release-v108.md) | **现行执行原则 + 顶部 V161 利润优先产品主线**；覆盖历史 roadmap 的“当前/下一步” |
+| V166 精确主线**技术验收** | [完整 A3 #43573659587](https://github.com/kunlong-luo/merchivra/actions/runs/43573659587) · [PR #141](https://github.com/kunlong-luo/merchivra/pull/141) | 代码 SHA `7425547766a1854bb30c23a8dfb24c78326ac31f`，首次 7/7 PG18/V93/Owner 案件初判/Next 成功；不是财务真实核验或上线许可 |
 | V166 冲突候选持久化与人工双人研判 | [V166 身份冲突案件与不可变审计](finance/cost-collision-cases-v166.md) | Flyway V93、真实本地候选 UUID、独立 Owner 一次性研判；**不解除 V165 阻断或计入利润** |
 | V165 精确主线**技术验收** | [完整 A3 #43571700251](https://github.com/kunlong-luo/merchivra/actions/runs/43571700251) · [修复 PR #139](https://github.com/kunlong-luo/merchivra/pull/139) | 精确代码 SHA `15f705a03890b5bb3b792da19047657a119029e0`，首次 7/7 PG18/HTTP/Next 成功；首次 #43570834637 的 6/7 合成 SHA 重叠仍保留；未验证真实第三方净利润 |
 | V165 额外成本跨来源身份重叠与保守审批阻断 | [V165 精确来源身份检查](finance/cost-identity-collision-v165.md) | 同租户/Marketplace 8 类本地线索、Owner no-store 只读 API、V164 批准时 409；无匹配 ≠ 外部核验 |
