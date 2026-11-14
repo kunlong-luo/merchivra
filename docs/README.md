@@ -7,6 +7,7 @@
 | 想了解什么 | 当前权威文档 | 注意 |
 | --- | --- | --- |
 | 最新 P0 优先级、MVP 冻结与上线顺序 | [V108 MVP 收尾与集中验收计划](roadmap/mvp-freeze-release-v108.md) | **现行执行原则 + 顶部 V161 利润优先产品主线**；覆盖历史 roadmap 的“当前/下一步” |
+| V165 精确主线**技术验收** | [完整 A3 #43571700251](https://github.com/kunlong-luo/merchivra/actions/runs/43571700251) · [修复 PR #139](https://github.com/kunlong-luo/merchivra/pull/139) | 精确代码 SHA `15f705a03890b5bb3b792da19047657a119029e0`，首次 7/7 PG18/HTTP/Next 成功；首次 #43570834637 的 6/7 合成 SHA 重叠仍保留；未验证真实第三方净利润 |
 | V165 额外成本跨来源身份重叠与保守审批阻断 | [V165 精确来源身份检查](finance/cost-identity-collision-v165.md) | 同租户/Marketplace 8 类本地线索、Owner no-store 只读 API、V164 批准时 409；无匹配 ≠ 外部核验 |
 | V164 当前精确主线**技术验收** | [完整 A3 #43569333074](https://github.com/kunlong-luo/merchivra/actions/runs/43569333074) · [PR #136](https://github.com/kunlong-luo/merchivra/pull/136) | SHA `a68564e4ec4649727844073d66fa5eca096e24b2`，首次 7/7 PG18/HTTP/Next 验收；首次 A3 #43568896651 的 6/7 格式失败仍保留；没有真实净利润/生产上线 |
 | V164 已复核手工来源的成本分摊与余额守恒 | [V164 成本分摊与未分摊池](finance/cost-allocation-v164.md) | PG18 Flyway V92 + 单一维度 SKU/订单/期间、严格原币和金额守恒、不可变一次性双人审核；不入真实利润 |
