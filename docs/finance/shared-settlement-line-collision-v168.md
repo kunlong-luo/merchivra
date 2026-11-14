@@ -37,6 +37,6 @@ V162 仍是纯成本覆盖预览，V64 是已知来源范围贡献报表；本�
 
 针对性 JUnit 测试：8 类 V165 线索数量兼容、单份链接无虚假确认、多来源共享行独立触发审批持有、Session/Cache-Control 不回归、DDL 不可变声明。现有 `scripts/smoke_cost_identity_v165.py` 增加真实 PG18/Spring HTTP 合成条件：不同来源键/不同 SHA 的新费用也因**同一具体报告行**进入 409；Owner 只读反向归属计数、跨 Marketplace 404、数据库直写审批和 Settlement 已链接行 UPDATE/DELETE 拒绝；旧 V167 测试仍运行。
 
-**合并前的 CI 与合并后精确 main SHA 完整 A3 均必须以实际 GitHub Actions 结果为准**，不得将未运行的测试写成已通过。技术验收仅使用合成隔离数据，不能代替用户本地真实 Seller/Ads/银行验证。
+**验收结论（2026-11-14）**：代码 [PR #145](https://github.com/kunlong-luo/merchivra/pull/145) 已合并，SHA `c2f0c72c8416f32871e3e0bcc33e293519c65ec0` 的 [完整 A3 #43586824346](https://github.com/kunlong-luo/merchivra/actions/runs/43586824346) 首次 `run_attempt=1`，**7/7 SUCCESS**。包含真实 PostgreSQL18/Flyway V95、Spring HTTP 与合成 Owner/CSRF、共享交易行反向计数/审批 409、数据库 SQL 变更拦截、Java25/Gradle、Next16/Vite Chromium 与 Compose 合成回归。PR 快速 CI [#43586683129](https://github.com/kunlong-luo/merchivra/actions/runs/43586683129) 也已成功。**这只完成 V168 本地技术验收**，不能代替用户本地真实 Seller/Ads/银行验证、全成本利润核销或 G1/G2/G3。
 
 生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 保持 OPEN/**NO-GO**，真实 Amazon Seller/Ads OAuth/远程写入关闭；正式 ERP 仍以 Next.js 16 为目标，Vite 回退保留至正式目标切流独立批准。
