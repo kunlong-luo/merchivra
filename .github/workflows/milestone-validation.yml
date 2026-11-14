@@ -1,3 +1,5 @@
+# V163 exact-main A3 after PG18 V91 immutable source, Owner Session/CSRF,
+# cost provenance API and maker/checker. No production GO or Amazon OAuth.
 # V160: exact-main A3 after adding OCI revision labels to all three
 # runtime images and Compose build args, with operator-only read-only image
 # identity evidence. No production signature or G1/G2/G3 approval.
@@ -83,7 +85,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V160-A3-runtime-image-OCI-revision-evidence' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V163-A3-PostgreSQL18-cost-provenance-maker-checker' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -136,6 +138,7 @@ on:
           - V156-A3-HTTPS-cutover-safe-substage-diagnostics
           - V157-A3-strict-loopback-TLS-ingress-readiness
           - V160-A3-runtime-image-OCI-revision-evidence
+          - V163-A3-PostgreSQL18-cost-provenance-maker-checker
 
 permissions:
   contents: read
