@@ -1,5 +1,14 @@
 # V108 — MVP 收尾、集中测试与上线准入（2026-11-08）
 
+## 2026-11-14 / V165 跨来源身份拦截（**最新已验收技术基线**）
+
+- **实际开发**：[PR #138](https://github.com/kunlong-luo/merchivra/pull/138) 完成本地 8 类来源标识精确扫描与 V164 费用分摊审批事务中 409 拦截；[PR #139](https://github.com/kunlong-luo/merchivra/pull/139) 隔离不相关合成单据的身份摘要，仍严格验证真正同名来源键和同 SHA 需隔离。只按来源键/自称 SHA 判断**候选重叠**；同金额或同日期不会直接判重。
+- **首轮失败不抹去**：功能主线 `4e95dc019b13aa84f71590bb46d7d61ac3bc4749`，[A3 #43570834637](https://github.com/kunlong-luo/merchivra/actions/runs/43570834637) **首次 6/7 SUCCESS、1 FAILED**；此前 V98 Settlement 与 V164 费用测试碰巧使用固定 `a*64` 合成自称单据摘要，新 V165 正确阻断了旧测试期望的批准。
+- **新主线验收通过**：`15f705a03890b5bb3b792da19047657a119029e0`，[完整 A3 #43571700251](https://github.com/kunlong-luo/merchivra/actions/runs/43571700251) **run_attempt=1、7/7 SUCCESS**：真实独立 PG18/Flyway、Spring HTTP 双 Owner、相同金额但不同身份不拦截、手工 Ads 同来源键阻断批准 409 且无审计副作用、后续相同自称单据摘要实时提示，加上 V164 金额守恒及 Next/Vite Chromium、合成 HTTPS 回退。[同 SHA 快速 CI #43571700366](https://github.com/kunlong-luo/merchivra/actions/runs/43571700366) 首次成功。
+- **仍未完成产品 P0**：上述结果只是**本地候选身份冲突隔离**，并非真实账单行级交易对账/重复费用确认、第三方发票真实性、会计入账或真实利润。财务审批裁决/取消/反冲、跨时点不可变成本快照、V162/V64/Next 全成本利润瀑布及真实 G1 签署仍待开发。#12 OPEN；#104 生产 NO-GO；#115 历史 TLS 根因未证实，Seller/Ads 真实 OAuth 继续关闭。
+
+---
+
 ## 2026-11-14 / V165 首轮真实 PG18 发现合成跨用例身份重叠（**验收跟踪**）
 
 - [V165 PR #138](https://github.com/kunlong-luo/merchivra/pull/138) 已合并 `4e95dc019b13aa84f71590bb46d7d61ac3bc4749`。但 [首次完整 A3 #43570834637](https://github.com/kunlong-luo/merchivra/actions/runs/43570834637) **run_attempt=1，6/7 SUCCESS、1 FAILED**：V164 的手工费用单据在隔离 PG18 中用固定自称 SHA `a*64`，与此前 V98 合成 Settlement 报告摘要相同。V165 扫描正确地标记了跨来源候选冲突，导致旧 V164 测试原本预期的批准返回 HTTP 409 而非 200。**不能为使测试通过而移除身份拦截**。
