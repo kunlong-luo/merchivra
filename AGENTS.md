@@ -1,3 +1,5 @@
+> **V167 交易行证据关联（尚待 PG18/HTTP 专项验收）**：新增 [V94 持久化来源↔Settlement 交易行关联](apps/server/src/main/resources/db/migration/V94__cost_settlement_line_evidence_links.sql)、`CostSettlementLineEvidenceService` 与 [规则](docs/finance/settlement-line-evidence-v167.md)。只能由 Owner Session 租户/Marketplace 读取既有 V54 具体报告行，数据库复合 FK/原币金额快照/追加审计与独立 Owner 一次性未证实判断必须保留。订单参考编号相似、金额相等、Local LIVE 标志都不是独立扣费同一性证据；不得解除 V165 409、自动写 V162/V64/Next 净利润或打开 Seller/Ads OAuth。V167 的 PR 未经实际 PG18 + HTTP 验收不得宣称完成；#104 仍 NO-GO。
+
 # Merchivra · Agent 开发策略
 
 > **V166 冲突案件/人工研判不得等于财务放行**：V93 新增 [案件+只追加审计](apps/server/src/main/resources/db/migration/V93__cost_identity_collision_cases.sql)、[`CostIdentityCaseService`](apps/server/src/main/java/org/merchivra/erp/finance/CostIdentityCaseService.java) 和 [规则](docs/finance/cost-collision-cases-v166.md)。必须让服务器按同租户/Marketplace/精确键或人工宣称 SHA 找真实候选 UUID，保存不可变 source/candidate/signal；候选案件 UUID 幂等，第二名 Owner 只能作出 `ESCALATED_NEEDS_PROOF` / `POTENTIAL_DUPLICATE` / `NOT_SAME_CHARGE_UNVERIFIED` 初判，禁止放行状态、取消 V165 409、外部证明/真实净利润假设或修改审计。修改 PG18、权限 HTTP 后必须在精确 main SHA 运行真实 A3。
