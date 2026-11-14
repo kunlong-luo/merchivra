@@ -1,3 +1,5 @@
+> **2026-11-14 / V168 新增 P0（待 CI 与 PG18 A3）**：V167 已完成具体 Settlement 行的手工费证据链接；本轮补 [同一交易行多份费用来源归属碰撞](../finance/shared-settlement-line-collision-v168.md) 的全库计数、有限反向钻取、V164 审批 409 和 PostgreSQL V95 原始行/审批 SQL 保护。金额/引用相同仍非双扣证明，V162/V64/Next 全成本利润核销尚未完成；GitHub 技术测试≠真实 Amazon/银行账单认证。生产 #104 NO-GO，Seller/Ads OAuth OFF，Next16 仍为正式目标、Vite 仅受控回退。
+
 > **2026-11-14 / V167 已合并并通过合成 A3 技术验收（财务未核销）**：V166 冲突案件和初步独立复核已经落地；本阶段新增 V94 手工费用与已入库 Settlement **具体交易行**的范围校验、只追加本地关联及独立未证实研判（见 [V167](../finance/settlement-line-evidence-v167.md)）。不得凭相同订单参考/金额/导入标签判为真正双扣；当前 V162 全成本与 V64/Next 已核验净利润仍未贯通，生产 #104 NO-GO、Seller/Ads OAuth 关闭、Vite 暂留回退。PR #143 合并提交 `a57894b6` 的 [完整 A3 #43575075275](https://github.com/kunlong-luo/merchivra/actions/runs/43575075275) 首次 7/7 SUCCESS，含真实 PG18/Flyway V94 和合成双 Owner HTTP；仍不能列为真实账单核销、全成本净利润完成或生产上线证据。
 
 # V108 — MVP 收尾、集中测试与上线准入（2026-11-08）
