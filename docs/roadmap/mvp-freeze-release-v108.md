@@ -1,6 +1,14 @@
 # V108 — MVP 收尾、集中测试与上线准入（2026-11-08）
 
-## 2026-11-14 / V164 手工成本凭证分摊和金额守恒（**当前工程状态**）
+## 2026-11-14 / V164 分摊金额格式与 PG18 实际回归修复（**验收跟踪**）
+
+- [PR #135](https://github.com/kunlong-luo/merchivra/pull/135) 已合并 `d2d38296e00e908d8f52e2ada05ab48d5d7f9c2d`，但 [首次完整 A3 #43568896651](https://github.com/kunlong-luo/merchivra/actions/runs/43568896651) 的真实 PG18 HTTP 分摊脚本检测到 **7.25 与 7.250000 的序列化格式不一致**。真实 Flyway V92 与 HTTP 操作已到成本金额断言处，这个失败不得被忽略。
+- 后续修复在 `CostAllocationEngine` 将原币金额用 `BigDecimal.setScale(6, UNNECESSARY)` 统一成精确 6 位小数，绝不四舍五入，并通过同一金额不同输入 scale、小到 0.000001 的负例验证。必须合并到新 SHA 后再次执行完整 A3 且七项首次成功才可标为技术验收通过。
+- 这仍然不是实际 Amazon/Ads/银行来源核验、V64 全成本利润或 G1 生产批准。#104 NO-GO，#115 历史 TLS 根因未证实。
+
+---
+
+## 2026-11-14 / V164 手工成本凭证分摊和金额守恒（V164 已合并但首次 A3 未通过）
 
 > 当前 P0 重点已从来源存证推进到有确定金额守恒的 **SKU/订单/期间单一维度成本分摊**。本轮实现 Flyway **V92**、不可变正金额分摊明细、未分摊余额、同一来源一个待审/已审方案、被驳回方案历史、第二名 Owner 与原凭证 maker 和提案人相互独立的一次性批准/驳回、只读审计与 Owner/Session/CSRF/no-store API。见 [V164 实施与边界](../finance/cost-allocation-v164.md)。
 

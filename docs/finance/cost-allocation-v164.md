@@ -12,7 +12,7 @@
 
 同一来源一次**不得同时用 SKU + ORDER + PERIOD 不同维度重复发放成本**；若以后需同一费用的不同维度视图，必须从受审单一事实衍生可追溯投影，而不是再扣一次。
 
-`allocated = Σ allocationLines.amount`，`unallocated = source.amount − allocated`，必须 `0 < allocationLines.amount`、`allocated ≤ source.amount`，严格同一原币，精确到六位小数，不进行浮点舍入/隐式汇率换算。100 条以内、同一目标禁止重复，同一成本来源最多一份**待审或已审**方案。`unallocated > 0` 时显示 `PARTIAL_WITH_REMAINDER`；`unallocated = 0` 时显示 `FULLY_ASSIGNED_UNVERIFIED`，仅意味着这份人工来源已完全分配，**不代表全成本覆盖或实际利润可靠**。重复请求使用 UUID `requestKey`；完全相同的来源+方案+金额返回已有版本，不同事实返回冲突。
+`allocated = Σ allocationLines.amount`，`unallocated = source.amount − allocated`，必须 `0 < allocationLines.amount`、`allocated ≤ source.amount`，严格同一原币，精确到六位小数，不进行浮点舍入/隐式汇率换算。**API 的 sourceAmount、allocatedAmount、unallocatedAmount 统一以 6 位小数序列化（例如 7.250000，而不是 7.25）**，以消除源字符串小数位不同导致的报表快照差异。100 条以内、同一目标禁止重复，同一成本来源最多一份**待审或已审**方案。`unallocated > 0` 时显示 `PARTIAL_WITH_REMAINDER`；`unallocated = 0` 时显示 `FULLY_ASSIGNED_UNVERIFIED`，仅意味着这份人工来源已完全分配，**不代表全成本覆盖或实际利润可靠**。重复请求使用 UUID `requestKey`；完全相同的来源+方案+金额返回已有版本，不同事实返回冲突。
 
 ## 数据层保障
 

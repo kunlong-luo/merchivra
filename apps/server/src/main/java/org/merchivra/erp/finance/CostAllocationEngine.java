@@ -64,8 +64,13 @@ public final class CostAllocationEngine {
         }
         BigDecimal remaining=source.subtract(allocated);
         boolean full=remaining.signum()==0;
+        // V164 actual PG18 stores NUMERIC(20,6). Stabilize all public decimal
+        // amounts without changing value or rounding, so API/CSV snapshots and
+        // independent replay checks cannot differ only by input scale.
         return new Summary(full?"FULLY_ASSIGNED_UNVERIFIED":"PARTIAL_WITH_REMAINDER",
-            currency,source.toPlainString(),allocated.toPlainString(),
-            remaining.toPlainString(),lines.size(),full,false,false);
+            currency,source.setScale(6,java.math.RoundingMode.UNNECESSARY).toPlainString(),
+            allocated.setScale(6,java.math.RoundingMode.UNNECESSARY).toPlainString(),
+            remaining.setScale(6,java.math.RoundingMode.UNNECESSARY).toPlainString(),
+            lines.size(),full,false,false);
     }
 }
