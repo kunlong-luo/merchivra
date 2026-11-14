@@ -1,6 +1,18 @@
 # V108 — MVP 收尾、集中测试与上线准入（2026-11-08）
 
-## 2026-11-13 / V160 自构建镜像与候选 SHA 绑定（**当前权威状态**）
+## 2026-11-14 / V161 利润优先产品目标 + Next.js 单一前端（**当前优先级**）
+
+> **正式产品方向**：Merchivra 首要价值是**完整成本归集 → 可追溯利润核算 → 订单/SKU/店铺/站点/期间经营报表**。采购、库存、FBA/FBM、广告、订单、Finances、Settlement 和回款是成本与收入来源，而不是优先级高于利润的孤立子系统。详见 [V161 利润优先产品/交付计划](../product/profit-first-next-primary-v161.md) 和 [仍待 G1 签署的财务口径](../product/finance-rulebook.md)。
+
+- **当前真实代码边界**：已有 V33 单订单贡献、V61 SKU 预览、V62 多 SKU 受审分配、V64 冻结整期原币贡献及 CSV，**但未实现完整净利润**：广告、头程、仓储、FBM 配送、退款成本、汇率及其他期间费用并未全部可验证纳入。必须显式显示缺项/未知状态，禁止将“贡献估算”命名为“已实现净利润”。
+- **现在的重点**：P0-A 成本科目/真实来源与金额防重复 → P0-B 多类费用分摊/退款历史归属 → P0-C 全成本利润引擎与覆盖率 → P0-D Next 利润中心多维报表与 CSV → P0-E G1 财务样本及全链路对账验收。真实 Amazon Seller/Ads API 依旧需维护者在本地最后授权；在此之前用合成和获审手工来源建设逻辑。
+- **Next.js 正式唯一前端目标**：Next.js 16 + React 19 App Router 为主，Vite/Nginx 仅作为**尚未实际目标切流期间**的默认旧部署与短期回滚。不得再为 Vite 开辟长期第二套业务 UI；通过目标 HTTPS、会话/CSRF/租户权限、业务对照、实际受控切流和人工准入后再切换 Compose 默认及移除 Vite 代码。GitHub Pages 仅是独立静态展示，不是登录 ERP。Next 目标 [#63](https://github.com/kunlong-luo/merchivra/issues/63) 技术 Issue 虽关闭，不证明真实生产切流。
+- **验收分级**：V160 已有精确 main SHA [a960f7cf93c3dfc8a0f8ab96b534fd0a7252e49a](https://github.com/kunlong-luo/merchivra/commit/a960f7cf93c3dfc8a0f8ab96b534fd0a7252e49a) 的[完整 A3 #43428867257](https://github.com/kunlong-luo/merchivra/actions/runs/43428867257) 首次 **7/7 SUCCESS**。它仅验证合成运行时；V161 属产品优先级与 UI 信息布局更新，需按风险运行前端快速 CI。任何新金融公式必须有金额守恒、多币种、跨期退款/费用防重负例和 G1 真实样本批准；**不能从 V160 A3 推断 V161 财务已验收**。
+- **生产与历史故障**：[G1/G2/G3 #104](https://github.com/kunlong-luo/merchivra/issues/104) 继续 OPEN/NO-GO；[#115](https://github.com/kunlong-luo/merchivra/issues/115) V148 历史 HTTPS 根因未证实；真实 Seller/Ads OAuth 和远程读写保持关闭。
+
+---
+
+## 2026-11-13 / V160 自构建镜像与候选 SHA 绑定（历史 V160 技术记录）
 
 > V160 是新的**运行时镜像构建配置变更**：Spring、Next 和 Vite 回退最终镜像均支持从受信构建流程注入 `MERCHIVRA_BUILD_REVISION` OCI label（默认空值，不假造源 commit）。[目标运行容器只读核对](../operations/v160-target-image-evidence.md) 要求独立审查过的三份不可变本地 image ID、人工确认的候选 SHA 和明确授权的 Docker context；只读取固定 metadata，决不读取 Env/日志、自动构建、重启或部署。镜像标签和本地 image ID 匹配**不是**签名验证，更不是发布批准。实际目标未经此 PR 访问。
 
