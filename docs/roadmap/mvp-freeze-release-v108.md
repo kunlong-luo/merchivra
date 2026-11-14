@@ -1,6 +1,16 @@
 # V108 — MVP 收尾、集中测试与上线准入（2026-11-08）
 
-## 2026-11-14 / V163 手工成本来源入库和独立审核（**当前工程状态**）
+## 2026-11-14 / V164 手工成本凭证分摊和金额守恒（**当前工程状态**）
+
+> 当前 P0 重点已从来源存证推进到有确定金额守恒的 **SKU/订单/期间单一维度成本分摊**。本轮实现 Flyway **V92**、不可变正金额分摊明细、未分摊余额、同一来源一个待审/已审方案、被驳回方案历史、第二名 Owner 与原凭证 maker 和提案人相互独立的一次性批准/驳回、只读审计与 Owner/Session/CSRF/no-store API。见 [V164 实施与边界](../finance/cost-allocation-v164.md)。
+
+- **当前不是净利润**：V163 人工来源即便通过本地复核，仍是 `REVIEWED_UNVERIFIED`；V164 全额分配也只等于 `APPROVED_UNVERIFIED`。未核验第三方平台/Ads 真实性和跨来源防双计前，不得流入 V162、V64 或 Next “真实净利润”。
+- **必须验收**：本次有 PG18 DDL、金额事务和新增 HTTP，PR 快速 Java 25/Next/Compose CI 通过后，修改里程碑工作流触发**精确合并 main SHA** 的七项 A3（PG18/Flyway、实际 Spring/Session/CSRF、Next/Vite/Chromium 与合成 HTTPS 切换）。V163 最近通过的完整 A3 [#43552262026](https://github.com/kunlong-luo/merchivra/actions/runs/43552262026) 是历史基线，不能代替 V164 新变更。
+- **后续真 P0**：独立可核验的 Ads/Finances/Settlement 来源身份反双计、费用票据真实性、全成本多维报表及完整回溯、财务 G1 业务规则批准；[#12](https://github.com/kunlong-luo/merchivra/issues/12) 保持 OPEN。生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 仍 NO-GO，TLS 间歇问题 [#115](https://github.com/kunlong-luo/merchivra/issues/115) 根因未证实，真实 Seller/Ads API/OAuth 关闭。正式 ERP 目标 Next.js 16，Vite 暂作为尚未切流前的回退。
+
+---
+
+## 2026-11-14 / V163 手工成本来源入库和独立审核（V163 历史状态）
 
 > 已新增 [V163 成本凭证存证/审核规则](../finance/cost-source-review-v163.md)：PostgreSQL 18 Flyway **V91**，租户/Marketplace/原币约束、跨类别同来源键唯一防重、原始凭证 metadata 不可变触发器、一次性不同 Owner 双人审核及追加审计。后端 Owner Session/CSRF 新增成本凭证登记、列表、复核、审计 API。所有来源仍 **MANUAL_UNVERIFIED**，复核通过为 **REVIEWED_UNVERIFIED**，不是真实第三方 Ads/财务核验，**不自动接入 V162 扣减或 V64 利润报告**。
 
