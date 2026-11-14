@@ -141,7 +141,7 @@ assert not good["sourceExternallyVerified"] and not good["recognizedProfitAllowe
 
 # Later same-document evidence creates a potential hold in the *current*
 # read-only snapshot. No retroactive claims of bank/GL clearance are made.
-later=create("V165-DOC-"+uuid4().hex[:16],"c","OTHER_OPERATING")
+later=create("V165-DOC-"+uuid4().hex[:16],sha_b,"OTHER_OPERATING")
 after_import=call(owner,url_b+"/identity-check")
 assert after_import["approvalHeld"]
 assert signals(after_import)["OTHER_MANUAL_COST_SAME_CLAIMED_DOCUMENT"]
