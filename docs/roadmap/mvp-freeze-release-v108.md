@@ -1,6 +1,16 @@
 # V108 — MVP 收尾、集中测试与上线准入（2026-11-08）
 
-## 2026-11-14 / V164 成本分摊与原币金额守恒（**最新已验收技术基线**）
+## 2026-11-14 / V165 本地成本来源身份冲突隔离（**当前实施里程碑**）
+
+> 在 V164 精确金额守恒后，增加 [V165 8 类本地来源身份重叠扫描/审批时 409 保守拦截](../finance/cost-identity-collision-v165.md)：同租户、同 Marketplace、按**来源键与人工宣称的文件摘要**精确匹配 V91/V36/V64/Finances/Settlement 数据，而不是按金额/日期猜测重复。新增 Owner no-store 只读 HTTP，V164 单一来源费用分摊审核 `accept=true` 的事务内重新扫描；若有精确身份重叠保留待审、不追加批准审计。事后新导入来源可使已批方案重新出现风险，但批准依旧 `APPROVED_UNVERIFIED`。
+
+- **判定边界**：`POTENTIAL_IDENTITY_COLLISION_HOLD` 是需要人工独立核查的**候选冲突**，不是“已证明重复”；`NO_LOCAL_IDENTITY_MATCH_UNVERIFIED` 仍不意味着外部平台财务完整、可信或银行已核对。没有新增真实 Amazon Seller/Ads API、没有自动入利润，也不将 V164 已审人工来源变成 `REVIEWED_COST`。
+- **必须验收**：本轮增加金融审批时的 SQL 查询与权限 HTTP，需 Java 25/Gradle 单测、真实隔离 PG18 + 双合成 Owner + 8 类本地身份重叠 + 等额不同来源不误判、CSRF/409 和完整 A3；只有新代码精确 main SHA 首次 7/7 后才可宣布技术通过。V164 [#43569333074](https://github.com/kunlong-luo/merchivra/actions/runs/43569333074) 是历史基线。
+- **剩余 P0**：真实第三方身份线索/账单行级去重与人工财务裁决日志、冻结整期成本源快照和跨期金额归属、V162/V64 受信成本合并、Next SKU/订单/期间利润瀑布。P0 [#12](https://github.com/kunlong-luo/merchivra/issues/12) OPEN；生产 G1/G2/G3 [#104](https://github.com/kunlong-luo/merchivra/issues/104) NO-GO，历史合成 TLS 问题 [#115](https://github.com/kunlong-luo/merchivra/issues/115) 根因未证实。
+
+---
+
+## 2026-11-14 / V164 成本分摊与原币金额守恒（V164 已验收历史技术基线）
 
 > **实际交付与验收**：[PR #135](https://github.com/kunlong-luo/merchivra/pull/135) Flyway V92 及 SKU/订单/期间成本分摊、未分摊余额、Owner 独立审批/审计；[修复 PR #136](https://github.com/kunlong-luo/merchivra/pull/136) 使用 `BigDecimal.setScale(6, UNNECESSARY)` 确保精确、无舍入、统一六位小数的金额 API。
 
