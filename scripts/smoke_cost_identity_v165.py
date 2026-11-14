@@ -84,8 +84,10 @@ def signals(p):
     return {x["code"]:x["exactLocalIdentityOverlap"] for x in p["signals"]}
 key_a="V165-ADS-"+uuid4().hex[:16]
 key_b="V165-FREIGHT-"+uuid4().hex[:12]
-a=create(key_a,"b","ADS_SPEND")
-b=create(key_b,"c","INBOUND_FREIGHT")
+sha_a=uuid4().hex+uuid4().hex
+sha_b=uuid4().hex+uuid4().hex
+a=create(key_a,sha_a,"ADS_SPEND")
+b=create(key_b,sha_b,"INBOUND_FREIGHT")
 url_a=root+"/"+a["id"]
 url_b=root+"/"+b["id"]
 p_a=call(owner,url_a+"/identity-check")
