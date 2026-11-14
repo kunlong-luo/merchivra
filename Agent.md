@@ -1,4 +1,4 @@
-> **V167 财务交易行证据关联（待专项验收）**：V94 增加 V91 手工费用与 V54 Settlement 具体行的有界、只追加关联及复核。所有分类都是未核验线索；不能凭订单参考编号/金额判定同一笔费用，不能放行 V165 或写 V64/Next 净利润。详见 [V167](docs/finance/settlement-line-evidence-v167.md)。保留真实 Seller/Ads 授权关闭、Next 16 目标和生产 #104 NO-GO。
+> **V167 财务交易行证据关联（合成 A3 已通过）**：V94 增加 V91 手工费用与 V54 Settlement 具体行的有界、只追加关联及复核。所有分类都是未核验线索；不能凭订单参考编号/金额判定同一笔费用，不能放行 V165 或写 V64/Next 净利润。详见 [V167](docs/finance/settlement-line-evidence-v167.md)。PR #143 合并代码 `a57894b6` 的 [A3 #43575075275](https://github.com/kunlong-luo/merchivra/actions/runs/43575075275) 首次 7/7 SUCCESS；这是合成数据技术验收，不是实际费用核销或净利润批准。保留真实 Seller/Ads 授权关闭、Next 16 目标和生产 #104 NO-GO。
 
 # Merchivra · Agent 开发策略
 
