@@ -1,4 +1,4 @@
-> **V168（待技术验收）**：同一 V54 Settlement 具体行被两份 V91 费用来源关联时，按 [V168 规则](docs/finance/shared-settlement-line-collision-v168.md) 展示反向来源数量并保守阻断 V164 分摊批准，V95 保护已链接报告行不可变。共享关联不证明重复扣费；不改 V162/V64/Next 利润或 Seller/Ads OAuth，#104 继续 NO-GO。
+> **V168（合成 A3 已技术验收）**：同一 V54 Settlement 具体行被两份 V91 费用来源关联时，按 [V168 规则](docs/finance/shared-settlement-line-collision-v168.md) 展示反向来源数量并保守阻断 V164 分摊批准，V95 保护已链接报告行不可变。共享关联不证明重复扣费；PR #145 合并代码 `c2f0c72c` 的 [完整 A3 #43586824346](https://github.com/kunlong-luo/merchivra/actions/runs/43586824346) 首次 7/7 SUCCESS；不等于实际重复扣费证明、不改 V162/V64/Next 利润或 Seller/Ads OAuth，#104 继续 NO-GO。
 
 > **V167 财务交易行证据关联（合成 A3 已通过）**：V94 增加 V91 手工费用与 V54 Settlement 具体行的有界、只追加关联及复核。所有分类都是未核验线索；不能凭订单参考编号/金额判定同一笔费用，不能放行 V165 或写 V64/Next 净利润。详见 [V167](docs/finance/settlement-line-evidence-v167.md)。PR #143 合并代码 `a57894b6` 的 [A3 #43575075275](https://github.com/kunlong-luo/merchivra/actions/runs/43575075275) 首次 7/7 SUCCESS；这是合成数据技术验收，不是实际费用核销或净利润批准。保留真实 Seller/Ads 授权关闭、Next 16 目标和生产 #104 NO-GO。
 
