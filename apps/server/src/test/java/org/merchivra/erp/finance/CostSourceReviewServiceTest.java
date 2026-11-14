@@ -78,7 +78,7 @@ class CostSourceReviewServiceTest {
                 .getStatusCode());
         assertEquals(HttpStatus.BAD_REQUEST,
             assertThrows(ResponseStatusException.class,()->
-                CostSourceReviewService.independent(maker,checker,"line one long\\nline two"))
+                CostSourceReviewService.independent(maker,checker,"line one long\nline two"))
                 .getStatusCode());
     }
     @Test void ownerScopeFromSessionNotRequestBodyAndNoStoreResponse() {
