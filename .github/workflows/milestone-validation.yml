@@ -1,3 +1,7 @@
+# V165 exact-main A3: current PG18/HTTP local cost identity overlap
+# must block manual allocation approval, but equal amounts alone do not.
+# Same source references in different namespaces are candidate signals,
+# not verified double-charging or a production release approval.
 # V164 correction: first exact-main PG18 full A3 observed 7.25 vs
 # 7.250000 in public allocation summary. Force fresh SHA full A3 after
 # lossless six-decimal BigDecimal serialization fix. No production GO.
@@ -93,7 +97,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V164-A3-exact-six-decimal-amounts-and-cost-allocation' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V165-A3-cross-source-identity-collision-hold' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -150,6 +154,7 @@ on:
           - V163-A3-Next-finance-nav-regression-and-PG18-review
           - V164-A3-PG18-cost-allocation-amount-conservation
           - V164-A3-exact-six-decimal-amounts-and-cost-allocation
+          - V165-A3-cross-source-identity-collision-hold
 
 permissions:
   contents: read
