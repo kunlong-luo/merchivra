@@ -180,6 +180,58 @@ class V146SafeHttpsTests(unittest.TestCase):
         factory.assert_called_once()
         sleeper.assert_not_called()
 
+    def test_v163_vite_page_retries_only_known_reload_transients(self):
+        for first in (
+            (503,b"unavailable",{"X-Merchivra-V146-Candidate":"vite"}),
+            (200,b"old Next body",{"X-Merchivra-V146-Candidate":"next"}),
+        ):
+            probe=Mock()
+            probe.call.side_effect=[
+                first,
+                (200,b"<html>Merchivra SPA</html>",
+                    {"X-Merchivra-V146-Candidate":"vite"})
+            ]
+            with patch.object(smoke.time,"sleep") as sleeper:
+                smoke.verify_vite_rollback_page(probe,attempts=2)
+            self.assertEqual(probe.call.call_count,2)
+            probe.call.assert_called_with("/purchasing")
+            sleeper.assert_called_once_with(.25)
+
+    def test_v163_vite_page_rejects_wrong_identity_and_content_without_retry(self):
+        for response in (
+            (200,b"Merchivra",{"X-Merchivra-V146-Candidate":"evil"}),
+            (200,b"not the SPA",{"X-Merchivra-V146-Candidate":"vite"}),
+            (404,b"Merchivra",{"X-Merchivra-V146-Candidate":"vite"}),
+            (401,b"Merchivra",{"X-Merchivra-V146-Candidate":"vite"}),
+        ):
+            probe=Mock()
+            probe.call.return_value=response
+            with (self.subTest(response=response[0]),
+                  patch.object(smoke.time,"sleep") as sleeper,
+                  self.assertRaises(AssertionError)):
+                smoke.verify_vite_rollback_page(probe,attempts=8)
+            probe.call.assert_called_once_with("/purchasing")
+            sleeper.assert_not_called()
+        probe=Mock()
+        probe.call.side_effect=ssl.SSLCertVerificationError("bad-ca")
+        with (patch.object(smoke.time,"sleep") as sleeper,
+              self.assertRaises(ssl.SSLError)):
+            smoke.verify_vite_rollback_page(probe,attempts=8)
+        sleeper.assert_not_called()
+
+    def test_v163_vite_page_reload_must_converge_inside_fixed_bound(self):
+        probe=Mock()
+        probe.call.return_value=(200,b"stale Next",
+            {"X-Merchivra-V146-Candidate":"next"})
+        with (patch.object(smoke.time,"sleep") as sleeper,
+              self.assertRaisesRegex(RuntimeError,"rollback_page_reload_not_ready")):
+            smoke.verify_vite_rollback_page(probe,attempts=3)
+        self.assertEqual(probe.call.call_count,3)
+        self.assertEqual(sleeper.call_count,2)
+        for invalid in (0,9):
+            with self.assertRaises(ValueError):
+                smoke.verify_vite_rollback_page(Mock(),attempts=invalid)
+
     def test_v156_rollback_phase_diagnostics_are_static_and_secret_free(self):
         # The V148 first-attempt AssertionError had no stage, so neither
         # its precise failure point nor root cause can be reconstructed.
@@ -188,7 +240,7 @@ class V146SafeHttpsTests(unittest.TestCase):
         boundaries=(
             ("vite-switch", 'switch("vite")'),
             ("vite-auth", 'viewer_vite,_=client.json("/api/v1/auth/me")'),
-            ("vite-page", 'fallback_html,headers=client.expect("/purchasing")'),
+            ("vite-page", 'verify_vite_rollback_page(client)'),
             ("vite-access-control", 'public.expect("/api/v1/auth/me",expected=401)'),
             ("next-switch", 'switch("next")'),
             ("next-auth", 'viewer_next,_=client.json("/api/v1/auth/me")'),

@@ -278,6 +278,35 @@ def wait_for_secure_auth(certificate:str,attempts:int=40)->None:
     raise RuntimeError("secure_auth_backend_unavailable")
 
 
+def verify_vite_rollback_page(client:Client,attempts:int=8)->None:
+    """V163: bound only proxy reload/transport transients, not security failures.
+
+    A previous known Next worker may briefly serve an old socket after the
+    reload; Vite must eventually return its own verified candidate and SPA.
+    Wrong content, unknown upstream, 401/403/404 or invalid TLS fail at once.
+    """
+    if attempts<1 or attempts>8:
+        raise ValueError("invalid_rollback_page_attempts")
+    for index in range(attempts):
+        status,body,headers=client.call("/purchasing")
+        candidate=headers.get("X-Merchivra-V146-Candidate")
+        transient=(status in (502,503,504)
+                   or (status==200 and candidate=="next"))
+        if transient:
+            if index+1==attempts:
+                raise RuntimeError("rollback_page_reload_not_ready")
+            time.sleep(.25)
+            continue
+        if status!=200:
+            raise AssertionError("rollback_page_unexpected_status")
+        if candidate!="vite":
+            raise AssertionError("rollback_wrong_backend")
+        if b"Merchivra" not in body:
+            raise AssertionError("rollback_unavailable")
+        return
+    raise RuntimeError("rollback_page_not_ready")
+
+
 def run_synthetic(certificate:str,config_path:Path,container:str):
     if not CONTAINER.fullmatch(container):
         raise ValueError("invalid_disposable_container")
@@ -376,11 +405,7 @@ def run_synthetic(certificate:str,config_path:Path,container:str):
     if viewer_vite.get("userId")!=viewer["userId"]:
         raise AssertionError("vite_rollback_lost_authenticated_principal")
     mark_stage("vite-page")
-    fallback_html,headers=client.expect("/purchasing")
-    if headers.get("X-Merchivra-V146-Candidate")!="vite":
-        raise AssertionError("rollback_wrong_backend")
-    if b"Merchivra" not in fallback_html:
-        raise AssertionError("rollback_unavailable")
+    verify_vite_rollback_page(client)
     mark_stage("vite-access-control")
     public.expect("/api/v1/auth/me",expected=401)
     client.expect("/api/v1/operations/scan",method="POST",

@@ -1111,7 +1111,7 @@ async function main() {
         // server-cursor pages. Verify there is no cross-Marketplace mixing.
         mode='finance'
         await evaluate(send,`(() => {const link=[...document.querySelectorAll('.nav-link')]
-          .find(x=>x.textContent.includes('财务与对账'));
+          .find(x=>x.getAttribute('href')==='/finance' && x.textContent.includes('利润与成本报表'));
           if(!link)throw Error('Missing finance link');link.click()})()`)
         await waitFor(send,
           "document.querySelectorAll('.v106-finance-events-table tbody tr').length===50",
