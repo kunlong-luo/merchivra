@@ -1,16 +1,17 @@
 # Merchivra ERP · 文档导航与事实基线
 
-> **当前文档入口（2026-11-13 / V157 完整 A3 基线；V159 目标 HTTPS 预检；V160 镜像证据准备）。** 本页用于区分已经实现的代码、模拟测试、尚未批准的设计方案及真正的生产发布条件。早期 G1/G2 评审文件和 V1–V92 阶段记录仍保留原始历史意义，不再作为当前工程状态的依据。
+> **当前文档入口（2026-11-14 / V161 利润优先产品方向与 Next 统一前端；V160 完整 A3 7/7 基线）。** 本页用于区分已经实现的代码、模拟测试、尚未批准的设计方案及真正的生产发布条件。早期 G1/G2 评审文件和 V1–V92 阶段记录仍保留原始历史意义，不再作为当前工程状态的依据。
 
 ## 从这里开始
 
 | 想了解什么 | 当前权威文档 | 注意 |
 | --- | --- | --- |
-| 最新 P0 优先级、MVP 冻结与上线顺序 | [V108 MVP 收尾与集中验收计划](roadmap/mvp-freeze-release-v108.md) | **现行执行原则 + 顶部 V160 准确主线状态**；覆盖历史 roadmap 的“当前/下一步” |
+| 最新 P0 优先级、MVP 冻结与上线顺序 | [V108 MVP 收尾与集中验收计划](roadmap/mvp-freeze-release-v108.md) | **现行执行原则 + 顶部 V161 利润优先产品主线**；覆盖历史 roadmap 的“当前/下一步” |
+| **利润优先、全成本核算及 Next 单一前端目标** | [V161 利润优先产品计划](product/profit-first-next-primary-v161.md) · [财务口径 G1 候选](product/finance-rulebook.md) | 现有 V33/V61/V64 是贡献预览，不是已经完成全成本净利润；目标正式 ERP 采用 Next，Vite 暂作回滚 |
 | 采购订单 V110 服务端分页实施与证据边界 | [订单游标/筛选契约](purchasing/purchase-order-pages-v110.md) | V110–V144 已完成主要采购、供应商、仓储全库分页；[#62](https://github.com/kunlong-luo/merchivra/issues/62) 已关闭 |
 | 成熟开源 ERP 源码对标与复用决策 | [BENCH-001 · Wimoor / ERPNext / metasfresh / Amazon SDK](architecture/open-source-erp-benchmark-2026-11-08.md) | 以当前后端查询与权限事实作差距判断；不复制 GPL 源码、不盲目扩充 P0 |
 | 各模块代码/真实来源/验收状态 | [RTM-002 V148 代码与验收追踪](requirements/implementation-acceptance-rtm-v148.md) · [V109 文档审计](governance/docs-audit-v109.md) | 25 条 P0 分离代码/测试/真实来源/签署；V86 仅历史快照 |
-| 当前架构、模块与依赖 | [总体架构](architecture/overview.md) · [V99–V100 Next 迁移门槛](architecture/next16-ab-migration-v99.md) | Next 16 已有真实 App Router，但还没有取代默认 Vite/Nginx 部署 |
+| 当前架构、模块与依赖 | [总体架构](architecture/overview.md) · [V99–V100 Next 迁移门槛](architecture/next16-ab-migration-v99.md) | 正式目标是 **Next 16 唯一 ERP 前端**；实际目标切换前仍保留 Vite/Nginx 旧默认部署和回滚 |
 | 本地运行、开发和环境变量 | [开发指南](development.md) · [Docker/PG18 部署](deployment/local-spark-db.md) | Java 25 / Gradle / PostgreSQL **18** / React 19 |
 | FBA 采购来源 V147–V148 | [V147 真实分页及范围](inventory/fba-purchase-pagination-v147.md) · [V75 本地证据](inventory/fba-purchase-link-v75.md) | [V148 A3 #43356548084](https://github.com/kunlong-luo/merchivra/actions/runs/43356548084) 二次尝试 7/7；[#108](https://github.com/kunlong-luo/merchivra/issues/108) 合成技术关闭，真实 Amazon 来源未验收 |
 | API 代码生成与原始合同 | [API 文档入口](api/README.md) · [Orval/真实 Controller](architecture/mature-tool-first-api-client-2026-11-01.md) | 设计版 OpenAPI JSON **不是**当前全量后端契约 |
@@ -29,7 +30,7 @@
 
 **部署差别**：默认私有 ERP 是 React/Vite 构建 + Nginx、Spring Boot 和 PostgreSQL 18；Next 16 技术跟踪 [Issue #63](https://github.com/kunlong-luo/merchivra/issues/63) 已由维护者关闭；**这不代表生产流量切换、目标真实 TLS 或发布审批已完成**；唯一生产准入仍由 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 跟踪。[GitHub Pages](https://kunlong-luo.github.io/merchivra/) 只托管不含真实账号/数据库/业务写入的合成数据展示页，并不是 SaaS 或可登录 ERP。
 
-**证据分级**：设计提案 → 代码实现 → 快速 CI → 隔离 PG18/Compose/Chromium 模拟验收 → 用户本地真实接口联调 → 业务、安全、生产正式批准。任何较早级别都不能自动升级为较晚级别。最新完整合成里程碑：[V157 main SHA 5ac412dab7e71a0703c4887614bfba17fbe2eb25 · A3 run_attempt=1 7/7 success](https://github.com/kunlong-luo/merchivra/actions/runs/43422914368)（严格 TLS/重定向/后端身份及 HTTPS 回切；仅该 SHA 的隔离环境；V148 首轮 HTTPS canary 失败根因仍由 [#115](https://github.com/kunlong-luo/merchivra/issues/115) 跟踪）。FBA 来源分页 [#108](https://github.com/kunlong-luo/merchivra/issues/108) 已按技术范围关闭；[#63](https://github.com/kunlong-luo/merchivra/issues/63) 已按维护者技术跟踪决定关闭，但真实目标切流仍缺证据；当前权威生产签署门禁仍是 [#104](https://github.com/kunlong-luo/merchivra/issues/104)。
+**证据分级**：设计提案 → 代码实现 → 快速 CI → 隔离 PG18/Compose/Chromium 模拟验收 → 用户本地真实接口联调 → 业务、安全、生产正式批准。任何较早级别都不能自动升级为较晚级别。最新完整合成里程碑：[V160 main SHA a960f7cf93c3dfc8a0f8ab96b534fd0a7252e49a · A3 run_attempt=1 7/7 success](https://github.com/kunlong-luo/merchivra/actions/runs/43428867257)（严格 TLS/重定向/后端身份及 HTTPS 回切；仅该 SHA 的隔离环境；V148 首轮 HTTPS canary 失败根因仍由 [#115](https://github.com/kunlong-luo/merchivra/issues/115) 跟踪）。FBA 来源分页 [#108](https://github.com/kunlong-luo/merchivra/issues/108) 已按技术范围关闭；[#63](https://github.com/kunlong-luo/merchivra/issues/63) 已按维护者技术跟踪决定关闭，但真实目标切流仍缺证据；当前权威生产签署门禁仍是 [#104](https://github.com/kunlong-luo/merchivra/issues/104)。
 
 ## 设计与决策文件（作为评审资料，未被自动签署）
 
@@ -47,7 +48,7 @@ G1/G2/G3 仍属于待批准的业务/架构/发布门槛。设计文件中“未
 
 ## 历史资料与文档维护
 
-- [阶段开发路线历史](roadmap.md) 以 V108 计划顶部的 V160 状态补丁为最新入口；V92 及更早“当前”的说法属于当时记录。
+- [阶段开发路线历史](roadmap.md) 以 V108 计划顶部的 V161 状态补丁为最新入口；V92 及更早“当前”的说法属于当时记录。
 - [早期架构评审报告](governance/g2-review-2026-10-30.md)、[文档状态管理](governance/document-control.md)、[风险登记](governance/risk-register.md) 作为决策背景保留。
 - 历史版本、测试运行 URL 和旧技术栈应保留“当时”标识，**不得**把已淘汰的 Vue、Maven、PostgreSQL 17 或无 CI/E2E 当成最新技术决策。
 - 修改部署、安全、授权、数据模型或 P0 接口时，应同步 [Agent 规则](../AGENTS.md)、本页、[开发指南](development.md) 和 [现行计划](roadmap/mvp-freeze-release-v108.md)；可运行 `python3 scripts/check_docs_consistency_v109.py` 验证核心文档本地链接与权威引用。

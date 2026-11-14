@@ -1,5 +1,9 @@
 # Merchivra · Agent 开发策略
 
+> **V161 利润优先与前端统一决策（2026-11-14）**：产品首要 P0 是**全成本来源核算→订单/SKU/店铺/站点利润→多维报表与缺项追溯**；订单、采购、库存、FBA/FBM、广告、结算是上游证据。已有 V33/V61/V64 **仅是已知费用范围的贡献估算**，不允许把未核对的广告、头程/仓储、退货退款、税费、汇兑/银行费用默认为 0 或称“真实净利润”。所有新增利润计算须按原币/来源/期间/生效版本、金额守恒、无双计、跨期退款、费用分摊与财务 G1 决策做测试，并优先给 Next 利润中心展示成本覆盖率与不可计算原因。详见 [V161 利润优先产品规划](docs/product/profit-first-next-primary-v161.md)。
+>
+> **前端唯一长期目标：React 19 + Next.js 16 App Router**，仍保留 Spring Boot/Gradle/PG18 业务后端。当前的 Vite/Nginx 是**尚未完成真实目标切流前的默认旧部署及短期回退**，不是正式最终前端，也不能直接删除导致回退丢失。后续仅在 Next 业务/利润入口、真实目标 TLS/Session/CSRF/Owner、多维 UI/回退受控验收并独立批准后调整默认部署，最终退休 Vite 业务构建。技术 Issue #63 已关闭不代表生产 TLS/G1/G2/G3 获批；[#104](https://github.com/kunlong-luo/merchivra/issues/104) 仍 NO-GO，Seller/Ads 真实 OAuth 和远程读写继续关闭。旧文档关于 Vite/Vue/Maven 的技术选型只作历史记录。
+
 > **V109 文档治理规则（2026-11-08）：** 先核对 [当前文档中心](docs/README.md) 和 [P0/历史矛盾审计](docs/governance/docs-audit-v109.md)。维护 README / 开发/部署/安全/CI 文档时，必须与实际 Gradle Java25/Spring Boot4.1.2、PostgreSQL18、React19、Next16 迁移候选、V108 快速 CI + 集中 Mock 里程碑策略一致；早期 PG17/Vue/Maven/未实现声明加历史标签，不能作为当前执行准则。前端/后端/安全或接口改动应更新相关现行文档，并运行 `python3 scripts/check_docs_consistency_v109.py`；该静态检查不代替生产 G1/G2/G3 或真实 Seller 授权。
 
 > **现行策略更新（2026-11-08 / V108）：** MVP P0 功能收尾优先；常规 PR 用快速测试；在功能冻结、真实联调前以及 Beta/Release 候选使用 `.github/workflows/milestone-validation.yml` 统一运行完整 PostgreSQL 18、Next.js、Chromium 和 Compose 模拟回归。任何跨租户、认证、金额、库存并发、正式 OAuth 及敏感文件变更仍必须即时执行必要的针对性安全检查。此规则覆盖文件中旧的“每次提交全套回归”描述；G1/G2/G3 业务签署和生产准入不能由测试绿色代替。详见 [现行执行计划](docs/roadmap/mvp-freeze-release-v108.md)。
