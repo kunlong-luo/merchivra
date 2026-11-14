@@ -51,6 +51,47 @@ export default function BusinessOverviewWorkspace({tenantId,onOpenFinance}:{
      <h2>当前租户尚未建立 Marketplace</h2>
      <p>配置站点后再读取来源质量；不会自动开启 Amazon 授权。</p>
     </section>:<>
+     <div className="core-controls">
+      <label className="shop-filter" htmlFor="business-marketplace-select">
+       <span>查看单站点来源详情</span>
+       <select id="business-marketplace-select" value={selected?.id??''}
+        onChange={e=>setSelectedId(e.target.value)}>
+        {list.map(m=><option key={m.id} value={m.id}>
+         {m.marketplaceId} · {m.region} · {m.currency}</option>)}
+       </select>
+      </label>
+     </div>
+     {selected&&<>
+      <section className="panel full-panel">
+       <div className="panel-heading"><div>
+        <h2>利润总览 · 已知费用贡献（非净利润）</h2>
+        <p>优先回答“这一站点赚了多少、哪些成本还没算进来”。只复用 V64 冻结报告，不虚构净利润。</p>
+       </div></div>
+       {!report?<p className="empty-state">
+        暂无已创建的 V64 报告。没有可信财务来源时，不展示利润数字。</p>:<>
+        <p>报告期间（UTC）{report.after} 至 {report.before}（不含） ·
+         原始币种 {report.currency} · 状态 {report.state}</p>
+        <p>候选订单 {report.totalOrders} · 已提取 {report.processedOrders} ·
+         已合格 {report.eligibleOrders} · 阻断 {report.blockedOrders}</p>
+        <p className="metric-value">
+         {report.state==='SUCCEEDED'&&report.contribution!==null?
+          report.currency+' '+report.contribution:'贡献金额暂不可计算'}
+        </p>
+        <p className="setup-hint">即便 SUCCEEDED，也仅表示候选订单处理完成：
+         银行未核验、税费/真实广告/汇兑可能未覆盖，
+         不表示全球同一时点冻结、正式净利润或已会计过账。</p>
+        {report.state==='SUCCEEDED'&&
+         <a className="text-button"
+          href={exportPeriodProfitUrl(selected.id,report.id)}
+          download="merchivra-period-contribution-snapshot.csv">
+          使用原 V64 接口导出已冻结明细 CSV
+         </a>}
+       </>}
+       <p className="panel-caption">当前贡献模型仅对已复核销售、Amazon/FBA 费用和历史商品成本进行估算。广告、头程与仓储、退货退款、税费、汇兑及其他经营费用的完整覆盖仍需核对；未知费用不可按零处理。</p>
+       <button className="refresh-button" type="button"
+        onClick={onOpenFinance}>进入利润与成本中心，核对原始费用及报表</button>
+      </section>
+     </>}
      <section className="panel full-panel" aria-label="各 Marketplace 全库数据质量">
       <div className="panel-heading"><div>
        <h2>站点覆盖和来源风险</h2>
@@ -78,16 +119,7 @@ export default function BusinessOverviewWorkspace({tenantId,onOpenFinance}:{
        不是将多期观测或不同仓库库存相加。</p>
      </section>
 
-     <div className="core-controls">
-      <label className="shop-filter" htmlFor="business-marketplace-select">
-       <span>查看单站点来源详情</span>
-       <select id="business-marketplace-select" value={selected?.id??''}
-        onChange={e=>setSelectedId(e.target.value)}>
-        {list.map(m=><option key={m.id} value={m.id}>
-         {m.marketplaceId} · {m.region} · {m.currency}</option>)}
-       </select>
-      </label>
-     </div>
+
      {selected&&<>
       <section className="metric-grid" aria-label="当前站点来源质量摘要">
        {[
@@ -149,34 +181,7 @@ export default function BusinessOverviewWorkspace({tenantId,onOpenFinance}:{
        <p className="setup-hint">OBSERVED 为 0 不代表该站点所有 SKU 缺货；
        STALE 正数不能当作当前可售，质量计数不表示库存单位总和。</p>
       </section>
-      <section className="panel full-panel">
-       <div className="panel-heading"><div>
-        <h2>V64 已持久化来源贡献报告</h2>
-        <p>只引用当前 Marketplace 的最新已有报告，不在看板中建立第二套财务计算口径。</p>
-       </div></div>
-       {!report?<p className="empty-state">
-        暂无已创建的 V64 报告。没有可信财务来源时，不展示利润数字。</p>:<>
-        <p>报告期间（UTC）{report.after} 至 {report.before}（不含） ·
-         原始币种 {report.currency} · 状态 {report.state}</p>
-        <p>候选订单 {report.totalOrders} · 已提取 {report.processedOrders} ·
-         已合格 {report.eligibleOrders} · 阻断 {report.blockedOrders}</p>
-        <p className="metric-value">
-         {report.state==='SUCCEEDED'&&report.contribution!==null?
-          report.currency+' '+report.contribution:'贡献金额暂不可计算'}
-        </p>
-        <p className="setup-hint">即便 SUCCEEDED，也仅表示候选订单处理完成：
-         银行未核验、税费/真实广告/汇兑可能未覆盖，
-         不表示全球同一时点冻结、正式净利润或已会计过账。</p>
-        {report.state==='SUCCEEDED'&&
-         <a className="text-button"
-          href={exportPeriodProfitUrl(selected.id,report.id)}
-          download="merchivra-period-contribution-snapshot.csv">
-          使用原 V64 接口导出已冻结明细 CSV
-         </a>}
-       </>}
-       <button className="refresh-button" type="button"
-        onClick={onOpenFinance}>到财务与对账查看报告及原始来源</button>
-      </section>
+
      </>}
     </>}
    </>:null}
