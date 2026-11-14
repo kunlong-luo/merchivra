@@ -1,3 +1,5 @@
+# V164 exact-main full PG18/Flyway A3: immutable expense allocation, partial
+# original-currency remainder and independent review. No net profit or GO.
 # V163 A3 follow-up: fix deterministic V161 Next navigation label selector
 # found on first full run 43551775269; rerun exact merged main for PG18,
 # session/CSRF, browser and synthetic HTTPS without hiding failed history.
@@ -88,7 +90,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V163-A3-Next-finance-nav-regression-and-PG18-review' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V164-A3-PG18-cost-allocation-amount-conservation' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -143,6 +145,7 @@ on:
           - V160-A3-runtime-image-OCI-revision-evidence
           - V163-A3-PostgreSQL18-cost-provenance-maker-checker
           - V163-A3-Next-finance-nav-regression-and-PG18-review
+          - V164-A3-PG18-cost-allocation-amount-conservation
 
 permissions:
   contents: read
