@@ -1,5 +1,7 @@
 # Merchivra · Agent 开发策略
 
+> **V163 原始成本凭证/审核安全门禁**：新增 [V91 PG18 数据来源表](apps/server/src/main/resources/db/migration/V91__manual_cost_source_review.sql)、[`CostSourceReviewService`](apps/server/src/main/java/org/merchivra/erp/finance/CostSourceReviewService.java) 与 [接口](apps/server/src/main/java/org/merchivra/erp/finance/CostSourceReviewController.java)。成本登记须以租户/Marketplace 复合外键、唯一来源键、数据库不可变字段、单次审核终态及不同 Owner 双人复核；`REVIEWED_UNVERIFIED` 仍是**人工不可信第三方来源**，绝不能自动入 V162/V64、真实 Ads/Finances、银行回款或净利润。目标财务系统变更应跑真实 PG18/Flyway/Session/CSRF 专项；生产 #104 仍 NO-GO。详见 [V163 文档](docs/finance/cost-source-review-v163.md)。
+>
 > **V162 成本核算安全底线**：已落地纯 Java [`FullCostCoverageEngine`](apps/server/src/main/java/org/merchivra/erp/finance/FullCostCoverageEngine.java) 和 [八类费用规则](docs/finance/full-cost-coverage-v162.md)。仅允许外部受审且明确不在 V33 Finances/签名 Amazon/FBA 费中的正费用降低已知贡献预览；缺失/手工未审/多币种/重复来源/退款负费用一律不准作为确认净利润。所有 G1 凭证签署、来源持久化、SKU/订单/期间分摊和 V64 集成仍未实现；测试成功≠真实净利润。
 >
 > **V161 利润优先与前端统一决策（2026-11-14）**：产品首要 P0 是**全成本来源核算→订单/SKU/店铺/站点利润→多维报表与缺项追溯**；订单、采购、库存、FBA/FBM、广告、结算是上游证据。已有 V33/V61/V64 **仅是已知费用范围的贡献估算**，不允许把未核对的广告、头程/仓储、退货退款、税费、汇兑/银行费用默认为 0 或称“真实净利润”。所有新增利润计算须按原币/来源/期间/生效版本、金额守恒、无双计、跨期退款、费用分摊与财务 G1 决策做测试，并优先给 Next 利润中心展示成本覆盖率与不可计算原因。详见 [V161 利润优先产品规划](docs/product/profit-first-next-primary-v161.md)。

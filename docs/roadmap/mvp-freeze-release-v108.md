@@ -1,6 +1,16 @@
 # V108 — MVP 收尾、集中测试与上线准入（2026-11-08）
 
-## 2026-11-14 / V161 利润优先产品目标 + Next.js 单一前端（**当前优先级**）
+## 2026-11-14 / V163 手工成本来源入库和独立审核（**当前工程状态**）
+
+> 已新增 [V163 成本凭证存证/审核规则](../finance/cost-source-review-v163.md)：PostgreSQL 18 Flyway **V91**，租户/Marketplace/原币约束、跨类别同来源键唯一防重、原始凭证 metadata 不可变触发器、一次性不同 Owner 双人审核及追加审计。后端 Owner Session/CSRF 新增成本凭证登记、列表、复核、审计 API。所有来源仍 **MANUAL_UNVERIFIED**，复核通过为 **REVIEWED_UNVERIFIED**，不是真实第三方 Ads/财务核验，**不自动接入 V162 扣减或 V64 利润报告**。
+
+- **验证边界**：V163 改了真实 PG18 DDL、敏感资金与 HTTP 读写 API；PR 必须通过 Java 25/Gradle 财务来源/权限负例与文档 CI。合并后须对**精确 main SHA**重新执行完整 A3 (PG18/Flyway + Spring Session/CSRF + Next/Vite 合成 HTTPS/Chromium)，不能沿用 V160 的 7/7、也不能用 V162 的纯算法 CI 代替。实际第三方费用真实性/反重复凭证与 maker-checker 财务 G1 审批仍需另审。
+- **剩余真正 P0**：持久化成本来源与当前 V33、Ads 离线报告、库存/物流票据的**跨来源防双计**；按 SKU/订单/期间的有金额守恒的分摊与未分摊池、版本化 V64 全成本报表、Next.js 成本覆盖与利润瀑布、真实来源签署。跟踪 [利润 P0 #12](https://github.com/kunlong-luo/merchivra/issues/12)。
+- **生产与前端**：[G1/G2/G3 #104](https://github.com/kunlong-luo/merchivra/issues/104) 仍 OPEN/NO-GO；Next.js 16 是正式目标，Vite 目前仍是旧默认与安全回退；Amazon Seller/Ads 真实授权和远程读写继续关闭；V148 TLS 历史问题 [#115](https://github.com/kunlong-luo/merchivra/issues/115) 未证实根因。
+
+---
+
+## 2026-11-14 / V161 利润优先产品目标 + Next.js 单一前端（V161 方向）
 
 > **正式产品方向**：Merchivra 首要价值是**完整成本归集 → 可追溯利润核算 → 订单/SKU/店铺/站点/期间经营报表**。采购、库存、FBA/FBM、广告、订单、Finances、Settlement 和回款是成本与收入来源，而不是优先级高于利润的孤立子系统。详见 [V161 利润优先产品/交付计划](../product/profit-first-next-primary-v161.md) 和 [仍待 G1 签署的财务口径](../product/finance-rulebook.md)。
 
