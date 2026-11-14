@@ -37,6 +37,13 @@ public class CostAllocationService {
     private static ResponseStatusException bad(String reason) {
         return new ResponseStatusException(HttpStatus.BAD_REQUEST,reason);
     }
+    static void independent(UUID sourceMaker,UUID proposer,UUID reviewer) {
+        if(reviewer==null)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        if(sourceMaker==null||proposer==null||reviewer.equals(sourceMaker)
+            ||reviewer.equals(proposer))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "The source maker and allocation proposer may not approve");
+    }
     private static ResponseStatusException conflict(String reason) {
         return new ResponseStatusException(HttpStatus.CONFLICT,reason);
     }
@@ -206,9 +213,7 @@ public class CostAllocationService {
         Batch current=batch(tenant,sourceId,batchId,true);
         if(!"PENDING_REVIEW".equals(current.state()))
             throw conflict("Cost allocation decision is immutable");
-        if(actor.equals(current.proposedBy())||actor.equals(src.creator()))
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                "Reviewer must be independent of both source maker and allocation proposer");
+        independent(src.creator(),current.proposedBy(),actor);
         if(!"REVIEWED_UNVERIFIED".equals(src.state()))
             throw conflict("Source review changed");
         var submitted=lines(tenant,batchId);
