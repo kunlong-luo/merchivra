@@ -1,3 +1,6 @@
+# V166 full A3 on exact merged main: PG18 V93 collision cases,
+# independent one-shot Owner triage/audit and unchanged V165 approval holds.
+# Never treat local candidate classification as verified profit/production GO.
 # V165 fix: full PG18 A3 correctly held a V164 mock invoice with claimed
 # SHA a*64 also used by V98 synthetic Settlement mock. Unique per-fixture
 # SHA allows unrelated tests; dedicated V165 exact-hash hold must still fail.
@@ -101,7 +104,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V165-A3-unique-synthetic-evidence-and-identity-guard' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V166-A3-PG18-collision-case-maker-checker-audit' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -160,6 +163,7 @@ on:
           - V164-A3-exact-six-decimal-amounts-and-cost-allocation
           - V165-A3-cross-source-identity-collision-hold
           - V165-A3-unique-synthetic-evidence-and-identity-guard
+          - V166-A3-PG18-collision-case-maker-checker-audit
 
 permissions:
   contents: read

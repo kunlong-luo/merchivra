@@ -1,6 +1,16 @@
 # V108 — MVP 收尾、集中测试与上线准入（2026-11-08）
 
-## 2026-11-14 / V165 跨来源身份拦截（**最新已验收技术基线**）
+## 2026-11-14 / V166 费用来源身份冲突案件审计（**当前工程阶段**）
+
+> 本轮新增 [V166 冲突候选案件与不可变双人审核](../finance/cost-collision-cases-v166.md)：PostgreSQL 18 Flyway **V93** 存储服务器发现的具体候选 UUID、8 类固定冲突编码、案件创建人及时间。可幂等扫描、独立 Owner 一次性研判、只追加审计、不可改写事实。审批时**仍由 V165 旧规则 409 持续阻断**，不提供只靠人工判断解除财务不确定性的放行按钮。
+
+- **不宣称完成财务对账**：案件 `POTENTIAL_DUPLICATE` 仍只是猜测；`NOT_SAME_CHARGE_UNVERIFIED` 也不是有真实外部交易证据的反证。没有原始文件内容真实性核验、Refund/Ads/Settlement 金额级可验证同一性、正式实际净利润或新 Amazon 生产授权。
+- **门禁**：本轮是新增 PG18 结构和敏感 Owner 写入接口，需要先过 PR Java25/Gradle + Next/Compose 快速 CI，再合并并让**精确 main SHA** 执行 A3 全部七项，其中真实 PG18/HTTP 两名 Owner 候选案件初判、幂等、自审 403、伪造 `CLEAR` 400、重复审核 409、SQL UPDATE/DELETE 应拒绝；不能复用 V165 的通过结果。
+- **下一真正 P0**：对已记录案件进行真正的来源交易金额与单据核实、可撤销/可回算的财务裁决，并以同源身份与金额守恒驱动 V162/V64/Next 多维利润，#12 OPEN；生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 继续 NO-GO、TLS [#115](https://github.com/kunlong-luo/merchivra/issues/115) 历史根因未知。
+
+---
+
+## 2026-11-14 / V165 跨来源身份拦截（V165 历史已验收技术基线）
 
 - **实际开发**：[PR #138](https://github.com/kunlong-luo/merchivra/pull/138) 完成本地 8 类来源标识精确扫描与 V164 费用分摊审批事务中 409 拦截；[PR #139](https://github.com/kunlong-luo/merchivra/pull/139) 隔离不相关合成单据的身份摘要，仍严格验证真正同名来源键和同 SHA 需隔离。只按来源键/自称 SHA 判断**候选重叠**；同金额或同日期不会直接判重。
 - **首轮失败不抹去**：功能主线 `4e95dc019b13aa84f71590bb46d7d61ac3bc4749`，[A3 #43570834637](https://github.com/kunlong-luo/merchivra/actions/runs/43570834637) **首次 6/7 SUCCESS、1 FAILED**；此前 V98 Settlement 与 V164 费用测试碰巧使用固定 `a*64` 合成自称单据摘要，新 V165 正确阻断了旧测试期望的批准。
