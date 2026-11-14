@@ -1,3 +1,8 @@
+# V169 PG18 first exact main A3 #43587863847 failed its PG18 job: the new
+# category assertion incorrectly expected one source's 7.25 to equal
+# a whole category with earlier synthetic A3 costs. Recheck summed
+# approved V92 source allocations via independent PG18 SQL then rerun
+# the entire A3 on the new exact merged main SHA.
 # V169 exact merged-main A3: PG18/V91-V95 period cost readiness read model,
 # original-currency category totals, pending-null, 50-row keyset and Next UI.
 # This is source exposure, NEVER verified net profit or production release.
@@ -113,7 +118,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V169-A3-PG18-cost-profit-readiness' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V169-A3-PG18-full-category-rollup-recheck' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -174,7 +179,7 @@ on:
           - V165-A3-unique-synthetic-evidence-and-identity-guard
           - V166-A3-PG18-collision-case-maker-checker-audit
           - V167-A3-PG18-settlement-line-evidence-review
-          - V169-A3-PG18-cost-profit-readiness
+          - V169-A3-PG18-full-category-rollup-recheck
 
 permissions:
   contents: read

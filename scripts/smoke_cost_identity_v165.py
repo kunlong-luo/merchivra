@@ -377,11 +377,40 @@ for bkt in r["buckets"]:
     # Single-period original-currency sources; the full report is grouped by
     # currency and category rather than silently mixing USD/EUR.
     assert bkt["currency"]==currency
-assert all(bkt["approvedUnverifiedAllocationAmount"]=="0.000000"
-           for bkt in r["buckets"] if bkt["category"]!="INBOUND_FREIGHT")
-b_bucket=next(x for x in r["buckets"] if x["category"]=="INBOUND_FREIGHT")
-assert b_bucket["approvedUnverifiedAllocationAmount"]=="7.250000"
-assert b_bucket["approvedUnverifiedUnallocatedAmount"]=="2.750000"
+# Earlier A3 scripts can create independently approved manual costs in
+# the same marketplace/category. A category total MUST match every approved
+# source in this period, never the 7.25 of one hand-picked V164 source.
+rollup=sql(f"""
+ SELECT s.category||'|'||btrim(s.currency_code)||'|'||
+   coalesce(sum(x.allocated),0)::numeric(20,6)::text||'|'||
+   coalesce(sum(s.amount-x.allocated),0)::numeric(20,6)::text
+ FROM finance_cost_source_v91 s
+ JOIN finance_cost_allocation_batch_v92 b
+   ON b.tenant_id=s.tenant_id AND b.source_id=s.id
+   AND b.state='APPROVED_UNVERIFIED'
+ CROSS JOIN LATERAL (
+   SELECT coalesce(sum(l.expense_amount),0) AS allocated
+   FROM finance_cost_allocation_line_v92 l
+   WHERE l.tenant_id=b.tenant_id AND l.batch_id=b.id
+ ) x
+ WHERE s.tenant_id='{tenant}' AND s.seller_marketplace_id='{mp}'
+   AND s.business_date>='2026-11-01'
+   AND s.business_date<'2026-12-01'
+ GROUP BY s.category,s.currency_code
+ ORDER BY s.category,s.currency_code""")
+expected_rollup={}
+for entry in rollup.splitlines():
+    category_code,original_currency,assigned,remainder=entry.split("|")
+    expected_rollup[(category_code,original_currency)]=(assigned,remainder)
+for bkt in r["buckets"]:
+    assigned,remainder=expected_rollup.get(
+        (bkt["category"],bkt["currency"]),("0.000000","0.000000"))
+    assert bkt["approvedUnverifiedAllocationAmount"]==assigned
+    assert bkt["approvedUnverifiedUnallocatedAmount"]==remainder
+# Exact V164 original-currency money conservation remains independently
+# checked ABOVE on the known source; this is full-category conservation.
+assert rows[b["id"]]["approvedUnverifiedAllocationAmount"]=="7.250000"
+assert rows[b["id"]]["approvedUnverifiedUnallocatedAmount"]=="2.750000"
 assert not call(owner,readiness_url+
     "?periodStart=2026-12-01&periodEndExclusive=2027-01-01")["buckets"]
 # Stable keyset + unbounded grouped totals: add 52 synthetic manual sources
