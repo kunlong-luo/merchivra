@@ -182,3 +182,18 @@ CREATE TABLE finance_cost_allocation_audit_v92 (
 );
 CREATE INDEX finance_cost_allocation_audit_recent_v92
   ON finance_cost_allocation_audit_v92(tenant_id,batch_id,occurred_at DESC,id DESC);
+
+-- Preserve both existing source-review audit history (V91) and new V92
+-- proposal decisions even from accidental SQL UPDATE/DELETE.
+CREATE FUNCTION finance_cost_audit_append_only_v92() RETURNS TRIGGER
+LANGUAGE plpgsql AS $$
+BEGIN
+  RAISE EXCEPTION 'Cost evidence audit history is append-only';
+END;
+$$;
+CREATE TRIGGER finance_cost_source_audit_append_only_v92
+  BEFORE UPDATE OR DELETE ON finance_cost_source_audit_v91
+  FOR EACH ROW EXECUTE FUNCTION finance_cost_audit_append_only_v92();
+CREATE TRIGGER finance_cost_allocation_audit_append_only_v92
+  BEFORE UPDATE OR DELETE ON finance_cost_allocation_audit_v92
+  FOR EACH ROW EXECUTE FUNCTION finance_cost_audit_append_only_v92();
