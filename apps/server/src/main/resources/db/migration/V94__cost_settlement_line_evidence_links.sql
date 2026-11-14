@@ -60,9 +60,10 @@ CREATE INDEX finance_cost_settlement_links_recent_v94
 -- Captured facts are immutable; a review is a one-shot unverified disposition.
 CREATE FUNCTION finance_cost_settlement_line_link_guard_v94() RETURNS TRIGGER
 LANGUAGE plpgsql AS $$
-DECLARE s finance_cost_source_v91%ROWTYPE;
-DECLARE l spapi_settlement_report_line%ROWTYPE;
-DECLARE expected_similarity VARCHAR(40);
+DECLARE
+  s finance_cost_source_v91%ROWTYPE;
+  l spapi_settlement_report_line%ROWTYPE;
+  expected_similarity VARCHAR(40);
 BEGIN
   IF TG_OP='DELETE' THEN
     RAISE EXCEPTION 'Cost-to-settlement evidence links cannot be deleted';
