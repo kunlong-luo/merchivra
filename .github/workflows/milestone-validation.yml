@@ -1,4 +1,4 @@
-# V169 PG18 first exact main A3 #43587863847 failed 6/7: the new
+# V169 PG18 first exact main A3 #43587863847 failed its PG18 job: the new
 # category assertion incorrectly expected one source's 7.25 to equal
 # a whole category with earlier synthetic A3 costs. Recheck summed
 # approved V92 source allocations via independent PG18 SQL then rerun
