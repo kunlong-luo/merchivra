@@ -30,6 +30,12 @@ V164 允许经过**本地手工元数据复核**的费用按 SKU / 订单 / 期�
 
 V165 在 V164 `CostAllocationService.decide(..., accept=true)` 的**同一个数据库事务**内，于持有费用来源行锁后重新扫描。出现重叠即返回 **HTTP 409**，保留 `PENDING_REVIEW` 并不追加批准审计；拒绝方案仍可执行。该机制防止**当前可见候选冲突在审批瞬间被忽视**，不保证对其他表未来导入的事务持续清除冲突；之后新导入的费用会出现在最新扫描中，已有 `APPROVED_UNVERIFIED` 仍不能变成已核验费用。现阶段不提供“我确认不是重复”的绕过按钮，也不自动改财务报表与账本。
 
+## V165 真实隔离验收记录（2026-11-14）
+
+第一版主线 `4e95dc019b13aa84f71590bb46d7d61ac3bc4749` 的 [完整 A3 #43570834637](https://github.com/kunlong-luo/merchivra/actions/runs/43570834637) **run_attempt=1，6/7 成功、1 失败**：V98 Settlement 合成报告与旧 V164 单据使用了相同固定 `a*64` 人工声称文件 SHA，扫描正确发现候选重叠，因而旧 V164 费用审核的预期 200 变为 409。修复 [PR #139](https://github.com/kunlong-luo/merchivra/pull/139) 为**无关**合成单据生成独立 SHA；V165 故意相同来源键/同摘要的负例一律保留，绝不解除真实候选冲突阻断。
+
+新代码 SHA `15f705a03890b5bb3b792da19047657a119029e0` 的 [完整 A3 #43571700251](https://github.com/kunlong-luo/merchivra/actions/runs/43571700251) **首次 7/7 SUCCESS**，包含真实 PG18、两名合成 Owner、相同金额不同来源身份不误判、相同 Ads 来源键导致审批 409 与旧审计不变、后续自称同 SHA 在当前预览中被提示；完整 Java25/Next16/Chromium/Session/CSRF/HTTPS 合成技术验证成功。不代表真实外部账本已经去重或实际净利润得到证明。
+
 ## 真实隔离测试与限制
 
 `CostIdentityReconciliationServiceTest` 检查八项独立命中、未命中仍不能视作真实、租户会话和 no-store、只读及无外部 API。完整 A3 调用 `scripts/smoke_cost_identity_v165.py` 使用**隔离 PostgreSQL 18 + 真实 Spring HTTP + 两个合成 Owner**：同金额不同来源键不误判；向 V36 插入相同来源键后，已提交的 V164 方案审批 409 而仍为待审；无冲突方案可按 V164 规则独立批准；若之后出现另一张宣称相同 SHA 的 V91 单据，只在快照中标记风险，绝不自动变成已验证利润。正常财务报表、Ads Reviewed Cost、银行回款表行数必须保持不变。
