@@ -176,7 +176,8 @@ public class CostSourceReviewService {
     public Source decide(UUID tenant,UUID mp,UUID id,UUID actor,
                          boolean accept,String reason) {
         if (actor==null)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
-        if (reason==null || reason.strip().length()<10 || reason.length()>500)
+        if (reason==null || reason.strip().length()<10 || reason.length()>500
+            || reason.indexOf(10)>=0 || reason.indexOf(13)>=0)
             throw bad();
         marketplaceCurrency(tenant,mp);
         Source current=get(tenant,mp,id,true);
