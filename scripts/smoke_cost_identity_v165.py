@@ -211,10 +211,93 @@ sql_denied(f"DELETE FROM finance_cost_identity_case_audit_v93 "
            f"WHERE tenant_id='{tenant}' AND case_id='{case['id']}'")
 assert sql(f"SELECT count(*) FROM finance_cost_identity_case_audit_v93 "
            f"WHERE tenant_id='{tenant}' AND case_id='{case['id']}'")=="2"
+# V167: actual PG18 Settlement REPORT LINE candidate, never real Amazon data.
+# Synthetic LIVE-tag staging data are deliberately not external invoice proof.
+report_id=str(uuid4())
+report_key="V167-REPORT-"+uuid4().hex[:12]
+doc_key="V167-DOCUMENT-"+uuid4().hex[:12]
+doc_sha=uuid4().hex+uuid4().hex
+sql(f"""INSERT INTO spapi_settlement_report (
+ id,tenant_id,seller_marketplace_id,amazon_report_id,report_document_id,
+ report_type,state,source_origin,document_sha256,settlement_reference,
+ statement_currency,declared_net,line_count)
+ VALUES ('{report_id}','{tenant}','{mp}','{report_key}','{doc_key}',
+ 'GET_V2_SETTLEMENT_REPORT_DATA_FLAT_FILE_V2','IMPORTED','LIVE',
+ '{doc_sha}','V167-SETTLEMENT-{uuid4().hex[:12]}','{currency}',-27,3)""")
+sql(f"""INSERT INTO spapi_settlement_report_line(
+ tenant_id,report_id,line_number,transaction_type,amount_type,
+ amount_description,external_order_id,signed_amount,currency_code) VALUES
+ ('{tenant}','{report_id}',1,'Other Transaction','Fee','Synthetic fee',
+   '{key_a}',-10.000000,'{currency}'),
+ ('{tenant}','{report_id}',2,'Other Transaction','Fee','Synthetic fee',
+   '{key_b}',-9.000000,'{currency}'),
+ ('{tenant}','{report_id}',3,'Other Transaction','Fee','Synthetic fee',
+   'DIFFERENT-{uuid4().hex[:12]}',-8.000000,'{currency}')""")
+link_url=url_a+"/settlement-line-links"
+call(sess(),link_url,expected=401)
+assert call(owner,link_url)==[]  # no link is UNKNOWN, not a zero charge
+# Regular call helper includes owner CSRF; explicitly invoke without it to test.
+saved_csrf=owner["csrf"]
+owner["csrf"]=None
+call(owner,link_url,"POST",{"reportId":report_id,"lineNumber":1},expected=403)
+owner["csrf"]=saved_csrf
+call(owner,link_url,"POST",{"reportId":report_id,"lineNumber":999},expected=404)
+call(owner,link_url,"POST",{"reportId":str(uuid4()),"lineNumber":1},
+     expected=404)
+call(owner,link_url,"POST",{"reportId":report_id,"lineNumber":0},
+     expected=400)
+first=call(owner,link_url,"POST",{"reportId":report_id,"lineNumber":1})
+assert first["similarity"]=="SIMILAR_REFERENCE_AND_AMOUNT"
+assert first["state"]=="OPEN"
+assert first["evidenceOrigin"]=="LOCAL_LINE_ASSOCIATION"
+assert first["sourceAmount"]=="10.000000"
+assert not first["confirmedDuplicate"] and not first["financialHoldCleared"]
+assert not first["netProfitVerified"]
+assert call(owner,link_url,"POST",{"reportId":report_id,
+                                  "lineNumber":1})["id"]==first["id"]
+assert len(call(owner,link_url))==1
+review_url=link_url+"/"+first["id"]+"/review"
+call(owner,review_url,"POST",{"disposition":"POTENTIAL_DUPLICATE_UNVERIFIED",
+    "reason":"A source maker must not review the same evidence"},expected=403)
+call(checker,review_url,"POST",{"disposition":"CLEAR",
+    "reason":"Unsupported verified financial clearance"},expected=400)
+decided=call(checker,review_url,"POST",{
+    "disposition":"POTENTIAL_DUPLICATE_UNVERIFIED",
+    "reason":"Identical order reference and amount still require invoice proof"})
+assert decided["state"]=="POTENTIAL_DUPLICATE_UNVERIFIED"
+assert not decided["financialHoldCleared"] and not decided["confirmedDuplicate"]
+call(checker,review_url,"POST",{
+    "disposition":"ESCALATED_NEEDS_PROOF",
+    "reason":"The disposition must be single-use"},expected=409)
+assert [x["action"] for x in call(owner,link_url+"/"+first["id"]+"/audit")]==[
+    "POTENTIAL_DUPLICATE_UNVERIFIED","OPEN"]
+assert call(owner,url_a+"/identity-check")["approvalHeld"], "V165 409 must remain"
+b_link=url_b+"/settlement-line-links"
+ref_only=call(owner,b_link,"POST",{"reportId":report_id,"lineNumber":2})
+assert ref_only["similarity"]=="SIMILAR_REFERENCE_ONLY"
+amount_only=call(owner,b_link,"POST",{"reportId":report_id,"lineNumber":1})
+assert amount_only["similarity"]=="AMOUNT_ONLY_NO_IDENTITY"
+unrelated=call(owner,b_link,"POST",{"reportId":report_id,"lineNumber":3})
+assert unrelated["similarity"]=="UNRELATED_LINE_NO_EVIDENCE"
+assert len(call(owner,b_link))==3
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}"
+     f"/cost-sources/{a['id']}/settlement-line-links",expected=404)
+call(owner,root+"/"+str(uuid4())+"/settlement-line-links",expected=404)
+sql_denied(f"UPDATE finance_cost_settlement_line_link_v94 "
+           f"SET similarity='AMOUNT_ONLY_NO_IDENTITY' "
+           f"WHERE tenant_id='{tenant}' AND id='{first['id']}'")
+sql_denied(f"DELETE FROM finance_cost_settlement_line_link_v94 "
+           f"WHERE tenant_id='{tenant}' AND id='{first['id']}'")
+sql_denied(f"DELETE FROM finance_cost_settlement_line_audit_v94 "
+           f"WHERE tenant_id='{tenant}' AND link_id='{first['id']}'")
+assert sql(f"SELECT count(*) FROM finance_cost_settlement_line_audit_v94 "
+           f"WHERE tenant_id='{tenant}' AND link_id='{first['id']}'")=="2"
+
 after=[sql("SELECT count(*) FROM "+t) for t in
     ("finance_profit_report_job","bank_payout_observation","ads_report_reviewed_cost")]
 assert before==after,"Manual identity scan may not post finance/bank/Ads"
-print("PASS V165/V166 PG18+HTTP: scoped 8-family source identity preview; equal "
+print("PASS V165/V166/V167 PG18+HTTP: 8-family source preview, audited "
+      "settlement-line scoped links and independent unverified review; equal "
       "amount/different key NOT duplication; same Ads key holds approval 409; "
       "no self/unauthorized leak; later claimed-document collision signaled; "
       "all manual allocations remain unverified, no profit/bank/Ads posting")
