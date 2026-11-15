@@ -1,3 +1,5 @@
+> **V170（待技术 A3）**：按 [退款/退货历史成本风险队列](docs/finance/refund-cost-readiness-v170.md) 对比 V63 数量/金额/历史成本指纹，标记待核对退款及过期人工证据；Next16 财务页面不把人工已回库视为库存实收，也不作 COGS 回转、财务记账或已验证净利润。#104 NO-GO、Seller/Ads 真实 OAuth OFF。
+
 > **V169 已完成合成技术 A3（不等于实账验收）**：PR #147 功能、PR #148 完整分类金额验证修复，原始失败 A3 #43587863847 保留，合并 SHA `8c12e042161d4eb0369fd64873eec9f91c30b7ac` 的 [最终 A3 #43588250536](https://github.com/kunlong-luo/merchivra/actions/runs/43588250536) 7/7 SUCCESS。按 [财务规则](docs/finance/cost-profit-readiness-v169.md) 显示人工成本原币/类别/余额/未核验及 Next 可见页面；没有真实费用认证、全成本净利润或生产授权；#104 NO-GO。
 
 > **V169（待技术验收）**：按 [全成本人工来源准备度](docs/finance/cost-profit-readiness-v169.md) 按月份及站点查看八类成本真实存储汇总、已批准但未核验分摊、余额和共享行冲突；Next16 财务工作台已接入。不得把元数据审核视为真实平台扣费认证，不得自动影响 V162/V64，#104 继续 NO-GO。

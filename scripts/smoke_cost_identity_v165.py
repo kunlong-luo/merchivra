@@ -440,10 +440,121 @@ assert len(r1["sources"])+len(r2["sources"])==int(sql(f"""
  AND business_date>='2026-11-01' AND business_date<'2026-12-01'"""))
 assert not r2["realizedNetProfitVerified"] and r2["realizedNetProfit"] is None
 
+# V170: a source-level Finances refund can be missing order match,
+# V34/V35 allocation or verified inventory receipt. NEVER omit it or
+# treat manual "restocked" sensitivity as a real COGS reversal.
+refund_root=f"/api/v1/finance/marketplaces/{mp}/refund-cost-readiness"
+refund_period="?periodStart=2025-03-01&periodEndExclusive=2025-04-01"
+call(sess(),refund_root+refund_period,expected=401)
+call(owner,refund_root+"?periodStart=2025-03-01"
+     "&periodEndExclusive=2025-03-01",expected=400)
+call(owner,refund_root+"?periodStart=2024-01-01"
+     "&periodEndExclusive=2025-04-01",expected=400)
+call(owner,refund_root+refund_period+"&beforeAt=2025-03-09T12:34:56Z",
+     expected=400)
+call(owner,refund_root+refund_period+
+     f"&beforeAt=2025-04-01T00:00:00Z&beforeId={uuid4()}",expected=400)
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}/refund-cost-readiness"
+     +refund_period,expected=404)
+before_refunds=call(owner,refund_root+refund_period)
+assert not before_refunds["realizedNetProfitVerified"]
+assert not before_refunds["actualCogsReversalsVerified"]
+assert not before_refunds["allFinancesRefundsCovered"]
+assert not before_refunds["bankReconciled"]
+# The synthetic LIVE flag is a staging-fixture label, NOT Amazon source
+# authentication. Fifty-two same-timestamp events test stable UUID keysets.
+salt=uuid4().hex[:12]
+other_currency="EUR" if currency!="EUR" else "USD"
+sql(f"""INSERT INTO finance_source_event(
+ id,tenant_id,seller_marketplace_id,source_family,source_event_key,
+ data_origin,category,amount,currency_code,posted_at,source_type)
+ SELECT gen_random_uuid(),'{tenant}','{mp}','SPAPI_FINANCES',
+ 'V170-REFUND-{salt}-'||to_char(g,'FM0000'),
+ 'LIVE','PRODUCT_REFUND',-1.250000,'{currency}',
+ '2025-03-09 12:34:56+00'::timestamptz,'V170_SYNTHETIC_REFUND'
+ FROM generate_series(1,52) g""")
+sql(f"""INSERT INTO finance_source_event(
+ id,tenant_id,seller_marketplace_id,source_family,source_event_key,
+ data_origin,category,amount,currency_code,posted_at,source_type)
+ VALUES('{uuid4()}','{tenant}','{mp}','SPAPI_FINANCES',
+ 'V170-REFUND-{salt}-ALT','LIVE','PRODUCT_REFUND',-2.750000,
+ '{other_currency}','2025-03-10 00:00:00+00','V170_SYNTHETIC_REFUND')""")
+sql(f"""INSERT INTO finance_source_event(
+ id,tenant_id,seller_marketplace_id,source_family,source_event_key,
+ data_origin,category,amount,currency_code,posted_at,source_type)
+ VALUES('{uuid4()}','{tenant}','{mp}','SPAPI_FINANCES',
+ 'V170-REFUND-{salt}-OUTSIDE','LIVE','PRODUCT_REFUND',-9.000000,
+ '{currency}','2025-04-01 00:00:00+00','V170_SYNTHETIC_REFUND')""")
+first_refunds=call(owner,refund_root+refund_period)
+assert len(first_refunds["events"])==50 and first_refunds["hasMore"]
+assert first_refunds["nextBeforeAt"] and first_refunds["nextBeforeId"]
+all_refunds=list(first_refunds["events"])
+page_refunds=first_refunds
+for _ in range(30):
+    if not page_refunds["hasMore"]:break
+    assert page_refunds["nextBeforeAt"] and page_refunds["nextBeforeId"]
+    cursor_refunds=(refund_period+"&beforeAt="+page_refunds["nextBeforeAt"]+
+                    "&beforeId="+page_refunds["nextBeforeId"])
+    page_refunds=call(owner,refund_root+cursor_refunds)
+    assert page_refunds["events"]
+    assert page_refunds["buckets"]==first_refunds["buckets"]
+    all_refunds.extend(page_refunds["events"])
+else:
+    raise AssertionError("V170 refund keyset did not terminate within 30 pages")
+assert not page_refunds["hasMore"]
+assert len(all_refunds)==len({v["eventId"] for v in all_refunds})
+expected_count=int(sql(f"""SELECT count(*) FROM finance_source_event
+ WHERE tenant_id='{tenant}' AND seller_marketplace_id='{mp}'
+ AND source_family='SPAPI_FINANCES' AND data_origin='LIVE'
+ AND category='PRODUCT_REFUND'
+ AND posted_at>='2025-03-01 00:00:00+00'
+ AND posted_at<'2025-04-01 00:00:00+00'"""))
+assert len(all_refunds)==expected_count
+assert first_refunds["buckets"]==page_refunds["buckets"]
+independent_buckets=sql(f"""SELECT btrim(currency_code)||'|'||
+ count(*)::text||'|'||sum(amount)::numeric(20,6)::text
+ FROM finance_source_event
+ WHERE tenant_id='{tenant}' AND seller_marketplace_id='{mp}'
+ AND source_family='SPAPI_FINANCES' AND data_origin='LIVE'
+ AND category='PRODUCT_REFUND'
+ AND posted_at>='2025-03-01 00:00:00+00'
+ AND posted_at<'2025-04-01 00:00:00+00'
+ GROUP BY currency_code ORDER BY currency_code""")
+expected_by_currency={}
+for line in independent_buckets.splitlines():
+    code,count,amount=line.split("|")
+    expected_by_currency[code]=(int(count),amount)
+assert len(first_refunds["buckets"])==len(expected_by_currency)
+for bucket in first_refunds["buckets"]:
+    assert (bucket["sourceEventCount"],bucket["signedProductRefundAmount"])==(
+        expected_by_currency[bucket["currency"]])
+    assert not bucket["completeRefundCoverage"]
+    assert not bucket["verifiedCogsReversal"]
+for record in all_refunds:
+    assert not record["externalReceiptVerified"]
+    assert not record["actualCogsReversalAllowed"]
+    assert record["actualCogsReversal"] is None
+synthetic_ids=set(sql(f"""SELECT id FROM finance_source_event
+ WHERE tenant_id='{tenant}' AND seller_marketplace_id='{mp}'
+ AND source_event_key LIKE 'V170-REFUND-{salt}-%'
+ AND posted_at<'2025-04-01 00:00:00+00'""").splitlines())
+assert len(synthetic_ids)==53
+synthetic_rows=[v for v in all_refunds if v["eventId"] in synthetic_ids]
+assert len(synthetic_rows)==53
+for v in synthetic_rows:
+    assert v["evidenceState"]=="INCOMPLETE_EVIDENCE"
+    assert v["historicalCostExposure"] is None
+    assert v["claimedRestockCostSensitivity"] is None
+    assert v["reviewedOrderId"] is None
+    assert not v["evidenceCurrent"]
+assert not call(owner,refund_root+
+    "?periodStart=2025-05-01&periodEndExclusive=2025-06-01")[
+    "actualCogsReversalsVerified"]
+
 after=[sql("SELECT count(*) FROM "+t) for t in
     ("finance_profit_report_job","bank_payout_observation","ads_report_reviewed_cost")]
 assert before==after,"Manual identity scan may not post finance/bank/Ads"
-print("PASS V165/V166/V167/V168/V169 PG18+HTTP: 8-family source preview, audited "
+print("PASS V165/V166/V167/V168/V169/V170 PG18+HTTP: 8-family source preview, audited "
       "settlement-line scoped links and independent unverified review; equal "
       "amount/different key NOT duplication; same Ads key holds approval 409; "
       "no self/unauthorized leak; later claimed-document collision signaled; "

@@ -11,6 +11,7 @@ import SettlementReportsPanel from './SettlementReportsPanel'
 import SkuProfitPanel from './SkuProfitPanel'
 import PeriodProfitReportPanel from './PeriodProfitReportPanel'
 import CostProfitReadinessPanel from './CostProfitReadinessPanel'
+import RefundCostReadinessPanel from './RefundCostReadinessPanel'
 import ItemAllocationPanel from './ItemAllocationPanel'
 import FinanceExceptionQueuePanel from './FinanceExceptionQueuePanel'
 import FinanceEventsTable from './components/FinanceEventsTable'
@@ -120,6 +121,8 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
   {currentId&&<SkuProfitPanel key={currentId} tenantId={tenantId} marketplaceId={currentId}/>}
   {currentId&&<PeriodProfitReportPanel key={currentId} tenantId={tenantId} marketplaceId={currentId}/>}
   {currentId&&<CostProfitReadinessPanel key={'cost-readiness-'+currentId}
+   tenantId={tenantId} marketplaceId={currentId}/>}
+  {currentId&&<RefundCostReadinessPanel key={'refund-cost-readiness-'+currentId}
    tenantId={tenantId} marketplaceId={currentId}/>}
   {currentId&&<SettlementReportsPanel key={currentId} tenantId={tenantId} marketplaceId={currentId} connected={markets.data?.find(m=>m.id===currentId)?.connectionStatus==='CONNECTED'}/>}
   {currentId&&<SettlementWorkspace key={currentId} tenantId={tenantId}

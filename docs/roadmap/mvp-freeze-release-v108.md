@@ -1,3 +1,5 @@
+> **2026-11-15 / V170 P0 退款 COGS 风险准备度（待 CI/A3）**：依 [V170 定义](../finance/refund-cost-readiness-v170.md)，增加按入账 UTC 期间/原币的 Finances PRODUCT_REFUND 来源全范围统计、最多 50 条有序退款事件及 V63 证据修订复核状态，Next16 财务页展示实际可见阻塞。**没有可信物理实收便不得把人工 RESTOCKED_CLAIMED 写成真实 COGS 回转或净利润**，也不得把 Finances signed refund 在 V162 再扣一次；G1/G2/G3 及生产 #104 仍未放行。
+
 > **V169（2026-11-14）已合并并通过精确 main SHA 全套 A3**：[费用原币八类准备度和 Next 财务页面](../finance/cost-profit-readiness-v169.md)。PR #147 首轮 [A3 #43587863847](https://github.com/kunlong-luo/merchivra/actions/runs/43587863847) 失败，是合成用例把一笔 V164 费用错当全科目合计。PR #148 改为 PG18 全类别全部来源独立 SQL 校验，修复提交 `8c12e042161d4eb0369fd64873eec9f91c30b7ac` 的 [A3 #43588250536](https://github.com/kunlong-luo/merchivra/actions/runs/43588250536) **7/7 SUCCESS**。**P0 全成本真实费用核销、退款汇率和净利润尚未完成**；G1/G2/G3 未批，Seller/Ads OAuth OFF，生产 #104 NO-GO。
 
 > **2026-11-14 / V169 P0 全成本可视化准备度（待快速 CI/完整 A3）**：[按业务月、科目、原币的人工费用准备度查询与 Next 财务工作台](../finance/cost-profit-readiness-v169.md)。完整范围聚合 + 50 条 keyset 来源穿透，保留 V165/V168 冲突、V164 已批准但未核验的分摊与剩余余额。**不是净利润已核销**；本地真实 Amazon/银行/Ads G1/G2/G3 仍待审批，#104 NO-GO。
