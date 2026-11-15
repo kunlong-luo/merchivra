@@ -1,3 +1,8 @@
+# V170 first main PG18 A3 #43694186657 failed: synthetic LIVE
+# refund triggered HTTP 500 after V63 @Transactional business 409 poisoned
+# the outer read-only transaction. Use TransactionTemplate REPEATABLE_READ
+# only for the original-currency source snapshot; probe V63 after commit.
+# Rerun ALL 7 A3 jobs on the new exact merged main SHA; not production GO.
 # V170 exact merged SHA A3: PG18 UTC-scoped V63 refund/COGS risk queue,
 # signed per-currency Finances source amounts, 50+ keyset refund events,
 # historical cost evidence freshness and NO physical receipt/GL posting.
@@ -122,7 +127,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V170-A3-PG18-refund-cogs-gap-queue' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V170-A3-PG18-refund-gap-transaction-isolation' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -183,7 +188,7 @@ on:
           - V165-A3-unique-synthetic-evidence-and-identity-guard
           - V166-A3-PG18-collision-case-maker-checker-audit
           - V167-A3-PG18-settlement-line-evidence-review
-          - V170-A3-PG18-refund-cogs-gap-queue
+          - V170-A3-PG18-refund-gap-transaction-isolation
 
 permissions:
   contents: read
