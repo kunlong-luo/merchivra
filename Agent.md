@@ -1,4 +1,6 @@
-> **V170（待技术 A3）**：按 [退款/退货历史成本风险队列](docs/finance/refund-cost-readiness-v170.md) 对比 V63 数量/金额/历史成本指纹，标记待核对退款及过期人工证据；Next16 财务页面不把人工已回库视为库存实收，也不作 COGS 回转、财务记账或已验证净利润。#104 NO-GO、Seller/Ads 真实 OAuth OFF。
+> **V170 已通过完整合成 A3（非真实财务/生产验收）**：功能 PR #150、事务修复 PR #151，代码 SHA `09b1195850592ac66b3022714a4f81f19b6a9512`，首次 PG18 A3 #43694186657 失败；修复后 [A3 #43694623744](https://github.com/kunlong-luo/merchivra/actions/runs/43694623744) attempt1 6/7（外部 Aliyun Maven 502），仅重跑失败 Compose 后 attempt2 **7/7 SUCCESS**。V63 未配齐退货证据只显示业务缺口，始终不核销 COGS、不虚构净利润。#104 NO-GO，Seller/Ads OAuth OFF。
+
+> **V170（技术 A3 已验收）**：按 [退款/退货历史成本风险队列](docs/finance/refund-cost-readiness-v170.md) 对比 V63 数量/金额/历史成本指纹，标记待核对退款及过期人工证据；Next16 财务页面不把人工已回库视为库存实收，也不作 COGS 回转、财务记账或已验证净利润。#104 NO-GO、Seller/Ads 真实 OAuth OFF。
 
 > **V169 已完成合成技术 A3（不等于实账验收）**：PR #147 功能、PR #148 完整分类金额验证修复，原始失败 A3 #43587863847 保留，合并 SHA `8c12e042161d4eb0369fd64873eec9f91c30b7ac` 的 [最终 A3 #43588250536](https://github.com/kunlong-luo/merchivra/actions/runs/43588250536) 7/7 SUCCESS。按 [财务规则](docs/finance/cost-profit-readiness-v169.md) 显示人工成本原币/类别/余额/未核验及 Next 可见页面；没有真实费用认证、全成本净利润或生产授权；#104 NO-GO。
 
