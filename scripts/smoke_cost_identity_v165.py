@@ -489,11 +489,19 @@ first_refunds=call(owner,refund_root+refund_period)
 assert len(first_refunds["events"])==50 and first_refunds["hasMore"]
 assert first_refunds["nextBeforeAt"] and first_refunds["nextBeforeId"]
 all_refunds=list(first_refunds["events"])
-cursor_refunds=(refund_period+"&beforeAt="+first_refunds["nextBeforeAt"]+
-                "&beforeId="+first_refunds["nextBeforeId"])
-second_refunds=call(owner,refund_root+cursor_refunds)
-assert second_refunds["events"] and not second_refunds["hasMore"]
-all_refunds.extend(second_refunds["events"])
+page_refunds=first_refunds
+for _ in range(30):
+    if not page_refunds["hasMore"]:break
+    assert page_refunds["nextBeforeAt"] and page_refunds["nextBeforeId"]
+    cursor_refunds=(refund_period+"&beforeAt="+page_refunds["nextBeforeAt"]+
+                    "&beforeId="+page_refunds["nextBeforeId"])
+    page_refunds=call(owner,refund_root+cursor_refunds)
+    assert page_refunds["events"]
+    assert page_refunds["buckets"]==first_refunds["buckets"]
+    all_refunds.extend(page_refunds["events"])
+else:
+    raise AssertionError("V170 refund keyset did not terminate within 30 pages")
+assert not page_refunds["hasMore"]
 assert len(all_refunds)==len({v["eventId"] for v in all_refunds})
 expected_count=int(sql(f"""SELECT count(*) FROM finance_source_event
  WHERE tenant_id='{tenant}' AND seller_marketplace_id='{mp}'
@@ -502,7 +510,7 @@ expected_count=int(sql(f"""SELECT count(*) FROM finance_source_event
  AND posted_at>='2025-03-01 00:00:00+00'
  AND posted_at<'2025-04-01 00:00:00+00'"""))
 assert len(all_refunds)==expected_count
-assert first_refunds["buckets"]==second_refunds["buckets"]
+assert first_refunds["buckets"]==page_refunds["buckets"]
 independent_buckets=sql(f"""SELECT btrim(currency_code)||'|'||
  count(*)::text||'|'||sum(amount)::numeric(20,6)::text
  FROM finance_source_event
