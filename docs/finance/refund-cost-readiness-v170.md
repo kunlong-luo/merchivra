@@ -1,5 +1,7 @@
 # V170 · 退款/退货历史 COGS 风险与核算准备度（Next.js 财务工作台）
 
+**V170 首次真实 A3 负例（2026-11-15）**：代码 [PR #150](https://github.com/kunlong-luo/merchivra/pull/150) 已合并至 `04fc6081dfe8343a6f507487c7eface4c5518e00`。首次 [完整 A3 #43694186657](https://github.com/kunlong-luo/merchivra/actions/runs/43694186657) 的 PG18 财务任务发现：空退款队列 GET 正常，插入未匹配的合成 LIVE 退款后出现 HTTP 500。原因分析为在同一 Spring `REPEATABLE_READ` 事务下捕获内层 V63 `@Transactional` 的正常 409 导致外层事务 rollback-only；必须把**来源分组及分页同快照查询**与**逐笔 V63 人工证据复核**隔离，再跑全套 A3。修复后的 V63 证据是逐事件的新鲜读，不声称与原始来源列表跨事务原子冻结；若两者间来源发生并发变更，以重新核查和待决为准。修复尚待 CI/A3，不能预先写作已通过。
+
 ## 背景与本轮交付
 
 V63 已按单个 LIVE Finances 退款事件提供独立 Owner 的 V34/V35 证据复核、历史成本敞口与「人工声称已回库」敏感度，**不**真实回补库存、不冲回 COGS、不写 GL。V169 实现八类手工费用的原币准备度，但退款事件来自另一条 Finances 链路，不能当作 V91 的额外正数成本，也不能与 V64 已纳入的 Finances 有符号退款再次相加。
