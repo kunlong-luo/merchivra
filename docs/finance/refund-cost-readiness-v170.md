@@ -2,6 +2,16 @@
 
 **V170 首次真实 A3 负例（2026-11-15）**：代码 [PR #150](https://github.com/kunlong-luo/merchivra/pull/150) 已合并至 `04fc6081dfe8343a6f507487c7eface4c5518e00`。首次 [完整 A3 #43694186657](https://github.com/kunlong-luo/merchivra/actions/runs/43694186657) 的 PG18 财务任务发现：空退款队列 GET 正常，插入未匹配的合成 LIVE 退款后出现 HTTP 500。原因分析为在同一 Spring `REPEATABLE_READ` 事务下捕获内层 V63 `@Transactional` 的正常 409 导致外层事务 rollback-only；必须把**来源分组及分页同快照查询**与**逐笔 V63 人工证据复核**隔离，再跑全套 A3。修复后的 V63 证据是逐事件的新鲜读，不声称与原始来源列表跨事务原子冻结；若两者间来源发生并发变更，以重新核查和待决为准。修复尚待 CI/A3，不能预先写作已通过。
 
+## V170 最终技术验收（2026-11-15）
+
+[功能 PR #150](https://github.com/kunlong-luo/merchivra/pull/150) 的首次合并代码 `04fc6081dfe8343a6f507487c7eface4c5518e00` 在 [A3 #43694186657](https://github.com/kunlong-luo/merchivra/actions/runs/43694186657) **FAILED**：孤立 PostgreSQL18 的合成退款来源缺少 V34/V35 证据，`RefundRecoveryService.preview` 正常抛出 409，但共享的外层只读事务被标记 rollback-only，导致 V170 整页 GET 出现 HTTP 500。保留原失败记录。
+
+[修复 PR #151](https://github.com/kunlong-luo/merchivra/pull/151) 将期间原币来源汇总及 50 条稳定 UUID keyset 查询单独放入 `TransactionTemplate` 的 `REPEATABLE_READ` 只读事务，**提交该来源快照之后**逐笔调用原有 V63 证据预览。正常的 404/409 只在单笔显示 `INCOMPLETE_EVIDENCE`、金额 null，而不再令整个来源报表回滚。V63 新鲜证据与已提交来源快照之间可能发生并发变化，不能冒充同一财务冻结版次。修复功能代码已合并，提交 `09b1195850592ac66b3022714a4f81f19b6a9512`。
+
+修复代码的 [完整 A3 #43694623744](https://github.com/kunlong-luo/merchivra/actions/runs/43694623744) **最终 7/7 SUCCESS（run_attempt=2）**：PG18/Flyway/Spring HTTP 已覆盖 53 条同月份合成未审退款（同时间键分页、异币原币汇总、资料缺项返回 200、没有 COGS/利润记账）；Java25/Gradle、Next16/React19/Vite、Chromium、Compose 配置和真实 HTTP 链路均成功。**第一次执行（attempt 1）6/7**：PG18 财务测试成功，Compose 服务镜像构建却因 `maven.aliyun.com` 返回 HTTP 502 失败；受控重跑**仅失败的完整 Compose HTTP 任务**后成功。相关历史仍可在同一运行查看。
+
+**这是本地合成技术验收，不是外部 Amazon/银行真实费用认证、物理退货实收、COGS 冲回或全部净利润核销。** #104 继续 NO-GO，Seller/Ads OAuth OFF；真实 G1/G2/G3 审核不变。
+
 ## 背景与本轮交付
 
 V63 已按单个 LIVE Finances 退款事件提供独立 Owner 的 V34/V35 证据复核、历史成本敞口与「人工声称已回库」敏感度，**不**真实回补库存、不冲回 COGS、不写 GL。V169 实现八类手工费用的原币准备度，但退款事件来自另一条 Finances 链路，不能当作 V91 的额外正数成本，也不能与 V64 已纳入的 Finances 有符号退款再次相加。
