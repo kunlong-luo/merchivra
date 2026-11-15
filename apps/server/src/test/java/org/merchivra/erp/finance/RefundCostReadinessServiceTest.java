@@ -69,8 +69,11 @@ class RefundCostReadinessServiceTest {
             "ORDER BY f.posted_at DESC,f.id DESC LIMIT 51",
             "recovery.preview(tenant,mp,src.id())",
             "false,false,null","List.copyOf(buckets)",
-            "isolation=Isolation.REPEATABLE_READ"})
+            "TransactionDefinition.ISOLATION_REPEATABLE_READ",
+            "snapshotTx.execute(ignored->",
+            "for(var source:snapshot.visible())events.add(describe"})
             assertTrue(java.contains(guard),guard);
+        assertFalse(java.contains("@Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)"));
         assertFalse(java.contains("UPDATE finance_source_event"));
         assertFalse(java.contains("UPDATE finance_profit_report"));
         assertFalse(java.contains("INSERT INTO finance_profit_report"));
