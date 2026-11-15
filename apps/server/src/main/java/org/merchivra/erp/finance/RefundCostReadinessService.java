@@ -14,8 +14,9 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -27,10 +28,15 @@ import org.springframework.web.server.ResponseStatusException;
 public class RefundCostReadinessService {
     private final JdbcTemplate jdbc;
     private final RefundRecoveryService recovery;
+    private final TransactionTemplate snapshotTx;
     private static final int PAGE_SIZE=50;
 
-    public RefundCostReadinessService(JdbcTemplate jdbc,RefundRecoveryService recovery) {
+    public RefundCostReadinessService(JdbcTemplate jdbc,
+        RefundRecoveryService recovery,PlatformTransactionManager manager) {
         this.jdbc=jdbc;this.recovery=recovery;
+        this.snapshotTx=new TransactionTemplate(manager);
+        this.snapshotTx.setReadOnly(true);
+        this.snapshotTx.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
     }
 
     public record CurrencyBucket(String currency,long sourceEventCount,
@@ -50,6 +56,8 @@ public class RefundCostReadinessService {
 
     private record Source(UUID id,OffsetDateTime postedAt,String currency,
         BigDecimal signedAmount,UUID order) {}
+    private record Snapshot(List<CurrencyBucket> buckets,List<Source> visible,
+        boolean hasMore) {}
     private static Source row(ResultSet r,int ignored)throws SQLException {
         return new Source(r.getObject("id",UUID.class),
             r.getObject("posted_at",OffsetDateTime.class),
@@ -107,10 +115,15 @@ public class RefundCostReadinessService {
             state,gap,exposure,sensitivity,current,false,false,null);
     }
 
-    @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public Page report(UUID tenant,UUID mp,LocalDate from,LocalDate until,
         Instant cursor,UUID cursorId) {
         validate(from,until,cursor,cursorId);
+        // V63.preview can throw a business 409 inside its own @Transactional
+        // method. Calling it under the aggregate read transaction would mark
+        // that entire transaction rollback-only even if the 409 is caught,
+        // resulting in HTTP 500 (UnexpectedRollbackException). Freeze only
+        // the two source SELECTs here, then probe V63 OUTSIDE that transaction.
+        Snapshot snapshot=snapshotTx.execute(ignored->{
         var available=jdbc.query("""
             SELECT m.id FROM seller_marketplace m
             JOIN tenant t ON t.id=m.tenant_id AND t.status='ACTIVE'
@@ -155,11 +168,17 @@ public class RefundCostReadinessService {
                 start,end,cursor.atOffset(ZoneOffset.UTC),cursorId);
         boolean more=found.size()>PAGE_SIZE;
         List<Source> visible=found.subList(0,Math.min(found.size(),PAGE_SIZE));
+        return new Snapshot(List.copyOf(buckets),List.copyOf(visible),more);
+        });
+        // A missing refund item/order is a normal business gap, not a reason
+        // to roll back the already-read page. Each V63 preview now owns an
+        // independent read transaction, and 409/404 can be rendered as
+        // INCOMPLETE_EVIDENCE without poisoning the source snapshot.
         var events=new ArrayList<Event>();
-        for(var source:visible)events.add(describe(tenant,mp,source));
-        Source last=more?visible.getLast():null;
+        for(var source:snapshot.visible())events.add(describe(tenant,mp,source));
+        Source last=snapshot.hasMore()?snapshot.visible().getLast():null;
         return new Page(mp.toString(),from.toString(),until.toString(),
-            List.copyOf(buckets),List.copyOf(events),more,
+            snapshot.buckets(),List.copyOf(events),snapshot.hasMore(),
             last==null?null:last.postedAt().toInstant().toString(),
             last==null?null:last.id().toString(),false,false,false,false);
     }
