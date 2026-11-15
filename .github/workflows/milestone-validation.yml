@@ -1,3 +1,7 @@
+# V170 exact merged SHA A3: PG18 UTC-scoped V63 refund/COGS risk queue,
+# signed per-currency Finances source amounts, 50+ keyset refund events,
+# historical cost evidence freshness and NO physical receipt/GL posting.
+# Real Amazon Seller/Ads OAuth OFF; #104 production NO-GO.
 # V169 PG18 first exact main A3 #43587863847 failed its PG18 job: the new
 # category assertion incorrectly expected one source's 7.25 to equal
 # a whole category with earlier synthetic A3 costs. Recheck summed
@@ -118,7 +122,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V169-A3-PG18-full-category-rollup-recheck' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V170-A3-PG18-refund-cogs-gap-queue' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -179,7 +183,7 @@ on:
           - V165-A3-unique-synthetic-evidence-and-identity-guard
           - V166-A3-PG18-collision-case-maker-checker-audit
           - V167-A3-PG18-settlement-line-evidence-review
-          - V169-A3-PG18-full-category-rollup-recheck
+          - V170-A3-PG18-refund-cogs-gap-queue
 
 permissions:
   contents: read
