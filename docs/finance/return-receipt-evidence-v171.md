@@ -1,5 +1,13 @@
 # V171 · 消费者退货实收核查单（人工证据；COGS 保守资格门禁）
 
+## V171 精确主线技术验收（2026-11-16）
+
+[功能 PR #153](https://github.com/kunlong-luo/merchivra/pull/153) 已合并到 `0b28fbaab4a28f865566c1f92a264609c4c85858`；该 SHA 的 [完整 A3 #43810447503](https://github.com/kunlong-luo/merchivra/actions/runs/43810447503) **run_attempt=1、7/7 SUCCESS**，包括 PostgreSQL 18 实际 Flyway V96、Spring Boot HTTP/Owner/CSRF、Java 25、Next.js16/React19、Chromium 与 Compose。
+
+复核边界输入时发现 `Set.of(...).contains(null)` 可能导致 JSON 缺少处置状态时 HTTP 500，因此由 [修复 PR #154](https://github.com/kunlong-luo/merchivra/pull/154) 显式拒绝 null 并补 JUnit 及 PG18 HTTP 400 回归。最终代码 SHA `1b217cfb737567b6c06a47fce30ba1af9bfb59d7` 的 [完整 A3 #43810932033](https://github.com/kunlong-luo/merchivra/actions/runs/43810932033) **run_attempt=1、7/7 SUCCESS**。快速 CI [#43810746198](https://github.com/kunlong-luo/merchivra/actions/runs/43810746198) 亦成功。
+
+这是**合成技术验收**：没有接通真实退货 WMS/FBA/FBM 数量和状态，没有独立外部退货签署，也没有真实 COGS 回转或银行/Ads/Seller 全源对账。`REVIEWED_MANUAL` 仍是未核验人工声明，净利润不予认列；G1/G2/G3 和生产 #104 继续 NO-GO，Amazon Seller/Ads OAuth OFF。
+
 ## 核心边界
 
 V39/V40/V44 的本地仓库流水是采购收货、库内操作和采购收货质量管理，**不是消费者退货仓库实收**。V34 的 `RESTOCKED_CLAIMED` 只是人工声明，V63 的独立 Owner `REVIEWED` 也不能证明退货仓库真的收到了商品或商品已达到可售状态。

@@ -1,4 +1,6 @@
-> **V171（待技术 A3）**：[消费者退货人工实收证据 V96](docs/finance/return-receipt-evidence-v171.md) 支持按退款事件+原订单商品行声明实收数量/处置及不同 Owner 独立复核，现有 V63 证据变更立即 STALE，直接 SQL/审计不可变。只代表人工声明；不构成 FBA/FBM 收货、库存变更、真实 COGS 回转或 V64 净利润。Seller/Ads OAuth OFF、#104 NO-GO。
+> **V171 技术 A3 已完成（2026-11-16）**：PR #153 + #154 最终代码 `1b217cfb737567b6c06a47fce30ba1af9bfb59d7`， [PG18/Next/Chromium/Compose 完整 A3 #43810932033](https://github.com/kunlong-luo/merchivra/actions/runs/43810932033) 首次 **7/7 SUCCESS**。V96 人工退货证据不可变、Owner 独立复核和数据过期门禁已通过合成技术验收；不自动入库/冲回 COGS/确认净利润，真实 Seller/Ads OFF，#104 NO-GO。见 [V171 规则](docs/finance/return-receipt-evidence-v171.md)。
+
+> **V171（合成技术 A3 已通过）**：[消费者退货人工实收证据 V96](docs/finance/return-receipt-evidence-v171.md) 支持按退款事件+原订单商品行声明实收数量/处置及不同 Owner 独立复核，现有 V63 证据变更立即 STALE，直接 SQL/审计不可变。只代表人工声明；不构成 FBA/FBM 收货、库存变更、真实 COGS 回转或 V64 净利润。Seller/Ads OAuth OFF、#104 NO-GO。
 
 > **V170 已通过完整合成 A3（非真实财务/生产验收）**：功能 PR #150、事务修复 PR #151，代码 SHA `09b1195850592ac66b3022714a4f81f19b6a9512`，首次 PG18 A3 #43694186657 失败；修复后 [A3 #43694623744](https://github.com/kunlong-luo/merchivra/actions/runs/43694623744) attempt1 6/7（外部 Aliyun Maven 502），仅重跑失败 Compose 后 attempt2 **7/7 SUCCESS**。V63 未配齐退货证据只显示业务缺口，始终不核销 COGS、不虚构净利润。#104 NO-GO，Seller/Ads OAuth OFF。
 
