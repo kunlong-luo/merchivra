@@ -1,3 +1,5 @@
+# V173 PG18 synthetic key revocation fixture: independent reviewer must revoke,
+# never the source enrollment author. Re-run all A3 on exact merged main SHA.
 # V173 exact main SHA: Ed25519 signed local WMS evidence; PG18 V98
 # source-key independence, immutable evidence and no real physical/COGS claim.
 # V172: immutable LOCAL two-person warehouse parcel candidates, same V171
@@ -137,7 +139,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V173-A3-PG18-signed-wms-source-provenance' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V173-A3-PG18-independent-wms-revocation' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -198,7 +200,7 @@ on:
           - V165-A3-unique-synthetic-evidence-and-identity-guard
           - V166-A3-PG18-collision-case-maker-checker-audit
           - V167-A3-PG18-settlement-line-evidence-review
-          - V173-A3-PG18-signed-wms-source-provenance
+          - V173-A3-PG18-independent-wms-revocation
 
 permissions:
   contents: read
