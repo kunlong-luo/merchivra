@@ -586,10 +586,51 @@ assert sql(f"""SELECT count(*) FROM finance_return_receipt_claim_v96
  WHERE tenant_id='{tenant}'""")=="0"
 
 
+# V172: actual PG18 immutable local customer-return parcel identity, separate
+# from V39/V44 purchase receipts. Seeded LIVE-label refund is NOT WMS proof.
+intake_root=f"/api/v1/finance/marketplaces/{mp}/events/{v171_event}/return-intakes"
+call(sess(),intake_root,expected=401)
+initial_intakes=call(owner,intake_root)
+assert initial_intakes["eventId"]==v171_event
+assert initial_intakes["coverage"]==[] and initial_intakes["receipts"]==[]
+assert not initial_intakes["externalWarehouseReconciled"]
+assert not initial_intakes["realizedNetProfitVerified"]
+call(owner,intake_root+"?beforeAt=2026-11-16T12:00:00Z",expected=400)
+call(owner,intake_root+"?beforeId="+str(uuid4()),expected=400)
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}/events/"
+     +v171_event+"/return-intakes",expected=404)
+call(owner,intake_root,"POST",{
+ "claimId":str(uuid4()),"warehouseId":str(uuid4()),
+ "receiptReference":"V172-PARCEL-INVALID-0001","quantity":0,
+ "condition":"UNKNOWN","note":"Zero parcel quantity must be invalid"
+},expected=400)
+call(owner,intake_root,"POST",{
+ "claimId":str(uuid4()),"warehouseId":str(uuid4()),
+ "receiptReference":"V172-PARCEL-INVALID-0002","quantity":1,
+ "note":"Missing condition must produce HTTP 400 not a server error"
+},expected=400)
+call(owner,intake_root,"POST",{
+ "claimId":str(uuid4()),"warehouseId":str(uuid4()),
+ "receiptReference":"V172-PARCEL-UNREVIEWED-0003","quantity":1,
+ "condition":"UNKNOWN",
+ "note":"An unreviewed refund is not physical warehouse receipt"
+},expected=404)
+assert call(owner,intake_root)["receipts"]==[]
+assert sql("""SELECT count(*) FROM pg_trigger
+ WHERE tgname IN ('finance_customer_return_intake_guard_v97',
+                  'finance_customer_return_intake_audit_guard_v97')
+ AND NOT tgisinternal""")=="2"
+assert sql("""SELECT count(*) FROM pg_constraint
+ WHERE conname IN ('finance_return_receipt_claim_scoped_v97',
+                  'finance_customer_return_intake_v97_tenant_id_warehouse_id_receipt_reference_key')
+ """)=="2"
+assert sql(f"""SELECT count(*) FROM finance_customer_return_intake_v97
+ WHERE tenant_id='{tenant}'""")=="0"
+
 after=[sql("SELECT count(*) FROM "+t) for t in
     ("finance_profit_report_job","bank_payout_observation","ads_report_reviewed_cost")]
 assert before==after,"Manual identity scan may not post finance/bank/Ads"
-print("PASS V165/V166/V167/V168/V169/V170/V171 PG18+HTTP: 8-family source preview, audited "
+print("PASS V165/V166/V167/V168/V169/V170/V171/V172 PG18+HTTP: 8-family source preview, audited "
       "settlement-line scoped links and independent unverified review; equal "
       "amount/different key NOT duplication; same Ads key holds approval 409; "
       "no self/unauthorized leak; later claimed-document collision signaled; "
