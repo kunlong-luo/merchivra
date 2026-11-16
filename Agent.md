@@ -1,3 +1,5 @@
+> **V171（待技术 A3）**：[消费者退货人工实收证据 V96](docs/finance/return-receipt-evidence-v171.md) 支持按退款事件+原订单商品行声明实收数量/处置及不同 Owner 独立复核，现有 V63 证据变更立即 STALE，直接 SQL/审计不可变。只代表人工声明；不构成 FBA/FBM 收货、库存变更、真实 COGS 回转或 V64 净利润。Seller/Ads OAuth OFF、#104 NO-GO。
+
 > **V170 已通过完整合成 A3（非真实财务/生产验收）**：功能 PR #150、事务修复 PR #151，代码 SHA `09b1195850592ac66b3022714a4f81f19b6a9512`，首次 PG18 A3 #43694186657 失败；修复后 [A3 #43694623744](https://github.com/kunlong-luo/merchivra/actions/runs/43694623744) attempt1 6/7（外部 Aliyun Maven 502），仅重跑失败 Compose 后 attempt2 **7/7 SUCCESS**。V63 未配齐退货证据只显示业务缺口，始终不核销 COGS、不虚构净利润。#104 NO-GO，Seller/Ads OAuth OFF。
 
 > **V170（技术 A3 已验收）**：按 [退款/退货历史成本风险队列](docs/finance/refund-cost-readiness-v170.md) 对比 V63 数量/金额/历史成本指纹，标记待核对退款及过期人工证据；Next16 财务页面不把人工已回库视为库存实收，也不作 COGS 回转、财务记账或已验证净利润。#104 NO-GO、Seller/Ads 真实 OAuth OFF。

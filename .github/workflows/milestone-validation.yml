@@ -1,3 +1,6 @@
+# V171 PG18 V96 immutable manual customer return receipt evidence,
+# V63 current reviewed refund item/fingerprint, independent Owner/no COGS.
+# Exact merged main SHA full 7-job A3 required. #104 remains NO-GO.
 # V170 first main PG18 A3 #43694186657 failed: synthetic LIVE
 # refund triggered HTTP 500 after V63 @Transactional business 409 poisoned
 # the outer read-only transaction. Use TransactionTemplate REPEATABLE_READ
@@ -127,7 +130,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V170-A3-PG18-refund-gap-transaction-isolation' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V171-A3-PG18-return-receipt-evidence-gate' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -188,7 +191,7 @@ on:
           - V165-A3-unique-synthetic-evidence-and-identity-guard
           - V166-A3-PG18-collision-case-maker-checker-audit
           - V167-A3-PG18-settlement-line-evidence-review
-          - V170-A3-PG18-refund-gap-transaction-isolation
+          - V171-A3-PG18-return-receipt-evidence-gate
 
 permissions:
   contents: read

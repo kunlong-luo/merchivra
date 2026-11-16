@@ -551,10 +551,39 @@ assert not call(owner,refund_root+
     "?periodStart=2025-05-01&periodEndExclusive=2025-06-01")[
     "actualCogsReversalsVerified"]
 
+# V171: no customer return inventory receipt can be established from a
+# bare LIVE-labelled refund, nor can an untrusted warehouse purchase receipt
+# be used as a customer return. Both Owners remain scoped, no manual COGS.
+v171_event=sorted(synthetic_ids)[0]
+receipt_url=f"/api/v1/finance/marketplaces/{mp}/events/{v171_event}/return-receipts"
+call(sess(),receipt_url,expected=401)
+assert call(owner,receipt_url)==[]
+call(owner,receipt_url,"POST",{
+    "itemId":"synthetic-line","quantity":1,"condition":"UNKNOWN",
+    "localWarehouseId":None,"evidenceReference":"V171-LOCAL-TEST-0001",
+    "note":"Unmatched synthetic refund must never become physical stock"
+},expected=409)
+assert call(owner,receipt_url)==[]
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}/events/"
+     +v171_event+"/return-receipts",expected=404)
+call(owner,receipt_url,"POST",{
+    "itemId":"synthetic-line","quantity":0,"condition":"UNKNOWN",
+    "evidenceReference":"V171-LOCAL-TEST-0002",
+    "note":"This invalid quantity must be rejected before validation"
+},expected=400)
+# All zero trust/COGS guarantees are constraints, not only UI annotations.
+assert sql("""SELECT count(*) FROM pg_trigger
+ WHERE tgname IN ('finance_return_receipt_claim_guard_v96',
+              'finance_return_receipt_audit_append_only_v96')
+ AND NOT tgisinternal""")=="2"
+assert sql(f"""SELECT count(*) FROM finance_return_receipt_claim_v96
+ WHERE tenant_id='{tenant}'""")=="0"
+
+
 after=[sql("SELECT count(*) FROM "+t) for t in
     ("finance_profit_report_job","bank_payout_observation","ads_report_reviewed_cost")]
 assert before==after,"Manual identity scan may not post finance/bank/Ads"
-print("PASS V165/V166/V167/V168/V169/V170 PG18+HTTP: 8-family source preview, audited "
+print("PASS V165/V166/V167/V168/V169/V170/V171 PG18+HTTP: 8-family source preview, audited "
       "settlement-line scoped links and independent unverified review; equal "
       "amount/different key NOT duplication; same Ads key holds approval 409; "
       "no self/unauthorized leak; later claimed-document collision signaled; "
