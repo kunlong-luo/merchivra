@@ -571,6 +571,12 @@ call(owner,receipt_url,"POST",{
     "evidenceReference":"V171-LOCAL-TEST-0002",
     "note":"This invalid quantity must be rejected before validation"
 },expected=400)
+# Missing JSON condition is a client error, never NullPointerException/500.
+call(owner,receipt_url,"POST",{
+    "itemId":"synthetic-line","quantity":1,
+    "evidenceReference":"V171-LOCAL-TEST-0003",
+    "note":"Unknown return condition must be rejected as invalid client input"
+},expected=400)
 # All zero trust/COGS guarantees are constraints, not only UI annotations.
 assert sql("""SELECT count(*) FROM pg_trigger
  WHERE tgname IN ('finance_return_receipt_claim_guard_v96',
