@@ -1,5 +1,9 @@
 -- V171: one-shot manual physical return RECEIPT CLAIM, never trusted WMS receipt.
 -- Purchase receipts (V39/V44) are NOT customer return receipts.
+-- Required composite identity for the event+order+item evidence reference.
+ALTER TABLE finance_refund_item_review
+ ADD CONSTRAINT finance_refund_item_review_full_v96 UNIQUE
+ (tenant_id,event_id,sales_order_id,external_item_id);
 CREATE TABLE finance_return_receipt_claim_v96 (
  id UUID PRIMARY KEY,
  tenant_id UUID NOT NULL,
@@ -52,6 +56,9 @@ CREATE UNIQUE INDEX finance_return_receipt_claim_active_v96
 CREATE INDEX finance_return_receipt_claim_event_v96
  ON finance_return_receipt_claim_v96(tenant_id,seller_marketplace_id,event_id,requested_at DESC,id);
 
+ALTER TABLE finance_return_receipt_claim_v96
+ ADD CONSTRAINT finance_return_receipt_claim_tenant_id UNIQUE(tenant_id,id);
+
 CREATE TABLE finance_return_receipt_audit_v96 (
  id UUID PRIMARY KEY,
  tenant_id UUID NOT NULL,
@@ -65,8 +72,6 @@ CREATE TABLE finance_return_receipt_audit_v96 (
    REFERENCES finance_return_receipt_claim_v96(tenant_id,id),
  FOREIGN KEY(tenant_id,actor_user_id) REFERENCES membership(tenant_id,user_id)
 );
-ALTER TABLE finance_return_receipt_claim_v96
- ADD CONSTRAINT finance_return_receipt_claim_tenant_id UNIQUE(tenant_id,id);
 CREATE INDEX finance_return_receipt_audit_recent_v96
  ON finance_return_receipt_audit_v96(tenant_id,claim_id,occurred_at DESC,id);
 
