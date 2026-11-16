@@ -60,6 +60,12 @@ class ReturnReceiptEvidenceServiceTest {
                 new ReturnReceiptEvidenceService.Request("line-1",1,
                     "SELLABLE",null,"LOCAL-RET-2026-TEST",
                     "Independent check physical goods")));
+        assertEquals(HttpStatus.BAD_REQUEST,
+            assertThrows(ResponseStatusException.class,()->
+                ReturnReceiptEvidenceService.validate(
+                    new ReturnReceiptEvidenceService.Request("line-1",1,null,
+                        null,"LOCAL-RET-2026-TEST","Independent check physical goods")))
+                .getStatusCode());
         UUID maker=UUID.randomUUID();
         assertEquals(HttpStatus.FORBIDDEN,
             assertThrows(ResponseStatusException.class,()->
