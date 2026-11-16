@@ -1,5 +1,9 @@
 -- V172: customer-return LOCAL warehouse intake candidates, separately from V39
 -- PURCHASE_RECEIPT and V96 manual assertions. Never finance/stock posting.
+-- Prevent cross-order, cross-event or cross-item mixing even by direct SQL.
+ALTER TABLE finance_return_receipt_claim_v96
+ ADD CONSTRAINT finance_return_receipt_claim_scoped_v97 UNIQUE
+ (tenant_id,id,event_id,sales_order_id,external_item_id);
 CREATE TABLE finance_customer_return_intake_v97 (
  id UUID PRIMARY KEY,
  tenant_id UUID NOT NULL,
@@ -39,8 +43,9 @@ CREATE TABLE finance_customer_return_intake_v97 (
    REFERENCES sales_order(tenant_id,seller_marketplace_id,id),
  FOREIGN KEY(tenant_id,event_id,sales_order_id,external_item_id)
    REFERENCES finance_refund_item_review(tenant_id,event_id,sales_order_id,external_item_id),
- FOREIGN KEY(tenant_id,claim_id)
-   REFERENCES finance_return_receipt_claim_v96(tenant_id,id),
+ FOREIGN KEY(tenant_id,claim_id,event_id,sales_order_id,external_item_id)
+   REFERENCES finance_return_receipt_claim_v96
+     (tenant_id,id,event_id,sales_order_id,external_item_id),
  FOREIGN KEY(tenant_id,warehouse_id)
    REFERENCES erp_local_warehouse(tenant_id,id),
  FOREIGN KEY(tenant_id,requested_by)
