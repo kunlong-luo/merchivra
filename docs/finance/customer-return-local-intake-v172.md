@@ -1,5 +1,11 @@
 # V172 · 本地仓消费者退货包裹核对与来源唯一性（不可直接冲回 COGS）
 
+## V172 完整技术 A3 最终结论（2026-11-16）
+
+[功能 PR #156](https://github.com/kunlong-luo/merchivra/pull/156) 已 squash 合并到业务提交 `2637abe99edad01b4a665d1e38bb8f1ebd58834a`。[精确主线 SHA 完整 A3 #43827605960](https://github.com/kunlong-luo/merchivra/actions/runs/43827605960) **run_attempt=1、7/7 SUCCESS**。Java25/Gradle、Next.js16/React19/Vite、Chromium、Compose 配置、完整 Spring/Nginx/PostgreSQL 18 HTTP 以及 PG18/Flyway V97 真实迁移和合成业务负例全部成功。PR 快速 [CI #43827440611](https://github.com/kunlong-luo/merchivra/actions/runs/43827440611) 亦通过。
+
+本次 PG18/HTTP 负例覆盖无 V171 可信双人来源时 404 阻止创建、非法件数/缺失状态 HTTP 400、匿名 401、跨 Marketplace 404、真实 V97 触发器注册及仓库来源唯一索引存在；JUnit 覆盖跨版本未驳回件数保守求和契约和静态禁止库存/COGS 更新。**此测试尚未从真实外部 WMS/FBA 获取实收记录，不能当作受信外部来源正向签收验收**。要使费用可真正进成本和利润，仍必须先接通可验证的独立外部来源及 G1 会计审批；生产 #104 NO-GO、Seller/Ads OAuth OFF。
+
 ## 为什么需要
 
 V171 的 V96 手工退货核查单只表达「商品应当/据称退回」及独立 Owner 对声明的复核。它尚不对应可追溯的**仓库、每个到仓包裹、该包裹的数量、签收参考号**。V39/V44 是采购收货，不能用作消费者退货的事实或将 V171 `RESTOCKED_CLAIMED` 变成销售库存。
