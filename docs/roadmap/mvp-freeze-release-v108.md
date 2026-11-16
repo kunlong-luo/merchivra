@@ -1,3 +1,5 @@
+> **V171 / 2026-11-16（开发中，待 CI/A3）**：新 [退货实收人工证据与 COGS 禁入门禁](../finance/return-receipt-evidence-v171.md)，V96 复合外键关联当前 V34 商品/V63 证据，支持不可变申报、第二人审核和动态 STALE；Next16 财务退款页提供操作/审计。**不新增可信 FBA/FBM 实物收货或 GL**，只有真实仓储来源认证/不可重复数量、G1 会计规则与财务对账完成后才考虑成本回转。生产 #104 NO-GO，Seller/Ads OAuth OFF。
+
 > **2026-11-15 / V170 已合并且完整 A3 技术验收通过**：[退款原币和历史 COGS 证据准备度](../finance/refund-cost-readiness-v170.md) 已接入 Next 财务页，业务模型 PR #150 + 事务隔离修复 PR #151，代码 `09b1195850592ac66b3022714a4f81f19b6a9512`。首次 [A3 #43694186657](https://github.com/kunlong-luo/merchivra/actions/runs/43694186657) 在无匹配合成退款时 HTTP 500，修复后 [A3 #43694623744](https://github.com/kunlong-luo/merchivra/actions/runs/43694623744) **run_attempt=2、7/7 SUCCESS**（attempt1 仅完整 Compose 因外部阿里云 Maven 502 失败，PG18 已通过；重试失败任务成功）。这不代表已核验退货实收、成本回转或完整净利润；G1/G2/G3 仍阻断，Seller/Ads OFF，生产 #104 NO-GO。
 
 > **V170 第一轮 A3 阻塞已修复并重验（2026-11-15）**：原合并提交 `04fc6081...` 的 [A3 #43694186657](https://github.com/kunlong-luo/merchivra/actions/runs/43694186657) PG18/HTTP 于新增合成退款 500 失败。PR #151 已隔离原币期间汇总和逐笔 V63 证据事务：后者正常拒绝(409)应表现为风险缺口，而不是整页 500；完整真账、G1 和 COGS 核销仍未批准。
