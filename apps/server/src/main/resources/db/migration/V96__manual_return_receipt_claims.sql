@@ -32,7 +32,6 @@ CREATE TABLE finance_return_receipt_claim_v96 (
    CHECK(inventory_receipt_verified=FALSE),
  cogs_reversal_posted BOOLEAN NOT NULL DEFAULT FALSE
    CHECK(cogs_reversal_posted=FALSE),
- UNIQUE(tenant_id,event_id,external_item_id,source_review_revision),
  FOREIGN KEY(tenant_id,seller_marketplace_id,event_id)
    REFERENCES finance_source_event(tenant_id,seller_marketplace_id,id),
  FOREIGN KEY(tenant_id,seller_marketplace_id,sales_order_id)
