@@ -1,4 +1,5 @@
 import {useState} from 'react'
+import ReturnReceiptEvidencePanel from './ReturnReceiptEvidencePanel'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {decideRefundRecovery,getRefundRecovery,getRefundRecoveryAudit} from './lib/refund-recovery'
 
@@ -92,6 +93,8 @@ export default function RefundRecoveryPanel({tenantId,marketplaceId,eventId}:{
         <td>{a.revision}</td><td>{a.action}</td><td>{a.actorId}</td>
         <td>{a.reason}</td><td>{a.occurredAt}</td>
        </tr>)}</tbody></table></div>)}
+    <ReturnReceiptEvidencePanel tenantId={tenantId}
+     marketplaceId={marketplaceId} eventId={eventId} recovery={d}/>
     <p className="panel-caption">所有“实际收货已核实”“已进行 COGS 会计回转”和“财务过账”标志固定为 false。
      双人审核只核对**人工来源**。实际可回转成本必须依靠以后独立的受信退货收货/处置记录和正式会计规则。</p>
    </>}
