@@ -62,7 +62,7 @@ public class CustomerReturnIntakeService {
     private record Row(UUID id,UUID event,UUID order,String item,UUID claim,UUID warehouse,
         String reference,int quantity,String condition,String state,String fingerprint,
         UUID maker,UUID checker,OffsetDateTime at) {}
-    private record Totals(UUID claim,long pending,long attested) {}
+    private record Totals(String item,long pending,long attested) {}
     private record Snapshot(List<Totals> totals,List<Row> rows,boolean more) {}
 
     static void validate(Request input) {
@@ -127,15 +127,15 @@ public class CustomerReturnIntakeService {
             ReturnReceiptEvidenceService.Claim::id,x->x,(a,b)->a));
         Snapshot snapshot=readTx.execute(t->{
             List<Totals> totals=jdbc.query("""
-                SELECT claim_id,
+                SELECT external_item_id,
                   COALESCE(sum(received_quantity) FILTER
                     (WHERE state='PENDING'),0) AS pending,
                   COALESCE(sum(received_quantity) FILTER
                     (WHERE state='ATTESTED_LOCAL'),0) AS attested
                 FROM finance_customer_return_intake_v97
                 WHERE tenant_id=? AND seller_marketplace_id=? AND event_id=?
-                GROUP BY claim_id
-                """,(r,i)->new Totals(r.getObject("claim_id",UUID.class),
+                GROUP BY external_item_id
+                """,(r,i)->new Totals(r.getString("external_item_id"),
                     r.getLong("pending"),r.getLong("attested")),tenant,mp,event);
             String query="""
                 SELECT * FROM finance_customer_return_intake_v97
@@ -152,10 +152,10 @@ public class CustomerReturnIntakeService {
                 all.size()>PAGE_SIZE);
         });
         var sum=snapshot.totals().stream().collect(Collectors.toMap(
-            x->x.claim().toString(),x->x));
+            x->x.item(),x->x));
         var coverage=new ArrayList<Coverage>();
         for(var claim:claims) {
-            Totals total=sum.get(claim.id());
+            Totals total=sum.get(claim.itemId());
             long pending=total==null?0:total.pending(),attested=total==null?0:total.attested();
             // A negative remainder is not allowed to masquerade as full coverage
             // after a source quantity revision. Stale claims are always held.
@@ -199,6 +199,16 @@ public class CustomerReturnIntakeService {
             "V63/V171 source changed; refresh physical intake evidence");
         return now;
     }
+    private Intake detail(UUID tenant,UUID mp,UUID event,UUID id) {
+        var claims=receipts.list(tenant,mp,event).stream().collect(Collectors.toMap(
+            ReturnReceiptEvidenceService.Claim::id,x->x,(a,b)->a));
+        var found=jdbc.query("""
+            SELECT * FROM finance_customer_return_intake_v97
+            WHERE tenant_id=? AND seller_marketplace_id=? AND event_id=? AND id=?
+            """,CustomerReturnIntakeService::row,tenant,mp,event,id);
+        if(found.size()!=1)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        return display(found.getFirst(),claims);
+    }
     private void audit(UUID tenant,UUID id,UUID actor,String action,String note) {
         jdbc.update("""
             INSERT INTO finance_customer_return_intake_audit_v97
@@ -230,6 +240,12 @@ public class CustomerReturnIntakeService {
             if(reserved==null||reserved+input.quantity()>before.claimedQuantity())
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "All active parcel receipts together exceed independently reviewed V171 quantity");
+            Integer existing=jdbc.queryForObject("""
+                SELECT count(*) FROM finance_customer_return_intake_v97
+                WHERE tenant_id=? AND warehouse_id=? AND receipt_reference=?
+                """,Integer.class,tenant,input.warehouseId(),input.receiptReference());
+            if(existing!=null&&existing>0)throw new ResponseStatusException(
+                HttpStatus.CONFLICT,"Parcel receipt reference already exists at this warehouse");
             UUID id=UUID.randomUUID();
             jdbc.update("""
                 INSERT INTO finance_customer_return_intake_v97
@@ -243,9 +259,7 @@ public class CustomerReturnIntakeService {
             audit(tenant,id,actor,"REQUESTED",RefundRecoveryService.reason(input.note()));
             return id;
         });
-        return report(tenant,mp,event,null,null).receipts().stream()
-            .filter(x->x.id().equals(made.toString())).findFirst()
-            .orElseThrow();
+        return detail(tenant,mp,event,made);
     }
     public Intake decide(UUID tenant,UUID mp,UUID event,UUID id,UUID actor,
         boolean approve,String reason) {
@@ -302,9 +316,7 @@ public class CustomerReturnIntakeService {
             audit(tenant,id,actor,state,note);
             return id;
         });
-        return report(tenant,mp,event,null,null).receipts().stream()
-            .filter(x->x.id().equals(decided.toString())).findFirst()
-            .orElseThrow();
+        return detail(tenant,mp,event,decided);
     }
     public List<Audit> history(UUID tenant,UUID mp,UUID event,UUID id) {
         receipts.list(tenant,mp,event);
