@@ -1,3 +1,5 @@
+> **V172（待 A3）**：[本地消费者退货包裹来源对账](docs/finance/customer-return-local-intake-v172.md) 新增 V97 每仓实收包裹参考号唯一、同退款/订单商品 V171 索引外键、原退款项跨页/版本物理候选数量保守守恒、一次性独立 Owner 核对、Next 财务实收表单。仅本地人工/双人证据，不是第三方 WMS 已认证或可售库存/COGS 冲回；#104 NO-GO，Seller/Ads OFF。
+
 > **V171 技术 A3 已完成（2026-11-16）**：PR #153 + #154 最终代码 `1b217cfb737567b6c06a47fce30ba1af9bfb59d7`， [PG18/Next/Chromium/Compose 完整 A3 #43810932033](https://github.com/kunlong-luo/merchivra/actions/runs/43810932033) 首次 **7/7 SUCCESS**。V96 人工退货证据不可变、Owner 独立复核和数据过期门禁已通过合成技术验收；不自动入库/冲回 COGS/确认净利润，真实 Seller/Ads OFF，#104 NO-GO。见 [V171 规则](docs/finance/return-receipt-evidence-v171.md)。
 
 > **V171（合成技术 A3 已通过）**：[消费者退货人工实收证据 V96](docs/finance/return-receipt-evidence-v171.md) 支持按退款事件+原订单商品行声明实收数量/处置及不同 Owner 独立复核，现有 V63 证据变更立即 STALE，直接 SQL/审计不可变。只代表人工声明；不构成 FBA/FBM 收货、库存变更、真实 COGS 回转或 V64 净利润。Seller/Ads OAuth OFF、#104 NO-GO。
