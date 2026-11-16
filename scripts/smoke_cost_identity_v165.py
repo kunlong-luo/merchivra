@@ -621,9 +621,12 @@ assert sql("""SELECT count(*) FROM pg_trigger
                   'finance_customer_return_intake_audit_guard_v97')
  AND NOT tgisinternal""")=="2"
 assert sql("""SELECT count(*) FROM pg_constraint
- WHERE conname IN ('finance_return_receipt_claim_scoped_v97',
-                  'finance_customer_return_intake_v97_tenant_id_warehouse_id_receipt_reference_key')
- """)=="2"
+ WHERE conname='finance_return_receipt_claim_scoped_v97'""")=="1"
+# PostgreSQL truncates long implicit unique constraint names to 63 bytes;
+# verify the indexed columns rather than assuming the generated name.
+assert sql("""SELECT count(*) FROM pg_indexes
+ WHERE tablename='finance_customer_return_intake_v97'
+ AND indexdef LIKE '%(tenant_id, warehouse_id, receipt_reference)%'""")=="1"
 assert sql(f"""SELECT count(*) FROM finance_customer_return_intake_v97
  WHERE tenant_id='{tenant}'""")=="0"
 
