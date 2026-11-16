@@ -1,3 +1,5 @@
+> **V173（开发中，待完整合成 A3）**：[Ed25519 外部 WMS 退货签名来源](docs/finance/wms-signed-return-evidence-v173.md)：V98 按租户+仓库不可变登记公钥、不同 Owner 独立批准/撤销、对 V172 同仓同退款包裹按标准载荷验证签名与来源唯一性；Next16/Vite 共享签名核验 UI。**密钥只由租户登记，没有独立 WMS 运营商身份认证**，签名有效 ≠ 仓库实收、QC 或真实 COGS；库存/利润入账继续禁止，Seller/Ads OFF、生产 #104 NO-GO。
+
 > **V172 精确 SHA 技术验收完成（2026-11-16）**：[消费者退货本地仓分包裹与来源守恒规则](docs/finance/customer-return-local-intake-v172.md) 已通过 [PR #156](https://github.com/kunlong-luo/merchivra/pull/156) 合并，代码 SHA `2637abe99edad01b4a665d1e38bb8f1ebd58834a` 的 [完整 A3 #43827605960](https://github.com/kunlong-luo/merchivra/actions/runs/43827605960) **run_attempt=1、7/7 SUCCESS**。PG18/Flyway V97、Servlet HTTP、Java25、Next16/Vite、Chromium 与 Compose 合成验收成功；**仅本地人工双人核对不是 WMS/FBA/FBM 受信实收，绝不自动入库或入 V162/V64 净利润**。Seller/Ads OFF、生产 #104 NO-GO。
 
 > **V172（完整合成技术 A3 已验收）**：新增 [消费者退货本地仓包裹实收候选与防重对账](docs/finance/customer-return-local-intake-v172.md)。PG18 V97 每仓包裹参考号唯一、与 V171 核查单同退款/订单/商品复合 FK、按原商品跨版本累计 PENDING+ATTESTED_LOCAL 数量并串行行锁；第二 Owner 独立核对/不可变审计，Next16/Vite 复用 WarehousePicker 操作。**LOCAL_TWO_PERSON_UNVERIFIED ≠ 可信第三方 WMS/FBA/FBM 实收**，从未更新 V39 库存/V162/V64 净利润，#104 继续 NO-GO，Seller/Ads OFF。

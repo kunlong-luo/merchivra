@@ -199,7 +199,7 @@ public class CustomerReturnIntakeService {
             "V63/V171 source changed; refresh physical intake evidence");
         return now;
     }
-    private Intake detail(UUID tenant,UUID mp,UUID event,UUID id) {
+    Intake detail(UUID tenant,UUID mp,UUID event,UUID id) {
         var claims=receipts.list(tenant,mp,event).stream().collect(Collectors.toMap(
             ReturnReceiptEvidenceService.Claim::id,x->x,(a,b)->a));
         var found=jdbc.query("""

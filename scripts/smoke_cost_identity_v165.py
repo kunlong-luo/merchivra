@@ -630,10 +630,76 @@ assert sql("""SELECT count(*) FROM pg_indexes
 assert sql(f"""SELECT count(*) FROM finance_customer_return_intake_v97
  WHERE tenant_id='{tenant}'""")=="0"
 
+# V173: enroll an Ed25519 signing key in a disposable LOCAL warehouse.
+# No private signing key or real WMS identity is used; these are negative
+# provenance/auth tests only, never a physical receipt certification.
+from base64 import b64encode
+v173_warehouse=str(uuid4())
+v173_code="SYNTHWMS"+uuid4().hex[:12].upper()
+v173_public=b64encode(bytes.fromhex(
+ "302a300506032b6570032100"+
+ "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
+)).decode()
+sql(f"""INSERT INTO erp_local_warehouse(
+ id,tenant_id,warehouse_code,display_name,status,created_by)
+ VALUES('{v173_warehouse}','{tenant}','{v173_code}',
+ 'V173 disposable synthetic location','ACTIVE','{user}')""")
+wms_root="/api/v1/finance/wms-signing-sources"
+call(sess(),wms_root+"?warehouseId="+v173_warehouse,expected=401)
+assert call(owner,wms_root+"?warehouseId="+v173_warehouse)==[]
+wms=call(owner,wms_root,"POST",{
+ "warehouseId":v173_warehouse,"sourceCode":v173_code,
+ "publicKeySpkiBase64":v173_public,
+ "reason":"Local synthetic Ed25519 test enrollment is not WMS operator proof"})
+assert wms["state"]=="PENDING" and not wms["operatorIdentityVerified"]
+assert wms["warehouseId"]==v173_warehouse
+wms_url=wms_root+"/"+wms["id"]
+call(owner,wms_url+"/approve","POST",{"reason":
+ "Self approval must be rejected for test-only key source"},expected=403)
+approved=call(checker,wms_url+"/approve","POST",{"reason":
+ "Second Owner reviewed only synthetic tenant registered public key"})
+assert approved["state"]=="APPROVED"
+assert not approved["operatorIdentityVerified"]
+call(owner,wms_root,"POST",{
+ "warehouseId":v173_warehouse,"sourceCode":v173_code,
+ "publicKeySpkiBase64":v173_public,
+ "reason":"Reusing the same source code must not mutate public key"},expected=409)
+# Direct DB access cannot replace a tenant-approved key or delete a signed audit.
+sql_denied(f"""UPDATE finance_wms_signing_source_v98
+ SET ed25519_spki_base64='{b64encode(bytes.fromhex('302a300506032b6570032100'+ 'b'*64)).decode()}'
+ WHERE tenant_id='{tenant}' AND id='{wms['id']}'""")
+sql_denied(f"""DELETE FROM finance_wms_source_audit_v98
+ WHERE tenant_id='{tenant}' AND source_id='{wms['id']}'""")
+assert sql(f"""SELECT count(*) FROM finance_wms_source_audit_v98
+ WHERE tenant_id='{tenant}' AND source_id='{wms['id']}'""")=="2"
+# Cannot attach a signed external record without a V172 parcel and matching refund.
+missing_signed=intake_root+"/"+str(uuid4())+"/signed-wms"
+call(sess(),missing_signed,expected=401)
+call(owner,missing_signed,expected=404)
+call(owner,missing_signed,"POST",{
+ "sourceId":wms["id"],"externalReceiptId":"V173-TEST-EXT-0001",
+ "observedAt":"2026-11-16T12:00:00Z","quantity":1,
+ "condition":"UNKNOWN","signatureBase64":b64encode(bytes(64)).decode()
+},expected=404)
+assert sql(f"""SELECT count(*) FROM finance_wms_signed_return_v98
+ WHERE tenant_id='{tenant}'""")=="0"
+revoked=call(owner,wms_url+"/revoke","POST",{"reason":
+ "Revoke disposable key after synthetic cryptographic provenance test"})
+assert revoked["state"]=="REVOKED"
+call(checker,wms_url+"/approve","POST",{"reason":
+ "A revoked signing key can never be reapproved"},expected=409)
+assert sql("""SELECT count(*) FROM pg_trigger
+ WHERE tgname IN ('finance_wms_source_guard_v98',
+                  'finance_wms_signed_return_guard_v98',
+                  'finance_wms_source_audit_guard_v98')
+ AND NOT tgisinternal""")=="3"
+assert sql(f"""SELECT count(*) FROM finance_wms_source_audit_v98
+ WHERE tenant_id='{tenant}' AND source_id='{wms['id']}'""")=="3"
+
 after=[sql("SELECT count(*) FROM "+t) for t in
     ("finance_profit_report_job","bank_payout_observation","ads_report_reviewed_cost")]
 assert before==after,"Manual identity scan may not post finance/bank/Ads"
-print("PASS V165/V166/V167/V168/V169/V170/V171/V172 PG18+HTTP: 8-family source preview, audited "
+print("PASS V165/V166/V167/V168/V169/V170/V171/V172/V173 PG18+HTTP: 8-family source preview, audited "
       "settlement-line scoped links and independent unverified review; equal "
       "amount/different key NOT duplication; same Ads key holds approval 409; "
       "no self/unauthorized leak; later claimed-document collision signaled; "

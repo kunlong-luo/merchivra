@@ -1,3 +1,5 @@
+> **2026-11-17 / V173（开发中，待合成技术 A3）**：[外部 WMS 退货来源公钥与 Ed25519 签名](../finance/wms-signed-return-evidence-v173.md)；V98 同仓/同退款包裹唯一来源、租户公钥双人审核、签名校验与撤销、Next16 证据页面。**不宣称密钥由真实外部 WMS 提供或证明货物实收**；真实认证、QC 库存、历史 COGS/汇率及各费用来源 G1 对账仍是 P0。#104 生产 NO-GO、Seller/Ads OFF。
+
 > **2026-11-16 / V172 完整技术 A3 已通过**：[消费者退货本地仓包裹候选来源对账](../finance/customer-return-local-intake-v172.md) PR #156 已合并，代码 SHA `2637abe99edad01b4a665d1e38bb8f1ebd58834a` 的 [完整 A3 #43827605960](https://github.com/kunlong-luo/merchivra/actions/runs/43827605960) **run_attempt=1 7/7 SUCCESS**（PG18 Flyway V97、真实 Spring HTTP、Next16/Chromium、Java25、Compose）。本地申请/核对**不代表外部 WMS 可信收货**，真实 COGS/原币换算/全部费用来源和账期核对仍是 P0；V173 优先可信 WMS/官方 FBA 证据导入及交易级去重，G1/G2/G3 未放行，Seller/Ads OFF、生产 #104 NO-GO。
 
 > **2026-11-16 / V172（PG18 完整 A3 已通过）**：[消费者退货本地仓包裹分件核对及来源防重](../finance/customer-return-local-intake-v172.md)。新增 V97 不可变仓库包裹记录、来源唯一索引、V171 同订单/退款/商品复合 FK，分包裹 PENDING/ATTESTED_LOCAL/REJECTED 和跨版本原件数守恒；Next16/Vite 共享财务 UI，复用全库服务器分页 WarehousePicker。**不是外部 WMS/FBA 实收授权，不能自动写入库存或 COGS/已实现净利润**；G1/G2/G3 仍未放行，生产 #104 NO-GO。
