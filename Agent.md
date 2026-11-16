@@ -1,4 +1,6 @@
-> **V173（待 PG18 A3）**：新增 [WMS Ed25519 标准化签名凭据](docs/finance/wms-signed-return-evidence-v173.md)、V98 双人租户公钥登记、来源仓库复合 FK、每包裹/外部回执去重、不可变签名和密钥撤销；Next16 UI 复用 V172。签名只证明租户已登记密钥的持有者，**未证明运营商身份及实物收货**。V162/V64 不认列，#104 NO-GO，Seller/Ads OAuth OFF。
+> **V173 已完成精确 SHA 合成 A3（2026-11-17）**：V98 双人公钥审核/撤销、同仓同包裹签名去重与 Next16 证据页面，PR #158 + 测试角色修正 PR #159；最终 SHA `14c88c4a40e53b8100f501bb1168c78e8377288a` [A3 #43969992583](https://github.com/kunlong-luo/merchivra/actions/runs/43969992583) **首次 7/7 SUCCESS**。初次主线 A3 #43969427227 PG18 测试角色预期错误 6/7，已保留事故记录。签名只验证租户登记公钥与内容，没有独立 WMS 商业身份或真实仓库签收/COGS 入账。#104 NO-GO，Amazon Seller/Ads OAuth OFF。详情 [V173](docs/finance/wms-signed-return-evidence-v173.md)。
+
+> **V173（合成 A3 已通过）**：新增 [WMS Ed25519 标准化签名凭据](docs/finance/wms-signed-return-evidence-v173.md)、V98 双人租户公钥登记、来源仓库复合 FK、每包裹/外部回执去重、不可变签名和密钥撤销；Next16 UI 复用 V172。签名只证明租户已登记密钥的持有者，**未证明运营商身份及实物收货**。V162/V64 不认列，#104 NO-GO，Seller/Ads OAuth OFF。
 
 > **V172 完整合成技术 A3 已验收（2026-11-16）**：PR #156 业务提交 `2637abe99edad01b4a665d1e38bb8f1ebd58834a`，[A3 #43827605960](https://github.com/kunlong-luo/merchivra/actions/runs/43827605960) **首次 7/7 SUCCESS**。V97 本地仓退货包裹来源唯一/退款商品件数保守守恒/动态证据过期及 Next UI 已验证；尚无真实第三方 WMS/FBA 独立签收、COGS 核销或实账利润。#104 NO-GO，Seller/Ads OAuth OFF。
 
