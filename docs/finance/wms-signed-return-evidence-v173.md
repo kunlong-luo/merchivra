@@ -1,5 +1,12 @@
 # V173 · 外部仓储公钥登记、Ed25519 包裹签名与来源防重
 
+## V173 精确主线 SHA 技术验收（2026-11-17）
+
+- 功能 [PR #158](https://github.com/kunlong-luo/merchivra/pull/158) 合并代码 SHA `187a96f4c3782a48660f076b6f911f07b1150fb4`，快速 [CI #43969174921](https://github.com/kunlong-luo/merchivra/actions/runs/43969174921) SUCCESS。其初次 [完整 A3 #43969427227](https://github.com/kunlong-luo/merchivra/actions/runs/43969427227) **6/7：PG18 失败**；实际 Spring Boot/Flyway V98 已迁移、租户注册公钥与独立 Owner 审批已通过，失败源自合成脚本误让公钥**原登记人**撤销，系统正确返回 HTTP 403，而脚本错误期望 200。**这是测试角色假设错误，不能抹掉这次 FAIL。**
+- 测试角色修正 [PR #159](https://github.com/kunlong-luo/merchivra/pull/159)：先明确断言原登记者撤销公钥返回 403，再使用独立 Owner 完成撤销，撤销后再次批准 409。仅更正 PG18 脚本与 A3 工作流唯一标记，**没有放宽签名或审批规则**。该 PR 快速 [CI #43969607749](https://github.com/kunlong-luo/merchivra/actions/runs/43969607749) SUCCESS。
+- 最终业务+测试代码 SHA `14c88c4a40e53b8100f501bb1168c78e8377288a`，精确 SHA [完整 A3 #43969992583](https://github.com/kunlong-luo/merchivra/actions/runs/43969992583) **run_attempt=1、7/7 SUCCESS**：Java25/Gradle、PostgreSQL18/Flyway V98/真实 Spring HTTP 合成反例、Next.js16/React19/Vite、Chromium、Compose 配置和完整 Compose HTTP 皆成功。
+- **证据范围**：JUnit 用即时生成的 Ed25519 密钥做真正签名验签/篡改检测；PG18 一次性合成仓库验证未验证外部签收时禁止提交、用户跨权限、来源唯一、密钥独立审批及永久撤销/不可变历史。**这些验证既没有使用实际 WMS 签发的公钥，也没有接通 Amazon FBA/FBM 实时认证 API，不能被解释为真实仓库收货或 COGS 核销认证。**
+
 ## 核心业务边界
 
 V172 只有 `ATTESTED_LOCAL` 的**本地双人核查**。V173 为外部仓储回执添加独立的加密来源验证：接受合作 WMS 提供的 Ed25519 X.509 DER 公钥（Base64）、由第二个 Owner 对**租户内部登记**进行确认后，逐包裹校验对方持有的私钥所生成的 detached Ed25519 签名。**从未要求上传或保存私钥**。
