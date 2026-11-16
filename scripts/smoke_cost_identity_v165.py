@@ -683,8 +683,10 @@ call(owner,missing_signed,"POST",{
 },expected=404)
 assert sql(f"""SELECT count(*) FROM finance_wms_signed_return_v98
  WHERE tenant_id='{tenant}'""")=="0"
-revoked=call(owner,wms_url+"/revoke","POST",{"reason":
- "Revoke disposable key after synthetic cryptographic provenance test"})
+call(owner,wms_url+"/revoke","POST",{"reason":
+ "Original enrollment author cannot independently revoke its own key"},expected=403)
+revoked=call(checker,wms_url+"/revoke","POST",{"reason":
+ "Independent second Owner revokes disposable key after synthetic provenance test"})
 assert revoked["state"]=="REVOKED"
 call(checker,wms_url+"/approve","POST",{"reason":
  "A revoked signing key can never be reapproved"},expected=409)
