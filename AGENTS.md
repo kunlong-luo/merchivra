@@ -1,3 +1,5 @@
+> **V172（待技术验收）**：新增 [消费者退货本地仓包裹实收候选与防重对账](docs/finance/customer-return-local-intake-v172.md)。PG18 V97 每仓包裹参考号唯一、与 V171 核查单同退款/订单/商品复合 FK、按原商品跨版本累计 PENDING+ATTESTED_LOCAL 数量并串行行锁；第二 Owner 独立核对/不可变审计，Next16/Vite 复用 WarehousePicker 操作。**LOCAL_TWO_PERSON_UNVERIFIED ≠ 可信第三方 WMS/FBA/FBM 实收**，从未更新 V39 库存/V162/V64 净利润，#104 继续 NO-GO，Seller/Ads OFF。
+
 > **V171 精确 SHA 技术验收已通过（2026-11-16）**：[V171 退货人工实收证据](docs/finance/return-receipt-evidence-v171.md) 已由 PR #153、#154 合并。首次功能 SHA `0b28fbaab4a28f865566c1f92a264609c4c85858` 的 [A3 #43810447503](https://github.com/kunlong-luo/merchivra/actions/runs/43810447503) 首次 7/7 SUCCESS；额外修复缺失 `condition` 应返回 HTTP 400 而非 NPE 500 后，最终 SHA `1b217cfb737567b6c06a47fce30ba1af9bfb59d7` 的 [A3 #43810932033](https://github.com/kunlong-luo/merchivra/actions/runs/43810932033) 再次首次 7/7 SUCCESS。**双人材料审查 ≠ 仓库真实实收/COGS 会计回转**；没有真实净利润认证，Seller/Ads OFF、生产 #104 NO-GO。
 
 > **V171（已完成合成技术 A3）**：新增消费者退货的 [人工实收声明 + 独立复核证据](docs/finance/return-receipt-evidence-v171.md)，V96 FK 锁定 V34 原退款商品与 V63 当前审核证据指纹，按件数/处置/凭据记录，审计与决策不可变；不能误把 V39 采购收货当消费者退货，也不能把 `RESTOCKED_CLAIMED` / `REVIEWED_MANUAL` 当受信库存实收或 COGS 回转。Next16/Vite 财务退款页复用新 UI；Seller/Ads OFF、生产 #104 NO-GO。
