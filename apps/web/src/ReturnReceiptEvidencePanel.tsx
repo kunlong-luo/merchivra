@@ -1,4 +1,5 @@
 import {useState} from 'react'
+import LocalReturnIntakePanel from './LocalReturnIntakePanel'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {decideReceiptClaim,listReceiptClaims,requestReceiptClaim,
  getReceiptClaimAudit,type ReceiptClaim} from './lib/return-receipts'
@@ -118,6 +119,8 @@ export default function ReturnReceiptEvidencePanel({tenantId,marketplaceId,event
     audit.isError?<p role="alert" className="setup-error">{String(audit.error)}</p>:
     <div aria-label="V171 审计历史"><ul>{audit.data?.map((x,i)=>
      <li key={i}>{x.occurredAt} · {x.action} · {x.actorId} · {x.note}</li>)}</ul></div>)}
+  <LocalReturnIntakePanel tenantId={tenantId} marketplaceId={marketplaceId}
+   eventId={eventId}/>
   <p className="panel-caption">V171 只接受人工申报、复核与审计；所有 physicalReceiptVerified、saleabilityVerified、cogsReversalEligible 恒为 false，actualCogsReversal 为 null。不得用于 V162/V64 实际利润。</p>
  </section>
 }
