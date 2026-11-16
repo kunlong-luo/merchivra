@@ -1,4 +1,5 @@
 import {useCallback,useState} from 'react'
+import WmsSignedEvidencePanel from './WmsSignedEvidencePanel'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import WarehousePicker from './WarehousePicker'
 import {getLocalReturnIntakes,requestLocalReturnIntake,
@@ -130,6 +131,9 @@ export default function LocalReturnIntakePanel({tenantId,marketplaceId,eventId}:
         beforeId:data.data!.nextBeforeId!}])}>下一页</button>}
     </div>
    </>}
+  {data.data&&<WmsSignedEvidencePanel tenantId={tenantId}
+   marketplaceId={marketplaceId} eventId={eventId}
+   intakes={data.data.receipts}/>}
   {auditId&&(audit.isPending?<p>读取包裹审计…</p>:
    audit.isError?<p className="setup-error" role="alert">{String(audit.error)}</p>:
    <ul>{audit.data?.map((x,i)=><li key={i}>{x.action} · {x.actorId} · {x.note}
