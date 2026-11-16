@@ -52,7 +52,8 @@ public class ReturnReceiptEvidenceService {
     static void validate(Request request) {
         if(request==null||request.itemId()==null||request.itemId().isBlank()
             ||request.itemId().length()>160||request.quantity()<1
-            ||request.quantity()>1000000||!CONDITIONS.contains(request.condition()))
+            ||request.quantity()>1000000||request.condition()==null
+            ||!CONDITIONS.contains(request.condition()))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "One valid order item, positive quantity and condition required");
         reference(request.evidenceReference());
