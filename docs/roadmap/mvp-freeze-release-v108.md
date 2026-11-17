@@ -1,3 +1,5 @@
+> **2026-11-17 / V175-B 开发中，未验收**：[WMS 公钥持有权一次性挑战](../finance/wms-key-possession-v175b.md) 新增 V101 append-only Ed25519 规范挑战/限期/防重放/第三人复核、Next16 页面与真实 PG18 三 Owner 合成 HTTP 验收；这只证明租户登记私钥控制，不能认证真实 WMS 经营主体/物理退货收货；库存、COGS、V162/V64 真利润仍禁入，#104 NO-GO、Seller/Ads OFF。
+
 > **2026-11-17 / V175-A 完整合成 A3 已通过**：PR [#163](https://github.com/kunlong-luo/merchivra/pull/163) 合并 SHA `c05a990579380a694e17cc84e28e8284ad5ba51f`；最新分支快速 [CI #44011618464](https://github.com/kunlong-luo/merchivra/actions/runs/44011618464) **4/4 SUCCESS**（包括 PostgreSQL 18 V100）；合并后精确 SHA [完整 A3 #44012031121](https://github.com/kunlong-luo/merchivra/actions/runs/44012031121) **run_attempt=1，7/7 SUCCESS**（Flyway、Java25、Next16/Vite/Chromium、真实 PG18 与 Compose HTTP）。 V100 仅为人工 QC/第三人审核与动态冻结；真正运营商认证、物理实收、库存/COGS 和 V162/V64 已验证净利润仍为 P0；#104 NO-GO，Seller/Ads OFF。
 
 

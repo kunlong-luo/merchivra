@@ -1,5 +1,6 @@
 import {useState} from 'react'
 import WmsReturnReconciliationPanel from './WmsReturnReconciliationPanel'
+import WmsKeyPossessionPanel from './WmsKeyPossessionPanel'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {decideWmsSource,fetchSignedWmsReceipts,fetchWmsSources,
  importWmsReceipt,registerWmsSource} from './lib/signed-wms-evidence'
@@ -101,6 +102,8 @@ export default function WmsSignedEvidencePanel({tenantId,marketplaceId,eventId,i
      onClick={()=>decide.mutate('revoke')}>撤销公钥</button>}
    </div>}
    {decide.error&&<p className="setup-error" role="alert">{String(decide.error)}</p>}
+   {sourceId&&<WmsKeyPossessionPanel tenantId={tenantId} sourceId={sourceId}
+    approved={active?.state==='APPROVED'}/>}
    <div className="core-controls">
     <h4>登记外部来源公钥</h4>
     <label htmlFor="v173-code">仓库来源代码（8–80 位大写）</label>
