@@ -60,6 +60,7 @@ public class WmsReturnReconciliationService {
         if(tenant==null||mp==null||event==null||intake==null||warehouse==null
             ||source==null||observed==null||localQuantity<1||localQuantity>1000000
             ||externalQuantity<1||externalQuantity>1000000
+            ||localCondition==null||externalCondition==null
             ||!CONDITIONS.contains(localCondition)||!CONDITIONS.contains(externalCondition))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "Incomplete V174 signed observation identity");
@@ -140,6 +141,7 @@ public class WmsReturnReconciliationService {
         if(actor==null)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         if(input==null||input.sourceId()==null||input.externalQuantity()<1
             ||input.externalQuantity()>1000000
+            ||input.externalCondition()==null
             ||!CONDITIONS.contains(input.externalCondition()))
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "Positive source quantity and explicit disposition are required");
