@@ -1,5 +1,11 @@
 # V174 · 外部退货签名观察与跨密钥回执对账隔离
 
+## V174 精确主线技术验收（2026-11-17）
+
+- 功能 [PR #161](https://github.com/kunlong-luo/merchivra/pull/161) squash merged to `main`，业务 SHA `7a4a9c42a821bcbeca273c1ec0f3cc29fbdbc738`。第一次快速 [CI #44006264683](https://github.com/kunlong-luo/merchivra/actions/runs/44006264683) FAIL：634 项 Java 测试中只有新增静态断言错误地要求 `Wms`（实际代码字符串是 `WMS`），编译和密码学测试正常；随后修正测试断言并重跑 [快速 CI #44006485570](https://github.com/kunlong-luo/merchivra/actions/runs/44006485570) **SUCCESS**。未降低任何测试门禁。
+- 合并后精确 SHA [完整 A3 #44006689758](https://github.com/kunlong-luo/merchivra/actions/runs/44006689758) **run_attempt=1、7/7 SUCCESS**：主线不可变 SHA、PostgreSQL18/Flyway V99/真实 Spring HTTP 合成约束验证、Java25/Gradle、Next.js16/React19、Vite、Chromium 与完整 Nginx/Spring/PG18 Compose HTTP。
+- **技术验收不是生产仓储真实性认证**：外部签名与 tenant-owner-registered SPKI 公钥匹配、V174 signed V2 分类与独立原始/外部数据签名绑定、PG18 V99 约束/触发器存在。但本期 PG18 HTTP 仍为无真实仓库的合成负例，不能称独立 WMS 身份已验证、物理收货完成或 COGS/全成本利润已入账。真实 Amazon Seller/Ads OAuth OFF、G1/G2/G3 未通过、生产 #104 NO-GO。
+
 ## 目的与信任边界
 
 V173 只能保存**完全等于 V172 人工核对数量、处置**的 Ed25519 签名证据。真实仓库回执出现件数差、可售判断差时，直接返回 409 会抹掉需要处理的源头差异。V174 通过单独的 **签名 V2 观察协议**保留“外部独立声称的数量/处置”与原 V172 本地数值，并保留不可修改的对账分类；不修改 V63/V171/V172/V173 原始记录。
