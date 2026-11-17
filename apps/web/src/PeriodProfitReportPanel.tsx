@@ -1,5 +1,6 @@
 import {useState} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
+import SourceEvidenceDrawer from './components/SourceEvidenceDrawer'
 import {createPeriodProfitReport,exportPeriodProfitUrl,
  getPeriodProfitAudit,getPeriodProfitJobs,getPeriodProfitReport,
  progressPeriodProfitReport,resumePeriodProfitReport} from './lib/period-profit'
@@ -27,6 +28,7 @@ export default function PeriodProfitReportPanel({tenantId,marketplaceId}:{
  const [offset,setOffset]=useState(0)
  const [filter,setFilter]=useState('')
  const [showAudit,setShowAudit]=useState(false)
+ const [inspectedOrderId,setInspectedOrderId]=useState('')
  const cache=useQueryClient()
  const scope=['finance','period-profit',tenantId,marketplaceId]
  const jobs=useQuery({queryKey:[...scope,'jobs'],
@@ -47,13 +49,14 @@ export default function PeriodProfitReportPanel({tenantId,marketplaceId}:{
   // New user action -> new request key. Retry before successful response is
   // handled by the server idempotency key contract.
   return createPeriodProfitReport(marketplaceId,crypto.randomUUID(),after,before)
- },onSuccess:result=>{setActive(result.id);setOffset(0);refresh()}})
+ },onSuccess:result=>{setActive(result.id);setOffset(0);setInspectedOrderId('');refresh()}})
  const next=useMutation({mutationFn:()=>progressPeriodProfitReport(marketplaceId,selected),
   onSuccess:refresh})
  const resume=useMutation({mutationFn:()=>resumePeriodProfitReport(marketplaceId,selected),
   onSuccess:refresh})
  const current=report.data
  const j=current?.job
+ const inspected=current?.orders.find(o=>o.orderId===inspectedOrderId)
  const busy=create.isPending||next.isPending||resume.isPending
  const summary=current?.skus.filter(s=>
   s.sku.toLowerCase().includes(filter.trim().toLowerCase()))??[]
@@ -81,7 +84,7 @@ export default function PeriodProfitReportPanel({tenantId,marketplaceId}:{
   {(jobs.data?.length??0)>0&&
    <label className="shop-filter">选择历史报告
     <select value={selected} onChange={e=>{setActive(e.target.value);setOffset(0);
-     setShowAudit(false);setFilter('')}}>
+     setShowAudit(false);setFilter('');setInspectedOrderId('')}}>
      {jobs.data?.map(x=><option key={x.id} value={x.id}>
       {x.after} 至 {x.before} · {x.currency} · {x.state} · {x.processedOrders}/{x.totalOrders}
      </option>)}
@@ -156,22 +159,52 @@ export default function PeriodProfitReportPanel({tenantId,marketplaceId}:{
        <td><strong>{x.contribution}</strong></td></tr>)}</tbody></table>
     </div>}
    <h3>候选订单覆盖与排除原因</h3>
+   <p className="setup-hint">可点“核对来源”查看当前页该订单的逐项金额、阻断状态、提取时间和哈希。
+    只查看当前已加载的候选订单，不再请求其他租户或未加载记录。</p>
    <div className="table-scroll" role="region" tabIndex={0}
     aria-label="完整候选订单进度分页">
     <table><thead><tr><th>候选位置</th><th>来源订单 UUID</th><th>状态</th>
-     <th>数据条件</th><th>原币贡献</th><th>提取时间</th></tr></thead>
+     <th>数据条件</th><th>原币贡献</th><th>提取时间</th><th>核对</th></tr></thead>
      <tbody>{current.orders.map(o=><tr key={o.orderId}>
       <td>{o.position+1}</td><td>{o.orderId}</td><td>{o.state}</td>
       <td>{o.readiness??'等待本批处理'}</td>
       <td>{o.contribution??'来源不完整，不显示数值'}</td>
-      <td>{o.extractedAt??'尚未提取'}</td></tr>)}</tbody></table>
+      <td>{o.extractedAt??'尚未提取'}</td>
+      <td><button className="text-button" type="button"
+       onClick={()=>setInspectedOrderId(o.orderId)}
+       aria-label={'核对候选订单来源 '+o.orderId}>核对来源</button></td></tr>)}</tbody></table>
    </div>
    <div className="sandbox-actions">
     <button type="button" className="text-button" disabled={offset===0}
-     onClick={()=>setOffset(x=>Math.max(0,x-100))}>上一页</button>
+     onClick={()=>{setInspectedOrderId('');setOffset(x=>Math.max(0,x-100))}}>上一页</button>
     <button type="button" className="text-button"
-     disabled={!current.hasMore} onClick={()=>setOffset(x=>x+100)}>下一页</button>
+     disabled={!current.hasMore} onClick={()=>{setInspectedOrderId('');setOffset(x=>x+100)}}>下一页</button>
    </div>
+   <SourceEvidenceDrawer open={!!inspected} title="候选订单 · 来源证据"
+    description="V64 冻结任务中的当前页提取快照；不等于全成本净利润或实际到账"
+    onClose={()=>setInspectedOrderId('')}>
+    {inspected&&<>
+     <div className="v179-evidence-tags"><span className="v179-source-tag">{inspected.state}</span>
+      <span className="v179-source-tag">{inspected.currency}</span>
+      <span className="v179-source-tag">候选位置 {inspected.position+1}</span></div>
+     <dl className="v179-evidence-facts">
+      <div><dt>来源订单 UUID</dt><dd><code>{inspected.orderId}</code></dd></div>
+      <div><dt>审核与阻断条件</dt><dd>{inspected.readiness??'未完成来源核对'}</dd></div>
+      <div><dt>提取时间</dt><dd>{inspected.extractedAt??'未提取'}</dd></div>
+      <div><dt>提取快照 SHA-256</dt><dd><code>{inspected.extractSha256??'未生成'}</code></dd></div>
+     </dl>
+     <h4 className="v179-evidence-section">本单原币金额 · {inspected.currency}</h4>
+     <dl className="v179-evidence-facts">
+      {([['已审核销售',inspected.sales],['Amazon 费用',inspected.fees],
+       ['FBA 费用',inspected.fba],['历史商品成本',inspected.cogs],
+       ['合格订单贡献',inspected.contribution]] as const).map(([label,value])=>
+       <div key={label}><dt>{label}</dt><dd>{inspected.state==='ELIGIBLE'&&value!==null?
+        inspected.currency+' '+value:'来源不完整 · 不显示金额'}</dd></div>)}
+     </dl>
+     <p className="v179-evidence-warning">只有 ELIGIBLE 的金额才可查看。缺少可信来源时保持未知；
+      即使本单 ELIGIBLE，也不代表广告、头程、税费、汇兑、银行到账与最终会计净利润已认证。</p>
+    </>}
+   </SourceEvidenceDrawer>
    <button type="button" className="text-button"
     onClick={()=>setShowAudit(s=>!s)}>{showAudit?'收起':'查看'}报表批次审计</button>
    {showAudit&&(history.isPending?<p>读取审计中…</p>:

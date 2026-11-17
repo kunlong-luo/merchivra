@@ -264,11 +264,25 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
       confirmLabel:'取消此采购单',danger:true,
       onConfirm:()=>action.mutate({id:o.id,kind:'cancel'})
      })}/>
-   {selectedId&&<div className="core-tools">
-    <h3>采购明细 / 分批收货</h3>
+   {selectedId&&<div className="core-tools v179-purchase-detail" aria-label="当前采购单详情">
+    <div className="v179-purchase-detail-head"><div>
+     <span className="v179-evidence-kicker">PURCHASING / ORDER INSPECTION</span>
+     <h3>采购明细与分批收货</h3>
+     <p>仅当前选择的本地采购单，仓库入库、可售放行与 Amazon FBA 入仓分别记录。</p>
+    </div><button type="button" className="refresh-button"
+     onClick={()=>{setSelectedId('');setReceiveAsnId('')}}>关闭采购详情</button></div>
     {selected.isPending?<p>读取中…</p>:selected.isError?
       <p className="setup-error">{String(selected.error)}</p>:selected.data&&<>
-      <p className="setup-hint">{selected.data.order.orderNumber} · {selected.data.order.status}</p>
+      <div className="v179-purchase-summary" role="status">
+       <div><span>采购单号</span><strong>{selected.data.order.orderNumber}</strong></div>
+       <div><span>审批/收货状态</span><strong>{selected.data.order.status}</strong></div>
+       <div><span>原币</span><strong>{selected.data.order.currency}</strong></div>
+       <div><span>已收 / 订购数量（当前单全部行）</span><strong>{
+        selected.data.lines.reduce((sum,l)=>sum+l.receivedQuantity,0)} / {
+        selected.data.lines.reduce((sum,l)=>sum+l.orderedQuantity,0)}</strong></div>
+      </div>
+      <p className="v179-purchase-boundary">已收数量只代表本地采购收货记录，仍需独立 QC。
+       不等于可售库存、FBA 已入仓或历史 COGS 已回转。</p>
       <div className="table-scroll" role="region" tabIndex={0}>
        <table><thead><tr><th scope="col">内部 SKU</th><th scope="col">订购</th>
        <th scope="col">已收</th><th scope="col">原币单价</th></tr></thead><tbody>
