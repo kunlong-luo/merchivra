@@ -1,4 +1,5 @@
 import {useState} from 'react'
+import WmsReturnReconciliationPanel from './WmsReturnReconciliationPanel'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import {decideWmsSource,fetchSignedWmsReceipts,fetchWmsSources,
  importWmsReceipt,registerWmsSource} from './lib/signed-wms-evidence'
@@ -139,6 +140,9 @@ export default function WmsSignedEvidencePanel({tenantId,marketplaceId,eventId,i
    </div>
    {importEvidence.error&&<p className="setup-error" role="alert">{String(importEvidence.error)}</p>}
    {proofs.isError&&<p className="setup-error" role="alert">{String(proofs.error)}</p>}
+   <WmsReturnReconciliationPanel tenantId={tenantId} mp={marketplaceId}
+    event={eventId} selected={selected} sourceId={sourceId}
+    sourceApproved={active?.state==='APPROVED'}/>
    {proofs.data?.map(p=><p key={p.id} className="setup-hint">
     外部参考 {p.externalReceiptId}：Ed25519 签名有效（SHA256 {p.canonicalSha256.slice(0,16)}…），但仓储身份与实物签收未核验；库存/COGS 未入账。
    </p>)}
