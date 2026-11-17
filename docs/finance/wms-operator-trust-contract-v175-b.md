@@ -28,3 +28,16 @@ V173 的 Ed25519 公钥由租户 Owner 登记，V174 的签名数量/处置差�
 ## 交付判断
 
 本设计文档的合并仅确认**下一阶段接口与安全边界已被记录**，不代表 B1/B2/B3 已实现、真实仓储身份可信、PG18 本轮已通过、净利润已核销或 ERP 正式上线。
+
+
+## B1 可实施的数据与拒绝矩阵（2026-11-17 补充设计，仍未实现）
+
+建议用 **PG18 forward-only Flyway V101（以实际 main 下一空号为准）**，不要修改 V98–V100 已发布迁移。持久化最小结构：`operator_subject`（租户/Marketplace/仓库范围、外部法定主体标识及合同引用、状态、有效期）；`operator_proof_submission`（提交人、外部证据受控 URI、SHA-256、证据类型与独立核验渠道、来源时间）；`operator_trust_decision`（append-only、独立审核人、决定时间、核验渠道、证据指纹、拒绝原因）；`operator_key_binding`（既有 V173 公钥 UUID、运营商、仓库、有效期与撤销关联）。所有跨表引用必须以 tenant+marketplace+warehouse 复合 FK 或同等数据库约束封闭，禁止只凭客户端 UUID 关联。
+
+**B1 不提供自动 VERIFIED 通路。** 录入仅产生 `UNVERIFIED` 或 `PENDING_INDEPENDENT_PROOF`；独立外部验证通道未部署、证据不充分、审核人与登记人相同、合同过期、密钥已撤销、来源不匹配，全部保持未验证/撤销状态。即便未来批准 VERIFIED，读取时也必须重新检查有效期、撤销和绑定版本，不依赖缓存布尔值。状态变更采用追加事件，原始证据/审计不可 UPDATE/DELETE，撤销立即阻断后续使用；历史记录仍可审计。
+
+**建议 API（待 OpenAPI 评审，不代表已存在）**：`POST /api/v1/finance/wms-operators` 仅登记；`POST /api/v1/finance/wms-operators/{id}/proofs` 仅引用私有证据（不经公开 JSON 上传原件）；`POST /api/v1/finance/wms-operators/{id}/revoke` 独立撤销；`GET /api/v1/finance/wms-operators/page` 按租户、仓库、状态做 keyset 全库分页并显示可信度来源。所有写入需 Owner Session、CSRF、no-store、审计与幂等；拒绝跨租户、错仓、无权限、重复提交/重放和证据 SHA 改变。不存在外部独立验证能力时不暴露可写的 approve-verified API。
+
+**合成验收矩阵（未运行）**：至少测试 ① 跨租户/Marketplace/仓库复合引用拒绝；② 提交人自审、伪造/空证明、过期合同与撤销公钥拒绝；③ 同一身份并发登记/撤销后的状态一致与不可变审计；④ 225+ 运营商分页、错筛选游标、全量计数不截断；⑤ 401/403/CSRF 及证据原件/密钥不出现在日志和响应；⑥ B1 所有路径对库存流水、退款 COGS、V162/V64 净利润的**零副作用**。执行顺序为快速 CI → 真实隔离 PG18 Flyway+Spring HTTP 定向回归 → 合并后精确 main SHA 完整 A3。不得用设计文档或快速 CI 代替数据库/HTTP 验收。
+
+**当前 PR 技术证据范围**：Draft PR #165 原始 head `e28c13ea1eba9e10941eb26ba4a4bfa9ca08cf36` 的 [快速 CI #44024944348](https://github.com/kunlong-luo/merchivra/actions/runs/44024944348) 记录 SUCCESS（Java25/Gradle、前端与基础检查）；该运行发生于本补充文档提交**之前**，也没有证明 B1 数据表、API 或 PG18 专项测试已实现。后续必须检查新 head 的独立 CI。
