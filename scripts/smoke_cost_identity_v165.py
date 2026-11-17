@@ -698,10 +698,38 @@ assert sql("""SELECT count(*) FROM pg_trigger
 assert sql(f"""SELECT count(*) FROM finance_wms_source_audit_v98
  WHERE tenant_id='{tenant}' AND source_id='{wms['id']}'""")=="3"
 
+# V174: PG18 signed external observations use an append-only global
+# receipt registry shared by V173 and V174. Unmatched refund/parcel
+# remains 404; synthetic signing keys never assert real warehouse identity.
+reconcile_missing=intake_root+"/"+str(uuid4())+"/wms-reconciliation"
+call(sess(),reconcile_missing,expected=401)
+call(owner,reconcile_missing,expected=404)
+call(owner,reconcile_missing,"POST",{
+ "sourceId":wms["id"],"externalReceiptId":"V174-TEST-OBS-0001",
+ "observedAt":"2026-11-17T01:00:00Z","externalQuantity":1,
+ "externalCondition":"UNKNOWN","signatureBase64":b64encode(bytes(64)).decode()
+},expected=404)
+assert sql("""SELECT count(*) FROM pg_trigger
+ WHERE tgname IN ('finance_wms_v173_global_id_v99',
+   'finance_wms_v174_global_id_v99',
+   'finance_wms_observation_guard_v99',
+   'finance_wms_receipt_identity_guard_v99')
+ AND NOT tgisinternal""")=="4"
+assert sql("""SELECT count(*) FROM pg_constraint
+ WHERE conname IN ('finance_customer_return_intake_event_scoped_v99',
+   'finance_wms_receipt_identity_v99_pkey',
+   'finance_wms_receipt_identity_v99_tenant_id_intake_id_key')
+ """)=="3"
+assert sql(f"""SELECT count(*) FROM finance_wms_receipt_identity_v99
+ WHERE tenant_id='{tenant}'""")=="0"
+assert sql(f"""SELECT count(*) FROM finance_wms_return_observation_v99
+ WHERE tenant_id='{tenant}'""")=="0"
+
+
 after=[sql("SELECT count(*) FROM "+t) for t in
     ("finance_profit_report_job","bank_payout_observation","ads_report_reviewed_cost")]
 assert before==after,"Manual identity scan may not post finance/bank/Ads"
-print("PASS V165/V166/V167/V168/V169/V170/V171/V172/V173 PG18+HTTP: 8-family source preview, audited "
+print("PASS V165/V166/V167/V168/V169/V170/V171/V172/V173/V174 PG18+HTTP: 8-family source preview, audited "
       "settlement-line scoped links and independent unverified review; equal "
       "amount/different key NOT duplication; same Ads key holds approval 409; "
       "no self/unauthorized leak; later claimed-document collision signaled; "
