@@ -1,3 +1,5 @@
+> **V175-B 开发中/未验收**：[租户登记 WMS 公钥持有权挑战](docs/finance/wms-key-possession-v175b.md) V101 只验证密钥占有与独立 Owner 签名复核，绝不声称独立 WMS 运营商身份、实物已收/可售或 V162/V64 利润核销；正式 Next16，Vite 回退，Amazon Seller/Ads OFF、生产 #104 NO-GO。
+
 > **V175-A 合成技术 A3 已通过（2026-11-17）**：PR [#163](https://github.com/kunlong-luo/merchivra/pull/163) 合并 SHA `c05a990579380a694e17cc84e28e8284ad5ba51f`；最新分支快速 [CI #44011618464](https://github.com/kunlong-luo/merchivra/actions/runs/44011618464) **4/4 SUCCESS**（包括 PostgreSQL 18 V100）；合并后精确 SHA [完整 A3 #44012031121](https://github.com/kunlong-luo/merchivra/actions/runs/44012031121) **run_attempt=1，7/7 SUCCESS**（Flyway、Java25、Next16/Vite/Chromium、真实 PG18 与 Compose HTTP）。 三人隔离与 QC 手工材料不证明真实 WMS 实物收货或可售库存，COGS/利润禁入、#104 NO-GO、Seller/Ads OFF；详见 [V175-A](docs/finance/wms-manual-qc-review-v175.md)。
 
 
