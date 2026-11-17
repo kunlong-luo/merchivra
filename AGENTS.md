@@ -1,3 +1,5 @@
+> **V175-A 待验收**：[WMS 人工 QC 三人复核及不可变差异](docs/finance/wms-manual-qc-review-v175.md) 正在开发：V100 仅补独立手工 QC 观察和审核日志，不给 V174 租户签名升级运营商身份、实物收货或 COGS/净利润权限。任何新代码合并后必须精确 SHA A3，#104 NO-GO、Seller/Ads OFF。
+
 > **V174 完整合成 A3 已通过（2026-11-17）**：[签名 WMS 差异隔离 V99](docs/finance/signed-wms-return-discrepancy-v174.md) 功能 PR #161（业务 SHA `7a4a9c42a821bcbeca273c1ec0f3cc29fbdbc738`）；最初快速 CI #44006264683 仅新增测试断言 `Wms`/ `WMS` 大小写错误，修复后 [CI #44006485570](https://github.com/kunlong-luo/merchivra/actions/runs/44006485570) SUCCESS；精确 SHA [完整 A3 #44006689758](https://github.com/kunlong-luo/merchivra/actions/runs/44006689758) **run_attempt=1、7/7 SUCCESS**。密钥仅由租户登记，签名不证明真实仓储/退货实收或 COGS；Amazon Seller/Ads OFF，#104 生产 NO-GO。
 
 > **V174（完整合成 A3 已通过）**：[V99 签名 WMS 数量/处置差异隔离](docs/finance/signed-wms-return-discrepancy-v174.md)。V173/V174 共用跨来源密钥的外部回执唯一性（tenant+warehouse+external ID）、同一 V172 包裹只占用一次，新的 Ed25519 V2 标准载荷允许外部数与本地人工数不一致并隔离；动态读取公钥撤销/本地证据失效。**签名密钥仍仅租户登记，不能作为真实实收/COGS 或 V162/V64 净利润核销依据**，Seller/Ads OFF、生产 #104 NO-GO。

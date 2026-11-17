@@ -1,3 +1,5 @@
+> **V175-A 待技术验收**：[人工 QC 不可变案件/第三人复核](docs/finance/wms-manual-qc-review-v175.md) 并不代表可认证的仓库身份或实际退货入库；真实物理 QC、库存与历史 COGS 会计回转保留为 P0。持续保持 Next.js 16 目标、Vite 回退、Seller/Ads OAuth OFF、生产 #104 NO-GO。
+
 > **V174 已完成合成技术 A3（2026-11-17）**：Flyway V99 跨 V173/V174 签名回执全局去重、Ed25519 V2 外部数量/处置差异隔离、Next16 工作台，PR #161、业务 SHA `7a4a9c42a821bcbeca273c1ec0f3cc29fbdbc738`，[完整 A3 #44006689758](https://github.com/kunlong-luo/merchivra/actions/runs/44006689758) **首次 7/7 SUCCESS**（前期快速 CI 静态断言大小写已修复）。**真实 WMS 运营商认证/物理实收/库存/历史 COGS 仍缺**，#104 生产 NO-GO，Seller/Ads OAuth OFF。详见 [V174](docs/finance/signed-wms-return-discrepancy-v174.md)。
 
 > **V174（合成 A3 已通过）**：V99 PG18 全局外部仓库回执去重（贯穿 V173/V174 和密钥轮换）、Ed25519 V2 外部数量/处置差异不可变记录与 Next 16 隔离工作台；保持各费用来源、仓库实收、历史 COGS 未通过真实认证，不得自动过账或将 V162/V64 当作真实利润。详见 [V174](docs/finance/signed-wms-return-discrepancy-v174.md)。#104 NO-GO。
