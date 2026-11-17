@@ -873,6 +873,19 @@ async function main() {
         "[...document.querySelectorAll('[aria-label=\"站点异常规则表\"] tbody tr')].some(x=>x.textContent.includes('库存'))",
         'V69 Marketplace rule settings')
       await layout(send,width,'operations-360')
+      // V179: open the tenant-scoped finding detail without updating state.
+      await evaluate(send,"document.querySelector('button[aria-label^=\\\"查看异常来源\\\"]')?.click()")
+      await waitFor(send,
+        "document.querySelector('.v179-evidence-drawer')?.textContent?.includes('原始来源键')",
+        'V179 Base UI operations source-evidence drawer')
+      assert.equal(await evaluate(send,
+        "document.querySelector('.v179-evidence-warning')?.textContent?.includes('DONE')"),
+        true,'V179 DONE must not certify the original business evidence')
+      await screenshot(send,'v179-ops-evidence-360.png')
+      await evaluate(send,"document.querySelector('.v179-evidence-close')?.click()")
+      await waitFor(send,
+        "!document.querySelector('.v179-evidence-drawer')",
+        'V179 source drawer should dismiss and release focus')
       await screenshot(send,'operations-360.png')
       // V105: Base UI Select must change the SERVER filter, not client-side
       // re-sort the currently fetched 50 rows. Column hiding is view-only.
@@ -1121,6 +1134,23 @@ async function main() {
           "document.querySelector('.core-workspace')?.textContent?.includes('采购单状态已更新：CANCELLED')",
           'V104 confirmed local PO cancel updates status')
         assert.equal(v104CancelWrites,1,'one explicit confirmation must send one local POST')
+        // V179: a purchase detail is an explicit, closeable evidence area.
+        await evaluate(send,`(() => {const row=[...document.querySelectorAll('[aria-label="采购单列表"] tbody tr')]
+          .find(r=>r.textContent.includes('PO-V104-CONFIRM-SYNTHETIC'));
+          const btn=[...row.querySelectorAll('button')].find(b=>b.textContent.trim()==='明细');
+          if(!btn)throw Error('Missing local PO detail');btn.click()})()`)
+        await waitFor(send,
+          "!!document.querySelector('.v179-purchase-detail-head')",
+          'V179 selected purchase detail heading')
+        assert.equal(await evaluate(send,
+          "document.querySelector('.v179-purchase-detail-head')?.textContent?.includes('采购明细与分批收货')"),
+          true,'V179 PO details remain tied to selected purchase')
+        await screenshot(send,'v179-purchase-evidence-360.png')
+        await evaluate(send,
+          "document.querySelector('.v179-purchase-detail-head button')?.click()")
+        await waitFor(send,"!document.querySelector('.v179-purchase-detail')",
+          'V179 purchase detail can close without writes')
+        assert.equal(v104CancelWrites,1,'V179 detail must not post another mutation')
         await layout(send,width,'v104-confirm-360')
         // V106: the finance scope is selected with Base UI, and rows are
         // server-cursor pages. Verify there is no cross-Marketplace mixing.
