@@ -10,6 +10,7 @@ import java.time.OffsetDateTime;
 import java.util.Base64;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -239,7 +240,9 @@ public class WmsSignedReturnService {
         if(!verify(before.publicKey(),input.signatureBase64(),payload))
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "Detached Ed25519 signature invalid for exact return parcel identity");
-        UUID recorded=tx.execute(t->{
+        UUID recorded;
+        try {
+            recorded=tx.execute(t->{
             // Lock source first, then parcel; serialize with key revocation,
             // and re-check exact tenant/order/warehouse/quantity identity.
             Key current=key(tenant,input.sourceId(),true);
@@ -278,7 +281,11 @@ public class WmsSignedReturnService {
                 input.condition(),input.signatureBase64(),
                 RefundRecoveryService.hash(payload),actor);
             return id;
-        });
+            });
+        } catch(DataIntegrityViolationException collision) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "WMS receipt globally reserved by V173/V174 or scoped identity invalid");
+        }
         return receipts(tenant,mp,event,intakeId).stream()
             .filter(x->x.id().equals(recorded.toString())).findFirst().orElseThrow();
     }
