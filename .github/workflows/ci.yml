@@ -120,7 +120,9 @@ jobs:
 
   pg18-migrations:
     name: PostgreSQL 18 / real Flyway migrations
-    if: inputs.full_suite == true
+    # V175 exception: finance integrity needs real PG18 before PR merge.
+    # Other PRs retain V108 quick CI cadence; no LIVE Amazon credentials.
+    if: inputs.full_suite == true || (github.event_name == 'pull_request' && github.head_ref == 'feat/v175-qc-independent-review-foundation')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -304,6 +306,13 @@ jobs:
           # V165: exact current local identity collisions across 8 source
           # families hold unverified allocation approvals, not monetary equality.
           MERCHIVRA_V165_DISPOSABLE_ONLY=true python3 scripts/smoke_cost_identity_v165.py
+          # V175: real PG18 Flyway V100 + scoped QC actor guards, immutable
+          # review and negative Session/CSRF HTTP; NOT true physical receipt.
+          MERCHIVRA_V175_DISPOSABLE_ONLY=true python3 scripts/smoke_wms_qc_v175.py
+          # Exercise the installed PG18 trigger functions against fully
+          # disposable shadow fixtures for 3 independent reviewers.
+          psql -h 127.0.0.1 -U merchivra -d merchivra -v ON_ERROR_STOP=1 \
+            -f scripts/smoke_wms_qc_actor_pg18_v175.sql
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='81' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='80' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='79' AND success")" = "1"
@@ -462,6 +471,8 @@ jobs:
         run: python3 scripts/check_ci_cadence_v108.py
       - name: Verify V109 active documentation links and runtime status
         run: python3 scripts/check_docs_consistency_v109.py
+      - name: V175 QC PG18 targeted synthetic smoke syntax
+        run: python3 -m py_compile scripts/smoke_wms_qc_v175.py
       - name: V140 synthetic Owner HTTP smoke Python syntax
         run: python3 -m py_compile scripts/smoke_proof_monitor_v140.py
       - name: V141 read-only disk/WAL/backup readiness probe contracts

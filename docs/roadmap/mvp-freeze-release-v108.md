@@ -1,3 +1,5 @@
+> **2026-11-17 / V175-A 开发中，未验收**：新增 [WMS 人工 QC 三人独立复核基础](../finance/wms-manual-qc-review-v175.md) 的 Flyway V100、后端 Owner/CSRF、Next16 共享界面和专项测试；只追加人工 QC 数量/处置与审核原因，不能证明外部仓库经营主体、物理签收或自动入库/回转 COGS。状态以分支 PR/CI 和精确 main SHA A3 为准，未通过前不得标记完成；Seller/Ads OFF，生产 #104 NO-GO。
+
 > **2026-11-17 / V174 合成技术 A3 已通过**：[外部 WMS 签名观察与差异隔离](../finance/signed-wms-return-discrepancy-v174.md)，PR #161、代码 SHA `7a4a9c42a821bcbeca273c1ec0f3cc29fbdbc738`，[精确 SHA 完整 A3 #44006689758](https://github.com/kunlong-luo/merchivra/actions/runs/44006689758) **run_attempt=1、7/7 SUCCESS**。早期快速 CI #44006264683 唯一新增静态断言大小写失配，修复后 #44006485570 SUCCESS。下一 P0：**独立可信外部运营商身份 + 官方 FBA/仓库实收来源 + 可售 QC + 审核后 COGS 回转及 V162/V64 原币全成本净利润**。本期签名凭证不能证明实物收货，Amazon Seller/Ads OFF，G1/G2/G3、生产 #104 NO-GO。
 
 > **2026-11-17 / V174（合成 A3 已通过）**：[签名外部仓库观察/差异隔离](../finance/signed-wms-return-discrepancy-v174.md)：V99 跨 V173/V174 的全局来源回执与包裹去重，签名 V2 保留外部报告数量/处置不一致证据，避免扔掉需要核对的差异；仍无独立外部仓储经营主体认证/物理实收/GL、COGS 过账。真实 Amazon Seller/Ads OAuth OFF、#104 生产 NO-GO。下一 P0 外部运营商认证、签收真实性与可售 QC，随后完整真实成本利润核销。

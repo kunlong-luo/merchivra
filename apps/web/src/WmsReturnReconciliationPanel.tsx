@@ -4,6 +4,7 @@ import type {LocalReturnIntake} from './lib/customer-return-intakes'
 import {canonicalWmsObservation,importWmsObservation,readWmsReconciliation}
  from './lib/wms-return-reconciliation'
 import type {WmsObservedCondition} from './lib/wms-return-reconciliation'
+import WmsQcReviewPanel from './WmsQcReviewPanel'
 
 const safe=/^[A-Za-z0-9][A-Za-z0-9._:/-]{7,159}$/
 const states:Record<string,string>={
@@ -91,6 +92,8 @@ export default function WmsReturnReconciliationPanel({tenantId,mp,event,selected
    disabled={!canSubmit||mutation.isPending||reconciliation.isLoading}
    onClick={()=>mutation.mutate()}>验签并保存不可变外部差异观察</button>
   {mutation.error&&<p className="setup-error" role="alert">{String(mutation.error)}</p>}
+  <WmsQcReviewPanel tenantId={tenantId} mp={mp} event={event} selected={selected}
+   sourceAvailable={!!reconciliation.data?.signatureValid}/>
   <p className="panel-caption">回执身份跨 V173/V174 和已轮换公钥全局防重。同一个 V172 包裹只可占用一次外部回执。签名有效仅证明租户登记密钥持有人，不证明货物实际入库或真实利润。</p>
  </section>
 }
