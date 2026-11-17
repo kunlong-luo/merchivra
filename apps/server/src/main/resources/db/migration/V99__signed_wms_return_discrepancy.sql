@@ -2,6 +2,10 @@
 -- warehouse identity, goods receipt, saleability, inventory or COGS.
 -- Global tenant+warehouse+external receipt and tenant+intake uniqueness
 -- apply ACROSS old V173 exact-match evidence and new V174 quarantine.
+ALTER TABLE finance_customer_return_intake_v97
+ ADD CONSTRAINT finance_customer_return_intake_event_scoped_v99
+ UNIQUE(tenant_id,id,seller_marketplace_id,event_id,warehouse_id);
+
 CREATE TABLE finance_wms_receipt_identity_v99 (
  tenant_id UUID NOT NULL,
  warehouse_id UUID NOT NULL,
@@ -65,6 +69,9 @@ CREATE TABLE finance_wms_return_observation_v99 (
   REFERENCES finance_wms_signing_source_v98(tenant_id,id,warehouse_id),
  FOREIGN KEY (tenant_id,intake_id,warehouse_id)
   REFERENCES finance_customer_return_intake_v97(tenant_id,id,warehouse_id),
+ FOREIGN KEY (tenant_id,intake_id,seller_marketplace_id,event_id,warehouse_id)
+  REFERENCES finance_customer_return_intake_v97
+   (tenant_id,id,seller_marketplace_id,event_id,warehouse_id),
  FOREIGN KEY (tenant_id,seller_marketplace_id,event_id)
   REFERENCES finance_source_event(tenant_id,seller_marketplace_id,id),
  FOREIGN KEY (tenant_id,recorded_by) REFERENCES membership(tenant_id,user_id),
