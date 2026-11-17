@@ -1,4 +1,6 @@
-> **V174（待 PG18 A3）**：V99 PG18 全局外部仓库回执去重（贯穿 V173/V174 和密钥轮换）、Ed25519 V2 外部数量/处置差异不可变记录与 Next 16 隔离工作台；保持各费用来源、仓库实收、历史 COGS 未通过真实认证，不得自动过账或将 V162/V64 当作真实利润。详见 [V174](docs/finance/signed-wms-return-discrepancy-v174.md)。#104 NO-GO。
+> **V174 已完成合成技术 A3（2026-11-17）**：Flyway V99 跨 V173/V174 签名回执全局去重、Ed25519 V2 外部数量/处置差异隔离、Next16 工作台，PR #161、业务 SHA `7a4a9c42a821bcbeca273c1ec0f3cc29fbdbc738`，[完整 A3 #44006689758](https://github.com/kunlong-luo/merchivra/actions/runs/44006689758) **首次 7/7 SUCCESS**（前期快速 CI 静态断言大小写已修复）。**真实 WMS 运营商认证/物理实收/库存/历史 COGS 仍缺**，#104 生产 NO-GO，Seller/Ads OAuth OFF。详见 [V174](docs/finance/signed-wms-return-discrepancy-v174.md)。
+
+> **V174（合成 A3 已通过）**：V99 PG18 全局外部仓库回执去重（贯穿 V173/V174 和密钥轮换）、Ed25519 V2 外部数量/处置差异不可变记录与 Next 16 隔离工作台；保持各费用来源、仓库实收、历史 COGS 未通过真实认证，不得自动过账或将 V162/V64 当作真实利润。详见 [V174](docs/finance/signed-wms-return-discrepancy-v174.md)。#104 NO-GO。
 
 > **V173 已完成精确 SHA 合成 A3（2026-11-17）**：V98 双人公钥审核/撤销、同仓同包裹签名去重与 Next16 证据页面，PR #158 + 测试角色修正 PR #159；最终 SHA `14c88c4a40e53b8100f501bb1168c78e8377288a` [A3 #43969992583](https://github.com/kunlong-luo/merchivra/actions/runs/43969992583) **首次 7/7 SUCCESS**。初次主线 A3 #43969427227 PG18 测试角色预期错误 6/7，已保留事故记录。签名只验证租户登记公钥与内容，没有独立 WMS 商业身份或真实仓库签收/COGS 入账。#104 NO-GO，Amazon Seller/Ads OAuth OFF。详情 [V173](docs/finance/wms-signed-return-evidence-v173.md)。
 
