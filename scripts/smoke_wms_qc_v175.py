@@ -89,7 +89,9 @@ for col in ("operator_identity_verified", "physical_receipt_verified",
         AND pg_get_constraintdef(oid) LIKE '%{col} = false%'""") == "1", col
 guard = sql("""SELECT pg_get_functiondef('finance_wms_qc_actor_guard_v100'::regproc)""")
 assert "signed_importer" in guard and "qc_requester" in guard
-assert "23514" in guard and "qc_requester, signed_importer" in guard
+assert "23514" in guard and "qc_requester" in guard and "signed_importer" in guard
+# Behavioral actor independence is tested by actual PG18 trigger invocations
+# in smoke_wms_qc_actor_pg18_v175.sql; do not assert PL/pgSQL whitespace.
 
 before = [sql("SELECT count(*) FROM " + t) for t in
           ("erp_local_stock_movement", "finance_profit_report_job")]
