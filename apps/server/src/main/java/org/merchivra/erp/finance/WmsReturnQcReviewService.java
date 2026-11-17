@@ -170,6 +170,9 @@ public class WmsReturnQcReviewService {
         UUID actor,Request request) {
         if(actor==null)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         validate(request);
+        // Fail with the tenant-scoped 404 before probing signed observations.
+        // The transaction below rechecks the current source under locks.
+        intakes.detail(tenant,mp,event,intake);
         try {
             tx.executeWithoutResult(status->{
                 Observation signed=observation(tenant,mp,event,intake,true);

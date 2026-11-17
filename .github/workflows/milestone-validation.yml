@@ -1,3 +1,5 @@
+# V175-A: new PG18 V100 immutable QC evidence/three-owner guard. Full A3
+# must run at the exact merged main SHA; not real WMS identity or production GO.
 # V174 A3 PG18 V99 signed WMS observation discrepancy and cross-key global
 # receipt identity registry; NO trusted external operator, stock, COGS or GO.
 # V173 PG18 synthetic key revocation fixture: independent reviewer must revoke,
@@ -141,7 +143,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V174-A3-PG18-global-signed-wms-reconciliation' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V175-A3-PG18-immutable-independent-qc-review' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -203,6 +205,7 @@ on:
           - V166-A3-PG18-collision-case-maker-checker-audit
           - V167-A3-PG18-settlement-line-evidence-review
           - V174-A3-PG18-global-signed-wms-reconciliation
+          - V175-A3-PG18-immutable-independent-qc-review
 
 permissions:
   contents: read
