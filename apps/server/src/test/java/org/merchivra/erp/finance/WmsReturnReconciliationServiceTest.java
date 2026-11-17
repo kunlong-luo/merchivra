@@ -117,6 +117,6 @@ class WmsReturnReconciliationServiceTest {
             assertFalse(impl.contains(unsafe),unsafe);
         assertTrue(impl.contains("TransactionDefinition.ISOLATION_REPEATABLE_READ"));
         assertTrue(impl.contains("WmsSignedReturnService.verify"));
-        assertTrue(impl.contains("Wms receipt already reserved by V173 or V174"));
+        assertTrue(impl.contains("WMS receipt already reserved by V173 or V174"));
     }
 }
