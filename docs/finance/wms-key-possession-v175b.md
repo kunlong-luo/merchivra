@@ -1,6 +1,12 @@
 # V175-B · WMS 租户登记公钥的独立密钥持有权挑战
 
-状态：**功能分支待 PG18 / 三 Owner 正向 HTTP 专项 CI 与合并后精确 main SHA 完整 A3**。这不是独立外部 WMS 经营主体认证，不能证明真实退货签收或库存、历史 COGS、全成本净利润。
+状态：**V175-B 已合并，完整合成技术 A3 首次 7/7 成功（2026-11-17）**。这不是独立外部 WMS 经营主体认证，不能证明真实退货签收或库存、历史 COGS、全成本净利润。
+
+## 合成技术验收记录
+
+PR [#166](https://github.com/kunlong-luo/merchivra/pull/166) 合并业务 SHA `325dd84eb4b02540de9ef27e9e2259b413dad204`；PR [CI #44086459396](https://github.com/kunlong-luo/merchivra/actions/runs/44086459396) **run_attempt=1、4/4 SUCCESS**（含真实 PostgreSQL18/Flyway V101 三名独立 Owner Spring HTTP+CSRF、OpenSSL Ed25519 正向/错签/重放与撤销）；精确业务 SHA [完整 A3 #44087005800](https://github.com/kunlong-luo/merchivra/actions/runs/44087005800) **run_attempt=1、7/7 SUCCESS**（PG18、Java25/Gradle、React19/Next16/Vite、Chromium、Compose HTTP）。
+
+**验证范围**：V101 真实 PostgreSQL 18 迁移及复合 FK、三 Owner 真实 Session/CSRF、限定时间的 Ed25519 规范签验，错签、跨来源、同人决策、重放与来源撤销拒绝，以及 V39/V162/V64/银行/Ads 无过账。只验证合成密钥的控制权，**没有**独立真实 WMS 运营商身份证明、真实仓库/官方 FBA 实收或原币净利润核销；#104 生产继续 NO-GO、Seller/Ads OAuth OFF。
 
 ## 为何需要单独挑战
 
