@@ -1,6 +1,12 @@
 # V179 · Next.js 16 原始证据只读下钻与采购详情精修
 
-状态：**代码分支待 Chromium 真实浏览器回归与精确 main SHA 完整 A3**。
+状态：**V179 已合并，精确 main SHA 的合成 A3 首次 7/7 通过（2026-11-17）**。
+
+## 合成技术验收归档
+
+业务 [PR #172](https://github.com/kunlong-luo/merchivra/pull/172) 已合并，精确 SHA `6d352e706c4e64237ffeef302213116fbb2ae1a8`；[PR CI #44097349142](https://github.com/kunlong-luo/merchivra/actions/runs/44097349142) 首次 SUCCESS（Java25、React19/Vite/Next16、Compose、Chromium 异常证据抽屉与采购详情无额外写入）；合并后 [A3 #44097675646](https://github.com/kunlong-luo/merchivra/actions/runs/44097675646) 精确主线 SHA **run_attempt=1、7 个核心任务全部 SUCCESS**（PG18/Flyway、Java、Next16、Chromium、Compose HTTP、安全/恢复回归；额外 PR 专属浏览器任务在 main SKIPPED）。[GitHub Pages #44097675161](https://github.com/kunlong-luo/merchivra/actions/runs/44097675161) SUCCESS（只读虚构展示）。
+
+**验收范围**：真实 Next16 Chromium 在模拟租户来源数据上验证运营异常抽屉打开/关闭、采购单详情打开/关闭和无额外业务 POST；Java25、Next/Vite 类型与单测、PG18/Flyway 和全链 Compose HTTP 通过。V64 逐单来源金额的条件渲染由前端编译和现有类型契约覆盖，**未**使用真实外部 Amazon/仓储账单完成逐金额业务核对，不能把它称为银行到账或最终利润核实。下一阶段继续提高真实报表和来源交叉核验，生产 #104 继续 NO-GO。
 
 ## 本轮目标
 
