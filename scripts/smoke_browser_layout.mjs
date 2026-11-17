@@ -1116,6 +1116,19 @@ async function main() {
         await waitFor(send,
           "document.querySelectorAll('.v106-finance-events-table tbody tr').length===50",
           'V106 50-row first finance event page')
+        // Visual refresh must NOT replace the source-aware finance ledger.
+        // Assert real DOM hierarchy & loaded CSS in a Chromium Next route.
+        assert.equal(await evaluate(send,
+          "document.querySelectorAll('.page-context-tag').length"),
+          3,'navigation title preserves explicit provenance and session context')
+        assert.equal(await evaluate(send,
+          "document.querySelector('.finance-signal-strip')?.textContent?.includes('尚未认证')"),
+          true,'finance summary cannot advertise verified net profit')
+        assert.equal(await evaluate(send,
+          "getComputedStyle(document.querySelector('.finance-signal-strip')).display"),
+          'grid','new finance layout CSS must load in Next.js runtime')
+        await evaluate(send,"window.scrollTo(0,0)")
+        await screenshot(send,'v177-finance-command-center-360.png')
         assert.equal(await evaluate(send,
           "document.querySelectorAll('.v106-finance-events-table thead th').length"),
           7,'V106 default finance columns')

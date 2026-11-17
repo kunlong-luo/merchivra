@@ -122,7 +122,13 @@ export default function App({viewer,signingOut,onLogout,initialView='core',
  activeView==='orders'&&routeNavigation?'读取当前租户的真实订单入库记录；履约、退款和财务状态独立标注，不把订单预计金额当结算。':
  activeView==='catalog'&&routeNavigation?'读取当前租户的 Listing 与内部 SKU 关系；明确区分 MOCK、未验证及经授权的来源记录。':
  activeView==='inventory'&&routeNavigation?'查看 FBA 库存最新来源观测与入仓证据；未知不等于零，历史数据不冒充实时可售库存。':
- '集中查看店铺运营数据，所有示例来自本地 Mock Gateway。'}</p></div>
+ '集中查看店铺运营数据，所有示例来自本地 Mock Gateway。'}</p>
+ <div className="page-context-tags" aria-label="当前工作空间边界">
+  <span className="page-context-tag accent">会话租户隔离</span>
+  <span className="page-context-tag">{activeView==='overview'||activeView==='finance'?
+   '各站点按原币核对':'每条记录保留来源状态'}</span>
+  <span className="page-context-tag">连接状态不等于 Amazon 授权</span>
+ </div></div>
  {demo&&<div className="heading-actions"><label className="shop-filter"><span>当前店铺</span><select aria-label="切换演示店铺" value={accountId} disabled={!overview.data?.accounts.length} onChange={e=>setAccountId(e.target.value)}>{(overview.data?.accounts??[]).map(a=><option key={a.id} value={a.id}>{a.name}</option>)}</select></label>
  <button className="refresh-button" disabled={overview.isFetching} onClick={()=>void overview.refetch()}>↻ {overview.isFetching?'读取中':'刷新'}</button></div>}</div>
  {demo&&<div className="mock-banner" role="status"><span className="mock-banner-icon" aria-hidden="true">✦</span><div><strong>MOCK 演示模式</strong><span>全部商品、订单、账户与库存为虚构数据；无真实 Amazon 凭证或财务结算。</span></div><span className="mock-pill">DEMO ONLY</span></div>}
