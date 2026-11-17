@@ -711,6 +711,12 @@ async function main() {
       assert.equal(await evaluate(send,
         "!!document.querySelector('.mock-banner')"),false,
         'Next /orders must not use the separate mock Gateway')
+      assert.equal(await evaluate(send,
+        "document.querySelector('.mv3-evidence-strip[aria-label=\\\"当前订单页来源质量\\\"]')?.textContent?.includes('仅统计本次服务端筛选已加载的记录')"),
+        true,'Next order evidence strip must disclose current-page scope')
+      assert.equal(await evaluate(send,
+        "document.querySelectorAll('.mv3-evidence-grid > div').length"),
+        3,'Next order evidence grid must expose three scoped facts')
       await screenshot(send,'v100-next-real-orders-360.png',true)
       await evaluate(send,"history.back()")
       await waitFor(send,`location.pathname==='/core' &&
@@ -722,6 +728,9 @@ async function main() {
         document.querySelector('.core-subtab.selected')?.textContent?.includes('FBA 库存') &&
         document.querySelector('.core-data-scroll tbody tr')?.textContent?.includes('TEST-SKU-100')`,
         'V100 real FBA inventory route')
+      assert.equal(await evaluate(send,
+        "document.querySelector('.mv3-evidence-strip[aria-label=\\\"当前 FBA 页观测质量\\\"]')?.textContent?.includes('UNKNOWN 不等于 0')"),
+        true,'Next FBA must distinguish unknown quantity from observed zero')
       await screenshot(send,'v100-next-real-fba-360.png',true)
       await evaluate(send,"history.back()")
       await waitFor(send,`location.pathname==='/core' &&
@@ -1027,6 +1036,12 @@ async function main() {
         true,'V107 immutable warehouse business reason retained')
       await evaluate(send,
         "document.querySelector('[aria-label=\\\"仓库本地库存流水\\\"]')?.scrollIntoView({block:'center'})")
+      assert.equal(await evaluate(send,
+        "document.querySelectorAll('.mv3-workflow-steps a[href^=\\\"#purchase-\\\"]').length"),
+        6,'Procurement flow shortcuts must point to six sections')
+      assert.equal(await evaluate(send,
+        "[...document.querySelectorAll('.mv3-workflow-steps a')].every(a=>document.getElementById(a.hash.slice(1)))"),
+        true,'Procurement flow links must resolve to real sections')
       await layout(send,width,'v107-warehouse-360')
       await screenshot(send,'v107-warehouse-360.png')
       assert.equal(v104CancelWrites,0,'V107 view filters cannot write to purchasing')

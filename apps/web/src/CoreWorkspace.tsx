@@ -176,6 +176,28 @@ export default function CoreWorkspace({tenantId,isOwner=true,focusException,
  <span className={`status-chip ${active.connectionStatus==='CONNECTED'?'chip-green':'chip-amber'}`}>账户状态：{coreStatusLabel(active.connectionStatus)}</span></div>}
  <div className="core-subtabs" role="group" aria-label="核心数据分类">{([{id:'listings',label:'Listing'},{id:'orders',label:'订单'},{id:'inventory',label:'FBA 库存'}] as const).map(t=>
  <button className={`core-subtab ${section===t.id?'selected':''}`} aria-pressed={section===t.id} key={t.id} onClick={()=>changeSection(t.id)}>{t.label}</button>)}</div>
+ {section==='orders'&&<section className="mv3-evidence-strip" aria-label="当前订单页来源质量">
+  <div className="mv3-evidence-title"><strong>当前订单页 · 来源核对</strong>
+   <span>仅统计本次服务端筛选已加载的记录，不代表站点全库</span></div>
+  <div className="mv3-evidence-grid">
+   <div><span>当前页订单</span><strong>{orders.isPending||orders.isError?'—':filteredOrders.length}</strong><small>已加载记录数</small></div>
+   <div><span>订单项未观测</span><strong>{orders.isPending||orders.isError?'—':
+    filteredOrders.filter(o=>o.itemsObservation!=='OBSERVED').length}</strong><small>不把缺失当零件</small></div>
+   <div><span>原始更新时间缺失</span><strong>{orders.isPending||orders.isError?'—':
+    filteredOrders.filter(o=>!o.sourceUpdatedAt).length}</strong><small>不能视为实时订单</small></div>
+  </div>
+ </section>}
+ {section==='inventory'&&<section className="mv3-evidence-strip" aria-label="当前 FBA 页观测质量">
+  <div className="mv3-evidence-title"><strong>当前 FBA 页 · 观测质量</strong>
+   <span>只统计本页最新来源观测；未知与已观测为零严格区分</span></div>
+  <div className="mv3-evidence-grid">
+   <div><span>当前页 SKU</span><strong>{inventory.isPending||inventory.isError?'—':filteredInventory.length}</strong><small>按服务端来源筛选</small></div>
+   <div><span>可售数量未知</span><strong>{inventory.isPending||inventory.isError?'—':
+    filteredInventory.filter(i=>i.fulfillable===null).length}</strong><small>UNKNOWN 不等于 0</small></div>
+   <div><span>来源质量为过期</span><strong>{inventory.isPending||inventory.isError?'—':
+    filteredInventory.filter(i=>i.quality==='STALE').length}</strong><small>STALE 不代表当前可售</small></div>
+  </div>
+ </section>}
  <div className="core-table-controls">
  {section==='listings'?
   <form className="core-search-field"
