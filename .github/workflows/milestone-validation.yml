@@ -1,3 +1,5 @@
+# Next16 multi-workspace polish: pagination-aware counts, no invented stock or profit,
+# browser scoped order/FBA views and purchasing flow links; production remains NO-GO.
 # Next16 visual elevation: keep Vite controlled fallback, prove source-aware
 # financial hero, Chromium responsive UI and production #104 NO-GO.
 # V175-B: PG18 V101 tenant-enrolled WMS key-possession challenge, not verified operator.
@@ -146,7 +148,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'NEXT16-A3-visual-command-center-business-finance' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'NEXT16-A3-orders-fba-purchasing-ops-finance-drilldown' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -211,6 +213,7 @@ on:
           - V175-A3-PG18-immutable-independent-qc-review
           - V175B-A3-PG18-three-owner-key-possession
           - NEXT16-A3-visual-command-center-business-finance
+          - NEXT16-A3-orders-fba-purchasing-ops-finance-drilldown
 
 permissions:
   contents: read

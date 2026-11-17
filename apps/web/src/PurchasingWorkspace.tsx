@@ -152,7 +152,19 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
   <div className="core-intro"><strong>采购与供应商 · 本地业务</strong><p>
    支持采购审批、真实收货待检批次、双人质检放行和不可覆盖的本地入库流水。
    本地累计入库不是可售库存，也不代表 Amazon FBA 已入仓；采购金额不等于平台结算。</p></div>
-  <section className="panel full-panel" aria-label="本地仓库">
+  <nav className="mv3-workflow-index" aria-label="采购业务流程快捷入口">
+   <div className="mv3-workflow-heading"><strong>采购业务流程</strong>
+    <span>先建基础资料，再起草采购单、独立审批和实物待检；本地库存与 FBA 分离</span></div>
+   <div className="mv3-workflow-steps">
+    <a href="#purchase-warehouse"><span aria-hidden="true">01</span><strong>本地仓库</strong><small>仓库资料</small></a>
+    <a href="#purchase-suppliers"><span aria-hidden="true">02</span><strong>供应商</strong><small>目录与搜索</small></a>
+    <a href="#purchase-draft"><span aria-hidden="true">03</span><strong>采购草稿</strong><small>原币成本</small></a>
+    <a href="#purchase-receipts"><span aria-hidden="true">04</span><strong>待检收货</strong><small>独立质检</small></a>
+    <a href="#purchase-orders"><span aria-hidden="true">05</span><strong>审批流程</strong><small>双人复核</small></a>
+    <a href="#purchase-stock"><span aria-hidden="true">06</span><strong>本地库存</strong><small>独立流水</small></a>
+   </div>
+  </nav>
+  <section className="panel full-panel" id="purchase-warehouse" aria-label="本地仓库">
    <div className="panel-heading"><div><h2>本地仓库</h2>
     <p>收货时必须选定实际本地仓库；原有未分配仓库的历史收货不会计入仓库流水。</p></div></div>
    <form className="team-invite-form" onSubmit={addWarehouse}>
@@ -171,7 +183,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
     <p className="setup-hint">兼容接口本次读取 {warehouses.data?.length??0} 个仓库（最多 200），
      不代表本租户仓库总数。收货、库存和调拨使用可搜索全库选择器。</p>}
   </section>
-  <section className="panel full-panel"><div className="panel-heading"><h2>供应商</h2></div>
+  <section className="panel full-panel" id="purchase-suppliers"><div className="panel-heading"><h2>供应商</h2></div>
    <form className="team-invite-form" onSubmit={addSupplier}>
     <label htmlFor="purchase-supplier-code">供应商编号</label>
     <input id="purchase-supplier-code" value={supplierCode}
@@ -185,7 +197,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
    </form>
    <SupplierDirectoryTable key={tenantId} tenantId={tenantId}/>
   </section>
-  <section className="panel full-panel"><div className="panel-heading"><h2>创建采购单草稿</h2></div>
+  <section className="panel full-panel" id="purchase-draft"><div className="panel-heading"><h2>创建采购单草稿</h2></div>
    <div className="team-invite-form">
     <SupplierPicker key={tenantId} tenantId={tenantId} id="purchase-supplier"
      label="采购草稿供应商" value={supplierId} onChange={setSupplierId}/>
@@ -231,7 +243,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
   <PurchaseDeliveryPanel tenantId={tenantId} onOpenOrder={orderId=>{
    setSelectedId(orderId);setReceiveAsnId('')
   }}/>
-  <section className="panel full-panel" aria-label="已审批待收货">
+  <section className="panel full-panel" id="purchase-receipts" aria-label="已审批待收货">
    <div className="panel-heading"><div><h2>已审批待收货</h2>
     <p>仅统计 APPROVED / RECEIVING 采购单的剩余数量，不代表供应商已发货或真实在途。</p></div></div>
    <PendingReceiptPages key={tenantId} tenantId={tenantId}
@@ -239,7 +251,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
      setSelectedId(orderId);setReceiveLine(lineId);setReceiveAsnId('')
     }}/>
   </section>
-  <section className="panel full-panel"><div className="panel-heading"><div><h2>采购单列表与流程</h2>
+  <section className="panel full-panel" id="purchase-orders"><div className="panel-heading"><div><h2>采购单列表与流程</h2>
    <p>批准人必须是另一名 Owner；收货可以分批，但不能超过每行订购数量。</p></div>
    <button className="refresh-button" onClick={refresh}>刷新</button></div>
    <PurchaseOrdersTable key={tenantId} tenantId={tenantId}
@@ -297,7 +309,7 @@ export default function PurchasingWorkspace({tenantId,currentUserId}:{
       </>}
    </div>}
   </section>
-  <section className="panel full-panel" aria-label="本地仓库库存与出入库流水">
+  <section className="panel full-panel" id="purchase-stock" aria-label="本地仓库库存与出入库流水">
    <div className="panel-heading"><div><h2>本地仓库库存台账</h2>
     <p>只统计明确分配仓库的采购入库、人工出库、仓间调拨与盘点差异。
      台账余额不含未知历史收货、未记录的损耗、预留或 Amazon FBA 库存。</p></div></div>

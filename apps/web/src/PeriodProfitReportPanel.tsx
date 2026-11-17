@@ -93,6 +93,22 @@ export default function PeriodProfitReportPanel({tenantId,marketplaceId}:{
   {selected&&report.isError&&<p role="alert" className="setup-error">
    {String(report.error)}</p>}
   {j&&current&&<>
+   <div className="mv3-profit-audit" aria-label="V64 冻结报表的来源证明">
+    <div className="mv3-profit-audit-lead">
+     <span className="mv3-profit-kicker">V64 · ORIGINAL-CURRENCY CONTRIBUTION</span>
+     <h3>本期来源贡献（非最终净利润）</h3>
+     <strong className="mv3-profit-contribution">{j.state==='SUCCEEDED'?
+       j.currency+' '+current.totals.contribution:'候选订单尚未全部完成'}</strong>
+     <p>只有候选订单冻结处理完成时才展示本期已核对贡献；
+      缺失费用不自动记零，财务来源仍未完整认证、银行到账未核验。</p>
+    </div>
+    <div className="mv3-profit-audit-stats">
+     <div><span>候选订单</span><strong>{j.totalOrders}</strong></div>
+     <div><span>已纳入贡献</span><strong>{j.eligibleOrders}</strong></div>
+     <div><span>缺可信来源阻断</span><strong>{j.blockedOrders}</strong></div>
+     <div><span>处理批次状态</span><strong className="mv3-profit-status">{states[j.state]??j.state}</strong></div>
+    </div>
+   </div>
    <p role="status"><strong>{states[j.state]??j.state}</strong>
     {' · '}{j.processedOrders}/{j.totalOrders} 单 · 已纳入贡献 {j.eligibleOrders} 单
     {' · '}缺少可信来源 {j.blockedOrders} 单 · {j.currency}</p>
