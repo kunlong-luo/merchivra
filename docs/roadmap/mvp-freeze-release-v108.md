@@ -1,4 +1,5 @@
-> **2026-11-17 / V175-A 开发中，未验收**：新增 [WMS 人工 QC 三人独立复核基础](../finance/wms-manual-qc-review-v175.md) 的 Flyway V100、后端 Owner/CSRF、Next16 共享界面和专项测试；只追加人工 QC 数量/处置与审核原因，不能证明外部仓库经营主体、物理签收或自动入库/回转 COGS。状态以分支 PR/CI 和精确 main SHA A3 为准，未通过前不得标记完成；Seller/Ads OFF，生产 #104 NO-GO。
+> **2026-11-17 / V175-A 完整合成 A3 已通过**：PR [#163](https://github.com/kunlong-luo/merchivra/pull/163) 合并 SHA `c05a990579380a694e17cc84e28e8284ad5ba51f`；最新分支快速 [CI #44011618464](https://github.com/kunlong-luo/merchivra/actions/runs/44011618464) **4/4 SUCCESS**（包括 PostgreSQL 18 V100）；合并后精确 SHA [完整 A3 #44012031121](https://github.com/kunlong-luo/merchivra/actions/runs/44012031121) **run_attempt=1，7/7 SUCCESS**（Flyway、Java25、Next16/Vite/Chromium、真实 PG18 与 Compose HTTP）。 V100 仅为人工 QC/第三人审核与动态冻结；真正运营商认证、物理实收、库存/COGS 和 V162/V64 已验证净利润仍为 P0；#104 NO-GO，Seller/Ads OFF。
+
 
 > **2026-11-17 / V174 合成技术 A3 已通过**：[外部 WMS 签名观察与差异隔离](../finance/signed-wms-return-discrepancy-v174.md)，PR #161、代码 SHA `7a4a9c42a821bcbeca273c1ec0f3cc29fbdbc738`，[精确 SHA 完整 A3 #44006689758](https://github.com/kunlong-luo/merchivra/actions/runs/44006689758) **run_attempt=1、7/7 SUCCESS**。早期快速 CI #44006264683 唯一新增静态断言大小写失配，修复后 #44006485570 SUCCESS。下一 P0：**独立可信外部运营商身份 + 官方 FBA/仓库实收来源 + 可售 QC + 审核后 COGS 回转及 V162/V64 原币全成本净利润**。本期签名凭证不能证明实物收货，Amazon Seller/Ads OFF，G1/G2/G3、生产 #104 NO-GO。
 

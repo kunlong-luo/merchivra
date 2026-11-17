@@ -1,6 +1,14 @@
 # V175-A · WMS 手工 QC 差异复核（非真实实收认证）
 
-状态：**开发分支 / 需要快速 CI 与 PostgreSQL 18 真实迁移、HTTP 验收**。本期仅实现 V175 的第一批可审计复核基础，并**没有完成**独立真实运营商身份认证或物理仓库收货核验。
+状态：**V175-A 已合并且合成技术 A3 通过（2026-11-17）**。本期仅实现 V175 第一批可审计人工 QC 复核基础，并**没有完成**独立真实运营商身份认证或物理仓库收货核验。
+
+## V175-A 合成技术验收归档（2026-11-17）
+
+PR [#163](https://github.com/kunlong-luo/merchivra/pull/163) 合并 SHA `c05a990579380a694e17cc84e28e8284ad5ba51f`；最新分支快速 [CI #44011618464](https://github.com/kunlong-luo/merchivra/actions/runs/44011618464) **4/4 SUCCESS**（包括 PostgreSQL 18 V100）；合并后精确 SHA [完整 A3 #44012031121](https://github.com/kunlong-luo/merchivra/actions/runs/44012031121) **run_attempt=1，7/7 SUCCESS**（Flyway、Java25、Next16/Vite/Chromium、真实 PG18 与 Compose HTTP）。
+
+- 首轮增加专项 PG18 后的 [CI #44011300873](https://github.com/kunlong-luo/merchivra/actions/runs/44011300873) **FAILED**：函数源码文本空格断言失配，Flyway V100 与原有 V174 及财务 PG18 合成检查已通过；修正仅测试文本匹配后，再以实际 PG18 临时影子测试执行三人权限、拒绝重复和 append-only 触发器，最终 #44011618464 SUCCESS。不能称整个开发过程首次无失败。
+- **已验证边界**：PG18 实际应用 V100，复合 FK/唯一与不可变触发器、Owner/匿名/错误请求的负例 HTTP，触发器函数在 disposable 影子表中执行第三人独立通过、同人操作和重复决定拒绝；V162/V64/V39 不产生过账。
+- **尚未验收**：跨三名真实独立 Owner 的完整正向 HTTP 实物收货流程（当前仅数据库触发器行为和负例 HTTP）；可信外部 WMS 主体身份、真实签收、可售 QC/库存、历史 COGS 原币回转及净利润确认。生产 #104 仍 NO-GO，Seller/Ads OAuth OFF。
 
 ## 目的与范围
 

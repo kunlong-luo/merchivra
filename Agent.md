@@ -1,4 +1,5 @@
-> **V175-A 待技术验收**：[人工 QC 不可变案件/第三人复核](docs/finance/wms-manual-qc-review-v175.md) 并不代表可认证的仓库身份或实际退货入库；真实物理 QC、库存与历史 COGS 会计回转保留为 P0。持续保持 Next.js 16 目标、Vite 回退、Seller/Ads OAuth OFF、生产 #104 NO-GO。
+> **V175-A 代码已合并，精确 SHA A3 7/7（2026-11-17）**：PR [#163](https://github.com/kunlong-luo/merchivra/pull/163) 合并 SHA `c05a990579380a694e17cc84e28e8284ad5ba51f`；最新分支快速 [CI #44011618464](https://github.com/kunlong-luo/merchivra/actions/runs/44011618464) **4/4 SUCCESS**（包括 PostgreSQL 18 V100）；合并后精确 SHA [完整 A3 #44012031121](https://github.com/kunlong-luo/merchivra/actions/runs/44012031121) **run_attempt=1，7/7 SUCCESS**（Flyway、Java25、Next16/Vite/Chromium、真实 PG18 与 Compose HTTP）。 正向三名 Owner 完整 HTTP 及可信 WMS 外部身份/物理 QC 尚未完成，库存/COGS 与真实净利润禁入；Next16 生产目标、Vite 受控回退，#104 NO-GO、Seller/Ads OFF。
+
 
 > **V174 已完成合成技术 A3（2026-11-17）**：Flyway V99 跨 V173/V174 签名回执全局去重、Ed25519 V2 外部数量/处置差异隔离、Next16 工作台，PR #161、业务 SHA `7a4a9c42a821bcbeca273c1ec0f3cc29fbdbc738`，[完整 A3 #44006689758](https://github.com/kunlong-luo/merchivra/actions/runs/44006689758) **首次 7/7 SUCCESS**（前期快速 CI 静态断言大小写已修复）。**真实 WMS 运营商认证/物理实收/库存/历史 COGS 仍缺**，#104 生产 NO-GO，Seller/Ads OAuth OFF。详见 [V174](docs/finance/signed-wms-return-discrepancy-v174.md)。
 
