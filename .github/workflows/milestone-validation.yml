@@ -1,3 +1,5 @@
+# Next16 visual elevation: keep Vite controlled fallback, prove source-aware
+# financial hero, Chromium responsive UI and production #104 NO-GO.
 # V175-B: PG18 V101 tenant-enrolled WMS key-possession challenge, not verified operator.
 # V175-A: new PG18 V100 immutable QC evidence/three-owner guard. Full A3
 # must run at the exact merged main SHA; not real WMS identity or production GO.
@@ -144,7 +146,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V175B-A3-PG18-three-owner-key-possession' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'NEXT16-A3-visual-command-center-business-finance' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -208,6 +210,7 @@ on:
           - V174-A3-PG18-global-signed-wms-reconciliation
           - V175-A3-PG18-immutable-independent-qc-review
           - V175B-A3-PG18-three-owner-key-possession
+          - NEXT16-A3-visual-command-center-business-finance
 
 permissions:
   contents: read

@@ -622,3 +622,10 @@ jobs:
           if-no-files-found: warn
           retention-days: 7
 
+
+  # Focused browser budget: only the visual design PR runs Chromium BEFORE merge.
+  # This reuses the real Vite/Next 16 synthetic layout workflow, with screenshots.
+  visual-refresh-browser:
+    name: Next.js 16 design review / Chromium 360px and desktop
+    if: github.event_name == 'pull_request' && github.head_ref == 'feat/next16-command-center-visual-refresh'
+    uses: ./.github/workflows/browser-layout-smoke.yml

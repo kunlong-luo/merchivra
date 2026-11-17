@@ -89,8 +89,12 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
  }
  const isValid=/^-?[0-9]{1,14}(\.[0-9]{1,6})?$/.test(amount)
  return <div className="core-workspace">
-  <div className="core-intro"><strong>财务来源与人工对账 · 原币种</strong>
-    <p>订单预计销售、平台财务交易及最终结算是不同事实。这一页不会自动合并或把人工录入视为已入账；不计算虚假净利润。</p></div>
+  <div className="core-intro finance-intro">
+   <div className="finance-kicker">FINANCIAL OPERATIONS / SOURCE-LEDGER</div>
+   <strong>先核对来源，再计算贡献</strong>
+   <p>订单预计销售、平台财务交易及最终结算是不同事实。
+    仅在各 Marketplace 的原始币种内核算；人工录入、未经核对的费用与结算不会被当作真实到账或净利润。</p>
+  </div>
   {markets.isError?<p className="setup-error" role="alert">{String(markets.error)}</p>:
    !markets.data?.length?<p className="empty-state">暂无可访问 Marketplace，请先创建本地店铺及站点。</p>:
    <div className="core-controls">
@@ -100,6 +104,20 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
       setSelectedEvent('');setSelectedOrder('')
      }}/>
    </div>}
+  {currentId&&<section className="finance-signal-strip" aria-label="当前站点财务核对状态">
+   <div className="finance-signal">
+    <span>当前站点原币</span>
+    <strong>{markets.data?.find(m=>m.id===currentId)?.currency??'—'}</strong>
+   </div>
+   <div className="finance-signal">
+    <span>已记录来源分类组</span>
+    <strong>{buckets.isError?'读取失败':buckets.isPending?'读取中…':(buckets.data?.length??0)+' 组'}</strong>
+   </div>
+   <div className="finance-signal">
+    <span>最终可信净利润</span>
+    <strong>尚未认证 · 不自动入账</strong>
+   </div>
+  </section>}
   {currentId&&<FinanceExceptionQueuePanel key={currentId}
       tenantId={tenantId} marketplaceId={currentId}/>}
   {currentId&&markets.data?.find(m=>m.id===currentId)?.connectionStatus==='CONNECTED'&&

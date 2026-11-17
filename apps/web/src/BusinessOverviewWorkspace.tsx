@@ -62,34 +62,67 @@ export default function BusinessOverviewWorkspace({tenantId,onOpenFinance}:{
       </label>
      </div>
      {selected&&<>
-      <section className="panel full-panel">
-       <div className="panel-heading"><div>
+      <section className="metric-grid overview-kpi-grid" aria-label="当前站点来源质量摘要">
+       {[
+        ['Listing',selected.listings.total+' 条','当前站点已入库总量'],
+        ['订单',selected.orders.total+' 笔','不推断预计收入或净利润'],
+        ['最新 FBA',selected.inventory.skus+' 个 SKU','每 SKU 只选择最新一条来源观测'],
+        ['未知库存',selected.inventory.unknown+' 个 SKU','UNKNOWN 不是 0，可售数缺失另计']
+       ].map(([label,value,foot])=>
+        <div className="metric-card" key={label}>
+         <div className="metric-label">{label}</div>
+         <div className="metric-value">{value}</div>
+         <div className="metric-foot">{foot}</div>
+        </div>)}
+      </section>
+      <section className="overview-profit-hero" aria-label="利润贡献与可审计来源完整性">
+       <div className="overview-profit-main">
+        <div className="overview-overline">
+         <span className="overview-dot" aria-hidden="true"/>
+         OPERATING INTELLIGENCE · {selected.currency}
+        </div>
         <h2>利润总览 · 已知费用贡献（非净利润）</h2>
-        <p>优先回答“这一站点赚了多少、哪些成本还没算进来”。只复用 V64 冻结报告，不虚构净利润。</p>
-       </div></div>
-       {!report?<p className="empty-state">
-        暂无已创建的 V64 报告。没有可信财务来源时，不展示利润数字。</p>:<>
-        <p>报告期间（UTC）{report.after} 至 {report.before}（不含） ·
-         原始币种 {report.currency} · 状态 {report.state}</p>
-        <p>候选订单 {report.totalOrders} · 已提取 {report.processedOrders} ·
-         已合格 {report.eligibleOrders} · 阻断 {report.blockedOrders}</p>
-        <p className="metric-value">
-         {report.state==='SUCCEEDED'&&report.contribution!==null?
-          report.currency+' '+report.contribution:'贡献金额暂不可计算'}
-        </p>
-        <p className="setup-hint">即便 SUCCEEDED，也仅表示候选订单处理完成：
-         银行未核验、税费/真实广告/汇兑可能未覆盖，
-         不表示全球同一时点冻结、正式净利润或已会计过账。</p>
-        {report.state==='SUCCEEDED'&&
-         <a className="text-button"
-          href={exportPeriodProfitUrl(selected.id,report.id)}
-          download="merchivra-period-contribution-snapshot.csv">
-          使用原 V64 接口导出已冻结明细 CSV
-         </a>}
-       </>}
-       <p className="panel-caption">当前贡献模型仅对已复核销售、Amazon/FBA 费用和历史商品成本进行估算。广告、头程与仓储、退货退款、税费、汇兑及其他经营费用的完整覆盖仍需核对；未知费用不可按零处理。</p>
-       <button className="refresh-button" type="button"
-        onClick={onOpenFinance}>进入利润与成本中心，核对原始费用及报表</button>
+        <p className="overview-profit-description">
+         优先回答这一站点能核对到哪一步、还有哪些成本尚未纳入。
+         只读取已冻结的 V64 报告，绝不根据订单估算未经核实的净利润。</p>
+        <div className="overview-profit-amount">
+         <span className="overview-profit-amount-label">
+          {report?'最近一期已冻结报告贡献金额':'本期来源贡献金额'}
+         </span>
+         <strong>{report?.state==='SUCCEEDED'&&report.contribution!==null?
+          report.currency+' '+report.contribution:'贡献金额暂不可计算'}</strong>
+         <small>贡献金额 ≠ 已核实净利润 ≠ 银行实际到账；未知费用不会记为 0。</small>
+        </div>
+        {report&&<span className="overview-report-period">
+         UTC {report.after} 至 {report.before}（不含） · {report.currency} · {report.state}
+        </span>}
+        <div className="overview-profit-actions">
+         <button className="primary-button" type="button"
+          onClick={onOpenFinance}>进入利润与成本中心，核对原始费用及报表</button>
+         {report?.state==='SUCCEEDED'&&
+          <a href={exportPeriodProfitUrl(selected.id,report.id)}
+           download="merchivra-period-contribution-snapshot.csv">
+           导出已冻结的 V64 原币明细 CSV
+          </a>}
+        </div>
+       </div>
+       <div className="overview-profit-aside">
+        <div className="overview-aside-heading">
+         <span>订单与来源核对进度</span>
+         <span className="overview-audit-state">未形成真实净利润</span>
+        </div>
+        <dl className="overview-audit-facts">
+         <div><dt>候选订单</dt><dd>{report?.totalOrders??'—'}</dd></div>
+         <div><dt>已纳入贡献</dt><dd>{report?.eligibleOrders??'—'}</dd></div>
+         <div><dt>来源阻断订单</dt><dd>{report?.blockedOrders??'—'}</dd></div>
+        </dl>
+        <div className="overview-aside-alert">
+         <strong>{report?'冻结任务的成功不代表全部费用已核对':'当前暂无可核对的 V64 报告'}</strong>
+         <p>广告、头程、仓储、退款、税费、汇兑和其他费用仍须逐笔验证。
+          外部 WMS 身份、仓库实收与历史 COGS 也未取得独立可信证明，
+          因此不可据此确认最终净利润。</p>
+        </div>
+       </div>
       </section>
      </>}
      <section className="panel full-panel" aria-label="各 Marketplace 全库数据质量">
@@ -121,19 +154,6 @@ export default function BusinessOverviewWorkspace({tenantId,onOpenFinance}:{
 
 
      {selected&&<>
-      <section className="metric-grid" aria-label="当前站点来源质量摘要">
-       {[
-        ['Listing',selected.listings.total+' 条','当前站点已入库总量'],
-        ['订单',selected.orders.total+' 笔','不推断预计收入或净利润'],
-        ['最新 FBA',selected.inventory.skus+' 个 SKU','每 SKU 只选择最新一条来源观测'],
-        ['未知库存',selected.inventory.unknown+' 个 SKU','UNKNOWN 不是 0，可售数缺失另计']
-       ].map(([label,value,foot])=>
-        <div className="metric-card" key={label}>
-         <div className="metric-label">{label}</div>
-         <div className="metric-value">{value}</div>
-         <div className="metric-foot">{foot}</div>
-        </div>)}
-      </section>
       <section className="two-column">
        <div className="panel"><div className="panel-heading"><div>
         <h2>Listing 映射与来源</h2>
