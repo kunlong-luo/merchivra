@@ -1,3 +1,5 @@
+> **2026-11-17 / V174（开发中，待完整 PG18 A3）**：[签名外部仓库观察/差异隔离](../finance/signed-wms-return-discrepancy-v174.md)：V99 跨 V173/V174 的全局来源回执与包裹去重，签名 V2 保留外部报告数量/处置不一致证据，避免扔掉需要核对的差异；仍无独立外部仓储经营主体认证/物理实收/GL、COGS 过账。真实 Amazon Seller/Ads OAuth OFF、#104 生产 NO-GO。下一 P0 外部运营商认证、签收真实性与可售 QC，随后完整真实成本利润核销。
+
 > **2026-11-17 / V173 合成技术 A3 已通过**：[外部仓储公钥及 Ed25519 退货包裹签名](../finance/wms-signed-return-evidence-v173.md) 功能 PR #158，原 SHA `187a96f4c3782a48660f076b6f911f07b1150fb4` [A3 #43969427227](https://github.com/kunlong-luo/merchivra/actions/runs/43969427227) 6/7（脚本错误自撤销；权限正确 403），测试修正 PR #159 后最终代码 SHA `14c88c4a40e53b8100f501bb1168c78e8377288a` [完整 A3 #43969992583](https://github.com/kunlong-luo/merchivra/actions/runs/43969992583) **run_attempt=1、7/7 SUCCESS**。下一财务 P0：真实独立 WMS/官方 FBA 来源身份认证、库存 QC 和可审计 COGS 回转，随后各费用源/V162/V64 真实原币利润；签名有效≠外部身份/物理收货已认证，G1/G2/G3、生产 #104 继续 NO-GO，Seller/Ads OFF。
 
 > **2026-11-17 / V173（完整合成技术 A3 已通过）**：[外部 WMS 退货来源公钥与 Ed25519 签名](../finance/wms-signed-return-evidence-v173.md)；V98 同仓/同退款包裹唯一来源、租户公钥双人审核、签名校验与撤销、Next16 证据页面。**不宣称密钥由真实外部 WMS 提供或证明货物实收**；真实认证、QC 库存、历史 COGS/汇率及各费用来源 G1 对账仍是 P0。#104 生产 NO-GO、Seller/Ads OFF。

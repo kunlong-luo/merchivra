@@ -1,3 +1,5 @@
+> **V174（开发中，待合成 PG18 A3）**：[V99 签名 WMS 数量/处置差异隔离](docs/finance/signed-wms-return-discrepancy-v174.md)。V173/V174 共用跨来源密钥的外部回执唯一性（tenant+warehouse+external ID）、同一 V172 包裹只占用一次，新的 Ed25519 V2 标准载荷允许外部数与本地人工数不一致并隔离；动态读取公钥撤销/本地证据失效。**签名密钥仍仅租户登记，不能作为真实实收/COGS 或 V162/V64 净利润核销依据**，Seller/Ads OFF、生产 #104 NO-GO。
+
 > **V173 最终合成技术 A3 已通过（2026-11-17）**：[WMS 公钥+Ed25519 签名来源](docs/finance/wms-signed-return-evidence-v173.md) 功能 PR #158（SHA `187a96f4c3782a48660f076b6f911f07b1150fb4`）初次 [A3 #43969427227](https://github.com/kunlong-luo/merchivra/actions/runs/43969427227) 因 PG18 合成脚本让原登记者自撤销公钥（正确 403，脚本误期望 200）仅 6/7；修正 PR #159 后最终 SHA `14c88c4a40e53b8100f501bb1168c78e8377288a` 的 [完整 A3 #43969992583](https://github.com/kunlong-luo/merchivra/actions/runs/43969992583) **run_attempt=1、7/7 SUCCESS**。**租户自行登记公钥的签名验证不证明真实 WMS 运营商、实物收货或财务入账**；Seller/Ads OFF、生产 #104 NO-GO。
 
 > **V173（完整合成 A3 已通过）**：[Ed25519 外部 WMS 退货签名来源](docs/finance/wms-signed-return-evidence-v173.md)：V98 按租户+仓库不可变登记公钥、不同 Owner 独立批准/撤销、对 V172 同仓同退款包裹按标准载荷验证签名与来源唯一性；Next16/Vite 共享签名核验 UI。**密钥只由租户登记，没有独立 WMS 运营商身份认证**，签名有效 ≠ 仓库实收、QC 或真实 COGS；库存/利润入账继续禁止，Seller/Ads OFF、生产 #104 NO-GO。
