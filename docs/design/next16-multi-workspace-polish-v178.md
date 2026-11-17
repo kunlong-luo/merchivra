@@ -1,6 +1,12 @@
 # Merchivra · Next.js 16 多工作台视觉深化（V178）
 
-状态：**代码分支待 PR Chromium 与精确 main SHA A3 合成验收**。继此前经营总览 / 利润首页视觉升级后，本轮优化订单、FBA、采购供应商、运营异常和 V64 利润明细。不新增 API、数据库、认证或会计行为。
+状态：**V178 业务代码已合并，精确 main SHA A3 首次 7/7 通过（2026-11-17）**。继此前经营总览 / 利润首页视觉升级后，本轮优化订单、FBA、采购供应商、运营异常和 V64 利润明细。不新增 API、数据库、认证或会计行为。
+
+## 真实验收记录
+
+[PR #170](https://github.com/kunlong-luo/merchivra/pull/170) 合并业务 SHA `c057074111cc826cd646696ee51b3be5b768e6bb`；合并前 [CI #44093231552](https://github.com/kunlong-luo/merchivra/actions/runs/44093231552) **run_attempt=1 SUCCESS**（Java25、React19/Vite/Next16、Compose、Next+Vite Chromium 360px 实测；PG18 在快 CI 按策略 SKIPPED）；合并后精确业务 SHA [A3 #44093676183](https://github.com/kunlong-luo/merchivra/actions/runs/44093676183) **run_attempt=1、7 个核心任务 SUCCESS**（PG18/Flyway、Java、React/Next、Chromium、Compose HTTP、安全回归；PR 专属额外浏览器 job 在主线 SKIPPED）；[GitHub Pages #44093675534](https://github.com/kunlong-luo/merchivra/actions/runs/44093675534) SUCCESS（公开静态虚构数据展示）。
+
+已人工抽查合成 Chromium 截图中的 360px 订单表格、FBA 观测摘要及采购表单，确认已保留移动端分页/表格横向滚动、状态来源和 FBA UNKNOWN 文案。浏览器断言覆盖 Next16 下订单与 FBA 两种来源范围、采购六步锚链接的实际目标，并非全部页面每种尺寸的像素级人工认证。**运营异常和 V64 真实站点的更多视觉/交互质量仍可继续深化**，没有启用真实 WMS/Amazon 或新利润过账。
 
 ## 实际界面变更
 
