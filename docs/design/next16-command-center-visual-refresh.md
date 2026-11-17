@@ -1,7 +1,13 @@
 # Merchivra · 2026 Next.js 16 经营指挥台视觉升级
 
-阶段：**设计/实现分支，未通过 CI 和浏览器 QA 前不得称作上线版本**。
+阶段：**已合并、精确 main SHA 合成技术 A3 首次 7/7 通过；不等于生产 GO 或全页面人工像素审查**。
 目标：在现有 A+B 信息架构基础上提升经营总览、利润中心、导航、通用页面与公开演示的设计质量。直接实现于真实 React 19/Next.js 16，而不是新建虚构原型。
+
+## 实际交付与验收（2026-11-17）
+
+[PR #168](https://github.com/kunlong-luo/merchivra/pull/168) 已合并，业务 SHA `7c01735887b511baa7adfb5edcf8b0882569a116`；[PR CI #44090737007](https://github.com/kunlong-luo/merchivra/actions/runs/44090737007) 首次 SUCCESS（Next16/Vite TS、Java25、Compose，以及 PR 专属 Vite+Next Chromium 中文 360px/桌面截图和真实来源表格检查，PG18 在快速 PR 中按策略跳过）；[精确业务 SHA A3 #44091196466](https://github.com/kunlong-luo/merchivra/actions/runs/44091196466) **run_attempt=1，7 个核心任务全 SUCCESS**（PG18/Flyway、Java25、Next16/Vite、Chromium、Compose HTTP；PR 专属额外浏览器任务在主线 SKIPPED）。[GitHub Pages 展示构建 #44091196262](https://github.com/kunlong-luo/merchivra/actions/runs/44091196262) SUCCESS。
+
+已人工打开合成 Chrome 产物中的 **360px 财务首屏、360px Base UI 抽屉及 1280px 核心业务页面**，确认这些抽样截图中的正文、导航与主要表格层级。**经营总览真实财务 Hero、全部次级财务表单和所有屏幕尺寸尚未逐帧人工视觉验收**；用户看到的真实金额仍由数据库和原 V64 计算结果决定。本次只包含前端设计，不新增任何真实 WMS 身份、库存或 COGS 核销能力。
 
 ## 视觉语言与组件策略
 
