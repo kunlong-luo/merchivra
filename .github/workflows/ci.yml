@@ -309,6 +309,10 @@ jobs:
           # V175: real PG18 Flyway V100 + scoped QC actor guards, immutable
           # review and negative Session/CSRF HTTP; NOT true physical receipt.
           MERCHIVRA_V175_DISPOSABLE_ONLY=true python3 scripts/smoke_wms_qc_v175.py
+          # Exercise the installed PG18 trigger functions against fully
+          # disposable shadow fixtures for 3 independent reviewers.
+          psql -h 127.0.0.1 -U merchivra -d merchivra -v ON_ERROR_STOP=1 \
+            -f scripts/smoke_wms_qc_actor_pg18_v175.sql
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='81' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='80' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='79' AND success")" = "1"
