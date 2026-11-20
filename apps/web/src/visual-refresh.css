@@ -780,3 +780,74 @@ body{background:var(--mv2-bg);color:var(--mv2-ink);-webkit-font-smoothing:antial
 @media(prefers-reduced-motion:reduce){
  .v179-evidence-drawer{scroll-behavior:auto}
 }
+
+/* V180 · finance audit readability. Never style an unverified claim as profit. */
+.v180-section-kicker{
+ display:block;color:#496d9e;font-size:10px;font-weight:810;
+ letter-spacing:.13em;line-height:1.6;
+}
+.v180-version-panel,.v180-blockers{
+ margin:24px 0 27px;padding:20px 21px 22px;
+ background:linear-gradient(140deg,#fff,#fbfcfe);
+ border:1px solid #dce5f0;border-radius:14px;
+ box-shadow:0 8px 23px rgba(20,45,82,.04);
+ min-width:0;
+}
+.v180-version-heading{
+ display:flex;gap:13px;align-items:center;justify-content:space-between;
+ margin:0 0 17px;
+}
+.v180-version-heading h3{
+ font-size:16px;font-weight:790;color:#243a56;
+ letter-spacing:-.035em;margin:6px 0 7px;
+}
+.v180-version-heading p{
+ margin:0;line-height:1.7;color:#687b91;font-size:11px;
+}
+.v180-version-panel .shop-filter{
+ display:flex;flex-direction:column;align-items:flex-start;gap:7px;
+ width:min(100%,630px);margin:0 0 15px;
+}
+.v180-version-panel .shop-filter select{
+ width:100%;min-height:41px;border-radius:9px;
+ background:#fff;border:1px solid #d9e3ee;color:#293f5d;
+}
+.v180-version-panel .table-scroll,.v180-blockers .table-scroll{
+ margin:14px 0 0;background:#fff;border:1px solid #e6ebf2;border-radius:9px;
+}
+.v180-version-panel table th,.v180-blockers table th{
+ white-space:nowrap;
+}
+.v180-compare-hold{
+ margin:13px 0 0;padding:14px 16px;border-radius:9px;
+ background:#fff7ed;border:1px solid #eedac0;
+ border-left:3px solid #bf9555;color:#745935;
+ font-size:11px;line-height:1.8;
+}
+.v180-compare-hold strong{color:#765121}
+.v180-page-facts{
+ display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;
+}
+.v180-page-facts>div{
+ display:flex;flex-direction:column;gap:8px;min-width:0;
+ padding:14px 17px;background:#f5f8fc;
+ border:1px solid #e5ebf2;border-radius:10px;
+}
+.v180-page-facts span{color:#708095;font-size:11px}
+.v180-page-facts strong{
+ color:#26415e;font-weight:800;font-variant-numeric:tabular-nums;
+ font-size:25px;line-height:1.2;letter-spacing:-.04em;
+}
+.v180-page-facts>div:first-child strong{color:#9b6730}
+.v180-blockers td code{font-size:11px;overflow-wrap:anywhere;white-space:normal}
+@media(max-width:760px){
+ .v180-version-panel,.v180-blockers{margin:19px 0;padding:17px 14px}
+ .v180-page-facts>div{padding:13px 11px}
+ .v180-page-facts strong{font-size:22px}
+ .v180-page-facts span{font-size:10px}
+}
+@media(max-width:390px){
+ .v180-page-facts{gap:6px}
+ .v180-page-facts>div{padding:12px 8px}
+ .v180-page-facts strong{font-size:21px}
+}

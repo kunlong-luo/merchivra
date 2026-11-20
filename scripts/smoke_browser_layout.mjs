@@ -38,6 +38,48 @@ const v106OtherEvent={
   marketplaceId:v106OtherMarket,eventKey:'FIN-V106-EU-ONLY',
   currency:'EUR',amount:'23.000000'
 }
+
+const v180Ids=['90909090-9090-4090-8090-909090909091','90909090-9090-4090-8090-909090909092']
+const v180Jobs=v180Ids.map(id=>({
+ id,state:'SUCCEEDED',after:'2026-09-01',before:'2026-10-01',
+ currency:'USD',totalOrders:2,processedOrders:2,eligibleOrders:1,
+ blockedOrders:1,retryCount:0,failureCode:null,manualAdsReference:'12.00',
+ manualAdsCount:1,createdAt:'2026-11-01T00:00:00Z',
+ completedAt:'2026-11-01T00:01:00Z',cohortFrozen:true,
+ globalSourceSnapshot:false,financialSourceComplete:false,
+ bankVerified:false,ledgerPosted:false
+}))
+const v180Report=(id)=>{
+ const old=id===v180Ids[1]
+ return {job:v180Jobs.find(x=>x.id===id),
+  totals:{currency:'USD',eligibleOrders:1,blockedOrders:1,reviewedEvents:2,
+   signedSales:old?'100.00':'101.10',signedAmazonFees:'-10.00',
+   signedFbaFees:'-2.00',provisionalCogs:'-50.00',
+   contribution:old?'38.00':'39.10'},
+  skus:[],orders:[
+   {orderId:'90909090-9090-4090-8090-909090909101',position:0,
+    state:'ELIGIBLE',readiness:'READY',currency:'USD',
+    sales:old?'100.00':'101.10',fees:'-10.00',fba:'-2.00',
+    cogs:'-50.00',contribution:old?'38.00':'39.10',
+    extractedAt:'2026-11-01T00:02:00Z',extractSha256:'a'.repeat(64)},
+   {orderId:'90909090-9090-4090-8090-909090909102',position:1,
+    state:'BLOCKED',readiness:'V180_SYNTHETIC_COST_MISSING',
+    currency:'USD',sales:null,fees:null,fba:null,cogs:null,
+    contribution:null,extractedAt:'2026-11-01T00:03:00Z',
+    extractSha256:'b'.repeat(64)}
+  ],orderOffset:0,hasMore:false}
+}
+const v180Cost={
+ sourceId:'90909090-9090-4090-8090-909090909103',
+ businessDate:'2026-11-01',category:'ADS_SPEND',currency:'USD',
+ claimedAmount:'19.25',metadataReviewState:'REVIEWED_METADATA_ONLY',
+ activeAllocationState:'APPROVED_UNVERIFIED',
+ approvedUnverifiedAllocationAmount:'11.00',
+ approvedUnverifiedUnallocatedAmount:'8.25',
+ localIdentityStatus:'SHARED_REFERENCE_UNVERIFIED',approvalHeld:true,
+ linkedSettlementLineCount:2,sharedSettlementLineCount:1,
+ externallyVerified:false,allowedToDeductFromProfit:false
+}
 let mode = 'guest'
 // V104: mutable synthetic local PO for cancel/confirm without live operations.
 const v104Order={
@@ -138,6 +180,31 @@ const server = createServer(async (req, res) => {
     return respond(res,{
       scannedSourceTransactions:0,scannedSettlements:0,scannedOrders:0,
       partialScan:false,issueCount:0,findings:[]
+    })
+  // V180: synthetic V64 frozen versions / fee-to-bill reference only.
+  if(url.pathname==='/api/v1/finance/marketplaces/'+market+'/profit-reports'
+     && req.method==='GET')return respond(res,v180Jobs)
+  if(url.pathname.startsWith('/api/v1/finance/marketplaces/'+market+
+      '/profit-reports/') && req.method==='GET'){
+    const id=url.pathname.split('/').at(-1)
+    return v180Ids.includes(id)?respond(res,v180Report(id)):
+      respond(res,{error:'missing synthetic report'},404)
+  }
+  if(url.pathname==='/api/v1/finance/marketplaces/'+market+
+      '/cost-profit-readiness' && req.method==='GET')
+    return respond(res,{
+     marketplaceId:market,periodStart:url.searchParams.get('periodStart'),
+     periodEndExclusive:url.searchParams.get('periodEndExclusive'),
+     buckets:[{category:'ADS_SPEND',currency:'USD',sourceCount:1,
+      independentlyReviewedMetadataCount:1,claimedAmount:'19.25',
+      reviewedUnverifiedAmount:'19.25',
+      approvedUnverifiedAllocationAmount:'11.00',
+      approvedUnverifiedUnallocatedAmount:'8.25',sharedLineSourceCount:1,
+      externallyVerified:false,allowedToDeductFromProfit:false}],
+     sources:[v180Cost],hasMore:false,nextBeforeDate:null,nextBeforeId:null,
+     categoriesWithoutVerifiedExternalCoverage:['ADS_SPEND'],
+     fullCostCovered:false,bankReconciled:false,
+     realizedNetProfitVerified:false,realizedNetProfit:null
     })
   // Finance: real 50-row server cursor shape, not a fake client paginator.
   // Every row and Marketplace is synthetic; no Amazon credentials or calls.
@@ -1172,6 +1239,43 @@ async function main() {
         assert.equal(await evaluate(send,
           "getComputedStyle(document.querySelector('.finance-signal-strip')).display"),
           'grid','new finance layout CSS must load in Next.js runtime')
+        // V180 synthetic cost-profit evidence is not validated Amazon truth.
+        // Check real Next16 V64 HTML and Base UI expense links (read only).
+        await waitFor(send,
+          "document.querySelector('.v180-blockers')?.textContent?.includes('V180_SYNTHETIC_COST_MISSING')",
+          'V180 current-page block reason must preserve original source code')
+        assert.equal(await evaluate(send,
+          "document.querySelector('.v180-page-facts')?.textContent?.includes('当前页阻断')"),
+          true,'V180 blockers are explicitly scoped to the loaded page')
+        await waitFor(send,
+          "document.querySelector('#v180-report-compare option[value=\\\"90909090-9090-4090-8090-909090909092\\\"]')!==null",
+          'V180 second frozen report must be available')
+        await evaluate(send,`(() => {
+          const el=document.getElementById('v180-report-compare')
+          const setter=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set
+          setter.call(el,'90909090-9090-4090-8090-909090909092')
+          el.dispatchEvent(new Event('change',{bubbles:true}))
+        })()`)
+        await waitFor(send,
+          "document.querySelector('[aria-label=\\\"同原币同期间报表快照差额\\\"]')?.textContent?.includes('+1.1')",
+          'V180 version comparison computes precise original-currency difference')
+        await screenshot(send,'v180-profit-version-360.png')
+        await waitFor(send,
+          "document.querySelector('button[aria-label^=\\\"查看费用来源审计\\\"]')!==null",
+          'V180 synthetic manual fee reconciliation link exists')
+        await evaluate(send,
+          "document.querySelector('button[aria-label^=\\\"查看费用来源审计\\\"]')?.click()")
+        await waitFor(send,
+          "document.querySelector('.v179-evidence-drawer')?.textContent?.includes('共用的账单行数量')",
+          'V180 cost source drawer exposes shared line provenance')
+        assert.equal(await evaluate(send,
+          "document.querySelector('.v179-evidence-drawer')?.textContent?.includes('允许进入真实净利润')"),
+          true,'V180 unverified fees are not eligible for real profit')
+        await screenshot(send,'v180-cost-source-360.png')
+        await evaluate(send,"document.querySelector('.v179-evidence-close')?.click()")
+        await waitFor(send,
+          "!document.querySelector('.v179-evidence-drawer')",
+          'V180 cost source evidence drawer must close')
         await evaluate(send,"window.scrollTo(0,0)")
         await screenshot(send,'v177-finance-command-center-360.png')
         assert.equal(await evaluate(send,
