@@ -206,6 +206,49 @@ const server = createServer(async (req, res) => {
      fullCostCovered:false,bankReconciled:false,
      realizedNetProfitVerified:false,realizedNetProfit:null
     })
+  // V181 composite imported-line identity: one fresh frozen link and one
+  // pre-V102 link with explicitly absent capture. All local synthetic GETs.
+  const costLinks='/api/v1/finance/marketplaces/'+market+
+    '/cost-sources/'+v180Cost.sourceId+'/settlement-line-links'
+  const v181New='90909090-9090-4090-8090-909090909104'
+  const v181Old='90909090-9090-4090-8090-909090909105'
+  if(url.pathname===costLinks && req.method==='GET')
+    return respond(res,[v181New,v181Old].map((id,i)=>({
+      id,sourceId:v180Cost.sourceId,reportId:v180Ids[0],
+      lineNumber:i+1,sourceAmount:'19.25',sourceCurrency:'USD',
+      signedLineAmount:'-19.25',lineCurrency:'USD',
+      similarity:'AMOUNT_ONLY_NO_IDENTITY',state:'OPEN',
+      evidenceOrigin:'LOCAL_LINE_ASSOCIATION',
+      recordedBy:account,recordedAt:'2026-11-20T00:00:00Z',
+      reviewedBy:null,reviewedAt:null,confirmedDuplicate:false,
+      financialHoldCleared:false,netProfitVerified:false
+    })))
+  if(url.pathname===costLinks+'/'+v181New+'/composite-identity'
+    && req.method==='GET')
+    return respond(res,{
+      linkId:v181New,captureStatus:'FROZEN_IMPORTED_LINE_METADATA_UNVERIFIED',
+      reportId:v180Ids[0],lineNumber:1,amazonReportId:'V181-MOCK-REPORT-1',
+      reportDocumentId:'V181-MOCK-DOC-1',reportDocumentSha256:'a'.repeat(64),
+      transactionType:'Order',amountType:'ItemFees',
+      amountDescription:'Synthetic fulfillment fee',
+      externalOrderId:'V181-SYNTHETIC-ORDER',
+      lineSignedAmount:'-19.25',currency:'USD',
+      recordedBy:account,capturedAt:'2026-11-20T00:00:00Z',
+      externalChargeVerified:false,duplicateDebitVerified:false,
+      bankVerified:false,netProfitEligible:false
+    })
+  if(url.pathname===costLinks+'/'+v181Old+'/composite-identity'
+    && req.method==='GET')
+    return respond(res,{
+      linkId:v181Old,captureStatus:'CAPTURE_NOT_AVAILABLE',
+      reportId:v180Ids[0],lineNumber:2,
+      amazonReportId:null,reportDocumentId:null,
+      reportDocumentSha256:null,transactionType:null,amountType:null,
+      amountDescription:null,externalOrderId:null,
+      lineSignedAmount:null,currency:null,recordedBy:null,capturedAt:null,
+      externalChargeVerified:false,duplicateDebitVerified:false,
+      bankVerified:false,netProfitEligible:false
+    })
   // Finance: real 50-row server cursor shape, not a fake client paginator.
   // Every row and Marketplace is synthetic; no Amazon credentials or calls.
   if(url.pathname===`/api/v1/finance/marketplaces/${market}/events`){
@@ -1272,6 +1315,22 @@ async function main() {
           "document.querySelector('.v179-evidence-drawer')?.textContent?.includes('允许进入真实净利润')"),
           true,'V180 unverified fees are not eligible for real profit')
         await screenshot(send,'v180-cost-source-360.png')
+        await waitFor(send,
+          "document.querySelectorAll('.v181-line-option').length===2",
+          'V181 V94 cost links expose both new and legacy examples')
+        await evaluate(send,"document.querySelector('.v181-line-option')?.click()")
+        await waitFor(send,
+          "document.querySelector('.v181-line-identity-result')?.textContent?.includes('V181-MOCK-REPORT-1')",
+          'V181 frozen imported report + SHA256 composite identity')
+        assert.equal(await evaluate(send,
+          "document.querySelector('.v181-line-identity-result')?.textContent?.includes('外部真伪未认证')"),
+          true,'V181 imported line metadata is not certified external charge identity')
+        await screenshot(send,'v181-frozen-line-source-360.png')
+        await evaluate(send,"document.querySelectorAll('.v181-line-option')[1]?.click()")
+        await waitFor(send,
+          "document.querySelector('.v181-line-identity-result')?.textContent?.includes('历史 V94 关联无 V102')",
+          'V181 old links are NOT silently backfilled with invented evidence')
+        await screenshot(send,'v181-legacy-line-not-captured-360.png')
         await evaluate(send,"document.querySelector('.v179-evidence-close')?.click()")
         await waitFor(send,
           "!document.querySelector('.v179-evidence-drawer')",

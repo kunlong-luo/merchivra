@@ -851,3 +851,30 @@ body{background:var(--mv2-bg);color:var(--mv2-ink);-webkit-font-smoothing:antial
  .v180-page-facts>div{padding:12px 8px}
  .v180-page-facts strong{font-size:21px}
 }
+
+/* V181: bounded imported settlement line identity in existing financial drawer. */
+.v181-line-identity{margin:21px 0 0;padding:0;min-width:0}
+.v181-line-identity>.v179-evidence-section{margin:0 0 12px}
+.v181-line-identity>.setup-hint{font-size:11px;line-height:1.8}
+.v181-line-list{display:grid;gap:9px;margin:14px 0}
+.v181-line-option{
+ display:flex;flex-direction:column;gap:7px;
+ width:100%;text-align:left;min-width:0;
+ border:1px solid #dce5f0;border-radius:9px;
+ padding:12px 14px;background:#fff;cursor:pointer;
+}
+.v181-line-option:hover,.v181-line-option[aria-pressed=true]{
+ background:#eef5fd;border-color:#7299d7;
+}
+.v181-line-option strong{font-size:12px;color:#273e5e;font-weight:790}
+.v181-line-option span{
+ color:#687e95;font-size:10px;line-height:1.6;overflow-wrap:anywhere;
+}
+.v181-line-option:focus-visible{outline:3px solid #8eaeed;outline-offset:2px}
+.v181-line-identity-result{margin:15px 0 0}
+.v181-line-identity-result .v179-evidence-facts dd code{
+ white-space:normal;word-break:break-all;
+}
+@media(max-width:560px){
+ .v181-line-option{padding:12px}
+}

@@ -627,5 +627,5 @@ jobs:
   # This reuses the real Vite/Next 16 synthetic layout workflow, with screenshots.
   visual-refresh-browser:
     name: Next.js 16 design review / Chromium 360px and desktop
-    if: github.event_name == 'pull_request' && (github.head_ref == 'feat/next16-command-center-visual-refresh' || github.head_ref == 'feat/next16-operations-workspace-polish' || github.head_ref == 'feat/v179-source-evidence-drilldown' || github.head_ref == 'feat/v180-profit-reconciliation-visibility')
+    if: github.event_name == 'pull_request' && (github.head_ref == 'feat/next16-command-center-visual-refresh' || github.head_ref == 'feat/next16-operations-workspace-polish' || github.head_ref == 'feat/v179-source-evidence-drilldown' || github.head_ref == 'feat/v180-profit-reconciliation-visibility' || github.head_ref == 'feat/v181-immutable-settlement-line-identity')
     uses: ./.github/workflows/browser-layout-smoke.yml
