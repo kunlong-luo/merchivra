@@ -1,6 +1,12 @@
 # V180 — 利润来源可追溯与跨版本安全比较
 
-状态：**PR 开发分支，必须通过合并前 Chromium + Next16/React19/Java25 与精确主线 SHA 的 A3 才可归档为合成验收。**
+状态：**V180 已合并、精确 main SHA 合成 A3 首次 7/7 SUCCESS（2026-11-20）；不代表真实平台/银行对账完成或生产 GO。**
+
+## 2026-11-20 真实合成验收归档
+
+[业务 PR #174](https://github.com/kunlong-luo/merchivra/pull/174) 已合并，精确 main SHA `ee7cf584409f698f07e4ae64e3119499c9ba71e7`；合并前 [CI #44725730574](https://github.com/kunlong-luo/merchivra/actions/runs/44725730574) **run_attempt=1 SUCCESS**（Java25、React19/Vite/Next16 TypeScript/Vitest、Compose，以及 PR 专属 Chromium Vite+Next16 两版 V64 原币对照、候选阻断及费用关联抽屉检查，PG18 快 CI 按策略 SKIPPED）；合并后精确 SHA [完整 A3 #44725980838](https://github.com/kunlong-luo/merchivra/actions/runs/44725980838) **run_attempt=1，7 个核心任务全部 SUCCESS**（PG18/Flyway、安全与恢复、Java25、React19/Next16、Chromium、Compose HTTP；PR 专属浏览器 job 在 main 按策略 SKIPPED）；[GitHub Pages #44725980780](https://github.com/kunlong-luo/merchivra/actions/runs/44725980780) SUCCESS（只读虚构数据展示）。
+
+Chromium 在**隔离的虚构 V64 两版、原始 BLOCKED 代码和人工费用来源**中，实际验证了 Next.js 16 报表对照选择与有符号十进制差额 +1.1、当前页阻断理由、费用来源共用参考行风险、抽屉关闭。Vitest 覆盖超过 JS 安全整数范围的原币精确差分与跨币种/非同期/候选结构不同的阻断。**没有**连接真实 Amazon Seller/Ads 或银行；来源身份证明、原始账单行 ID 逐笔校验、仓库实体收货、历史退款 COGS 回转及净利润仍未完成。合成测试不能代替生产验收。
 
 ## 核心目标
 
