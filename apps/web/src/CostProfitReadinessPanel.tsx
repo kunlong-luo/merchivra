@@ -1,5 +1,6 @@
 import {useEffect,useState} from 'react'
 import {useQuery} from '@tanstack/react-query'
+import SourceEvidenceDrawer from './components/SourceEvidenceDrawer'
 import {fetchCostProfitReadiness,type CostReadinessCursor}
  from './lib/cost-profit-readiness'
 
@@ -25,6 +26,7 @@ export default function CostProfitReadinessPanel({tenantId,marketplaceId}:{
  tenantId:string;marketplaceId:string
 }){
  const [month,setMonth]=useState(monthNow)
+ const [inspectedSourceId,setInspectedSourceId]=useState('')
  const [history,setHistory]=useState<Array<CostReadinessCursor|undefined>>([undefined])
  const cursor=history.at(-1)
  const start=month+'-01'
@@ -35,7 +37,9 @@ export default function CostProfitReadinessPanel({tenantId,marketplaceId}:{
   enabled:!!marketplaceId,retry:false
  })
  useEffect(()=>setHistory([undefined]),[marketplaceId,month])
+ useEffect(()=>setInspectedSourceId(''),[marketplaceId,month,cursor])
  const data=readiness.data
+ const inspected=data?.sources.find(s=>s.sourceId===inspectedSourceId)
  const remaining=Object.keys(labels).filter(cat=>
   !data?.buckets.some(b=>b.category===cat))
  return <section className="panel full-panel" aria-label="八类成本核算准备度">
@@ -93,7 +97,7 @@ export default function CostProfitReadinessPanel({tenantId,marketplaceId}:{
      aria-label="人工费用来源准备度">
      <table><thead><tr>{['来源 ID','业务日期','类别','申报原币金额',
       '元数据复核','分摊','已批准未核验分配','未分配',
-      '结算行关联 / 共用','风险'].map(h=>
+      '结算行关联 / 共用','风险','审计详情'].map(h=>
        <th key={h} scope="col">{h}</th>)}
      </tr></thead><tbody>{data.sources.map(s=>
       <tr key={s.sourceId}>
@@ -108,7 +112,39 @@ export default function CostProfitReadinessPanel({tenantId,marketplaceId}:{
        <td>{s.linkedSettlementLineCount} / {s.sharedSettlementLineCount}</td>
        <td>{s.approvalHeld?'待核对 · 阻断':s.localIdentityStatus+
         '（仅本地线索，未验证）'}</td>
+       <td><button className="text-button" type="button"
+        onClick={()=>setInspectedSourceId(s.sourceId)}
+        aria-label={'查看费用来源审计 '+s.sourceId}>查看关联</button></td>
       </tr>)}</tbody></table></div>}
+   <SourceEvidenceDrawer open={!!inspected} title="费用来源 · 账单关联线索"
+    description="当前站点、当前月份、当前来源分页的本地申报与关联状态；不是外部平台核验"
+    onClose={()=>setInspectedSourceId('')}>
+    {inspected&&<>
+     <div className="v179-evidence-tags">
+      <span className="v179-source-tag">{labels[inspected.category]??inspected.category}</span>
+      <span className="v179-source-tag">{inspected.currency}</span>
+      <span className="v179-source-tag">{inspected.approvalHeld?'存在阻断':'未发现本地审批阻断'}</span>
+     </div>
+     <dl className="v179-evidence-facts">
+      <div><dt>本地费用来源 UUID</dt><dd><code>{inspected.sourceId}</code></dd></div>
+      <div><dt>业务日期</dt><dd>{inspected.businessDate}</dd></div>
+      <div><dt>人工申报金额 · 原币</dt><dd>{inspected.currency} {inspected.claimedAmount}（未认证）</dd></div>
+      <div><dt>元数据独立复核</dt><dd>{inspected.metadataReviewState}</dd></div>
+      <div><dt>当前分摊状态</dt><dd>{inspected.activeAllocationState??'尚无有效分摊'}</dd></div>
+      <div><dt>已批准但未核验分配</dt><dd>{inspected.approvedUnverifiedAllocationAmount??'尚未批准'}</dd></div>
+      <div><dt>未分配金额</dt><dd>{inspected.approvedUnverifiedUnallocatedAmount??'未确认'}</dd></div>
+      <div><dt>本地身份线索</dt><dd>{inspected.localIdentityStatus}（非外部身份认证）</dd></div>
+      <div><dt>关联参考账单行数量</dt><dd>{inspected.linkedSettlementLineCount}</dd></div>
+      <div><dt>其中与其他来源共用的账单行数量</dt><dd>{inspected.sharedSettlementLineCount}</dd></div>
+      <div><dt>外部来源认证</dt><dd>尚未完成</dd></div>
+      <div><dt>允许进入真实净利润</dt><dd>否</dd></div>
+     </dl>
+     <p className="v179-evidence-warning">
+      共用参考账单行是重复归属风险线索，不能单凭编号相似就判定重复扣费；
+      已存在本地关联也不代表 Amazon 或银行原始交易已验证。
+      缺独立可信外部来源前，不得将申报金额自动扣入 V64 贡献或 V162 最终净利润。</p>
+    </>}
+   </SourceEvidenceDrawer>
    <div className="sandbox-actions" role="navigation" aria-label="人工费用来源分页">
     <span className="setup-hint">第 {history.length} 页 · 当前 {data.sources.length} 条</span>
     {history.length>1&&<button type="button" className="refresh-button"
