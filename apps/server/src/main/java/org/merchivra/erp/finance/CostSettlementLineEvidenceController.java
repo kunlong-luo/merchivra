@@ -61,6 +61,17 @@ public class CostSettlementLineEvidenceController {
                 review==null?null:review.disposition(),
                 review==null?null:review.reason()));
     }
+    @Operation(operationId="getManualCostSettlementLineCompositeIdentity")
+    @GetMapping("/{linkId}/composite-identity")
+    public ResponseEntity<CostSettlementLineEvidenceService.CompositeIdentity>
+        compositeIdentity(@Parameter(hidden=true) Authentication auth,
+        @Parameter(hidden=true) HttpServletRequest request,
+        @PathVariable UUID marketplaceId,@PathVariable UUID sourceId,
+        @PathVariable UUID linkId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.identity(access.currentTenant(auth,request),
+                marketplaceId,sourceId,linkId));
+    }
     @Operation(operationId="auditManualCostSettlementLineLink")
     @GetMapping("/{linkId}/audit")
     public ResponseEntity<List<CostSettlementLineEvidenceService.Audit>> audit(

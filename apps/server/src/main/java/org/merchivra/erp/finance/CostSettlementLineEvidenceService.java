@@ -28,8 +28,21 @@ public class CostSettlementLineEvidenceService {
         String recordedBy,String recordedAt,String reviewedBy,String reviewedAt,
         boolean confirmedDuplicate,boolean financialHoldCleared,boolean netProfitVerified) {}
     public record Audit(String action,String actorId,String occurredAt) {}
+
+    /** A V102 frozen imported report+line metadata record, not a trusted fee.
+     * Historical V94 associations deliberately return CAPTURE_NOT_AVAILABLE. */
+    public record CompositeIdentity(String linkId,String captureStatus,
+        String reportId,Integer lineNumber,String amazonReportId,
+        String reportDocumentId,String reportDocumentSha256,
+        String transactionType,String amountType,String amountDescription,
+        String externalOrderId,String lineSignedAmount,String currency,
+        String recordedBy,String capturedAt,
+        boolean externalChargeVerified,boolean duplicateDebitVerified,
+        boolean bankVerified,boolean netProfitEligible) {}
     private record Source(UUID maker,String key,BigDecimal amount,String currency) {}
-    private record Line(String externalOrderId,BigDecimal signedAmount,String currency) {}
+    private record Line(String externalOrderId,BigDecimal signedAmount,String currency,
+        String amazonReportId,String reportDocumentId,String reportSha256,
+        String transactionType,String amountType,String amountDescription) {}
     private record Record(UUID id,UUID source,UUID report,int lineNumber,
         BigDecimal sourceAmount,String sourceCurrency,BigDecimal lineAmount,
         String lineCurrency,String similarity,String state,String evidenceOrigin,
@@ -80,7 +93,9 @@ public class CostSettlementLineEvidenceService {
     }
     private Line line(UUID tenant,UUID marketplace,UUID reportId,int lineNo) {
         var result=jdbc.query("""
-            SELECT l.external_order_id,l.signed_amount,l.currency_code
+            SELECT l.external_order_id,l.signed_amount,l.currency_code,
+              r.amazon_report_id,r.report_document_id,r.document_sha256,
+              l.transaction_type,l.amount_type,l.amount_description
             FROM spapi_settlement_report r
             JOIN spapi_settlement_report_line l
               ON l.tenant_id=r.tenant_id AND l.report_id=r.id
@@ -89,7 +104,9 @@ public class CostSettlementLineEvidenceService {
               AND r.state='IMPORTED' AND r.source_origin='LIVE'
             FOR SHARE OF r,l
             """,(r,i)->new Line(r.getString(1),r.getBigDecimal(2),
-                r.getString(3).trim()),tenant,marketplace,reportId,lineNo);
+                r.getString(3).trim(),r.getString(4),r.getString(5),
+                r.getString(6),r.getString(7),r.getString(8),r.getString(9)),
+                tenant,marketplace,reportId,lineNo);
         if(result.size()!=1)throw new ResponseStatusException(HttpStatus.NOT_FOUND,
             "Imported settlement line unavailable");
         return result.getFirst();
@@ -135,6 +152,58 @@ public class CostSettlementLineEvidenceService {
             """,UUID.randomUUID(),tenant,link,action,actor);
     }
 
+    private void captureCompositeIdentity(UUID tenant,UUID marketplace,
+        UUID sourceId,UUID linkId,UUID reportId,int lineNumber,
+        UUID actor,Line l) {
+        // V102 freeze shares the existing source/report/line locks from attach().
+        // The PostgreSQL trigger rechecks every field and rejects direct SQL
+        // fabrication, cross-Marketplace references or later mutation.
+        jdbc.update("""
+            INSERT INTO finance_cost_settlement_line_identity_v102
+                (tenant_id,seller_marketplace_id,link_id,source_id,
+                 report_id,line_number,amazon_report_id,report_document_id,
+                 report_sha256,transaction_type,amount_type,
+                 amount_description,external_order_id,signed_amount,
+                 currency_code,recorded_by)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """,tenant,marketplace,linkId,sourceId,reportId,lineNumber,
+            l.amazonReportId(),l.reportDocumentId(),l.reportSha256(),
+            l.transactionType(),l.amountType(),l.amountDescription(),
+            l.externalOrderId(),l.signedAmount(),l.currency(),actor);
+    }
+
+    /** Read-only tenant-scoped composite provenance. Missing pre-V102 capture
+     * is UNKNOWN; there is no backfill from current mutable report metadata. */
+    @Transactional(readOnly=true)
+    public CompositeIdentity identity(UUID tenant,UUID marketplace,
+        UUID sourceId,UUID linkId) {
+        Record link=find(tenant,marketplace,sourceId,linkId,false);
+        var snapshots=jdbc.query("""
+            SELECT report_id,line_number,amazon_report_id,report_document_id,
+              report_sha256,transaction_type,amount_type,amount_description,
+              external_order_id,signed_amount,currency_code,recorded_by,
+              captured_at
+            FROM finance_cost_settlement_line_identity_v102
+            WHERE tenant_id=? AND seller_marketplace_id=?
+              AND source_id=? AND link_id=?
+            """,(r,i)->new CompositeIdentity(linkId.toString(),
+                "FROZEN_IMPORTED_LINE_METADATA_UNVERIFIED",
+                r.getObject(1,UUID.class).toString(),r.getInt(2),
+                r.getString(3),r.getString(4),r.getString(5).trim(),
+                r.getString(6),r.getString(7),r.getString(8),
+                r.getString(9),r.getBigDecimal(10).toPlainString(),
+                r.getString(11).trim(),r.getObject(12,UUID.class).toString(),
+                r.getObject(13,OffsetDateTime.class).toInstant().toString(),
+                false,false,false,false),
+            tenant,marketplace,sourceId,linkId);
+        if(snapshots.isEmpty())
+            return new CompositeIdentity(linkId.toString(),
+                "CAPTURE_NOT_AVAILABLE",link.report().toString(),
+                link.lineNumber(),null,null,null,null,null,null,null,
+                null,null,null,null,false,false,false,false);
+        return snapshots.getFirst();
+    }
+
     @Transactional
     public Link attach(UUID tenant,UUID marketplace,UUID sourceId,
         UUID reportId,Integer lineNumber,UUID actor) {
@@ -173,6 +242,11 @@ public class CostSettlementLineEvidenceService {
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
             """,id,tenant,marketplace,sourceId,reportId,lineNumber,
             s.amount(),s.currency(),l.signedAmount(),l.currency(),category,actor);
+        // All three writes are ONE transaction: V94 association, V102
+        // immutable imported-line composite, and append-only V94 audit.
+        // A failed V102 capture rolls back the entire new association.
+        captureCompositeIdentity(tenant,marketplace,sourceId,id,
+            reportId,lineNumber,actor,l);
         audit(tenant,id,actor,"OPEN");
         return view(find(tenant,marketplace,sourceId,id,false));
     }
