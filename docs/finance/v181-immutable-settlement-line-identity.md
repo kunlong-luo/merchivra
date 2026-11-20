@@ -1,6 +1,12 @@
 # V181 — 结算报告行复合身份的不可变证据快照
 
-状态：**业务开发分支待 Java25/Vitest/Chromium 与 PostgreSQL 18 精确 main SHA A3**。本版是可审计证据加强，**不是真实平台/银行收费认证，也不放行真实利润**。
+状态：**V181 业务代码已合并，真实 PostgreSQL 18/Flyway 与精确 main SHA A3 首次 7/7 成功（2026-11-20）**。本版是可审计证据加强，**不是真实平台/银行收费认证，也不放行真实利润**。
+
+## V181 精确 SHA 技术验收
+
+业务 [PR #176](https://github.com/kunlong-luo/merchivra/pull/176) 已合并，精确 main SHA `51ced3db16e08ab70963ae22989f8ae7dc0efc98`；合并前 [CI #44729550558](https://github.com/kunlong-luo/merchivra/actions/runs/44729550558) **run_attempt=1 SUCCESS**（Java25/Gradle、React19/Vite/Next16、Compose、Chromium Next/Vite 新/旧行身份查询；PG18 在快 PR CI 按策略跳过）；合并后精确 SHA [完整 A3 #44729829959](https://github.com/kunlong-luo/merchivra/actions/runs/44729829959) **run_attempt=1、7 项核心任务 SUCCESS**（PG18/Flyway V102、Java、安全与恢复、React/Next16、Chromium、Compose HTTP；额外 PR 专属 Chromium job 在 main 按策略跳过）。[主线 CI #44729830152](https://github.com/kunlong-luo/merchivra/actions/runs/44729830152) SUCCESS；[GitHub Pages #44729829967](https://github.com/kunlong-luo/merchivra/actions/runs/44729829967) SUCCESS（只读虚构数据）。
+
+验收精确覆盖 V102 Flyway 创建成功、Java 单元静态不可变性与租户控制路径、Next16/Vite 合成浏览器里新关联拥有 V102 来源身份、旧关联明确无历史创建时快照，及既有 Spring/PG18/HTTP 安全回归。**并未**用外部真实 Amazon、独立财务账单、银行或 WMS 证实元数据真实性，也未证明真实重复扣费或净利润。严格保持生产 #104 NO-GO、Seller/Ads OAuth OFF。
 
 ## 为什么必须做
 
