@@ -100,7 +100,7 @@ class PeriodProfitWaterfallV188Test {
         assertEquals("12.000001",p.approvedUnverifiedLocalCostExposure());
         assertEquals("32.999999",p.unverifiedCostSensitivityContribution());
         assertEquals("UNVERIFIED_COST_SENSITIVITY_ONLY",p.sensitivityState());
-        assertEquals(1,p.reviewedCostSourceCount());
+        assertEquals(1,p.manualCostSourceCount());
         assertEquals(1,p.costLines().size());
         neverRecognize(p);
     }
