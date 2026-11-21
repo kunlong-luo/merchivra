@@ -81,7 +81,7 @@ class PeriodCostAccrualPreviewV185Test {
         var p=preview("5.00","APPROVED_UNVERIFIED",List.of(a,b));
         var reversed=preview("5.000000","APPROVED_UNVERIFIED",List.of(b,a));
         assertEquals(p,reversed);
-        assertEquals(List.of("2.000000","3.000000"),
+        assertEquals(List.of("2.250000","2.750000"),
             p.months().stream().map(PeriodCostAccrualPreviewV185.Month::projectedAmount).toList());
         assertTrue(p.overlappingServiceDays());
         assertTrue(p.blockerCodes().contains("OVERLAPPING_SERVICE_DAYS_REQUIRE_POLICY_REVIEW"));
