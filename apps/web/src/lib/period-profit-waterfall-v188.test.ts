@@ -87,7 +87,7 @@ describe('V188 V64 to V92 original-currency candidate cost waterfall',()=>{
   expect(request).toHaveBeenCalledOnce()
   const [url,opts]=request.mock.calls[0]
   expect(url).toBe('/api/v1/finance/marketplaces/'+MP+
-   '/profit-reports/'+JOB+'/cost-waterfall-preview')
+   '/cost-waterfall-preview/'+JOB)
   expect(opts).toMatchObject({method:'GET',credentials:'same-origin',cache:'no-store'})
  })
  it('never interprets 401/404 or failed evidence as a computed zero',async()=>{

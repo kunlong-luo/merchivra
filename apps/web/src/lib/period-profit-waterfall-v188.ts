@@ -72,7 +72,7 @@ export type PeriodProfitWaterfallV188=z.infer<typeof periodProfitWaterfallV188>
 
 export async function getPeriodProfitWaterfallV188(mp:string,jobId:string){
  const r=await fetch('/api/v1/finance/marketplaces/'+encodeURIComponent(mp)+
-  '/profit-reports/'+encodeURIComponent(jobId)+'/cost-waterfall-preview',{
+  '/cost-waterfall-preview/'+encodeURIComponent(jobId),{
    method:'GET',credentials:'same-origin',cache:'no-store',
    headers:{Accept:'application/json'}
   })

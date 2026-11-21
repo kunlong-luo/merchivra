@@ -207,6 +207,19 @@ class PeriodProfitWaterfallV188Test {
         verifyNoInteractions(jdbc,reports);
     }
 
+    @Test void v188DoesNotMutateTheBoundedV64OpenApiOrvalRouteGroup()
+        throws Exception {
+        var controller=Files.readString(Path.of(
+            "src/main/java/org/merchivra/erp/finance/PeriodProfitWaterfallControllerV188.java"));
+        assertTrue(controller.contains(
+            "/api/v1/finance/marketplaces/{marketplaceId}/cost-waterfall-preview/{jobId}"));
+        assertFalse(controller.contains("/profit-reports"));
+        // The existing V64 OpenAPI normalizer deliberately selects routes by
+        // substring '/profit-reports'. This new GET stays outside that set,
+        // while still looking up a real scoped V64 job before reading costs.
+        assertTrue(controller.contains("access.currentTenant(auth,request)"));
+    }
+
     @Test void scopedFrozenSqlIsIndependentOfV64OrderPageAndDoesNotPostProfit()
         throws Exception {
         var code=Files.readString(Path.of(
