@@ -63,15 +63,15 @@ public class PeriodProfitWaterfallServiceV188 {
                     OR sk.estimated_contribution IS DISTINCT FROM o.estimated_contribution))
                 OR (o.state<>'ELIGIBLE' AND sk.sku_count<>0)
               ) AS sku_mismatch_count,
-              coalesce(sum(signed_sales) FILTER(WHERE state='ELIGIBLE'),0::numeric)
+              coalesce(sum(o.signed_sales) FILTER(WHERE state='ELIGIBLE'),0::numeric)
                 AS signed_sales,
-              coalesce(sum(signed_amazon_fees) FILTER(WHERE state='ELIGIBLE'),0::numeric)
+              coalesce(sum(o.signed_amazon_fees) FILTER(WHERE state='ELIGIBLE'),0::numeric)
                 AS signed_amazon_fees,
-              coalesce(sum(signed_fba_fees) FILTER(WHERE state='ELIGIBLE'),0::numeric)
+              coalesce(sum(o.signed_fba_fees) FILTER(WHERE state='ELIGIBLE'),0::numeric)
                 AS signed_fba_fees,
-              coalesce(sum(provisional_cogs) FILTER(WHERE state='ELIGIBLE'),0::numeric)
+              coalesce(sum(o.provisional_cogs) FILTER(WHERE state='ELIGIBLE'),0::numeric)
                 AS provisional_cogs,
-              coalesce(sum(estimated_contribution) FILTER(WHERE state='ELIGIBLE'),0::numeric)
+              coalesce(sum(o.estimated_contribution) FILTER(WHERE state='ELIGIBLE'),0::numeric)
                 AS contribution
             FROM finance_profit_report_order o
             LEFT JOIN LATERAL (
