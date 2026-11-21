@@ -12,6 +12,8 @@ V188 接到现有 `PeriodProfitReportPanel`，**不建立第二套原始成本�
 
 `GET /api/v1/finance/marketplaces/{marketplaceId}/cost-waterfall-preview/{jobId}`
 
+**V188-A3 第一次精确业务 SHA 的真实故障与修复：**原 GET 挂载在 V64 `/profit-reports` 路径下，触发 `scripts/normalize-finance-openapi.mjs` 的严格九路由白名单，真实 PG18 A3 #44870830613 中 OpenAPI 合同校验报 `Unexpected endpoint in bounded finance group`。该任务失败**不是 PostgreSQL 或 Spring 启动失败**。修复将 V188 独立只读端点移到 `/cost-waterfall-preview/{jobId}`，保留原 V64 报表 ID 和 Owner/tenant/Marketplace 校验，且不更改 V64 已生成 Orval API 的固定 9 路由合同；修复后的全量 A3 必须单独在新 main SHA 上验证。此前失败 A3 不得写成通过。
+
 - Owner Spring Session 的既有 `TenantAccessService`、`Cache-Control: no-store`、跨租户/站点/错误 V64 报表 ID 404。先使用**原 V64 服务按 tenant+Marketplace+job UUID**做作用域校验，再以 `job.after/before` 同时获取 V186 全期间唯一来源成本池和 V187 风险并集。
 - V64 订单金额从 `finance_profit_report_order` 的 `ELIGIBLE` 读取**整份已冻结 job**，而不是当前的 100 行或 1000 SKU 分页；检查 eligible/blocked/pending 行数完全对应 V64 job 及每行币种、必需金额非空，`sales + signed Amazon + signed FBA - COGS = contribution` 精确守恒。不能把负平台费用再减第二遍。
 - 所有 V91 人工来源按 V186 的 `category/currency/primaryDimension` 列为 `CostLine`，其来源 UUID 已在 V186 去重（单源不可横跨 SKU/ORDER/PERIOD 重复计费）；V162 的八类枚举作为允许的类别，但**不将 V91 `APPROVED_UNVERIFIED` 冒充 V162 `REVIEWED_COST`**。人工来源必须能在同一原币保持精确六位，所有期间源总数必须与 V187 完整风险计数一致，状态不一致或金额错配 HTTP 409。
