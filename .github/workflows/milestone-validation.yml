@@ -1,3 +1,6 @@
+# V188 exact-main PG18 A3: existing V64 persisted cohort joined READ-ONLY
+# to V186 original-currency ownership and V187 local collision risk.
+# No real net profit, no bank/Ads authorization, no G1 approval, prod NO-GO.
 # V187: exact merged main SHA PG18/HTTP/Chromium A3 for full-period
 # eight V165 collisions + shared V168 report-line source candidates.
 # Local matches are never proof of actual duplicate debit/profit; OAuth OFF.
@@ -172,7 +175,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V187-A3-full-period-cross-source-risk' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V188-A3-source-aware-period-profit-waterfall' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -249,6 +252,7 @@ on:
           - V185-A3-original-currency-periodization
           - V186-A3-single-cost-ownership-bridge
           - V187-A3-full-period-cross-source-risk
+          - V188-A3-source-aware-period-profit-waterfall
 
 permissions:
   contents: read
