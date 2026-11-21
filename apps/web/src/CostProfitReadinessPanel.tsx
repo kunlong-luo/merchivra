@@ -2,6 +2,7 @@ import {useEffect,useState} from 'react'
 import {useQuery} from '@tanstack/react-query'
 import SourceEvidenceDrawer from './components/SourceEvidenceDrawer'
 import CostLineIdentityPanel from './CostLineIdentityPanel'
+import PeriodCostPreviewPanelV185 from './PeriodCostPreviewPanelV185'
 import {fetchCostProfitReadiness,type CostReadinessCursor}
  from './lib/cost-profit-readiness'
 
@@ -168,6 +169,8 @@ export default function CostProfitReadinessPanel({tenantId,marketplaceId}:{
       <div><dt>允许进入真实净利润</dt><dd>否</dd></div>
      </dl>
      <CostLineIdentityPanel tenantId={tenantId}
+      marketplaceId={marketplaceId} sourceId={inspected.sourceId}/>
+     <PeriodCostPreviewPanelV185 tenantId={tenantId}
       marketplaceId={marketplaceId} sourceId={inspected.sourceId}/>
      <p className="v179-evidence-warning">
       共用参考账单行是重复归属风险线索，不能单凭编号相似就判定重复扣费；
