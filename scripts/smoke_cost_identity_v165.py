@@ -1,0 +1,910 @@
+#!/usr/bin/env python3
+"""V165 disposable PG18/HTTP identity-overlap hold, never a profit certificate."""
+import http.cookiejar
+import json
+import os
+import subprocess
+from urllib.parse import urlencode
+from urllib.error import HTTPError
+from urllib.request import Request, HTTPCookieProcessor, build_opener
+from uuid import uuid4
+
+assert os.getenv("GITHUB_ACTIONS")=="true"
+assert os.getenv("MERCHIVRA_V165_DISPOSABLE_ONLY")=="true"
+assert os.getenv("DB_HOST")=="127.0.0.1" and os.getenv("DB_NAME")=="merchivra"
+assert os.getenv("MERCHIVRA_DEMO_ENABLED")=="true"
+assert os.getenv("MERCHIVRA_SPAPI_ENABLED")=="false"
+assert os.getenv("MERCHIVRA_SPAPI_OAUTH_ENABLED")=="false"
+assert os.getenv("MERCHIVRA_SPAPI_ALLOW_WRITES","false")=="false"
+BASE="http://127.0.0.1:8080"
+def sql(q):
+    p=subprocess.run(["psql","-X","-q","-v","ON_ERROR_STOP=1",
+        "-h","127.0.0.1","-U","merchivra","-d","merchivra","-Atc",q],
+        capture_output=True,text=True,timeout=20,
+        env={**os.environ,"PGPASSWORD":os.environ["DB_PASSWORD"]})
+    assert p.returncode==0,"V165 disposable PG18 fixture error"
+    return p.stdout.strip()
+def sess():
+    return {"agent":build_opener(HTTPCookieProcessor(http.cookiejar.CookieJar())),
+            "csrf":None}
+def call(c,path,method="GET",data=None,expected=200,form=False):
+    headers={"Accept":"application/json"}
+    if c["csrf"] and method=="POST":headers["X-CSRF-TOKEN"]=c["csrf"]
+    body=None
+    if data is not None:
+        body=(urlencode(data) if form else json.dumps(data)).encode()
+        headers["Content-Type"]="application/x-www-form-urlencoded" if form else "application/json"
+    try:
+        with c["agent"].open(Request(BASE+path,method=method,data=body,
+              headers=headers),timeout=20) as r:
+            status,raw,cache=r.status,r.read(),r.headers.get("Cache-Control","")
+    except HTTPError as e:
+        status,raw,cache=e.code,e.read(),e.headers.get("Cache-Control","")
+    assert status==expected,(path,method,status,expected)
+    if status==200 and "/cost-sources/" in path:
+        assert "no-store" in cache.lower()
+    try:return json.loads(raw)
+    except (ValueError,TypeError):return None
+def csrf(c):
+    c["csrf"]=call(c,"/api/v1/auth/csrf")["token"]
+def login(c,user,passw):
+    csrf(c)
+    call(c,"/api/v1/auth/login","POST",
+         {"username":user,"password":passw},form=True)
+    csrf(c)
+    return call(c,"/api/v1/auth/me")
+
+owner,checker=sess(),sess()
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}/cost-sources/{uuid4()}/identity-check",
+     expected=401)
+me=login(owner,os.environ["MERCHIVRA_BOOTSTRAP_USERNAME"],
+         os.environ["MERCHIVRA_BOOTSTRAP_PASSWORD"])
+tenant=me["activeTenantId"]
+mp,currency=sql(f"""SELECT id||'|'||trim(currency_code)
+ FROM seller_marketplace WHERE tenant_id='{tenant}' ORDER BY id LIMIT 1""").split("|")
+user=me["userId"]
+reviewer_login="identity165"+uuid4().hex[:12]
+inv=call(owner,"/api/v1/team/invitations","POST",
+         {"loginName":reviewer_login,"role":"OWNER"})
+csrf(checker)
+password="v165-disposable-local-reviewer-only"
+call(checker,"/api/v1/auth/invitations/accept","POST",
+     {"token":inv["token"],"password":password},expected=204)
+peer=login(checker,reviewer_login,password)
+assert peer["isOwner"] and peer["activeTenantId"]==tenant
+root=f"/api/v1/finance/marketplaces/{mp}/cost-sources"
+before=[sql("SELECT count(*) FROM "+t) for t in
+    ("finance_profit_report_job","bank_payout_observation","ads_report_reviewed_cost")]
+def create(name,doc,category):
+    return call(owner,root,"POST",{"category":category,
+        "sourceKind":"MANUAL_INVOICE","sourceKey":name,
+        "documentSha256":doc,"businessDate":"2026-11-09",
+        "currency":currency,"amount":"10.000000"})
+def signals(p):
+    return {x["code"]:x["exactLocalIdentityOverlap"] for x in p["signals"]}
+key_a="V165-ADS-"+uuid4().hex[:16]
+key_b="V165-FREIGHT-"+uuid4().hex[:12]
+sha_a=uuid4().hex+uuid4().hex
+sha_b=uuid4().hex+uuid4().hex
+a=create(key_a,sha_a,"ADS_SPEND")
+b=create(key_b,sha_b,"INBOUND_FREIGHT")
+url_a=root+"/"+a["id"]
+url_b=root+"/"+b["id"]
+p_a=call(owner,url_a+"/identity-check")
+p_b=call(owner,url_b+"/identity-check")
+assert p_a["status"]=="NO_LOCAL_IDENTITY_MATCH_UNVERIFIED"
+assert p_b["status"]=="NO_LOCAL_IDENTITY_MATCH_UNVERIFIED"
+for p in (p_a,p_b):
+    assert not p["approvalHeld"] and not p["completeSourceCoverage"]
+    assert not p["independentExternalEvidenceVerified"]
+    assert not p["netProfitVerified"] and len(p["signals"])==8
+assert not any(signals(p_a).values())
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}/cost-sources/{a['id']}/identity-check",
+     expected=404)
+call(owner,root+"/"+str(uuid4())+"/identity-check",expected=404)
+for x in (a,b):
+    call(checker,root+"/"+x["id"]+"/review","POST",{
+        "accept":True,"reason":"Independent synthetic identity metadata review"})
+
+# Deliberate exact cross-family reference collision; the amounts being same
+# did NOT cause this hold: only the identical normalized source key does.
+sql(f"""INSERT INTO finance_ad_spend_reference(
+ id,tenant_id,seller_marketplace_id,source_key,campaign_reference,
+ business_date,currency_code,spend_amount,created_by)
+ VALUES('{uuid4()}','{tenant}','{mp}','{key_a}','V165-LOCAL-CAMPAIGN',
+ '2026-11-09','{currency}',9.000000,'{user}')""")
+held=call(owner,url_a+"/identity-check")
+assert held["status"]=="POTENTIAL_IDENTITY_COLLISION_HOLD"
+assert held["approvalHeld"]
+assert signals(held)["MANUAL_ADS_SPEND_SAME_KEY"]
+# V166: persist exact candidate UUID, independent one-shot triage and audit.
+# Triaging any of these local hypotheses must NEVER clear V165's hold.
+cases_url=url_a+"/collision-cases"
+call(sess(),cases_url,expected=401)
+cases=call(owner,cases_url+"/scan","POST")
+ads_cases=[x for x in cases if x["signalCode"]=="MANUAL_ADS_SPEND_SAME_KEY"]
+assert len(ads_cases)==1
+case=ads_cases[0]
+assert case["state"]=="OPEN" and case["evidenceOrigin"]=="LOCAL_IDENTITY_ONLY"
+assert not case["canClearFinancialHold"] and not case["externalProofVerified"]
+assert len(case["candidateId"])==36
+assert call(owner,cases_url+"/scan","POST")==cases  # idempotent, no audit replay
+assert len(call(owner,cases_url))==len(cases)
+case_review=cases_url+"/"+case["id"]+"/review"
+call(owner,case_review,"POST",{"disposition":"POTENTIAL_DUPLICATE",
+    "reason":"Maker cannot certify a potential duplicate"},expected=403)
+call(checker,case_review,"POST",{"disposition":"CLEAR",
+    "reason":"Unsafe attempt to clear unverified financial hold"},expected=400)
+reviewed_case=call(checker,case_review,"POST",{
+    "disposition":"POTENTIAL_DUPLICATE",
+    "reason":"Independent triage found a matching local Ads reference only"})
+assert reviewed_case["state"]=="POTENTIAL_DUPLICATE"
+assert not reviewed_case["canClearFinancialHold"]
+call(checker,case_review,"POST",{
+    "disposition":"POTENTIAL_DUPLICATE",
+    "reason":"Repeated review must not replace audit"},expected=409)
+assert [x["action"] for x in call(owner,cases_url+"/"+case["id"]+"/audit")]==[
+    "POTENTIAL_DUPLICATE","OPEN"]
+assert call(owner,url_a+"/identity-check")["approvalHeld"]
+call(checker,cases_url+"/scan","POST")
+assert [x["action"] for x in call(owner,cases_url+"/"+case["id"]+"/audit")]==[
+    "POTENTIAL_DUPLICATE","OPEN"]
+
+assert not signals(call(owner,url_b+"/identity-check"))["MANUAL_ADS_SPEND_SAME_KEY"]
+assert call(owner,url_b+"/identity-check")["status"]=="NO_LOCAL_IDENTITY_MATCH_UNVERIFIED"
+
+def allocate(source):
+    path=root+"/"+source["id"]+"/allocations"
+    data={"requestKey":str(uuid4()),"targetKind":"PERIOD","currency":currency,
+          "lines":[{"periodAfter":"2026-11-01","periodBefore":"2026-11-30",
+                    "amount":"7.250000"}]}
+    batch=call(owner,path,"POST",data)
+    return path,batch["id"]
+a_path,a_batch=allocate(a)
+b_path,b_batch=allocate(b)
+why={"accept":True,"reason":"Independent synthetic allocation evidence decision"}
+call(checker,a_path+"/"+a_batch+"/decision","POST",why,expected=409)
+assert call(owner,a_path)[0]["state"]=="PENDING_REVIEW"
+assert [x["action"] for x in call(owner,a_path+"/"+a_batch+"/audit")]==["PROPOSED"]
+good=call(checker,b_path+"/"+b_batch+"/decision","POST",why)
+assert good["state"]=="APPROVED_UNVERIFIED"
+assert good["summary"]["allocatedAmount"]=="7.250000"
+assert good["summary"]["unallocatedAmount"]=="2.750000"
+assert not good["sourceExternallyVerified"] and not good["recognizedProfitAllowed"]
+
+# Later same-document evidence creates a potential hold in the *current*
+# read-only snapshot. No retroactive claims of bank/GL clearance are made.
+later=create("V165-DOC-"+uuid4().hex[:16],sha_b,"OTHER_OPERATING")
+after_import=call(owner,url_b+"/identity-check")
+assert after_import["approvalHeld"]
+assert signals(after_import)["OTHER_MANUAL_COST_SAME_CLAIMED_DOCUMENT"]
+late_cases=call(owner,url_b+"/collision-cases/scan","POST")
+late=[x for x in late_cases
+      if x["signalCode"]=="OTHER_MANUAL_COST_SAME_CLAIMED_DOCUMENT"]
+assert len(late)==1
+assert late[0]["state"]=="OPEN"
+b_case_url=url_b+"/collision-cases/"+late[0]["id"]
+unverified=call(checker,b_case_url+"/review","POST",{
+    "disposition":"NOT_SAME_CHARGE_UNVERIFIED",
+    "reason":"Manual triage cannot verify original invoice contents"})
+assert unverified["state"]=="NOT_SAME_CHARGE_UNVERIFIED"
+assert not unverified["canClearFinancialHold"]
+assert call(owner,url_b+"/identity-check")["approvalHeld"]
+
+assert call(owner,b_path)[0]["state"]=="APPROVED_UNVERIFIED"
+assert not call(owner,b_path)[0]["recognizedProfitAllowed"]
+assert sql(f"""SELECT count(*) FROM finance_cost_allocation_audit_v92
+ WHERE tenant_id='{tenant}' AND batch_id='{a_batch}'""")=="1"
+# Try to rewrite SQL case facts and audited decisions directly; DB must reject.
+def sql_denied(q):
+    p=subprocess.run(["psql","-X","-q","-v","ON_ERROR_STOP=1",
+        "-h","127.0.0.1","-U","merchivra","-d","merchivra","-Atc",q],
+        capture_output=True,text=True,timeout=20,
+        env={**os.environ,"PGPASSWORD":os.environ["DB_PASSWORD"]})
+    assert p.returncode!=0,"V166 immutable collision audit unexpectedly mutable"
+
+sql_denied(f"UPDATE finance_cost_identity_case_v93 SET state='OPEN' "
+           f"WHERE tenant_id='{tenant}' AND id='{case['id']}'")
+sql_denied(f"DELETE FROM finance_cost_identity_case_v93 "
+           f"WHERE tenant_id='{tenant}' AND id='{case['id']}'")
+sql_denied(f"DELETE FROM finance_cost_identity_case_audit_v93 "
+           f"WHERE tenant_id='{tenant}' AND case_id='{case['id']}'")
+assert sql(f"SELECT count(*) FROM finance_cost_identity_case_audit_v93 "
+           f"WHERE tenant_id='{tenant}' AND case_id='{case['id']}'")=="2"
+# V167: actual PG18 Settlement REPORT LINE candidate, never real Amazon data.
+# Synthetic LIVE-tag staging data are deliberately not external invoice proof.
+report_id=str(uuid4())
+report_key="V167-REPORT-"+uuid4().hex[:12]
+doc_key="V167-DOCUMENT-"+uuid4().hex[:12]
+doc_sha=uuid4().hex+uuid4().hex
+sql(f"""INSERT INTO spapi_settlement_report (
+ id,tenant_id,seller_marketplace_id,amazon_report_id,report_document_id,
+ report_type,state,source_origin,document_sha256,settlement_reference,
+ statement_currency,declared_net,line_count)
+ VALUES ('{report_id}','{tenant}','{mp}','{report_key}','{doc_key}',
+ 'GET_V2_SETTLEMENT_REPORT_DATA_FLAT_FILE_V2','IMPORTED','LIVE',
+ '{doc_sha}','V167-SETTLEMENT-{uuid4().hex[:12]}','{currency}',-27,3)""")
+sql(f"""INSERT INTO spapi_settlement_report_line(
+ tenant_id,report_id,line_number,transaction_type,amount_type,
+ amount_description,external_order_id,signed_amount,currency_code) VALUES
+ ('{tenant}','{report_id}',1,'Other Transaction','Fee','Synthetic fee',
+   '{key_a}',-10.000000,'{currency}'),
+ ('{tenant}','{report_id}',2,'Other Transaction','Fee','Synthetic fee',
+   '{key_b}',-9.000000,'{currency}'),
+ ('{tenant}','{report_id}',3,'Other Transaction','Fee','Synthetic fee',
+   'DIFFERENT-{uuid4().hex[:12]}',-8.000000,'{currency}')""")
+link_url=url_a+"/settlement-line-links"
+call(sess(),link_url,expected=401)
+assert call(owner,link_url)==[]  # no link is UNKNOWN, not a zero charge
+# V182 uses the existing authenticated Owner scope and never invents a
+# financial identity out of a missing V94/V102 association.
+attribution_a=url_a+"/settlement-attribution"
+call(sess(),attribution_a,expected=401)
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}"
+     f"/cost-sources/{a['id']}/settlement-attribution",expected=404)
+call(owner,root+"/"+str(uuid4())+"/settlement-attribution",expected=404)
+# Regular call helper includes owner CSRF; explicitly invoke without it to test.
+saved_csrf=owner["csrf"]
+owner["csrf"]=None
+call(owner,link_url,"POST",{"reportId":report_id,"lineNumber":1},expected=403)
+owner["csrf"]=saved_csrf
+call(owner,link_url,"POST",{"reportId":report_id,"lineNumber":999},expected=404)
+call(owner,link_url,"POST",{"reportId":str(uuid4()),"lineNumber":1},
+     expected=404)
+call(owner,link_url,"POST",{"reportId":report_id,"lineNumber":0},
+     expected=400)
+first=call(owner,link_url,"POST",{"reportId":report_id,"lineNumber":1})
+assert first["similarity"]=="SIMILAR_REFERENCE_AND_AMOUNT"
+assert first["state"]=="OPEN"
+assert first["evidenceOrigin"]=="LOCAL_LINE_ASSOCIATION"
+assert first["sourceAmount"]=="10.000000"
+assert not first["confirmedDuplicate"] and not first["financialHoldCleared"]
+assert not first["netProfitVerified"]
+assert call(owner,link_url,"POST",{"reportId":report_id,
+                                  "lineNumber":1})["id"]==first["id"]
+assert len(call(owner,link_url))==1
+review_url=link_url+"/"+first["id"]+"/review"
+call(owner,review_url,"POST",{"disposition":"POTENTIAL_DUPLICATE_UNVERIFIED",
+    "reason":"A source maker must not review the same evidence"},expected=403)
+call(checker,review_url,"POST",{"disposition":"CLEAR",
+    "reason":"Unsupported verified financial clearance"},expected=400)
+decided=call(checker,review_url,"POST",{
+    "disposition":"POTENTIAL_DUPLICATE_UNVERIFIED",
+    "reason":"Identical order reference and amount still require invoice proof"})
+assert decided["state"]=="POTENTIAL_DUPLICATE_UNVERIFIED"
+assert not decided["financialHoldCleared"] and not decided["confirmedDuplicate"]
+call(checker,review_url,"POST",{
+    "disposition":"ESCALATED_NEEDS_PROOF",
+    "reason":"The disposition must be single-use"},expected=409)
+assert [x["action"] for x in call(owner,link_url+"/"+first["id"]+"/audit")]==[
+    "POTENTIAL_DUPLICATE_UNVERIFIED","OPEN"]
+# V182 cannot turn a legitimate third-person V94 review into independent
+# platform proof. The previously detected V165 identity overlap wins.
+verdict_a=call(owner,attribution_a)
+assert verdict_a["status"]=="CONFLICT_EVIDENCE"
+assert verdict_a["linkedLineCount"]==1
+assert verdict_a["frozenIdentityCount"]==1
+assert verdict_a["missingCaptureCount"]==0
+assert verdict_a["independentlyReviewedCount"]==1
+assert verdict_a["auditBackedReviewCount"]==1
+assert verdict_a["independentReviewAuditComplete"]
+assert verdict_a["localCollisionApprovalHeld"]
+assert "POTENTIAL_CROSS_SOURCE_IDENTITY_OVERLAP" in verdict_a["reasonCodes"]
+assert not any(verdict_a[k] for k in (
+    "externalChargeVerified","duplicateDebitVerified",
+    "financialHoldCleared","netProfitEligible"))
+assert call(owner,url_a+"/identity-check")["approvalHeld"], "V165 409 must remain"
+b_link=url_b+"/settlement-line-links"
+ref_only=call(owner,b_link,"POST",{"reportId":report_id,"lineNumber":2})
+assert ref_only["similarity"]=="SIMILAR_REFERENCE_ONLY"
+amount_only=call(owner,b_link,"POST",{"reportId":report_id,"lineNumber":1})
+assert amount_only["similarity"]=="AMOUNT_ONLY_NO_IDENTITY"
+unrelated=call(owner,b_link,"POST",{"reportId":report_id,"lineNumber":3})
+assert unrelated["similarity"]=="UNRELATED_LINE_NO_EVIDENCE"
+assert len(call(owner,b_link))==3
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}"
+     f"/cost-sources/{a['id']}/settlement-line-links",expected=404)
+call(owner,root+"/"+str(uuid4())+"/settlement-line-links",expected=404)
+sql_denied(f"UPDATE finance_cost_settlement_line_link_v94 "
+           f"SET similarity='AMOUNT_ONLY_NO_IDENTITY' "
+           f"WHERE tenant_id='{tenant}' AND id='{first['id']}'")
+sql_denied(f"DELETE FROM finance_cost_settlement_line_link_v94 "
+           f"WHERE tenant_id='{tenant}' AND id='{first['id']}'")
+sql_denied(f"DELETE FROM finance_cost_settlement_line_audit_v94 "
+           f"WHERE tenant_id='{tenant}' AND link_id='{first['id']}'")
+assert sql(f"SELECT count(*) FROM finance_cost_settlement_line_audit_v94 "
+           f"WHERE tenant_id='{tenant}' AND link_id='{first['id']}'")=="2"
+
+# V168: a concrete report line can be linked to MULTIPLE independent manual
+# costs. This is a dispute over lineage, not automatic proof of double debit.
+c=create("V168-LINE-"+uuid4().hex[:16],uuid4().hex+uuid4().hex,"OTHER_OPERATING")
+c_url=root+"/"+c["id"]
+call(checker,c_url+"/review","POST",{
+    "accept":True,"reason":"Independent synthetic manual source metadata review"})
+before_c=call(owner,c_url+"/identity-check")
+assert not before_c["approvalHeld"] and before_c["sharedSettlementLineCount"]==0
+# A reviewed cost without any settlement-line association is UNKNOWN,
+# not a zero-valued expense or a supported financial charge.
+attribution_c=c_url+"/settlement-attribution"
+unknown_c=call(owner,attribution_c)
+assert unknown_c["status"]=="UNPROVEN" and unknown_c["linkedLineCount"]==0
+assert "NO_SETTLEMENT_LINE_ASSOCIATION" in unknown_c["reasonCodes"]
+assert not unknown_c["independentReviewAuditComplete"]
+c_path,c_batch=allocate(c)
+c_link=call(owner,c_url+"/settlement-line-links","POST",{
+    "reportId":report_id,"lineNumber":2})  # line 2 already belongs to b
+assert c_link["similarity"] in ("UNRELATED_LINE_NO_EVIDENCE",
+                               "AMOUNT_ONLY_NO_IDENTITY")
+shared=call(owner,c_url+"/identity-check")
+assert shared["status"]=="POTENTIAL_SETTLEMENT_LINE_COLLISION_HOLD"
+assert shared["approvalHeld"] and shared["linkedSettlementLineCount"]==1
+assert shared["sharedSettlementLineCount"]==1
+# V182 must reevaluate under the current PG18 read snapshot. The same V94
+# link becomes CONFLICT as soon as V95 sees another source claiming its line.
+verdict_c=call(owner,attribution_c)
+assert verdict_c["status"]=="CONFLICT_EVIDENCE"
+assert verdict_c["linkedLineCount"]==1
+assert verdict_c["sharedLineCount"]==1
+assert verdict_c["frozenIdentityCount"]==1
+assert "SHARED_SETTLEMENT_LINE_CLAIM" in verdict_c["reasonCodes"]
+assert verdict_c["localCollisionApprovalHeld"]
+assert not verdict_c["financialHoldCleared"] and not verdict_c["netProfitEligible"]
+assert not shared["lineChargeOwnershipVerified"]
+assert len(shared["signals"])==8 and not any(signals(shared).values())
+drill=call(owner,c_url+"/identity-check/shared-settlement-lines")
+assert drill["sharedLineCount"]==1 and drill["totalLinkedLines"]==1
+assert drill["examplesTruncated"] is False
+assert len(drill["examples"])==1
+assert drill["examples"][0]["reportId"]==report_id
+assert drill["examples"][0]["lineNumber"]==2
+assert drill["examples"][0]["otherManualSourceCount"]==1
+assert not drill["duplicateChargeVerified"] and not drill["accountingReleaseAllowed"]
+assert call(owner,url_b+"/identity-check")["sharedSettlementLineCount"]>=1
+call(checker,c_path+"/"+c_batch+"/decision","POST",{
+    "accept":True,"reason":"Cannot approve the same settlement line twice"},expected=409)
+assert call(owner,c_path)[0]["state"]=="PENDING_REVIEW"
+# Even bypassing the app directly is rejected by the V95 database trigger.
+sql_denied(f"""UPDATE finance_cost_allocation_batch_v92
+ SET state='APPROVED_UNVERIFIED',reviewed_by='{peer['userId']}',
+ reviewed_at=now(),review_reason='Independent synthetic direct SQL review'
+ WHERE tenant_id='{tenant}' AND source_id='{c['id']}'
+   AND id='{c_batch}'""")
+sql_denied(f"""UPDATE spapi_settlement_report_line
+ SET external_order_id='MUTATED-NOT-ALLOWED'
+ WHERE tenant_id='{tenant}' AND report_id='{report_id}' AND line_number=2""")
+sql_denied(f"""DELETE FROM spapi_settlement_report_line
+ WHERE tenant_id='{tenant}' AND report_id='{report_id}' AND line_number=2""")
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}"
+    f"/cost-sources/{c['id']}/identity-check/shared-settlement-lines",
+    expected=404)
+
+# V169: all-cost readiness is read-only. A V91 manual cost is only an
+# original-currency claimed expense, even with V92 independent allocation.
+readiness_url=f"/api/v1/finance/marketplaces/{mp}/cost-profit-readiness"
+period_q="?periodStart=2026-11-01&periodEndExclusive=2026-12-01"
+call(sess(),readiness_url+period_q,expected=401)
+call(owner,readiness_url+"?periodStart=2026-11-01"
+     "&periodEndExclusive=2026-11-01",expected=400)
+call(owner,readiness_url+"?periodStart=2025-01-01"
+     "&periodEndExclusive=2026-12-01",expected=400)
+call(owner,readiness_url+period_q+"&beforeDate=2026-11-09",expected=400)
+call(owner,readiness_url+period_q+"&beforeDate=2026-10-31"
+     f"&beforeId={uuid4()}",expected=400)
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}/cost-profit-readiness"
+     +period_q,expected=404)
+r=call(owner,readiness_url+period_q)
+assert r["periodStart"]=="2026-11-01"
+assert r["periodEndExclusive"]=="2026-12-01"
+assert not r["fullCostCovered"] and not r["bankReconciled"]
+assert not r["realizedNetProfitVerified"] and r["realizedNetProfit"] is None
+assert len(r["categoriesWithoutVerifiedExternalCoverage"])==8
+assert not r["hasMore"]
+assert r["nextBeforeDate"] is None and r["nextBeforeId"] is None
+# V183 full-period evidence blockers are derived independently of the page
+# cursor. Original money remains grouped by currency and category above.
+g=r["evidenceBarriers"]
+assert g["sourceCount"]==int(sql(f"""
+ SELECT count(*) FROM finance_cost_source_v91
+ WHERE tenant_id='{tenant}' AND seller_marketplace_id='{mp}'
+   AND business_date>='2026-11-01' AND business_date<'2026-12-01'"""))
+assert g["sourceCount"]==g["externallyUnverifiedSourceCount"]
+assert g["eligibleForV162OrV64Profit"] is False
+assert g["sharedSettlementLineSourceCount"]>=2
+assert g["pendingLineReviewSourceCount"]>=1
+assert g["noSettlementAssociationSourceCount"]>=1
+assert "BANK_SETTLEMENT_NOT_RECONCILED" in g["blockerCodes"]
+assert "REALIZED_PROFIT_PROVENANCE_INCOMPLETE" in g["blockerCodes"]
+rows={x["sourceId"]:x for x in r["sources"]}
+assert set((a["id"],b["id"],c["id"])).issubset(rows)
+assert rows[a["id"]]["activeAllocationState"]=="PENDING_REVIEW"
+assert rows[a["id"]]["approvedUnverifiedAllocationAmount"] is None
+assert rows[b["id"]]["activeAllocationState"]=="APPROVED_UNVERIFIED"
+assert rows[b["id"]]["approvedUnverifiedAllocationAmount"]=="7.250000"
+assert rows[b["id"]]["approvedUnverifiedUnallocatedAmount"]=="2.750000"
+assert rows[b["id"]]["approvalHeld"] and rows[b["id"]]["sharedSettlementLineCount"]>=1
+assert rows[c["id"]]["approvalHeld"]
+for source,source_id in ((attribution_a,a["id"]),
+                         (url_b+"/settlement-attribution",b["id"]),
+                         (attribution_c,c["id"])):
+    assert rows[source_id]["localAttributionStatus"] == call(
+        owner,source)["status"]
+    assert rows[source_id]["localAttributionReasonCodes"]
+    assert rows[source_id]["frozenIdentityCount"]>=1
+    assert not rows[source_id]["externallyVerified"]
+for s in rows.values():
+    assert not s["externallyVerified"] and not s["allowedToDeductFromProfit"]
+for bkt in r["buckets"]:
+    assert not bkt["externallyVerified"] and not bkt["allowedToDeductFromProfit"]
+    # Single-period original-currency sources; the full report is grouped by
+    # currency and category rather than silently mixing USD/EUR.
+    assert bkt["currency"]==currency
+# Earlier A3 scripts can create independently approved manual costs in
+# the same marketplace/category. A category total MUST match every approved
+# source in this period, never the 7.25 of one hand-picked V164 source.
+rollup=sql(f"""
+ SELECT s.category||'|'||btrim(s.currency_code)||'|'||
+   coalesce(sum(x.allocated),0)::numeric(20,6)::text||'|'||
+   coalesce(sum(s.amount-x.allocated),0)::numeric(20,6)::text
+ FROM finance_cost_source_v91 s
+ JOIN finance_cost_allocation_batch_v92 b
+   ON b.tenant_id=s.tenant_id AND b.source_id=s.id
+   AND b.state='APPROVED_UNVERIFIED'
+ CROSS JOIN LATERAL (
+   SELECT coalesce(sum(l.expense_amount),0) AS allocated
+   FROM finance_cost_allocation_line_v92 l
+   WHERE l.tenant_id=b.tenant_id AND l.batch_id=b.id
+ ) x
+ WHERE s.tenant_id='{tenant}' AND s.seller_marketplace_id='{mp}'
+   AND s.business_date>='2026-11-01'
+   AND s.business_date<'2026-12-01'
+ GROUP BY s.category,s.currency_code
+ ORDER BY s.category,s.currency_code""")
+expected_rollup={}
+for entry in rollup.splitlines():
+    category_code,original_currency,assigned,remainder=entry.split("|")
+    expected_rollup[(category_code,original_currency)]=(assigned,remainder)
+for bkt in r["buckets"]:
+    assigned,remainder=expected_rollup.get(
+        (bkt["category"],bkt["currency"]),("0.000000","0.000000"))
+    assert bkt["approvedUnverifiedAllocationAmount"]==assigned
+    assert bkt["approvedUnverifiedUnallocatedAmount"]==remainder
+# Exact V164 original-currency money conservation remains independently
+# checked ABOVE on the known source; this is full-category conservation.
+assert rows[b["id"]]["approvedUnverifiedAllocationAmount"]=="7.250000"
+assert rows[b["id"]]["approvedUnverifiedUnallocatedAmount"]=="2.750000"
+empty_month=call(owner,readiness_url+
+    "?periodStart=2026-12-01&periodEndExclusive=2027-01-01")
+assert not empty_month["buckets"]
+assert empty_month["evidenceBarriers"]["sourceCount"]==0
+assert empty_month["evidenceBarriers"]["blockerCodes"]
+assert empty_month["evidenceBarriers"]["eligibleForV162OrV64Profit"] is False
+# Stable keyset + unbounded grouped totals: add 52 synthetic manual sources
+# directly to disposable PG18; never pretend these SQL fixtures are LIVE fees.
+salt=uuid4().hex[:10]
+sql(f"""INSERT INTO finance_cost_source_v91(
+ id,tenant_id,seller_marketplace_id,category,source_kind,source_key,
+ source_document_sha256,business_date,currency_code,amount,created_by)
+ SELECT gen_random_uuid(),'{tenant}','{mp}','OTHER_OPERATING','MANUAL_OTHER',
+ 'V169-SYN-{salt}-'||to_char(g,'FM0000'),
+ md5('V169-{salt}-'||g::text)||md5('OTHER-{salt}-'||g::text),
+ '2026-11-09','{currency}',0.100000,'{user}'
+ FROM generate_series(1,52) g""")
+r1=call(owner,readiness_url+period_q)
+assert len(r1["sources"])==50 and r1["hasMore"]
+assert r1["nextBeforeDate"]=="2026-11-09" and r1["nextBeforeId"]
+params=(period_q+"&beforeDate="+r1["nextBeforeDate"]+
+        "&beforeId="+r1["nextBeforeId"])
+r2=call(owner,readiness_url+params)
+assert r2["sources"] and not r2["hasMore"]
+assert not ({x["sourceId"] for x in r1["sources"]}&
+            {x["sourceId"] for x in r2["sources"]})
+assert r1["buckets"]==r2["buckets"]  # full-range buckets, no page truncation
+# 52 new unreviewed/unassociated sources must stay in the FULL period
+# blockers on every page, even when none is currently in the 50-row view.
+assert r1["evidenceBarriers"]==r2["evidenceBarriers"]
+assert r1["evidenceBarriers"]["sourceCount"]==g["sourceCount"]+52
+assert r1["evidenceBarriers"]["noSettlementAssociationSourceCount"]>= (
+    g["noSettlementAssociationSourceCount"]+52)
+assert r1["evidenceBarriers"]["metadataReviewPendingSourceCount"]>= (
+    g["metadataReviewPendingSourceCount"]+52)
+assert r2["evidenceBarriers"]["externallyUnverifiedSourceCount"]== (
+    r2["evidenceBarriers"]["sourceCount"])
+assert not r2["evidenceBarriers"]["eligibleForV162OrV64Profit"]
+assert len(r1["sources"])+len(r2["sources"])==int(sql(f"""
+ SELECT count(*) FROM finance_cost_source_v91
+ WHERE tenant_id='{tenant}' AND seller_marketplace_id='{mp}'
+ AND business_date>='2026-11-01' AND business_date<'2026-12-01'"""))
+assert not r2["realizedNetProfitVerified"] and r2["realizedNetProfit"] is None
+
+# V170: a source-level Finances refund can be missing order match,
+# V34/V35 allocation or verified inventory receipt. NEVER omit it or
+# treat manual "restocked" sensitivity as a real COGS reversal.
+refund_root=f"/api/v1/finance/marketplaces/{mp}/refund-cost-readiness"
+refund_period="?periodStart=2025-03-01&periodEndExclusive=2025-04-01"
+call(sess(),refund_root+refund_period,expected=401)
+call(owner,refund_root+"?periodStart=2025-03-01"
+     "&periodEndExclusive=2025-03-01",expected=400)
+call(owner,refund_root+"?periodStart=2024-01-01"
+     "&periodEndExclusive=2025-04-01",expected=400)
+call(owner,refund_root+refund_period+"&beforeAt=2025-03-09T12:34:56Z",
+     expected=400)
+call(owner,refund_root+refund_period+
+     f"&beforeAt=2025-04-01T00:00:00Z&beforeId={uuid4()}",expected=400)
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}/refund-cost-readiness"
+     +refund_period,expected=404)
+before_refunds=call(owner,refund_root+refund_period)
+assert not before_refunds["realizedNetProfitVerified"]
+assert not before_refunds["actualCogsReversalsVerified"]
+assert not before_refunds["allFinancesRefundsCovered"]
+assert not before_refunds["bankReconciled"]
+# The synthetic LIVE flag is a staging-fixture label, NOT Amazon source
+# authentication. Fifty-two same-timestamp events test stable UUID keysets.
+salt=uuid4().hex[:12]
+other_currency="EUR" if currency!="EUR" else "USD"
+sql(f"""INSERT INTO finance_source_event(
+ id,tenant_id,seller_marketplace_id,source_family,source_event_key,
+ data_origin,category,amount,currency_code,posted_at,source_type)
+ SELECT gen_random_uuid(),'{tenant}','{mp}','SPAPI_FINANCES',
+ 'V170-REFUND-{salt}-'||to_char(g,'FM0000'),
+ 'LIVE','PRODUCT_REFUND',-1.250000,'{currency}',
+ '2025-03-09 12:34:56+00'::timestamptz,'V170_SYNTHETIC_REFUND'
+ FROM generate_series(1,52) g""")
+sql(f"""INSERT INTO finance_source_event(
+ id,tenant_id,seller_marketplace_id,source_family,source_event_key,
+ data_origin,category,amount,currency_code,posted_at,source_type)
+ VALUES('{uuid4()}','{tenant}','{mp}','SPAPI_FINANCES',
+ 'V170-REFUND-{salt}-ALT','LIVE','PRODUCT_REFUND',-2.750000,
+ '{other_currency}','2025-03-10 00:00:00+00','V170_SYNTHETIC_REFUND')""")
+sql(f"""INSERT INTO finance_source_event(
+ id,tenant_id,seller_marketplace_id,source_family,source_event_key,
+ data_origin,category,amount,currency_code,posted_at,source_type)
+ VALUES('{uuid4()}','{tenant}','{mp}','SPAPI_FINANCES',
+ 'V170-REFUND-{salt}-OUTSIDE','LIVE','PRODUCT_REFUND',-9.000000,
+ '{currency}','2025-04-01 00:00:00+00','V170_SYNTHETIC_REFUND')""")
+first_refunds=call(owner,refund_root+refund_period)
+assert len(first_refunds["events"])==50 and first_refunds["hasMore"]
+assert first_refunds["nextBeforeAt"] and first_refunds["nextBeforeId"]
+all_refunds=list(first_refunds["events"])
+page_refunds=first_refunds
+for _ in range(30):
+    if not page_refunds["hasMore"]:break
+    assert page_refunds["nextBeforeAt"] and page_refunds["nextBeforeId"]
+    cursor_refunds=(refund_period+"&beforeAt="+page_refunds["nextBeforeAt"]+
+                    "&beforeId="+page_refunds["nextBeforeId"])
+    page_refunds=call(owner,refund_root+cursor_refunds)
+    assert page_refunds["events"]
+    assert page_refunds["buckets"]==first_refunds["buckets"]
+    all_refunds.extend(page_refunds["events"])
+else:
+    raise AssertionError("V170 refund keyset did not terminate within 30 pages")
+assert not page_refunds["hasMore"]
+assert len(all_refunds)==len({v["eventId"] for v in all_refunds})
+expected_count=int(sql(f"""SELECT count(*) FROM finance_source_event
+ WHERE tenant_id='{tenant}' AND seller_marketplace_id='{mp}'
+ AND source_family='SPAPI_FINANCES' AND data_origin='LIVE'
+ AND category='PRODUCT_REFUND'
+ AND posted_at>='2025-03-01 00:00:00+00'
+ AND posted_at<'2025-04-01 00:00:00+00'"""))
+assert len(all_refunds)==expected_count
+assert first_refunds["buckets"]==page_refunds["buckets"]
+independent_buckets=sql(f"""SELECT btrim(currency_code)||'|'||
+ count(*)::text||'|'||sum(amount)::numeric(20,6)::text
+ FROM finance_source_event
+ WHERE tenant_id='{tenant}' AND seller_marketplace_id='{mp}'
+ AND source_family='SPAPI_FINANCES' AND data_origin='LIVE'
+ AND category='PRODUCT_REFUND'
+ AND posted_at>='2025-03-01 00:00:00+00'
+ AND posted_at<'2025-04-01 00:00:00+00'
+ GROUP BY currency_code ORDER BY currency_code""")
+expected_by_currency={}
+for line in independent_buckets.splitlines():
+    code,count,amount=line.split("|")
+    expected_by_currency[code]=(int(count),amount)
+assert len(first_refunds["buckets"])==len(expected_by_currency)
+for bucket in first_refunds["buckets"]:
+    assert (bucket["sourceEventCount"],bucket["signedProductRefundAmount"])==(
+        expected_by_currency[bucket["currency"]])
+    assert not bucket["completeRefundCoverage"]
+    assert not bucket["verifiedCogsReversal"]
+for record in all_refunds:
+    assert not record["externalReceiptVerified"]
+    assert not record["actualCogsReversalAllowed"]
+    assert record["actualCogsReversal"] is None
+synthetic_ids=set(sql(f"""SELECT id FROM finance_source_event
+ WHERE tenant_id='{tenant}' AND seller_marketplace_id='{mp}'
+ AND source_event_key LIKE 'V170-REFUND-{salt}-%'
+ AND posted_at<'2025-04-01 00:00:00+00'""").splitlines())
+assert len(synthetic_ids)==53
+synthetic_rows=[v for v in all_refunds if v["eventId"] in synthetic_ids]
+assert len(synthetic_rows)==53
+for v in synthetic_rows:
+    assert v["evidenceState"]=="INCOMPLETE_EVIDENCE"
+    assert v["historicalCostExposure"] is None
+    assert v["claimedRestockCostSensitivity"] is None
+    assert v["reviewedOrderId"] is None
+    assert not v["evidenceCurrent"]
+assert not call(owner,refund_root+
+    "?periodStart=2025-05-01&periodEndExclusive=2025-06-01")[
+    "actualCogsReversalsVerified"]
+
+# V171: no customer return inventory receipt can be established from a
+# bare LIVE-labelled refund, nor can an untrusted warehouse purchase receipt
+# be used as a customer return. Both Owners remain scoped, no manual COGS.
+v171_event=sorted(synthetic_ids)[0]
+receipt_url=f"/api/v1/finance/marketplaces/{mp}/events/{v171_event}/return-receipts"
+call(sess(),receipt_url,expected=401)
+assert call(owner,receipt_url)==[]
+call(owner,receipt_url,"POST",{
+    "itemId":"synthetic-line","quantity":1,"condition":"UNKNOWN",
+    "localWarehouseId":None,"evidenceReference":"V171-LOCAL-TEST-0001",
+    "note":"Unmatched synthetic refund must never become physical stock"
+},expected=409)
+assert call(owner,receipt_url)==[]
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}/events/"
+     +v171_event+"/return-receipts",expected=404)
+call(owner,receipt_url,"POST",{
+    "itemId":"synthetic-line","quantity":0,"condition":"UNKNOWN",
+    "evidenceReference":"V171-LOCAL-TEST-0002",
+    "note":"This invalid quantity must be rejected before validation"
+},expected=400)
+# Missing JSON condition is a client error, never NullPointerException/500.
+call(owner,receipt_url,"POST",{
+    "itemId":"synthetic-line","quantity":1,
+    "evidenceReference":"V171-LOCAL-TEST-0003",
+    "note":"Unknown return condition must be rejected as invalid client input"
+},expected=400)
+# All zero trust/COGS guarantees are constraints, not only UI annotations.
+assert sql("""SELECT count(*) FROM pg_trigger
+ WHERE tgname IN ('finance_return_receipt_claim_guard_v96',
+              'finance_return_receipt_audit_append_only_v96')
+ AND NOT tgisinternal""")=="2"
+assert sql(f"""SELECT count(*) FROM finance_return_receipt_claim_v96
+ WHERE tenant_id='{tenant}'""")=="0"
+
+
+# V172: actual PG18 immutable local customer-return parcel identity, separate
+# from V39/V44 purchase receipts. Seeded LIVE-label refund is NOT WMS proof.
+intake_root=f"/api/v1/finance/marketplaces/{mp}/events/{v171_event}/return-intakes"
+call(sess(),intake_root,expected=401)
+initial_intakes=call(owner,intake_root)
+assert initial_intakes["eventId"]==v171_event
+assert initial_intakes["coverage"]==[] and initial_intakes["receipts"]==[]
+assert not initial_intakes["externalWarehouseReconciled"]
+assert not initial_intakes["realizedNetProfitVerified"]
+call(owner,intake_root+"?beforeAt=2026-11-16T12:00:00Z",expected=400)
+call(owner,intake_root+"?beforeId="+str(uuid4()),expected=400)
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}/events/"
+     +v171_event+"/return-intakes",expected=404)
+call(owner,intake_root,"POST",{
+ "claimId":str(uuid4()),"warehouseId":str(uuid4()),
+ "receiptReference":"V172-PARCEL-INVALID-0001","quantity":0,
+ "condition":"UNKNOWN","note":"Zero parcel quantity must be invalid"
+},expected=400)
+call(owner,intake_root,"POST",{
+ "claimId":str(uuid4()),"warehouseId":str(uuid4()),
+ "receiptReference":"V172-PARCEL-INVALID-0002","quantity":1,
+ "note":"Missing condition must produce HTTP 400 not a server error"
+},expected=400)
+call(owner,intake_root,"POST",{
+ "claimId":str(uuid4()),"warehouseId":str(uuid4()),
+ "receiptReference":"V172-PARCEL-UNREVIEWED-0003","quantity":1,
+ "condition":"UNKNOWN",
+ "note":"An unreviewed refund is not physical warehouse receipt"
+},expected=404)
+assert call(owner,intake_root)["receipts"]==[]
+assert sql("""SELECT count(*) FROM pg_trigger
+ WHERE tgname IN ('finance_customer_return_intake_guard_v97',
+                  'finance_customer_return_intake_audit_guard_v97')
+ AND NOT tgisinternal""")=="2"
+assert sql("""SELECT count(*) FROM pg_constraint
+ WHERE conname='finance_return_receipt_claim_scoped_v97'""")=="1"
+# PostgreSQL truncates long implicit unique constraint names to 63 bytes;
+# verify the indexed columns rather than assuming the generated name.
+assert sql("""SELECT count(*) FROM pg_indexes
+ WHERE tablename='finance_customer_return_intake_v97'
+ AND indexdef LIKE '%(tenant_id, warehouse_id, receipt_reference)%'""")=="1"
+assert sql(f"""SELECT count(*) FROM finance_customer_return_intake_v97
+ WHERE tenant_id='{tenant}'""")=="0"
+
+# V173: enroll an Ed25519 signing key in a disposable LOCAL warehouse.
+# No private signing key or real WMS identity is used; these are negative
+# provenance/auth tests only, never a physical receipt certification.
+from base64 import b64encode
+v173_warehouse=str(uuid4())
+v173_code="SYNTHWMS"+uuid4().hex[:12].upper()
+v173_public=b64encode(bytes.fromhex(
+ "302a300506032b6570032100"+
+ "d75a980182b10ab7d54bfed3c964073a0ee172f3daa62325af021a68f707511a"
+)).decode()
+sql(f"""INSERT INTO erp_local_warehouse(
+ id,tenant_id,warehouse_code,display_name,status,created_by)
+ VALUES('{v173_warehouse}','{tenant}','{v173_code}',
+ 'V173 disposable synthetic location','ACTIVE','{user}')""")
+wms_root="/api/v1/finance/wms-signing-sources"
+call(sess(),wms_root+"?warehouseId="+v173_warehouse,expected=401)
+assert call(owner,wms_root+"?warehouseId="+v173_warehouse)==[]
+wms=call(owner,wms_root,"POST",{
+ "warehouseId":v173_warehouse,"sourceCode":v173_code,
+ "publicKeySpkiBase64":v173_public,
+ "reason":"Local synthetic Ed25519 test enrollment is not WMS operator proof"})
+assert wms["state"]=="PENDING" and not wms["operatorIdentityVerified"]
+assert wms["warehouseId"]==v173_warehouse
+wms_url=wms_root+"/"+wms["id"]
+call(owner,wms_url+"/approve","POST",{"reason":
+ "Self approval must be rejected for test-only key source"},expected=403)
+approved=call(checker,wms_url+"/approve","POST",{"reason":
+ "Second Owner reviewed only synthetic tenant registered public key"})
+assert approved["state"]=="APPROVED"
+assert not approved["operatorIdentityVerified"]
+call(owner,wms_root,"POST",{
+ "warehouseId":v173_warehouse,"sourceCode":v173_code,
+ "publicKeySpkiBase64":v173_public,
+ "reason":"Reusing the same source code must not mutate public key"},expected=409)
+# Direct DB access cannot replace a tenant-approved key or delete a signed audit.
+sql_denied(f"""UPDATE finance_wms_signing_source_v98
+ SET ed25519_spki_base64='{b64encode(bytes.fromhex('302a300506032b6570032100'+ 'b'*64)).decode()}'
+ WHERE tenant_id='{tenant}' AND id='{wms['id']}'""")
+sql_denied(f"""DELETE FROM finance_wms_source_audit_v98
+ WHERE tenant_id='{tenant}' AND source_id='{wms['id']}'""")
+assert sql(f"""SELECT count(*) FROM finance_wms_source_audit_v98
+ WHERE tenant_id='{tenant}' AND source_id='{wms['id']}'""")=="2"
+# Cannot attach a signed external record without a V172 parcel and matching refund.
+missing_signed=intake_root+"/"+str(uuid4())+"/signed-wms"
+call(sess(),missing_signed,expected=401)
+call(owner,missing_signed,expected=404)
+call(owner,missing_signed,"POST",{
+ "sourceId":wms["id"],"externalReceiptId":"V173-TEST-EXT-0001",
+ "observedAt":"2026-11-16T12:00:00Z","quantity":1,
+ "condition":"UNKNOWN","signatureBase64":b64encode(bytes(64)).decode()
+},expected=404)
+assert sql(f"""SELECT count(*) FROM finance_wms_signed_return_v98
+ WHERE tenant_id='{tenant}'""")=="0"
+call(owner,wms_url+"/revoke","POST",{"reason":
+ "Original enrollment author cannot independently revoke its own key"},expected=403)
+revoked=call(checker,wms_url+"/revoke","POST",{"reason":
+ "Independent second Owner revokes disposable key after synthetic provenance test"})
+assert revoked["state"]=="REVOKED"
+call(checker,wms_url+"/approve","POST",{"reason":
+ "A revoked signing key can never be reapproved"},expected=409)
+assert sql("""SELECT count(*) FROM pg_trigger
+ WHERE tgname IN ('finance_wms_source_guard_v98',
+                  'finance_wms_signed_return_guard_v98',
+                  'finance_wms_source_audit_guard_v98')
+ AND NOT tgisinternal""")=="3"
+assert sql(f"""SELECT count(*) FROM finance_wms_source_audit_v98
+ WHERE tenant_id='{tenant}' AND source_id='{wms['id']}'""")=="3"
+
+# V174: PG18 signed external observations use an append-only global
+# receipt registry shared by V173 and V174. Unmatched refund/parcel
+# remains 404; synthetic signing keys never assert real warehouse identity.
+reconcile_missing=intake_root+"/"+str(uuid4())+"/wms-reconciliation"
+call(sess(),reconcile_missing,expected=401)
+call(owner,reconcile_missing,expected=404)
+call(owner,reconcile_missing,"POST",{
+ "sourceId":wms["id"],"externalReceiptId":"V174-TEST-OBS-0001",
+ "observedAt":"2026-11-17T01:00:00Z","externalQuantity":1,
+ "externalCondition":"UNKNOWN","signatureBase64":b64encode(bytes(64)).decode()
+},expected=404)
+assert sql("""SELECT count(*) FROM pg_trigger
+ WHERE tgname IN ('finance_wms_v173_global_id_v99',
+   'finance_wms_v174_global_id_v99',
+   'finance_wms_observation_guard_v99',
+   'finance_wms_receipt_identity_guard_v99')
+ AND NOT tgisinternal""")=="4"
+assert sql("""SELECT count(*) FROM pg_constraint
+ WHERE conname IN ('finance_customer_return_intake_event_scoped_v99',
+   'finance_wms_receipt_identity_v99_pkey',
+   'finance_wms_receipt_identity_v99_tenant_id_intake_id_key')
+ """)=="3"
+assert sql(f"""SELECT count(*) FROM finance_wms_receipt_identity_v99
+ WHERE tenant_id='{tenant}'""")=="0"
+assert sql(f"""SELECT count(*) FROM finance_wms_return_observation_v99
+ WHERE tenant_id='{tenant}'""")=="0"
+
+
+# V182: a NEW isolated synthetic imported settlement report demonstrates
+# limited local support after (and only after) V94 independent audited review.
+# This does not establish real Amazon charge or bank ownership.
+d_key="V182-MATCH-"+uuid4().hex[:16]
+d=create(d_key,uuid4().hex+uuid4().hex,"OTHER_OPERATING")
+d_url=root+"/"+d["id"]
+call(checker,d_url+"/review","POST",{
+    "accept":True,"reason":"Independent V182 synthetic source metadata check"})
+d_report=str(uuid4())
+sql(f"""INSERT INTO spapi_settlement_report (
+ id,tenant_id,seller_marketplace_id,amazon_report_id,report_document_id,
+ report_type,state,source_origin,document_sha256,settlement_reference,
+ statement_currency,declared_net,line_count)
+ VALUES ('{d_report}','{tenant}','{mp}','V182-REPORT-{uuid4().hex[:12]}',
+ 'V182-DOC-{uuid4().hex[:12]}',
+ 'GET_V2_SETTLEMENT_REPORT_DATA_FLAT_FILE_V2','IMPORTED','LIVE',
+ '{uuid4().hex+uuid4().hex}','V182-SETTLEMENT-{uuid4().hex[:12]}',
+ '{currency}',-10,1)""")
+sql(f"""INSERT INTO spapi_settlement_report_line (
+ tenant_id,report_id,line_number,transaction_type,amount_type,
+ amount_description,external_order_id,signed_amount,currency_code)
+ VALUES ('{tenant}','{d_report}',1,'Other Transaction','Fee',
+ 'Synthetic unverified fee','{d_key}',-10.000000,'{currency}')""")
+d_link=call(owner,d_url+"/settlement-line-links","POST",
+    {"reportId":d_report,"lineNumber":1})
+assert d_link["state"]=="OPEN" and d_link["similarity"]=="SIMILAR_REFERENCE_AND_AMOUNT"
+d_assessment=d_url+"/settlement-attribution"
+initial_d=call(owner,d_assessment)
+assert initial_d["status"]=="UNPROVEN"
+assert initial_d["frozenIdentityCount"]==1 and initial_d["linkedLineCount"]==1
+assert "INDEPENDENT_V94_REVIEW_PENDING" in initial_d["reasonCodes"]
+call(checker,d_url+"/settlement-line-links/"+d_link["id"]+"/review","POST",{
+    "disposition":"POTENTIAL_DUPLICATE_UNVERIFIED",
+    "reason":"Local matching line only; original Amazon charge not authenticated"})
+supported_d=call(owner,d_assessment)
+assert supported_d["status"]=="SUPPORTING_LOCAL_METADATA_UNVERIFIED"
+assert supported_d["independentReviewAuditComplete"]
+assert supported_d["auditBackedReviewCount"]==1
+assert supported_d["frozenIdentityCount"]==1
+assert not supported_d["localCollisionApprovalHeld"]
+assert not any(supported_d[k] for k in (
+    "externalChargeVerified","duplicateDebitVerified",
+    "financialHoldCleared","netProfitEligible"))
+# The existing one-shot audit cannot be edited into a verified approval.
+call(checker,d_url+"/settlement-line-links/"+d_link["id"]+"/review","POST",{
+    "disposition":"ESCALATED_NEEDS_PROOF",
+    "reason":"Cannot rewrite a reviewed attribution"},expected=409)
+
+# V187 full-period local collision risk report uses V165's 8 matching
+# namespaces plus V168 shared imported settlement-line candidates.
+# It must count EACH V91 source once, independent of 20 sample limit.
+risk_base=f"/api/v1/finance/marketplaces/{mp}/cost-cross-source-risk"
+risk_q="?periodStart=2026-11-01&periodEndExclusive=2026-12-01"
+call(sess(),risk_base+risk_q,expected=401)
+call(owner,risk_base+"?periodStart=2026-11-01&"
+     "periodEndExclusive=2026-11-01",expected=400)
+call(owner,risk_base+"?periodStart=2025-01-01&"
+     "periodEndExclusive=2026-12-01",expected=400)
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}/cost-cross-source-risk"
+     +risk_q,expected=404)
+risk=call(owner,risk_base+risk_q)
+expected_sources=int(sql(f"""SELECT count(*) FROM finance_cost_source_v91
+ WHERE tenant_id='{tenant}' AND seller_marketplace_id='{mp}'
+   AND business_date>='2026-11-01' AND business_date<'2026-12-01'"""))
+assert risk["sourceCount"]==expected_sources
+assert risk["sourceCount"]==(risk["anyLocalCollisionSourceCount"]+
+    risk["noLocalMatchSourceCount"])
+assert risk["potentialIdentityOverlapSourceCount"]>=3  # Ads key, 2 manual docs
+assert risk["anyLocalCollisionSourceCount"]>=3
+assert risk["anyLocalCollisionSourceCount"]>=risk["sharedSettlementLineSourceCount"]
+assert risk["anyLocalCollisionSourceCount"]>=risk["potentialIdentityOverlapSourceCount"]
+assert "V165_CROSS_SOURCE_IDENTITY_OVERLAP_HOLD" in risk["blockerCodes"]
+assert len(risk["examples"])<=20
+assert risk["examplesTruncated"]==(risk["anyLocalCollisionSourceCount"]>20)
+if not risk["examplesTruncated"]:
+    index={x["sourceId"]:x for x in risk["examples"]}
+    assert {a["id"],b["id"],later["id"]}.issubset(index)
+    assert "MANUAL_ADS_SPEND_SAME_KEY" in index[a["id"]]["localSignalCodes"]
+    assert "OTHER_MANUAL_COST_SAME_CLAIMED_DOCUMENT" in index[b["id"]]["localSignalCodes"]
+    assert "OTHER_MANUAL_COST_SAME_CLAIMED_DOCUMENT" in index[later["id"]]["localSignalCodes"]
+assert risk["dateBasis"]=="V91_SOURCE_BUSINESS_DATE_NOT_ACCOUNTING_RECOGNITION_DATE"
+assert not any(risk[k] for k in (
+    "duplicateDebitVerified","externalChargeVerified",
+    "refundCogsReversalVerified","accountingPolicyApproved",
+    "bankReconciled","netProfitEligible"))
+assert risk["realizedNetProfit"] is None
+assert all(not x["duplicateDebitVerified"] and
+           not x["expenseDeductionAllowed"] for x in risk["examples"])
+# Absence of local matches cannot be used as a completeness certificate.
+empty_risk=call(owner,risk_base+
+    "?periodStart=2028-04-01&periodEndExclusive=2028-05-01")
+assert empty_risk["sourceCount"]==0
+assert empty_risk["anyLocalCollisionSourceCount"]==0
+assert empty_risk["noLocalMatchSourceCount"]==0
+assert empty_risk["examples"]==[]
+assert "ABSENCE_OF_LOCAL_MATCH_DOES_NOT_PROVE_NO_DUPLICATES" in empty_risk["blockerCodes"]
+assert not empty_risk["netProfitEligible"]
+
+after=[sql("SELECT count(*) FROM "+t) for t in
+    ("finance_profit_report_job","bank_payout_observation","ads_report_reviewed_cost")]
+assert before==after,"Manual identity scan may not post finance/bank/Ads"
+print("PASS V165/V166/V167/V168/V169/V170/V171/V172/V173/V174 PG18+HTTP: 8-family source preview, audited "
+      "settlement-line scoped links and independent unverified review; equal "
+      "amount/different key NOT duplication; same Ads key holds approval 409; "
+      "no self/unauthorized leak; later claimed-document collision signaled; "
+      "all manual allocations remain unverified, no profit/bank/Ads posting")

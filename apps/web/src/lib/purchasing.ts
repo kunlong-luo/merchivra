@@ -1,3 +1,12 @@
+import {
+ listWarehousesPage,getWarehouseItem,listSuppliersPage,listPurchaseOrdersPage,
+ listWarehouseStockPage,getWarehouseStockItem,listWarehouseLedgerPage,
+ listPendingReceiptsPage,
+ createLocalSupplier,createLocalWarehouse,createLocalPurchaseOrder,
+ getLocalPurchaseOrder,submitLocalPurchaseOrder,approveLocalPurchaseOrder,
+ cancelLocalPurchaseOrder,receiveLocalPurchaseOrder,createLocalStockOperation,
+ resolveLocalWarehouseLabels
+} from '../generated/purchasing-v114'
 import {z} from 'zod'
 import {csrfHeader} from './auth'
 
@@ -24,6 +33,7 @@ const stock=z.object({warehouseId:z.string().uuid(),productSkuId:z.string().uuid
 const movement=z.object({id:z.string().uuid(),warehouseId:z.string().uuid(),
  productSkuId:z.string().uuid(),internalSku:z.string(),purchaseReceiptId:z.string().uuid().nullable(),
  operationId:z.string().uuid().nullable(),inspectionId:z.string().uuid().nullable().optional(),
+  lotActionId:z.string().uuid().nullable().optional(),
  quantity:z.number().int(),
  movementType:z.enum(['PURCHASE_RECEIPT','OUTBOUND','TRANSFER_OUT','TRANSFER_IN','COUNT_ADJUSTMENT','QC_QUARANTINE','QC_RELEASE','LOT_QUARANTINE']),
  reason:z.string().nullable(),createdAt:z.string()})
@@ -61,19 +71,133 @@ async function call<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown
  return schema.parse(await res.json())
 }
 export const fetchSuppliers=()=>call(base+'/suppliers',z.array(supplier))
+// V111: supplier search and selection is tenant-scoped on the server, not the
+// first 200 suppliers returned by the legacy compatibility endpoint.
+const supplierPage=z.object({
+ items:z.array(supplier).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{
+ message:'Invalid supplier page cursor contract'
+})
+export type SupplierPage=z.infer<typeof supplierPage>
+export const fetchSuppliersPage=({limit=50,cursor=null,status='ALL',prefix=''}:{
+ limit?:number;cursor?:string|null;status?:'ALL'|'ACTIVE'|'ARCHIVED';prefix?:string
+}={}):Promise<SupplierPage>=>{
+ return listSuppliersPage({limit,status,prefix,...(cursor?{cursor}:{})})
+  .then(r=>supplierPage.parse(r.data))
+}
+
 export const createSupplier=(supplierCode:string,displayName:string)=>
- call(base+'/suppliers',supplier,'POST',{supplierCode,displayName})
+ createLocalSupplier({supplierCode,displayName})
+  .then(r=>supplier.parse(r.data))
+// V110: a page is an API-scoped view, never a full-tenant count or audit snapshot.
+const purchaseOrdersPage=z.object({
+ items:z.array(order).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{
+ message:'Invalid purchase order page cursor contract'
+}).refine(p=>p.items.length<=p.pageSize,{
+ message:'Purchase order page exceeds declared server size'
+})
+export type PurchaseOrdersPage=z.infer<typeof purchaseOrdersPage>
+export const fetchPurchaseOrdersPage=({limit=50,cursor=null,status='ALL',search=''}:{
+ limit?:number;cursor?:string|null;status?:string;search?:string
+}={}):Promise<PurchaseOrdersPage>=>{
+ return listPurchaseOrdersPage({
+  limit,status:status as 'ALL'|'DRAFT'|'SUBMITTED'|'APPROVED'|'RECEIVING'|'RECEIVED'|'CANCELLED',
+  search,...(cursor?{cursor}:{})
+ }).then(r=>purchaseOrdersPage.parse(r.data))
+}
 export const fetchPurchaseOrders=()=>call(base+'/orders',z.array(order))
-export const fetchPurchaseOrder=(id:string)=>call(base+'/orders/'+encodeURIComponent(id),detail)
+export const fetchPurchaseOrder=(id:string)=>
+ getLocalPurchaseOrder(id).then(r=>detail.parse(r.data))
 export const createPurchaseOrder=(supplierId:string,currency:string,notes:string,
- lines:NewPurchaseLine[])=>call(base+'/orders',detail,'POST',{supplierId,currency,notes,lines})
+ lines:NewPurchaseLine[])=>
+ createLocalPurchaseOrder({supplierId,currency,notes,lines})
+  .then(r=>detail.parse(r.data))
+// Keep explicit generated POST functions; never implement state transitions via GET.
 export const purchaseAction=(id:string,action:'submit'|'approve'|'cancel')=>
- call(base+'/orders/'+encodeURIComponent(id)+'/'+action,detail,'POST')
+ (action==='submit'?submitLocalPurchaseOrder(id):
+  action==='approve'?approveLocalPurchaseOrder(id):cancelLocalPurchaseOrder(id))
+  .then(r=>detail.parse(r.data))
+// V114: complete tenant-scoped directory, never the first 200 legacy warehouses.
+const warehousePage=z.object({
+ items:z.array(warehouse).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{
+ message:'Invalid warehouse page cursor contract'
+})
+export type WarehousePage=z.infer<typeof warehousePage>
+export const fetchWarehousesPage=({limit=50,status='ALL',prefix='',cursor=null}:{
+ limit?:number;status?:'ALL'|'ACTIVE'|'ARCHIVED';prefix?:string;cursor?:string|null
+}={}):Promise<WarehousePage>=>{
+ return listWarehousesPage({limit,status,prefix,...(cursor?{cursor}:{})})
+  .then(r=>warehousePage.parse(r.data))
+}
+/** Resolve up to 100 historical warehouse IDs in one tenant-bound HTTP call.
+ * The server omits unknown/foreign IDs; never synthesize a label. */
+export const fetchWarehouseLabels=(ids:string[]):Promise<LocalWarehouse[]>=>{
+ if(ids.length<1||ids.length>100||new Set(ids).size!==ids.length)
+  return Promise.reject(new Error('Warehouse label batch must have 1..100 unique IDs'))
+ return resolveLocalWarehouseLabels({ids}).then(r=>z.array(warehouse).max(100).parse(r.data))
+}
+export const fetchWarehouseItem=(warehouseId:string)=>
+ getWarehouseItem({warehouseId}).then(r=>warehouse.parse(r.data))
 export const fetchWarehouses=()=>call(base+'/warehouses',z.array(warehouse))
 export const createWarehouse=(warehouseCode:string,displayName:string)=>
- call(base+'/warehouses',warehouse,'POST',{warehouseCode,displayName})
+ createLocalWarehouse({warehouseCode,displayName})
+  .then(r=>warehouse.parse(r.data))
+// V113: paged warehouse balances and pending purchase lines are read-only,
+// tenant-scoped API views; an unseen SKU is NEVER treated as zero.
+const stockPage=z.object({
+ items:z.array(stock).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{
+ message:'Invalid warehouse stock cursor contract'
+})
+export type WarehouseStockPage=z.infer<typeof stockPage>
+export const fetchWarehouseStockPage=({warehouseId,limit=50,search='',cursor=null}:{
+ warehouseId:string;limit?:number;search?:string;cursor?:string|null
+}):Promise<WarehouseStockPage>=>{
+ return listWarehouseStockPage({warehouseId,limit,search,...(cursor?{cursor}:{})})
+  .then(r=>stockPage.parse(r.data))
+}
+export const fetchWarehouseStockItem=(warehouseId:string,productSkuId:string)=>
+ getWarehouseStockItem({warehouseId,productSkuId}).then(r=>stock.parse(r.data))
+const pendingPage=z.object({
+ items:z.array(pending).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{
+ message:'Invalid pending receipt cursor contract'
+})
+export type PendingReceiptsPage=z.infer<typeof pendingPage>
+export const fetchPendingReceiptsPage=({limit=50,status='ALL',search='',cursor=null}:{
+ limit?:number;status?:'ALL'|'APPROVED'|'RECEIVING';search?:string;cursor?:string|null
+}={}):Promise<PendingReceiptsPage>=>{
+ return listPendingReceiptsPage({limit,status,search,...(cursor?{cursor}:{})})
+  .then(r=>pendingPage.parse(r.data))
+}
 export const fetchWarehouseStock=(warehouseId:string)=>
  call(base+'/warehouse-stock?warehouseId='+encodeURIComponent(warehouseId),z.array(stock))
+// V112: page filters operate over the entire server-side warehouse history.
+const warehouseLedgerPage=z.object({
+ items:z.array(movement).max(100),nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{
+ message:'Invalid warehouse ledger cursor contract'
+})
+export type WarehouseLedgerPage=z.infer<typeof warehouseLedgerPage>
+export const fetchWarehouseLedgerPage=({warehouseId,limit=50,movementType='ALL',
+ search='',cursor=null}:{
+ warehouseId:string;limit?:number;movementType?:string;search?:string;cursor?:string|null
+}):Promise<WarehouseLedgerPage>=>{
+ return listWarehouseLedgerPage({
+  warehouseId,limit,
+  movementType:movementType as 'ALL'|'PURCHASE_RECEIPT'|'OUTBOUND'|'TRANSFER_OUT'|
+   'TRANSFER_IN'|'COUNT_ADJUSTMENT'|'QC_QUARANTINE'|'QC_RELEASE'|'LOT_QUARANTINE',
+  search,...(cursor?{cursor}:{})
+ }).then(r=>warehouseLedgerPage.parse(r.data))
+}
 export const fetchWarehouseLedger=(warehouseId:string)=>
  call(base+'/warehouse-ledger?warehouseId='+encodeURIComponent(warehouseId),z.array(movement))
 export const fetchPendingReceipts=()=>call(base+'/pending-receipts',z.array(pending))
@@ -81,8 +205,8 @@ export const fetchStockOperations=(warehouseId:string)=>
  call(base+'/warehouse-operations?warehouseId='+encodeURIComponent(warehouseId),
   z.array(stockOperation))
 export const postStockOperation=(body:StockOperationRequest)=>
- call(base+'/warehouse-operations',stockOperation,'POST',body)
+ createLocalStockOperation(body).then(r=>stockOperation.parse(r.data))
 export const receivePurchase=(id:string,lineId:string,quantity:number,
  warehouseId:string,asnId?:string|null)=>
- call(base+'/orders/'+encodeURIComponent(id)+'/receive',detail,'POST',
-  {lineId,quantity,warehouseId,...(asnId?{asnId}:{})})
+ receiveLocalPurchaseOrder(id,{lineId,quantity,warehouseId,...(asnId?{asnId}:{})})
+  .then(r=>detail.parse(r.data))

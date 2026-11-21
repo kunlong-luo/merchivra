@@ -2,6 +2,8 @@ package org.merchivra.erp.purchasing;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.time.OffsetDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -63,7 +65,8 @@ public class LotSupplierReturnTraceService {
     private static final String SELECT = """
         SELECT id,disposition_id,source_receipt_id,supplier_id,
           quantity,carrier_reference,reason,status,dispatched_by,
-          received_quantity,receipt_reference,received_reported_by
+          received_quantity,receipt_reference,received_reported_by,
+          dispatch_reported_at
         FROM erp_lot_supplier_return_trace WHERE tenant_id=?
         """;
     private Trace one(UUID tenant,UUID id){
@@ -78,6 +81,50 @@ public class LotSupplierReturnTraceService {
               WHERE tenant_id=? AND warehouse_id=?
             ) ORDER BY dispatch_reported_at DESC,id DESC LIMIT 200
             """,LotSupplierReturnTraceService::map,tenant,tenant,warehouse);
+    }
+    /** V120: complete warehouse return reports, never just the legacy first 200.
+     * Cursor encodes tenant, warehouse and stable (dispatch time,id) keyset.
+     * Human-reported dispatch/receipt is not proof from a carrier or supplier. */
+    private record TraceRow(Trace trace,OffsetDateTime at) {}
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Trace> listPage(UUID tenant,UUID warehouse,
+        int requested,String rawCursor) {
+        int limit=LocalKeysetPage.limit(requested);
+        String[] cursor=LocalKeysetPage.decode(rawCursor,5);
+        OffsetDateTime at=null;
+        UUID afterId=null;
+        if(cursor!=null){
+            if(!"return-v120".equals(cursor[0]) ||
+               !tenant.toString().equals(cursor[1]) ||
+               !warehouse.toString().equals(cursor[2]))
+                throw LocalKeysetPage.bad("Return trace page scope mismatch");
+            try {
+                at=OffsetDateTime.parse(cursor[3]);
+                afterId=UUID.fromString(cursor[4]);
+            } catch(DateTimeParseException|IllegalArgumentException ex) {
+                throw LocalKeysetPage.bad("Invalid supplier return cursor");
+            }
+        }
+        String query=SELECT+"""
+            AND disposition_id IN (
+              SELECT id FROM erp_local_lot_disposition
+              WHERE tenant_id=? AND warehouse_id=?
+            )
+            """+(cursor==null?"":" AND (dispatch_reported_at,id)<(?,?)")
+            +" ORDER BY dispatch_reported_at DESC,id DESC LIMIT ?";
+        List<TraceRow> records=cursor==null
+            ?jdbc.query(query,(rs,i)->new TraceRow(map(rs,i),
+                rs.getObject("dispatch_reported_at",OffsetDateTime.class)),
+                tenant,tenant,warehouse,limit+1)
+            :jdbc.query(query,(rs,i)->new TraceRow(map(rs,i),
+                rs.getObject("dispatch_reported_at",OffsetDateTime.class)),
+                tenant,tenant,warehouse,at,afterId,limit+1);
+        var packed=LocalKeysetPage.pack(records,limit,row->LocalKeysetPage.encode(
+            "return-v120",tenant.toString(),warehouse.toString(),
+            row.at().toString(),row.trace().id()));
+        return new LocalKeysetPage.Page<>(packed.items().stream()
+            .map(TraceRow::trace).toList(),packed.nextCursor(),
+            packed.hasMore(),packed.pageSize());
     }
     private void tenantLock(UUID tenant){
         List<UUID> rows=jdbc.queryForList("""

@@ -1,4 +1,7 @@
 import {z} from 'zod'
+import {getLocalPurchaseDeliveryOverview,
+ getFullLocalPurchaseDeliverySummary,listFullLocalPurchaseDeliveryLinesPage
+} from '../generated/purchasing-v114'
 
 const line=z.object({
  orderId:z.string().uuid(),orderNumber:z.string(),
@@ -35,15 +38,27 @@ export const deliveryOverviewSchema=z.object({
 export type PurchaseDeliveryOverview=z.infer<typeof deliveryOverviewSchema>
 export type PurchaseDeliveryLine=z.infer<typeof line>
 
-/** Local records only; browser never sends tenantId. Session controls the scope. */
-export async function fetchPurchaseDeliveryOverview():Promise<PurchaseDeliveryOverview> {
- const response=await fetch('/api/v1/purchasing/delivery/overview',{
-  method:'GET',credentials:'same-origin',cache:'no-store',headers:{Accept:'application/json'}
- })
- if(!response.ok) {
-  if(response.status===403)throw Error('仅当前租户 Owner 可查看采购交付')
-  if(response.status===401)throw Error('会话已过期，请重新登录')
-  throw Error('读取本地采购交付状态失败：HTTP '+response.status)
- }
- return deliveryOverviewSchema.parse(await response.json())
-}
+/** V118: Local records only. Session controls scope; response remains capped
+ * at 300 lines in the existing backend. Do not present this as an all-tenant
+ * overview when total lineCount exceeds the returned 300 rows. */
+export const fetchPurchaseDeliveryOverview=():Promise<PurchaseDeliveryOverview>=>
+ getLocalPurchaseDeliveryOverview().then(r=>deliveryOverviewSchema.parse(r.data))
+
+/** V119: complete approved-PO totals computed by PostgreSQL over the tenant,
+ * not derived by summing only currently displayed keyset page rows. */
+export const deliverySummarySchema=z.object({asOfDateUtc:z.string(),totals})
+export const deliveryLinePageSchema=z.object({
+ items:z.array(line).max(100),
+ nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
+}).refine(p=>p.hasMore===(p.nextCursor!==null),{
+ message:'Invalid delivery keyset cursor envelope'
+})
+export type PurchaseDeliveryFullSummary=z.infer<typeof deliverySummarySchema>
+export type PurchaseDeliveryLinePage=z.infer<typeof deliveryLinePageSchema>
+export const fetchPurchaseDeliveryFullSummary=():Promise<PurchaseDeliveryFullSummary>=>
+ getFullLocalPurchaseDeliverySummary().then(r=>deliverySummarySchema.parse(r.data))
+export const fetchPurchaseDeliveryLinesPage=(cursor:string|null=null):
+ Promise<PurchaseDeliveryLinePage>=>
+ listFullLocalPurchaseDeliveryLinesPage({limit:50,...(cursor?{cursor}:{})})
+  .then(r=>deliveryLinePageSchema.parse(r.data))

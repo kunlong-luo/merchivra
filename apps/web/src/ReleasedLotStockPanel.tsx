@@ -1,12 +1,16 @@
-import {useState,type FormEvent} from 'react'
+import WarehousePicker from './WarehousePicker'
+import CursorPageControls from './CursorPageControls'
+import {useEffect,useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
-import {fetchWarehouseStock} from './lib/purchasing'
+import {fetchWarehouseStockItem} from './lib/purchasing'
+import InternalSkuPicker from './InternalSkuPicker'
 import {fetchReceiptBatches} from './lib/receipt-batches'
 import {fetchReceiptLotPieces,fetchStockBins} from './lib/lot-locations'
 import {fetchPieceGrades,gradePiece,finalizePieceGrades,
- fetchLotPositions,putawayReleasedLot,previewLotPick,pickReleasedLots,
- type LotPolicy} from './lib/released-lots'
+ fetchLotPositionsPage,fetchReleasedLotReceiptAllocation,
+ putawayReleasedLot,previewLotPick,pickReleasedLots,
+ lotPickCapacityHint,type LotPolicy} from './lib/released-lots'
 
 export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
  tenantId:string;orderId:string;warehouses:LocalWarehouse[]
@@ -21,6 +25,9 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
  const [finalReason,setFinalReason]=useState('')
  const [finalKey,setFinalKey]=useState(()=>crypto.randomUUID())
  const [warehouse,setWarehouse]=useState('')
+ const [positionCursors,setPositionCursors]=useState<(string|null)[]>([null])
+ const positionCursor=positionCursors.at(-1)??null
+ useEffect(()=>setPositionCursors([null]),[tenantId,warehouse])
  const [storageBin,setStorageBin]=useState('')
  const [putawayQty,setPutawayQty]=useState(1)
  const [expiry,setExpiry]=useState('')
@@ -40,10 +47,17 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
   queryFn:()=>fetchPieceGrades(receipt),enabled:!!receipt,retry:false})
  const bins=useQuery({queryKey:[...root,'bins',warehouse],
   queryFn:()=>fetchStockBins(warehouse),enabled:!!warehouse,retry:false})
- const positions=useQuery({queryKey:[...root,'lot-positions',warehouse],
-  queryFn:()=>fetchLotPositions(warehouse),enabled:!!warehouse,retry:false})
- const stock=useQuery({queryKey:[...root,'stock',warehouse],
-  queryFn:()=>fetchWarehouseStock(warehouse),enabled:!!warehouse,retry:false})
+ const positions=useQuery({queryKey:[...root,'lot-positions-page',warehouse,positionCursor],
+  queryFn:()=>fetchLotPositionsPage(warehouse,positionCursor),
+  enabled:!!warehouse,retry:false})
+ const allocation=useQuery({queryKey:[...root,'receipt-root-allocation',receipt],
+  queryFn:()=>fetchReleasedLotReceiptAllocation(receipt),
+  enabled:!!receipt,retry:false})
+ const stockItem=useQuery({
+  queryKey:[...root,'stock-item-exact',warehouse,sku],
+  queryFn:()=>fetchWarehouseStockItem(warehouse,sku),
+  enabled:!!warehouse&&!!sku,retry:false
+ })
  const preview=useQuery({queryKey:[...root,'lot-pick-preview',warehouse,sku,policy],
   queryFn:()=>previewLotPick(warehouse,sku,policy),
   enabled:!!warehouse&&!!sku,retry:false})
@@ -67,9 +81,12 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
   onSuccess:()=>{setMessage('已标记合格品库位，不重复增加仓库可用库存');
    setFailure('');setPutawayKey(crypto.randomUUID());setPutawayReason('');refresh()},
   onError:(e:Error)=>setFailure(e.message)})
- const pick=useMutation({mutationFn:()=>pickReleasedLots({requestKey:pickKey,
-  warehouseId:warehouse,productSkuId:sku,policy,
-  quantity:pickQty,expectedOnHand:usable,reason:pickReason.trim()}),
+ const pick=useMutation({mutationFn:()=>{
+  if(usable===undefined)throw new Error('库存精确余额未知，禁止拣货')
+  return pickReleasedLots({requestKey:pickKey,warehouseId:warehouse,
+   productSkuId:sku,policy,quantity:pickQty,
+   expectedOnHand:usable,reason:pickReason.trim()})
+ },
   onSuccess:r=>{setMessage('已按 '+r.policy+' 从 '+r.allocations.length+
    ' 个批次库位拣货 '+r.quantity+' 件，并在同一事务登记仓库出库');
    setFailure('');setPickKey(crypto.randomUUID());setPickReason('');refresh()},
@@ -83,25 +100,30 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
   selectedBatch?.receivedQuantity
  const sourcePieces=pieces.data??[]
  const availableBins=bins.data?.filter(b=>b.purpose==='STORAGE'&&b.status==='ACTIVE')??[]
- const remainingToPlace=Math.max(0,(selectedBatch?.acceptedQuantity??0)-
-  (positions.data?.filter(p=>p.receiptId===receipt)
-   .reduce((sum,p)=>sum+p.placedQuantity,0)??0))
- const skus=stock.data??[]
- const usable=skus.find(s=>s.productSkuId===sku)?.onHandQuantity??0
- const availablePositioned=preview.data?.reduce((n,p)=>n+p.remainingQuantity,0)??0
+ const remainingToPlace=allocation.data?.remainingQuantity
+ // A SKU absent from the legacy 500-stock array must not be guessed as zero.
+ const usable=stockItem.data?.onHandQuantity
+ const pickCapacity=lotPickCapacityHint(preview.data,usable)
  const canGrade=!!selectedBatch&&selectedBatch.status==='PENDING_QC'&&
   !!selectedPiece&&!gradeMap.has(selectedPiece.id)&&
   Number.isSafeInteger(rejected)&&rejected>=0&&rejected<=selectedPiece.quantity&&
   reason.trim().length>=5&&reason.trim().length<=300&&!grade.isPending
  const canPlace=!!selectedBatch&&selectedBatch.status==='RELEASED'&&
+  !!allocation.data&&allocation.data.receiptId===receipt&&
+  allocation.data.status==='RELEASED'&&
+  allocation.data.warehouseId===warehouse&&
+  !allocation.isFetching&&!allocation.isError&&
   warehouse===selectedBatch.warehouseId&&
   availableBins.some(b=>b.id===storageBin)&&
-  Number.isSafeInteger(putawayQty)&&putawayQty>0&&putawayQty<=remainingToPlace&&
+  Number.isSafeInteger(remainingToPlace)&&Number.isSafeInteger(putawayQty)&&
+  putawayQty>0&&putawayQty<=(remainingToPlace??0)&&
   putawayReason.trim().length>=5&&putawayReason.trim().length<=300&&!putaway.isPending
- const canPick=!!sku&&!!warehouse&&Number.isSafeInteger(pickQty)&&
-  pickQty>=1&&pickQty<=Math.min(usable,availablePositioned)&&
+ const canPick=!!sku&&!!warehouse&&usable!==undefined&&
+  Number.isSafeInteger(pickQty)&&pickQty>=1&&
+  pickQty<=pickCapacity.maxPickable&&
   pickReason.trim().length>=5&&pickReason.trim().length<=300&&
-  !stock.isFetching&&!preview.isFetching&&!pick.isPending
+  !stockItem.isFetching&&!stockItem.isError&&!preview.isFetching&&
+  !preview.isError&&!pick.isPending
  return <section className="panel full-panel" aria-label="V48 分段质检与批次库位拣货">
   <div className="panel-heading"><div>
    <h2>V48 · 分段质检、合格品上架与 FIFO/FEFO 拣货</h2>
@@ -109,14 +131,10 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
     审批放行；放行后的合格件才允许标记到 STORAGE 库位。拣货同时扣减批次库位
     与本地仓库的签名库存流水，不能自动操作 Amazon。</p>
   </div><button className="refresh-button" type="button" onClick={refresh}>刷新</button></div>
-  <label htmlFor="v48-warehouse">本地仓库</label>
-  <select id="v48-warehouse" value={warehouse}
-   onChange={e=>{setWarehouse(e.target.value);setReceipt('');setPiece('');
-    setStorageBin('');setSku('');setPickKey(crypto.randomUUID())}}>
-   <option value="">选择仓库</option>
-   {warehouses.filter(w=>w.status==='ACTIVE').map(w=>
-    <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}
-  </select>
+  <WarehousePicker tenantId={tenantId} id="v48-warehouse"
+    label="本地仓库（全库）" value={warehouse}
+    onChange={id=>{setWarehouse(id);setReceipt('');setPiece('');
+    setStorageBin('');setSku('');setPickKey(crypto.randomUUID())}}/>
   {!!warehouse&&!!orderId&&<>
    <h3>真实收货分段质检与上架</h3>
    <label htmlFor="v48-receipt">V46+ 收货批次</label>
@@ -186,10 +204,12 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
     {selectedBatch?.status==='RELEASED'&&<>
      <h3>已放行合格品上架</h3>
      <p className="setup-hint">本批次已独立放行合格
-      {selectedBatch.acceptedQuantity} 件；累计已登记库位
-      {selectedBatch.acceptedQuantity-remainingToPlace} 件，
-      仍未分配具体 STORAGE 库位 {remainingToPlace} 件。
+      {allocation.data?.acceptedQuantity??'未知'} 件；累计已登记源批次库位
+      {allocation.data?.placedQuantity??'未知'} 件，
+      仍未分配具体 STORAGE 库位 {remainingToPlace??'未知（无法安全上架）'} 件。
       上架不重复计入仓库总库存。</p>
+     {allocation.isError&&<p className="setup-error" role="alert">
+      {String(allocation.error)}；精确可上架数量未知，禁止提交</p>}
      <form className="team-invite-form" onSubmit={e=>{
       e.preventDefault();if(!canPlace)return
       if(window.confirm('确认已将合格品放入所选 STORAGE 库位？此操作只绑定可用库存来源，不重复入账。'))
@@ -203,7 +223,7 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
       </select>
       <label htmlFor="v48-putaway-qty">本次上架件数</label>
       <input id="v48-putaway-qty" type="number" min={1}
-       max={remainingToPlace} value={putawayQty}
+       max={remainingToPlace??0} value={putawayQty}
        onChange={e=>{setPutawayQty(Number(e.target.value));
         setPutawayKey(crypto.randomUUID())}}/>
       <label htmlFor="v48-expiry">有效期（可选；FEFO 优先有效期更早且未过期的批次）</label>
@@ -226,37 +246,40 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
     有效期过期批次不会自动被选中，缺有效期的批次无法证明完整 FEFO。</p>
    {positions.isPending?<p className="empty-state">读取合格品库位台账…</p>:
     positions.isError?<p className="setup-error" role="alert">{String(positions.error)}</p>:
-    !positions.data?.length?<p className="empty-state">暂无明确上架的合格批次库存。</p>:
+    !positions.data?.items.length?<p className="empty-state">本页暂无明确上架的合格批次库存。</p>:
     <div className="table-scroll" role="region" tabIndex={0}>
      <table><thead><tr><th scope="col">批次</th><th scope="col">库位</th>
       <th scope="col">上架/余量</th><th scope="col">有效期</th></tr></thead><tbody>
-      {positions.data.map(p=><tr key={p.id}>
+      {(positions.data?.items??[]).map(p=><tr key={p.id}>
        <td>{p.lotCode}</td><td>{p.binCode}</td>
        <td>{p.placedQuantity} / {p.remainingQuantity}</td>
        <td>{p.expiryDate??'未登记'}</td></tr>)}
      </tbody></table>
     </div>}
+   {positions.data&&<CursorPageControls label="V48 全库已放行批次库位历史"
+     page={positionCursors.length} hasMore={positions.data.hasMore}
+     nextCursor={positions.data.nextCursor} busy={positions.isFetching}
+     onPrev={()=>setPositionCursors(v=>v.slice(0,-1))}
+     onNext={cursor=>setPositionCursors(v=>[...v,cursor])}/>}
    <form className="team-invite-form" onSubmit={e=>{
     e.preventDefault();if(!canPick)return
     if(window.confirm('确认从指定批次/库位实际拣货并扣减本地仓库库存 '+pickQty+
        ' 件？无法自动撤回，且不调用 Amazon。'))pick.mutate()
    }}>
-    <label htmlFor="v48-pick-sku">拣货 SKU</label>
-    <select id="v48-pick-sku" value={sku}
-     onChange={e=>{setSku(e.target.value);setPickKey(crypto.randomUUID())}}>
-     <option value="">选择已存在的 SKU</option>
-     {skus.filter(x=>x.onHandQuantity>0).map(s=>
-      <option key={s.productSkuId} value={s.productSkuId}>
-       {s.internalSku} · 当前可用 {s.onHandQuantity}</option>)}
-    </select>
+    <InternalSkuPicker tenantId={tenantId} id="v48-pick-sku"
+     label="拣货 SKU（全租户 SKU，精确核验仓库余额）" value={sku}
+     onChange={id=>{setSku(id);setPickKey(crypto.randomUUID())}}/>
     <label htmlFor="v48-policy">拣货策略</label>
     <select id="v48-policy" value={policy}
      onChange={e=>{setPolicy(e.target.value as LotPolicy);setPickKey(crypto.randomUUID())}}>
      <option value="FIFO">FIFO · 优先较早收货</option>
      <option value="FEFO">FEFO · 优先较早有效期</option>
     </select>
-    <p className="setup-hint">符合策略的非过期已上架批次余量：
-     {availablePositioned} 件；仓库总可用 {usable} 件。</p>
+    <p className="setup-hint">符合策略的非过期已上架批次
+     {pickCapacity.mayHaveMore?'（只预览前 500 个库位）':'余量'}：
+     {pickCapacity.shown} 件{pickCapacity.mayHaveMore?
+      '（预览下限；其他批次由后端在实际拣货时全库校验）':''}；
+     仓库总可用 {usable===undefined?'未知（精确读取未完成或失败）':usable} 件。</p>
     {!!preview.data?.length&&<div className="table-scroll" role="region" tabIndex={0}>
      <table><thead><tr><th scope="col">预计拣货顺序</th><th scope="col">批次/库位</th>
       <th scope="col">余量</th><th scope="col">有效期</th></tr></thead><tbody>
@@ -267,7 +290,7 @@ export default function ReleasedLotStockPanel({tenantId,orderId,warehouses}:{
     </div>}
     <label htmlFor="v48-pick-qty">确认实际拣货件数</label>
     <input id="v48-pick-qty" type="number" min={1}
-     max={Math.min(usable,availablePositioned)} value={pickQty}
+     max={pickCapacity.maxPickable} value={pickQty}
      onChange={e=>{setPickQty(Number(e.target.value));setPickKey(crypto.randomUUID())}}/>
     <label htmlFor="v48-pick-reason">实际出库原因</label>
     <input id="v48-pick-reason" minLength={5} maxLength={300}

@@ -5,6 +5,7 @@ import {
 } from '@tanstack/react-table'
 import {Columns3} from 'lucide-react'
 import OpsAttentionControls from '../OpsAttentionControls'
+import SourceEvidenceDrawer from './SourceEvidenceDrawer'
 import type {Finding,FindingState} from '../lib/operations'
 import {ruleNames,severityNames,stateNames} from '../lib/operations'
 import {formatSourceTime,sourceLabel} from '../lib/core-view'
@@ -34,6 +35,8 @@ export default function OpsFindingsTable({
  items,tenantId,userId,editing,canFba,onOpenFbaException,onChangeState
 }:Props){
  const [columnVisibility,setColumnVisibility]=useState<VisibilityState>({})
+ const [inspectedFindingId,setInspectedFindingId]=useState('')
+ const inspected=items.find(item=>item.id===inspectedFindingId)
  const columns:ColumnDef<Finding>[]=[
   {accessorKey:'severity',header:'级别',enableHiding:false,
    cell:({row})=><span className={`status-chip ${row.original.severity==='CRITICAL'?'chip-amber':'chip-muted'}`}>
@@ -59,6 +62,9 @@ export default function OpsFindingsTable({
    cell:({row})=>{
     const i=row.original
     return <div className="ops-row-actions">
+     <button type="button" className="text-button"
+      onClick={()=>setInspectedFindingId(i.id)}
+      aria-label={'查看异常来源 '+i.title}>查看证据</button>
      {fbaRule(i.ruleCode)&&<button type="button" className="text-button"
        onClick={()=>onOpenFbaException(i.marketplaceId,i.sourceKey)}>
        查看 FBA 原处理单
@@ -117,5 +123,30 @@ export default function OpsFindingsTable({
       </td>)}</tr>)}</tbody>
    </table>
   </div>
+  <SourceEvidenceDrawer open={!!inspected} title="运营异常 · 来源证据"
+   description="本次服务器游标页已读的异常快照；不等于原业务单据已完成"
+   onClose={()=>setInspectedFindingId('')}>
+   {inspected&&<>
+    <div className="v179-evidence-tags">
+     <span className="v179-source-tag">{severityNames[inspected.severity]}</span>
+     <span className="v179-source-tag">{stateNames[inspected.state]}</span>
+     <span className="v179-source-tag">{sourceLabel(inspected.dataOrigin)}</span>
+    </div>
+    <h4 className="v179-evidence-section">{inspected.title}</h4>
+    <dl className="v179-evidence-facts">
+     <div><dt>规则</dt><dd>{ruleNames[inspected.ruleCode]}</dd></div>
+     <div><dt>关联站点</dt><dd><code>{inspected.marketplaceId}</code></dd></div>
+     <div><dt>原始来源键</dt><dd><code>{inspected.sourceKey}</code></dd></div>
+     <div><dt>发现时间</dt><dd>{formatSourceTime(inspected.lastSeenAt)}</dd></div>
+     <div><dt>负责人</dt><dd>{inspected.assignedTo??'未分配'}</dd></div>
+     <div><dt>暂缓到期</dt><dd>{inspected.snoozedUntil??'未暂缓'}</dd></div>
+    </dl>
+    {fbaRule(inspected.ruleCode)&&<button type="button" className="refresh-button"
+     onClick={()=>{onOpenFbaException(inspected.marketplaceId,inspected.sourceKey);
+      setInspectedFindingId('')}}>返回 FBA 原处理单核对</button>}
+    <p className="v179-evidence-warning">该列表只是规则命中和工作队列。DONE 不是质检放行、
+     库存入库或财务结算；请在有权限的原处理单验证后再依业务流程处理。</p>
+   </>}
+  </SourceEvidenceDrawer>
  </>
 }

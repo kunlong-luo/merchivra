@@ -1,0 +1,11 @@
+# V146 CI-ONLY optional overlay. The real target must use approved TLS/AV,
+# secrets and G1–G3 signoff. This overlay does NOT deploy an ingress.
+# Secure cookie is required when synthetic TLS terminates on loopback Nginx.
+# NEVER use this overlay as proof of production readiness.
+services:
+  server:
+    environment:
+      MERCHIVRA_SESSION_COOKIE_SECURE: 'true'
+      MERCHIVRA_SPAPI_ENABLED: 'false'
+      MERCHIVRA_SPAPI_OAUTH_ENABLED: 'false'
+      MERCHIVRA_SPAPI_ALLOW_WRITES: 'false'

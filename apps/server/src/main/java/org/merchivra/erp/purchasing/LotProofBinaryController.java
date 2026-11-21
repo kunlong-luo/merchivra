@@ -43,7 +43,8 @@ public class LotProofBinaryController {
     @GetMapping("/{proofId}/download")
     public ResponseEntity<byte[]> download(Authentication auth,HttpServletRequest req,
         @PathVariable UUID proofId){
-        var file=files.download(access.currentTenant(auth,req),proofId);
+        var file=files.download(access.currentTenant(auth,req),
+            access.authenticatedUser(auth),proofId);
         String extension=switch(file.info().mediaType()){
             case "application/pdf" -> ".pdf";
             case "image/png" -> ".png";

@@ -4,6 +4,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
@@ -105,6 +108,45 @@ public class ReleasedLotLifecycleService {
             ORDER BY created_at DESC,id DESC LIMIT 200
             """,ReleasedLotLifecycleService::map,tenant,positionId,positionId);
     }
+    /** V132: complete V49 action history, including transfer destination evidence.
+     * The old 200-row list remains for compatible API clients, but the owner
+     * workspaces consume this tenant/position-scoped keyset endpoint instead.
+     */
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Action> historyPage(UUID tenant,UUID positionId,
+        int requested,String cursor) {
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=LocalKeysetPage.decode(cursor,4);
+        if(after!=null && (!tenant.toString().equals(after[0])
+            || !positionId.toString().equals(after[1])))
+            throw bad("Lot history cursor belongs to another tenant or position");
+        var args=new ArrayList<Object>();
+        args.add(tenant);
+        args.add(positionId);
+        args.add(positionId);
+        String predicate="";
+        if(after!=null) {
+            try {
+                predicate=" AND (created_at,id) < (?,?)";
+                args.add(OffsetDateTime.ofInstant(Instant.parse(after[2]),ZoneOffset.UTC));
+                args.add(UUID.fromString(after[3]));
+            } catch(java.time.DateTimeException | IllegalArgumentException ex) {
+                throw bad("Invalid lot history cursor");
+            }
+        }
+        List<UUID> present=jdbc.queryForList("""
+            SELECT id FROM erp_local_lot_position WHERE tenant_id=? AND id=?
+            """,UUID.class,tenant,positionId);
+        if(present.isEmpty())throw missing();
+        args.add(limit+1);
+        List<Action> rows=jdbc.query(ACTION_SQL+"""
+            AND (source_position_id=? OR destination_position_id=?)
+            """+predicate+"""
+            ORDER BY created_at DESC,id DESC LIMIT ?
+            """,ReleasedLotLifecycleService::map,args.toArray());
+        return LocalKeysetPage.pack(rows,limit,r->LocalKeysetPage.encode(
+            tenant.toString(),positionId.toString(),r.createdAt(),r.id()));
+    }
     @Transactional(readOnly=true)
     public List<ExpiryAlert> expiry(UUID tenant,UUID warehouse) {
         return jdbc.query("""
@@ -126,6 +168,64 @@ public class ReleasedLotLifecycleService {
                 rs.getInt("remaining_quantity"),
                 rs.getObject("expiry_date",LocalDate.class).toString(),
                 rs.getString("urgency")),tenant,warehouse);
+    }
+    /** V134: complete expiry alert navigation, retaining legacy first 300 for compatibility.
+     * Date/id ascending keyset includes all past-due and next-30-day positions
+     * without ever implying an automatic stock quarantine.
+     */
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<ExpiryAlert> expiryPage(UUID tenant,UUID warehouse,
+        int requested,String cursor) {
+        int limit=LocalKeysetPage.limit(requested);
+        String[] after=LocalKeysetPage.decode(cursor,5);
+        if(after!=null && (!tenant.toString().equals(after[0])
+            || !warehouse.toString().equals(after[1])
+            || !"EXPIRY".equals(after[2])))
+            throw bad("Lot expiry cursor belongs to another tenant, warehouse or domain");
+        var args=new ArrayList<Object>();
+        args.add(tenant);
+        args.add(warehouse);
+        String predicate="";
+        if(after!=null) {
+            try {
+                predicate=" AND (p.expiry_date,p.id) > (?,?)";
+                args.add(LocalDate.parse(after[3]));
+                args.add(UUID.fromString(after[4]));
+            } catch(java.time.DateTimeException | IllegalArgumentException e) {
+                throw bad("Invalid expiry cursor");
+            }
+        }
+        args.add(limit+1);
+        // V136: let the partial expiry index pick the 51 positions BEFORE
+        // receipt/bin joins. Reapply the stable date+id sort on the small page.
+        List<ExpiryAlert> rows=jdbc.query("""
+            WITH selected AS MATERIALIZED (
+              SELECT p.id,p.tenant_id,p.receipt_id,p.warehouse_id,p.bin_id,
+                p.product_sku_id,p.remaining_quantity,p.expiry_date
+              FROM erp_local_lot_position p
+              WHERE p.tenant_id=? AND p.warehouse_id=? AND p.remaining_quantity>0
+                AND p.expiry_date<=CURRENT_DATE+30
+            """+predicate+"""
+              ORDER BY p.expiry_date ASC,p.id ASC LIMIT ?
+            )
+            SELECT p.id,b.lot_code,z.bin_code,p.product_sku_id,p.remaining_quantity,
+              p.expiry_date,
+              CASE WHEN p.expiry_date<CURRENT_DATE THEN 'EXPIRED'
+                   ELSE 'NEAR_EXPIRY' END AS urgency
+            FROM selected p
+            JOIN erp_receipt_quality_batch b
+              ON b.tenant_id=p.tenant_id AND b.receipt_id=p.receipt_id
+            JOIN erp_local_stock_bin z
+              ON z.tenant_id=p.tenant_id AND z.id=p.bin_id
+            ORDER BY p.expiry_date ASC,p.id ASC
+            """,(rs,i)->new ExpiryAlert(rs.getObject("id",UUID.class).toString(),
+                rs.getString("lot_code"),rs.getString("bin_code"),
+                rs.getObject("product_sku_id",UUID.class).toString(),
+                rs.getInt("remaining_quantity"),
+                rs.getObject("expiry_date",LocalDate.class).toString(),
+                rs.getString("urgency")),args.toArray());
+        return LocalKeysetPage.pack(rows,limit,r->LocalKeysetPage.encode(
+            tenant.toString(),warehouse.toString(),"EXPIRY",r.expiryDate(),r.positionId()));
     }
     @Transactional(readOnly=true)
     public List<Lineage> lineage(UUID tenant,UUID positionId) {

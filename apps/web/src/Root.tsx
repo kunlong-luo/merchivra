@@ -3,6 +3,7 @@ import {useQuery,useQueryClient} from '@tanstack/react-query'
 import App,{type View} from './App'
 import {fetchViewer,loginSession,logoutSession} from './lib/auth'
 import {acceptTeamInvitation} from './lib/team'
+import {purgeBusinessSessionCache} from './lib/session-query-cache'
 
 export default function Root({initialView='core',routeNavigation=false,onNavigate}:{
  initialView?:View;routeNavigation?:boolean;
@@ -15,13 +16,12 @@ export default function Root({initialView='core',routeNavigation=false,onNavigat
  const [errorMessage,setErrorMessage]=useState(''),[authenticating,setAuthenticating]=useState(false)
  const [activating,setActivating]=useState(false),[signingOut,setSigningOut]=useState(false)
  const {data:viewer,isPending,isError,error,refetch}=useQuery({queryKey:['auth','me'],queryFn:fetchViewer,retry:false,staleTime:0})
- function clearCaches(){
-   for(const key of [['api','demo'],['core'],['setup'],['sandbox'],['operations'],['team'],['connections'],['orders-sync'],['fba-inbound'],['ads-reports']])
-     client.removeQueries({queryKey:key})
- }
+ // V144: refuse partial cache prefix allowlists: purchase, catalog and new
+ // future module queries must all be purged on identity changes.
+ const clearCaches=()=>purgeBusinessSessionCache(client)
  async function signIn(event:React.FormEvent){
    event.preventDefault();setErrorMessage('');setAuthenticating(true)
-   try {await loginSession(username,password);setPassword('');clearCaches();await refetch()}
+   try {await loginSession(username,password);setPassword('');await clearCaches();await refetch()}
    catch(e){setErrorMessage(e instanceof Error?e.message:'登录失败');setPassword('')}
    finally{setAuthenticating(false)}
  }
@@ -33,7 +33,7 @@ export default function Root({initialView='core',routeNavigation=false,onNavigat
  }
  async function signOut(){
    setErrorMessage('');setSigningOut(true)
-   try{await logoutSession();clearCaches();await refetch()}
+   try{await logoutSession();await clearCaches();await refetch()}
    catch(e){setErrorMessage(e instanceof Error?e.message:'退出失败')}
    finally{setSigningOut(false)}
  }

@@ -27,7 +27,7 @@ describe('local purchase warehouse contract',()=>{
   const post=seen.find(r=>r.options?.method==='POST')
   expect(post?.url).toBe('/api/v1/purchasing/orders/'+order+'/receive')
   expect(JSON.parse(String(post?.options?.body))).toEqual({lineId:line,quantity:3,warehouseId:warehouse})
-  expect(post?.options?.headers).toMatchObject({'X-CSRF-TOKEN':'local-csrf'})
+  expect(new Headers(post?.options?.headers).get('X-CSRF-TOKEN')).toBe('local-csrf')
  })
  it('reads tenant-scoped stock separately from approved pending purchases',async()=>{
   const urls:string[]=[]

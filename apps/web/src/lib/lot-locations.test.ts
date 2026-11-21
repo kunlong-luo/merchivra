@@ -38,7 +38,7 @@ describe('V47 receipt lot pieces and QC location contract',()=>{
   const result=await createStockBin(warehouse,'QC-RACK-A','QC_HOLD')
   expect(result.code).toBe('QC-RACK-A')
   const post=calls.find(c=>c.opts?.method==='POST')
-  expect(post?.opts?.headers).toMatchObject({'X-CSRF-TOKEN':'lot-csrf-token'})
+  expect(new Headers(post?.opts?.headers).get('X-CSRF-TOKEN')).toBe('lot-csrf-token')
   expect(JSON.parse(String(post?.opts?.body))).toEqual({
    code:'QC-RACK-A',purpose:'QC_HOLD'})
  })

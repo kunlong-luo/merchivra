@@ -1,0 +1,62 @@
+# V122: opt-in private Next.js Node App Router for disposable acceptance
+# and controlled cutover. Vite/Nginx web stays unchanged as rollback.
+# Only use behind reviewed HTTPS ingress; loopback staging port is NOT public.
+#
+# docker compose --env-file .env -f deploy/compose.yaml \
+#   -f deploy/compose.next.yaml up -d --build next-web
+services:
+  next-web:
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile.next
+      args:
+        MERCHIVRA_API_INTERNAL_URL: http://server:8080
+        MERCHIVRA_BUILD_REVISION: ${MERCHIVRA_BUILD_REVISION:-}
+    ports:
+      - "127.0.0.1:${MERCHIVRA_NEXT_PORT:-3001}:3000"
+    depends_on:
+      - server
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      HOSTNAME: 0.0.0.0
+      PORT: '3000'
+      NEXT_TELEMETRY_DISABLED: '1'
+    # V154: require BOTH the Next same-origin Spring identity AND actual
+    # PostgreSQL-backed Spring Actuator health (status UP). Accept only
+    # exact standard JSON / official Spring Boot vendor JSON media types.
+    # Direct Actuator access stays inside Compose DNS, not Next rewrites.
+    # Node 24 fetch only; no credentials, secrets or public HTTP endpoints.
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          const options = {signal: AbortSignal.timeout(3000),
+          redirect: 'manual', cache: 'no-store'};
+          fetch('http://127.0.0.1:3000/api/v1/ping', options)
+          .then(async response => {
+          if (response.status !== 200
+          || !response.headers.get('content-type')?.toLowerCase().includes('application/json'))
+          return false;
+          const ping = await response.json();
+          if (!ping || ping.service !== 'merchivra'
+          || ping.status !== 'ok' || ping.stage !== 'M0') return false;
+          const health = await fetch('http://server:8080/actuator/health', options);
+          const media = health.headers.get('content-type')?.toLowerCase().split(';', 1)[0].trim();
+          if (health.status !== 200
+          || !(media === 'application/json'
+          || media === 'application/vnd.spring-boot.actuator.v3+json'
+          || media === 'application/vnd.spring-boot.actuator.v2+json'))
+          return false;
+          const state = await health.json();
+          return state && state.status === 'UP';
+          })
+          .then(ok => process.exit(ok ? 0 : 1))
+          .catch(() => process.exit(1));
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+    # No Seller, Ads, bank or database secrets are injected into this service.

@@ -9,6 +9,10 @@ COPY src ./src
 RUN ./gradlew --no-daemon --console plain bootJar
 
 FROM eclipse-temurin:25-jre
+# V160: operator-supplied source claim, never a signature or registry digest.
+ARG MERCHIVRA_BUILD_REVISION=""
+LABEL org.opencontainers.image.source="https://github.com/kunlong-luo/merchivra" \
+      org.opencontainers.image.revision="${MERCHIVRA_BUILD_REVISION}"
 WORKDIR /app
 RUN useradd --system --uid 10001 merchivra
 COPY --from=build /build/build/libs/merchivra-server.jar /app/app.jar

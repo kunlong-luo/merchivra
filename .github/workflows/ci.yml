@@ -36,7 +36,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '25'
@@ -62,7 +62,7 @@ jobs:
         working-directory: apps/web
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
           cache: npm
@@ -78,6 +78,11 @@ jobs:
         run: npm run typecheck
       - name: Unit tests
         run: npm run test
+      # V123: no extra Chromium on every PR, just reject malformed fixture JS.
+      - name: Check synthetic browser fixture syntax (full Chromium on milestone)
+        run: |
+          node --check ../../scripts/smoke_browser_layout.mjs
+          node --test ../../scripts/chrome_devtools_port.test.mjs
       - name: Build
         run: npm run build
       - name: Next 16 App Router TS gate
@@ -117,7 +122,9 @@ jobs:
 
   pg18-migrations:
     name: PostgreSQL 18 / real Flyway migrations
-    if: inputs.full_suite == true
+    # V175 exception: finance integrity needs real PG18 before PR merge.
+    # Other PRs retain V108 quick CI cadence; no LIVE Amazon credentials.
+    if: inputs.full_suite == true || (github.event_name == 'pull_request' && github.head_ref == 'feat/v175-qc-independent-review-foundation') || (github.event_name == 'pull_request' && github.head_ref == 'feat/v175b-wms-key-possession-challenge')
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -148,12 +155,12 @@ jobs:
       MERCHIVRA_CONTRACT_EXPORT_ENABLED: 'true'
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: '25'
       - uses: gradle/actions/setup-gradle@v4
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: '24'
       - name: Start actual Spring Boot against isolated PostgreSQL 18
@@ -190,6 +197,26 @@ jobs:
             "SELECT count(*) FROM erp_local_lot_disposition_proof_file WHERE size_bytes > 2097152"
           psql -h 127.0.0.1 -U merchivra -d merchivra -v ON_ERROR_STOP=1 -Atc \
             "SELECT count(*) FROM erp_lot_supplier_return_trace"
+          # V129: real PG18 verifies the forward-only V84 audit migration.
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='84' AND success")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='85' AND success")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='86' AND success")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='87' AND success")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='88' AND success")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='89' AND success")" = "1"
+          # V147: actual forward-only PostgreSQL18 source paging indexes must exist.
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='90' AND success")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM pg_indexes WHERE indexname='fba_purchase_link_history_page_v90'")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM pg_indexes WHERE indexname='erp_purchase_order_candidate_page_v90'")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM pg_indexes WHERE indexname='erp_purchase_asn_candidate_page_v90'")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM pg_indexes WHERE indexname='erp_lot_proof_capacity_threshold_audit_recent_idx'")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM pg_indexes WHERE indexname='erp_lot_proof_gov_audit_recent_idx'")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM pg_indexes WHERE indexname='erp_local_lot_position_expiry_page_idx'")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM pg_indexes WHERE indexname='erp_local_lot_position_warehouse_recent_idx'")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM pg_indexes WHERE indexname='erp_local_lot_position_receipt_root_idx'")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM pg_indexes WHERE indexname='erp_local_lot_action_destination_recent_idx'")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM pg_constraint WHERE conname='erp_lot_proof_file_tenant_proof_id_unique'")" = "1"
+          psql -h 127.0.0.1 -U merchivra -d merchivra -v ON_ERROR_STOP=1 -Atc "SELECT count(*) FROM erp_local_lot_proof_file_download_audit"
           curl -fsS http://127.0.0.1:8080/v3/api-docs/finance-profits > /tmp/merchivra-live-finance-openapi.json
           node scripts/normalize-finance-openapi.mjs /tmp/merchivra-live-finance-openapi.json /tmp/merchivra-normalized-finance-openapi.json
           cmp apps/web/openapi/finance-profits.json /tmp/merchivra-normalized-finance-openapi.json
@@ -256,12 +283,41 @@ jobs:
           python3 scripts/smoke_fba_catalog_purchasing_full_selection_v91.py
           python3 scripts/smoke_fba_local_history_supplier_sku_v92.py
           python3 scripts/smoke_paged_local_purchasing_v92.py
+          python3 scripts/smoke_purchase_orders_page_v110.py
+          python3 scripts/smoke_supplier_pages_v111.py
+          python3 scripts/smoke_warehouse_ledger_pages_v112.py
+          python3 scripts/smoke_warehouse_read_pages_v113.py
+          python3 scripts/smoke_warehouse_directory_v114.py
           python3 scripts/smoke_receipt_operational_pages_v93.py
           python3 scripts/smoke_quality_returns_findings_v94.py
           python3 scripts/smoke_ops_lot_pagination_v95.py
+          python3 scripts/smoke_lot_history_v132.py
+          python3 scripts/smoke_released_lot_positions_v133.py
+          python3 scripts/smoke_lot_expiry_alerts_v134.py
+          MERCHIVRA_V135_DISPOSABLE_ONLY=true python3 scripts/check_lot_query_plans_v135.py
+          python3 scripts/smoke_proof_governance_v138.py
+          python3 scripts/smoke_proof_monitor_v140.py
           python3 scripts/smoke_supplier_case_pages_v96.py
           python3 scripts/smoke_supplier_finance_settlement_pages_v97.py
           python3 scripts/smoke_finance_audit_pages_v98.py
+          # V164: actual isolated PG18/HTTP manual cost proposal/approval,
+          # source+allocation audit immutability and exact unallocated remainder.
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='91' AND success")" = "1"
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='92' AND success")" = "1"
+          MERCHIVRA_V164_DISPOSABLE_ONLY=true python3 scripts/smoke_cost_allocation_v164.py
+          # V165: exact current local identity collisions across 8 source
+          # families hold unverified allocation approvals, not monetary equality.
+          MERCHIVRA_V165_DISPOSABLE_ONLY=true python3 scripts/smoke_cost_identity_v165.py
+          # V175: real PG18 Flyway V100 + scoped QC actor guards, immutable
+          # review and negative Session/CSRF HTTP; NOT true physical receipt.
+          MERCHIVRA_V175_DISPOSABLE_ONLY=true python3 scripts/smoke_wms_qc_v175.py
+          # V175-B real disposable PG18 + 3 Owner Ed25519 key-control HTTP,
+          # source revocation, replay rejection, never external WMS identity.
+          MERCHIVRA_V175B_DISPOSABLE_ONLY=true python3 scripts/smoke_wms_key_possession_v175b.py
+          # Exercise the installed PG18 trigger functions against fully
+          # disposable shadow fixtures for 3 independent reviewers.
+          psql -h 127.0.0.1 -U merchivra -d merchivra -v ON_ERROR_STOP=1 \
+            -f scripts/smoke_wms_qc_actor_pg18_v175.sql
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='81' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='80' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='79' AND success")" = "1"
@@ -312,9 +368,91 @@ jobs:
             MERCHIVRA_V101_DISPOSABLE_ONLY=true python3 \
               ../../scripts/smoke_next_session_csrf_v101.py
           )
-          MERCHIVRA_V68_DISPOSABLE_ONLY=true bash scripts/smoke_pg_restore_v68.sh
+          # V141: actual PG18 service-container filesystem, actual read-only
+          # pg_catalog WAL/database bytes and the successful isolated V68 restore.
+          # This is a disposable sample, NOT a production readiness grant.
+          v141_attest="$(mktemp /tmp/merchivra-v141-attest-XXXXXX.json)"
+          v141_disk="$(mktemp /tmp/merchivra-v141-disk-XXXXXX.json)"
+          MERCHIVRA_V141_ATTESTATION_FILE="$v141_attest" \
+            MERCHIVRA_V68_DISPOSABLE_ONLY=true bash scripts/smoke_pg_restore_v68.sh
+          docker exec -i "${{ job.services.postgres.id }}" sh -s \
+            < scripts/collect_pg18_disk_v141.sh > "$v141_disk"
+          python3 scripts/pg18_ops_probe_v141.py --mode disposable \
+            --disk-json "$v141_disk" --backup-json "$v141_attest" \
+            --disk-warn-percent 20 --disk-critical-percent 10 \
+            --wal-warn-bytes 536870912 --wal-critical-bytes 2147483648 \
+            --backup-max-age-hours 24 --restore-max-age-hours 24 \
+            --prometheus-file /tmp/merchivra-v141-pg18.prom \
+            > /tmp/merchivra-v141-ops.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('/tmp/merchivra-v141-ops.json').read_text())
+          assert r['mode']=='disposable' and r['productionApproved'] is False
+          assert r['alertReceiverVerified'] is False
+          assert r['measurements']['databaseBytes']>0
+          assert r['measurements']['walDirectoryBytes']>0
+          assert r['measurements']['filesystemAvailableBytes']>0
+          assert any(c['code']=='PITR_WAL_ARCHIVING' and c['status']=='BLOCKED'
+                     for c in r['checks']), 'Disposable pg_dump is NOT PITR'
+          metrics=Path('/tmp/merchivra-v141-pg18.prom').read_text()
+          assert 'merchivra_pg18_ops_production_approved 0' in metrics
+          print('PASS V141 disposable local PG18 ops: measured disk/WAL, verified restore, never production approval')
+          PY
+          rm -f -- "$v141_attest" "$v141_disk"
+          # V142: true physical PG18 basebackup + archived WAL recovery to
+          # the server timestamp between two committed fictional markers.
+          # A second restored container MUST pause and EXCLUDE later commits.
+          v142_pitr="$(mktemp /tmp/merchivra-v142-pitr-XXXXXX.json)"
+          MERCHIVRA_V142_DISPOSABLE_ONLY=true \
+            MERCHIVRA_V142_PITR_EVIDENCE_FILE="$v142_pitr" \
+            bash scripts/smoke_pg18_pitr_v142.sh
+          # V142: real Alertmanager API and webhook delivery on a Docker
+          # --internal network; no external recipient or published port.
+          v142_alert="$(mktemp /tmp/merchivra-v142-alert-XXXXXX.json)"
+          MERCHIVRA_V142_DISPOSABLE_ONLY=true \
+            MERCHIVRA_V142_ALERT_EVIDENCE_FILE="$v142_alert" \
+            bash scripts/smoke_alertmanager_v142.sh
+          python3 - "$v142_pitr" "$v142_alert" <<'PY'
+          import json,sys
+          from pathlib import Path
+          p=json.loads(Path(sys.argv[1]).read_text())
+          a=json.loads(Path(sys.argv[2]).read_text())
+          assert p['mode']=='disposable' and p['postgresMajor']==18
+          assert all(p[k] for k in ('archivedWalSegment','physicalBasebackup',
+              'recoveryTargetPaused','includedCommittedBeforeTarget',
+              'excludedCommittedAfterTarget'))
+          assert p['productionPitrApproved'] is False
+          assert a['source']=='real_alertmanager_v142_local'
+          assert a['status']=='firing' and a['receiver']=='ci-local-webhook'
+          assert a['externalRecipientVerified'] is False
+          assert a['productionApproved'] is False
+          print('PASS V142 A3: real local PG18 timestamp PITR + internal Alertmanager delivery; production blocked')
+          PY
+          # Leave only sanitized JSON evidence for 7-day Actions artifact.
+          # Never upload basebackup, archived WAL or raw webhook payload.
           echo "PostgreSQL 18 / Flyway / actual finance + FBA OpenAPI and local mock chain verified"
           kill "$app_pid" 2>/dev/null || true
+      - name: Preserve V141 disposable disk/WAL/PITR-not-ready metrics (no credentials)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v141-disposable-pg18-ops-evidence
+          path: |
+            /tmp/merchivra-v141-ops.json
+            /tmp/merchivra-v141-pg18.prom
+          if-no-files-found: warn
+          retention-days: 7
+      - name: V142 audit-only PITR and private Alertmanager delivery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v142-disposable-pitr-alertmanager-evidence
+          path: |
+            /tmp/merchivra-v142-pitr-*.json
+            /tmp/merchivra-v142-alert-*.json
+          if-no-files-found: warn
+          retention-days: 7
       - name: Preserve verified V65 OpenAPI contract for Orval review
         uses: actions/upload-artifact@v4
         with:
@@ -338,11 +476,86 @@ jobs:
         run: python3 scripts/check_ci_cadence_v108.py
       - name: Verify V109 active documentation links and runtime status
         run: python3 scripts/check_docs_consistency_v109.py
+      - name: V175-B key-possession synthetic three-Owner smoke syntax
+        run: python3 -m py_compile scripts/smoke_wms_key_possession_v175b.py
+      - name: V175 QC PG18 targeted synthetic smoke syntax
+        run: python3 -m py_compile scripts/smoke_wms_qc_v175.py
+      - name: V140 synthetic Owner HTTP smoke Python syntax
+        run: python3 -m py_compile scripts/smoke_proof_monitor_v140.py
+      - name: V141 read-only disk/WAL/backup readiness probe contracts
+        run: |
+          sh -n scripts/collect_pg18_disk_v141.sh
+          bash -n scripts/smoke_pg_restore_v68.sh
+          python3 -m py_compile scripts/pg18_ops_probe_v141.py
+          python3 -m unittest discover -s scripts -p 'test_pg18_ops_v141.py' -v
+      - name: V142 PITR and real Alertmanager isolated smoke syntax and refusal gate
+        run: |
+          bash -n scripts/smoke_pg18_pitr_v142.sh
+          bash -n scripts/smoke_alertmanager_v142.sh
+          python3 -m py_compile scripts/v142_alert_loopback.py
+          if env -u GITHUB_ACTIONS MERCHIVRA_V142_DISPOSABLE_ONLY=true \
+            bash scripts/smoke_pg18_pitr_v142.sh; then
+            echo 'Unsafe V142 PITR mode unexpectedly accepted non-CI' >&2
+            exit 1
+          fi
+          if env -u GITHUB_ACTIONS MERCHIVRA_V142_DISPOSABLE_ONLY=true \
+            bash scripts/smoke_alertmanager_v142.sh; then
+            echo 'Unsafe V142 Alertmanager mode unexpectedly accepted non-CI' >&2
+            exit 1
+          fi
+          echo 'PASS V142 fail-closed: non-CI/real execution refused before Docker or SQL'
+      - name: V146 HTTPS localhost-only Nginx cutover contracts and refuse-prod tests
+        run: |
+          bash -n scripts/smoke_https_cutover_v146.sh
+          python3 -m py_compile scripts/smoke_https_cutover_v146.py
+          python3 -m unittest discover -s scripts -p 'test_https_cutover_v146.py' -v
+          if env -u GITHUB_ACTIONS MERCHIVRA_V146_DISPOSABLE_ONLY=true \
+            bash scripts/smoke_https_cutover_v146.sh; then
+            echo 'V146 unacceptable: non-CI HTTPS canary accepted' >&2
+            exit 1
+          fi
+          echo 'PASS V146 refusal + only fixed localhost TLS and safe backend switches'
+      - name: V151 operator-only target ingress guard and offline HTTPS checks
+        run: |
+          python3 -m py_compile scripts/check_next_target_ingress_v151.py
+          python3 -m unittest discover -s scripts -p 'test_next_target_ingress_v151.py' -v
+          echo 'PASS V151: operator-only target HTTPS observations; no external requests in CI'
+      - name: V143 fail-closed production readiness and human approval contracts
+        run: |
+          python3 -m py_compile scripts/check_production_gate_v143.py
+          python3 -m unittest discover -s scripts -p 'test_production_gate_v143.py' -v
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          d=json.loads(Path('ops/release/v143-production-evidence-template.json').read_text())
+          assert not d['productionApproved'] and not d['deploymentPermitted']
+          assert all(x['status']=='pending' for x in d['controls'].values())
+          print('PASS V143 pending-only release evidence template (no synthetic approvals)')
+          PY
+      - name: V158 redacted-only production evidence owner worklist (always NO-GO)
+        run: |
+          python3 -m py_compile scripts/production_evidence_worklist_v158.py
+          python3 -m unittest discover -s scripts -p 'test_production_evidence_worklist_v158.py' -v
+          echo 'PASS V158: fixed role worklist from redacted V143 result; never grants production'
+      - name: V160 read-only image ID and OCI source/revision gates
+        run: |
+          python3 -m py_compile scripts/check_target_image_ids_v160.py
+          python3 -m unittest discover -s scripts -p 'test_target_image_ids_v160.py' -v
+          echo 'PASS V160: operator-only fixed Docker metadata; every result remains NO-GO'
+      - name: V135 EXPLAIN JSON and plan assertions (no database needed)
+        run: |
+          python3 -m py_compile scripts/check_lot_query_plans_v135.py
+          python3 scripts/check_lot_query_plans_v135.py --self-test
+      - name: V122 fail-closed Next Node runtime image and Vite rollback contract
+        run: python3 scripts/check_next_runtime_v122.py
       - name: Validate both documented deployment modes without using real databases
         shell: bash
         run: |
           set -euo pipefail
           docker compose --env-file .env.example -f deploy/compose.yaml config -q
+          docker compose --env-file .env.example -f deploy/compose.yaml \
+            -f deploy/compose.next.yaml \
+            -f deploy/compose.v146-synthetic-https.yaml config -q
           bundled=$(docker compose --env-file .env.example -f deploy/compose.yaml config --services | sort | tr '\n' ' ')
           test "$bundled" = "postgres server web "
           docker compose --env-file .env.example -f deploy/compose.yaml --profile optional-cache config -q
@@ -355,4 +568,66 @@ jobs:
           docker compose --env-file .env.example -f deploy/compose.spark-db.yaml -f deploy/compose.production.yaml config -q
           docker compose --env-file .env.example -f deploy/compose.yaml -f deploy/compose.production.yaml --profile optional-cache config --format json |
             python3 scripts/check_release_config_v68.py
+          docker compose --env-file .env.example -f deploy/compose.yaml \
+            -f deploy/compose.next.yaml config --format json |
+            python3 scripts/check_next_runtime_v122.py --compose
+          # V153: execute the exact YAML healthcheck Node expression with
+          # mocked responses; CI must never contact a real target.
+          docker compose --env-file .env.example -f deploy/compose.yaml \
+            -f deploy/compose.next.yaml config --format json |
+            node scripts/test_next_health_v153.mjs
+          docker compose --env-file .env.example -f deploy/compose.yaml \
+            -f deploy/compose.production.yaml -f deploy/compose.next.yaml \
+            config --format json |
+            python3 scripts/check_next_runtime_v122.py --compose --production
+          # V143: verify the real evaluated production+Next overlay remains
+          # BLOCKED with a demo .env and no external signoffs. The JSON input
+          # may contain secrets; ONLY bounded, redacted check codes are saved.
+          set +e
+          docker compose --env-file .env.example -f deploy/compose.yaml \
+            -f deploy/compose.production.yaml -f deploy/compose.next.yaml \
+            --profile optional-cache config --format json |
+            python3 scripts/check_production_gate_v143.py --compose-stdin \
+              --candidate-sha "$GITHUB_SHA" \
+              > /tmp/merchivra-v143-production-gate-blocked.json
+          v143_status=$?
+          set -e
+          test "$v143_status" -eq 2 || {
+            echo 'V143 release gate unexpectedly bypassed or errored' >&2
+            exit 1
+          }
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          r=json.loads(Path('/tmp/merchivra-v143-production-gate-blocked.json').read_text())
+          assert r['status']=='BLOCKED'
+          assert r['productionApproved'] is False
+          assert r['deploymentPermitted'] is False
+          assert r['automaticReleasePossible'] is False
+          assert r['operatorEvidenceIsSelfAttested'] is True
+          for k in ('PRIVATE_AV_HOST_CONFIGURED',
+                    'DB_BOOTSTRAP_SECRET_NOT_PLACEHOLDER'):
+              assert k in r['blockedChecks']['compose'],k
+          assert 'external_pager_delivered_and_acknowledged' in r['blockedChecks']['operatorEvidence']
+          assert 'production_wal_archiving_pitr_restore' in r['blockedChecks']['operatorEvidence']
+          assert 'product_scope_owner' in r['blockedChecks']['operatorEvidence']
+          assert 'https_trusted_proxy_live' in r['blockedChecks']['operatorEvidence']
+          print('PASS V143 actual merged compose: G1/G2/G3 and missing target infra BLOCKED, no deployed runtime')
+          PY
           echo "PASS: three bundled services, optional Redis, external spark-db reuse, production overlay"
+      - name: V143 redacted G1/G2/G3 release-block evidence (no secrets)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v143-release-preflight-blocked
+          path: /tmp/merchivra-v143-production-gate-blocked.json
+          if-no-files-found: warn
+          retention-days: 7
+
+
+  # Focused browser budget: only the visual design PR runs Chromium BEFORE merge.
+  # This reuses the real Vite/Next 16 synthetic layout workflow, with screenshots.
+  visual-refresh-browser:
+    name: Next.js 16 design review / Chromium 360px and desktop
+    if: github.event_name == 'pull_request' && (github.head_ref == 'feat/next16-command-center-visual-refresh' || github.head_ref == 'feat/next16-operations-workspace-polish' || github.head_ref == 'feat/v179-source-evidence-drilldown' || github.head_ref == 'feat/v180-profit-reconciliation-visibility' || github.head_ref == 'feat/v181-immutable-settlement-line-identity')
+    uses: ./.github/workflows/browser-layout-smoke.yml

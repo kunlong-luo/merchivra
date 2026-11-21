@@ -4,7 +4,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import java.util.UUID;
 import org.merchivra.erp.security.TenantAccessService;
+import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,6 +32,32 @@ public class PurchasingController {
                                                                 HttpServletRequest req) {
         return warehouses.warehouses(access.currentTenant(auth,req));
     }
+    /** V114 complete tenant-bound warehouse directory for all selection flows. */
+    @GetMapping("/warehouses/page")
+    public ResponseEntity<LocalKeysetPage.Page<WarehouseInventoryService.Warehouse>> warehousesPage(
+        Authentication auth,HttpServletRequest req,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(defaultValue="ALL") String status,
+        @RequestParam(defaultValue="") String prefix,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(warehouses.warehousesPage(access.currentTenant(auth,req),
+                limit,status,prefix,cursor));
+    }
+    /** V115 batch resolution for historical rows outside the legacy 200. */
+    @GetMapping("/warehouses/resolve")
+    public ResponseEntity<List<WarehouseInventoryService.Warehouse>> warehouseLabels(
+        Authentication auth,HttpServletRequest req,@RequestParam List<UUID> ids) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(warehouses.resolveWarehouses(access.currentTenant(auth,req),ids));
+    }
+    /** Exact warehouse identity, including archived rows for read-only labels. */
+    @GetMapping("/warehouses/item")
+    public ResponseEntity<WarehouseInventoryService.Warehouse> warehouseItem(
+        Authentication auth,HttpServletRequest req,@RequestParam UUID warehouseId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(warehouses.warehouseItem(access.currentTenant(auth,req),warehouseId));
+    }
     @PostMapping("/warehouses")
     @ResponseStatus(HttpStatus.CREATED)
     public WarehouseInventoryService.Warehouse createWarehouse(Authentication auth,
@@ -42,19 +70,75 @@ public class PurchasingController {
         HttpServletRequest req,@RequestParam UUID warehouseId) {
         return warehouses.stock(access.currentTenant(auth,req),warehouseId);
     }
+    /** V113 complete local stock; tenant is always authenticated. */
+    @GetMapping("/warehouse-stock/page")
+    public ResponseEntity<LocalKeysetPage.Page<WarehouseInventoryService.Stock>> stockPage(
+        Authentication auth,HttpServletRequest req,@RequestParam UUID warehouseId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(defaultValue="") String search,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(warehouses.stockPage(access.currentTenant(auth,req),
+                warehouseId,limit,search,cursor));
+    }
+    /** An exact read before inventory mutation; never infer zero from page omission. */
+    @GetMapping("/warehouse-stock/item")
+    public ResponseEntity<WarehouseInventoryService.Stock> stockItem(
+        Authentication auth,HttpServletRequest req,@RequestParam UUID warehouseId,
+        @RequestParam UUID productSkuId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(warehouses.stockItem(access.currentTenant(auth,req),
+                warehouseId,productSkuId));
+    }
     @GetMapping("/warehouse-ledger")
     public List<WarehouseInventoryService.Movement> ledger(Authentication auth,
         HttpServletRequest req,@RequestParam UUID warehouseId) {
         return warehouses.ledger(access.currentTenant(auth,req),warehouseId);
+    }
+    /** V112 full local warehouse movement history; never read a client tenant id. */
+    @GetMapping("/warehouse-ledger/page")
+    public ResponseEntity<LocalKeysetPage.Page<WarehouseInventoryService.Movement>> ledgerPage(
+        Authentication auth,HttpServletRequest req,@RequestParam UUID warehouseId,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(defaultValue="ALL") String movementType,
+        @RequestParam(defaultValue="") String search,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(warehouses.ledgerPage(access.currentTenant(auth,req),warehouseId,
+                limit,movementType,search,cursor));
     }
     @GetMapping("/pending-receipts")
     public List<WarehouseInventoryService.PendingReceipt> pendingReceipts(
         Authentication auth,HttpServletRequest req) {
         return warehouses.pendingReceipts(access.currentTenant(auth,req));
     }
+    /** V113 complete local approved/receiving purchase lines. */
+    @GetMapping("/pending-receipts/page")
+    public ResponseEntity<LocalKeysetPage.Page<WarehouseInventoryService.PendingReceipt>>
+        pendingReceiptsPage(Authentication auth,HttpServletRequest req,
+            @RequestParam(defaultValue="50") int limit,
+            @RequestParam(defaultValue="ALL") String status,
+            @RequestParam(defaultValue="") String search,
+            @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(warehouses.pendingReceiptsPage(access.currentTenant(auth,req),
+                limit,status,search,cursor));
+    }
     @GetMapping("/suppliers")
     public List<PurchasingService.Supplier> suppliers(Authentication auth,HttpServletRequest req){
         return purchasing.suppliers(access.currentTenant(auth,req));
+    }
+    /** Full directory: only the tenant from the authenticated session is used. */
+    @GetMapping("/suppliers/page")
+    public ResponseEntity<LocalKeysetPage.Page<PurchasingService.Supplier>> suppliersPage(
+        Authentication auth,HttpServletRequest req,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(defaultValue="ALL") String status,
+        @RequestParam(defaultValue="") String prefix,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(purchasing.suppliersPage(access.currentTenant(auth,req),
+                limit,status,prefix,cursor));
     }
     @PostMapping("/suppliers")
     @ResponseStatus(HttpStatus.CREATED)
@@ -66,6 +150,18 @@ public class PurchasingController {
     @GetMapping("/orders")
     public List<PurchasingService.Order> orders(Authentication auth,HttpServletRequest req){
         return purchasing.orders(access.currentTenant(auth,req));
+    }
+    /** Full local order history; no user-controlled tenant parameter or HTTP caching. */
+    @GetMapping("/orders/page")
+    public ResponseEntity<LocalKeysetPage.Page<PurchasingService.Order>> ordersPage(
+        Authentication auth,HttpServletRequest req,
+        @RequestParam(defaultValue="50") int limit,
+        @RequestParam(defaultValue="ALL") String status,
+        @RequestParam(defaultValue="") String search,
+        @RequestParam(required=false) String cursor) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(purchasing.ordersPage(access.currentTenant(auth,req),
+                limit,status,search,cursor));
     }
     @GetMapping("/orders/{id}")
     public PurchasingService.Detail detail(Authentication auth,HttpServletRequest req,

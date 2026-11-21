@@ -1,5 +1,7 @@
 # V99 — Next.js 16.4.5 A+B implementation bridge
 
+> **V161 技术决策方向（2026-11-14，尚未执行目标切流）**：正式私有 ERP 以 **Next.js 16 App Router + React 19** 为唯一长期前端，不再将 Vite 当作并行独立产品。当前 `deploy/compose.yaml` 的 `web` 仍是 **Vite/Nginx 默认部署**，`deploy/compose.next.yaml` 的 `next-web` 是隔离验收通过的 Next runtime。下一步在 Next 页面/身份/业务/利润报表一致、真实目标 TLS/Session/CSRF/回滚和人工准入满足之后，改变默认 Compose/入口、冻结 Vite 新功能、保留有限回退期，随后删掉旧 Vite 业务构建；**不能直接删掉现有回滚**。公开 GitHub Pages 只可继续保持无机密的静态展示，不是正式 ERP。优先实现的利润中心详见 [V161 产品计划](../product/profit-first-next-primary-v161.md)。
+>
 > **状态修订（V109 / 2026-11-08）**：本页记录 V99 初期 Next App Router 技术桥接及 V100 增量，**不应被误读为 Next 已正式切流**。目前项目继续以 Vite/Nginx 作为默认私有 ERP Web 交付，Next 16.4.5 的真实 App Router 可编译并通过合成 Chromium，但真实同源 Session/CSRF/敏感 OAuth 代理、Docker Node runtime、TLS 与 Vite 回退必须完成 [P0 #63](https://github.com/kunlong-luo/merchivra/issues/63) 后才允许正式切换。现行优先级见 [V108 MVP 计划](../roadmap/mvp-freeze-release-v108.md)。
 
 The production V98 React/Vite/Nginx application remains unchanged and fully

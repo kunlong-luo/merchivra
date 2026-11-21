@@ -50,8 +50,8 @@ describe('V45 supplier dispute and claims',()=>{
   await reportPurchaseVariance(order,{requestKey,lineId:line,kind:'PO_SHORTAGE',
    asnId:null,reportedExcessQuantity:0,reason:observation.reason})
   const post=calls.find(c=>c.options?.method==='POST')
-  expect(post?.options?.headers).toMatchObject({
-   'X-CSRF-TOKEN':'test-dispute-csrf-token'})
+  expect(new Headers(post?.options?.headers).get('X-CSRF-TOKEN'))
+   .toBe('test-dispute-csrf-token')
   expect(JSON.parse(String(post?.options?.body))).toEqual({
    requestKey,lineId:line,kind:'PO_SHORTAGE',asnId:null,
    reportedExcessQuantity:0,reason:observation.reason

@@ -1,4 +1,227 @@
+> **2026-11-20 / V181 PG18 V102 原币账单行身份不可变证据已合并、A3 首次 7/7**：业务 [PR #176](https://github.com/kunlong-luo/merchivra/pull/176) 已合并，精确 main SHA `51ced3db16e08ab70963ae22989f8ae7dc0efc98`；合并前 [CI #44729550558](https://github.com/kunlong-luo/merchivra/actions/runs/44729550558) **run_attempt=1 SUCCESS**（Java25/Gradle、React19/Vite/Next16、Compose、Chromium Next/Vite 新/旧行身份查询；PG18 在快 PR CI 按策略跳过）；合并后精确 SHA [完整 A3 #44729829959](https://github.com/kunlong-luo/merchivra/actions/runs/44729829959) **run_attempt=1、7 项核心任务 SUCCESS**（PG18/Flyway V102、Java、安全与恢复、React/Next16、Chromium、Compose HTTP；额外 PR 专属 Chromium job 在 main 按策略跳过）。[主线 CI #44729830152](https://github.com/kunlong-luo/merchivra/actions/runs/44729830152) SUCCESS；[GitHub Pages #44729829967](https://github.com/kunlong-luo/merchivra/actions/runs/44729829967) SUCCESS（只读虚构数据）。 V94/V95 继续负责独立未核验复核和共用行阻断；历史 V94 关联不可伪造回填。下一 P0：独立外部可验证账单身份 + 来源归属审计冲突裁决，之后才谈 V162/V64 真实成本利润；生产 #104 NO-GO。
+
+> **2026-11-20 / V180 利润来源可追溯展示与安全版本比较已完成合成 A3**：[业务 PR #174](https://github.com/kunlong-luo/merchivra/pull/174) 已合并，精确 main SHA `ee7cf584409f698f07e4ae64e3119499c9ba71e7`；合并前 [CI #44725730574](https://github.com/kunlong-luo/merchivra/actions/runs/44725730574) **run_attempt=1 SUCCESS**（Java25、React19/Vite/Next16 TypeScript/Vitest、Compose，以及 PR 专属 Chromium Vite+Next16 两版 V64 原币对照、候选阻断及费用关联抽屉检查，PG18 快 CI 按策略 SKIPPED）；合并后精确 SHA [完整 A3 #44725980838](https://github.com/kunlong-luo/merchivra/actions/runs/44725980838) **run_attempt=1，7 个核心任务全部 SUCCESS**（PG18/Flyway、安全与恢复、Java25、React19/Next16、Chromium、Compose HTTP；PR 专属浏览器 job 在 main 按策略 SKIPPED）；[GitHub Pages #44725980780](https://github.com/kunlong-luo/merchivra/actions/runs/44725980780) SUCCESS（只读虚构数据展示）。 下一 P0 必须继续实现平台账单行—费用来源的独立、不可变原始复合键验证和 V162 全成本真实净利润；目前只有人工费用关联数量与风险，不能过账。生产 #104 NO-GO，Seller/Ads OAuth OFF。
+
+> **2026-11-17 / V179 证据下钻已合并且完整 A3 首次 7/7**：业务 [PR #172](https://github.com/kunlong-luo/merchivra/pull/172) 已合并，精确 SHA `6d352e706c4e64237ffeef302213116fbb2ae1a8`；[PR CI #44097349142](https://github.com/kunlong-luo/merchivra/actions/runs/44097349142) 首次 SUCCESS（Java25、React19/Vite/Next16、Compose、Chromium 异常证据抽屉与采购详情无额外写入）；合并后 [A3 #44097675646](https://github.com/kunlong-luo/merchivra/actions/runs/44097675646) 精确主线 SHA **run_attempt=1、7 个核心任务全部 SUCCESS**（PG18/Flyway、Java、Next16、Chromium、Compose HTTP、安全/恢复回归；额外 PR 专属浏览器任务在 main SKIPPED）。[GitHub Pages #44097675161](https://github.com/kunlong-luo/merchivra/actions/runs/44097675161) SUCCESS（只读虚构展示）。 V64 逐单来源只读抽屉、运营异常来源证据和采购收货摘要已实现；合成验证不认证真实净利润或 WMS 实收。#104 NO-GO、Seller/Ads OFF。
+
+> **2026-11-17 / V178 Next.js 16 多工作台视觉深化通过合成 A3**：[PR #170](https://github.com/kunlong-luo/merchivra/pull/170) 合并业务 SHA `c057074111cc826cd646696ee51b3be5b768e6bb`；合并前 [CI #44093231552](https://github.com/kunlong-luo/merchivra/actions/runs/44093231552) **run_attempt=1 SUCCESS**（Java25、React19/Vite/Next16、Compose、Next+Vite Chromium 360px 实测；PG18 在快 CI 按策略 SKIPPED）；合并后精确业务 SHA [A3 #44093676183](https://github.com/kunlong-luo/merchivra/actions/runs/44093676183) **run_attempt=1、7 个核心任务 SUCCESS**（PG18/Flyway、Java、React/Next、Chromium、Compose HTTP、安全回归；PR 专属额外浏览器 job 在主线 SKIPPED）；[GitHub Pages #44093675534](https://github.com/kunlong-luo/merchivra/actions/runs/44093675534) SUCCESS（公开静态虚构数据展示）。 当前页订单与 FBA 观测、采购六步流程、异常与 V64 原币贡献审计一体化，严禁把当前页当全库或把未知费用填零。#104 生产 NO-GO，Seller/Ads OAuth OFF。
+
+> **2026-11-17 / Next.js 16 视觉升级已合并且 A3 通过**：[PR #168](https://github.com/kunlong-luo/merchivra/pull/168) 已合并，业务 SHA `7c01735887b511baa7adfb5edcf8b0882569a116`；[PR CI #44090737007](https://github.com/kunlong-luo/merchivra/actions/runs/44090737007) 首次 SUCCESS（Next16/Vite TS、Java25、Compose，以及 PR 专属 Vite+Next Chromium 中文 360px/桌面截图和真实来源表格检查，PG18 在快速 PR 中按策略跳过）；[精确业务 SHA A3 #44091196466](https://github.com/kunlong-luo/merchivra/actions/runs/44091196466) **run_attempt=1，7 个核心任务全 SUCCESS**（PG18/Flyway、Java25、Next16/Vite、Chromium、Compose HTTP；PR 专属额外浏览器任务在主线 SKIPPED）。[GitHub Pages 展示构建 #44091196262](https://github.com/kunlong-luo/merchivra/actions/runs/44091196262) SUCCESS。 经营总览真实来源 KPI/利润证据主视觉、财务分类与原币摘要、移动侧栏与公开虚构展示同步升级。无 API/PG/利润算法变动；利润、WMS 实收和生产 #104 仍 NO-GO，Seller/Ads OAuth OFF。
+
+> **2026-11-17 / V175-B 合成技术 A3 已通过**：PR [#166](https://github.com/kunlong-luo/merchivra/pull/166) 合并业务 SHA `325dd84eb4b02540de9ef27e9e2259b413dad204`；PR [CI #44086459396](https://github.com/kunlong-luo/merchivra/actions/runs/44086459396) **run_attempt=1、4/4 SUCCESS**（含真实 PostgreSQL18/Flyway V101 三名独立 Owner Spring HTTP+CSRF、OpenSSL Ed25519 正向/错签/重放与撤销）；精确业务 SHA [完整 A3 #44087005800](https://github.com/kunlong-luo/merchivra/actions/runs/44087005800) **run_attempt=1、7/7 SUCCESS**（PG18、Java25/Gradle、React19/Next16/Vite、Chromium、Compose HTTP）。 V101 密钥持有权挑战不构成可信 WMS 经营主体、物理收货、库存/COGS 或 V162/V64 真正净利润；后续 P0 是独立外部身份信任锚与来源交叉验证。#104 NO-GO，Seller/Ads OFF。
+
+> **2026-11-17 / V175-A 完整合成 A3 已通过**：PR [#163](https://github.com/kunlong-luo/merchivra/pull/163) 合并 SHA `c05a990579380a694e17cc84e28e8284ad5ba51f`；最新分支快速 [CI #44011618464](https://github.com/kunlong-luo/merchivra/actions/runs/44011618464) **4/4 SUCCESS**（包括 PostgreSQL 18 V100）；合并后精确 SHA [完整 A3 #44012031121](https://github.com/kunlong-luo/merchivra/actions/runs/44012031121) **run_attempt=1，7/7 SUCCESS**（Flyway、Java25、Next16/Vite/Chromium、真实 PG18 与 Compose HTTP）。 V100 仅为人工 QC/第三人审核与动态冻结；真正运营商认证、物理实收、库存/COGS 和 V162/V64 已验证净利润仍为 P0；#104 NO-GO，Seller/Ads OFF。
+
+
+> **2026-11-17 / V174 合成技术 A3 已通过**：[外部 WMS 签名观察与差异隔离](../finance/signed-wms-return-discrepancy-v174.md)，PR #161、代码 SHA `7a4a9c42a821bcbeca273c1ec0f3cc29fbdbc738`，[精确 SHA 完整 A3 #44006689758](https://github.com/kunlong-luo/merchivra/actions/runs/44006689758) **run_attempt=1、7/7 SUCCESS**。早期快速 CI #44006264683 唯一新增静态断言大小写失配，修复后 #44006485570 SUCCESS。下一 P0：**独立可信外部运营商身份 + 官方 FBA/仓库实收来源 + 可售 QC + 审核后 COGS 回转及 V162/V64 原币全成本净利润**。本期签名凭证不能证明实物收货，Amazon Seller/Ads OFF，G1/G2/G3、生产 #104 NO-GO。
+
+> **2026-11-17 / V174（合成 A3 已通过）**：[签名外部仓库观察/差异隔离](../finance/signed-wms-return-discrepancy-v174.md)：V99 跨 V173/V174 的全局来源回执与包裹去重，签名 V2 保留外部报告数量/处置不一致证据，避免扔掉需要核对的差异；仍无独立外部仓储经营主体认证/物理实收/GL、COGS 过账。真实 Amazon Seller/Ads OAuth OFF、#104 生产 NO-GO。下一 P0 外部运营商认证、签收真实性与可售 QC，随后完整真实成本利润核销。
+
+> **2026-11-17 / V173 合成技术 A3 已通过**：[外部仓储公钥及 Ed25519 退货包裹签名](../finance/wms-signed-return-evidence-v173.md) 功能 PR #158，原 SHA `187a96f4c3782a48660f076b6f911f07b1150fb4` [A3 #43969427227](https://github.com/kunlong-luo/merchivra/actions/runs/43969427227) 6/7（脚本错误自撤销；权限正确 403），测试修正 PR #159 后最终代码 SHA `14c88c4a40e53b8100f501bb1168c78e8377288a` [完整 A3 #43969992583](https://github.com/kunlong-luo/merchivra/actions/runs/43969992583) **run_attempt=1、7/7 SUCCESS**。下一财务 P0：真实独立 WMS/官方 FBA 来源身份认证、库存 QC 和可审计 COGS 回转，随后各费用源/V162/V64 真实原币利润；签名有效≠外部身份/物理收货已认证，G1/G2/G3、生产 #104 继续 NO-GO，Seller/Ads OFF。
+
+> **2026-11-17 / V173（完整合成技术 A3 已通过）**：[外部 WMS 退货来源公钥与 Ed25519 签名](../finance/wms-signed-return-evidence-v173.md)；V98 同仓/同退款包裹唯一来源、租户公钥双人审核、签名校验与撤销、Next16 证据页面。**不宣称密钥由真实外部 WMS 提供或证明货物实收**；真实认证、QC 库存、历史 COGS/汇率及各费用来源 G1 对账仍是 P0。#104 生产 NO-GO、Seller/Ads OFF。
+
+> **2026-11-16 / V172 完整技术 A3 已通过**：[消费者退货本地仓包裹候选来源对账](../finance/customer-return-local-intake-v172.md) PR #156 已合并，代码 SHA `2637abe99edad01b4a665d1e38bb8f1ebd58834a` 的 [完整 A3 #43827605960](https://github.com/kunlong-luo/merchivra/actions/runs/43827605960) **run_attempt=1 7/7 SUCCESS**（PG18 Flyway V97、真实 Spring HTTP、Next16/Chromium、Java25、Compose）。本地申请/核对**不代表外部 WMS 可信收货**，真实 COGS/原币换算/全部费用来源和账期核对仍是 P0；V173 优先可信 WMS/官方 FBA 证据导入及交易级去重，G1/G2/G3 未放行，Seller/Ads OFF、生产 #104 NO-GO。
+
+> **2026-11-16 / V172（PG18 完整 A3 已通过）**：[消费者退货本地仓包裹分件核对及来源防重](../finance/customer-return-local-intake-v172.md)。新增 V97 不可变仓库包裹记录、来源唯一索引、V171 同订单/退款/商品复合 FK，分包裹 PENDING/ATTESTED_LOCAL/REJECTED 和跨版本原件数守恒；Next16/Vite 共享财务 UI，复用全库服务器分页 WarehousePicker。**不是外部 WMS/FBA 实收授权，不能自动写入库存或 COGS/已实现净利润**；G1/G2/G3 仍未放行，生产 #104 NO-GO。
+
+> **2026-11-16 / V171 已合并且完整 A3 技术验收通过**：[消费者退货实收人工证据与 COGS 禁入门禁](../finance/return-receipt-evidence-v171.md) 已接入 Next16 退款页，PR #153 + #154；原代码 [A3 #43810447503](https://github.com/kunlong-luo/merchivra/actions/runs/43810447503) 首次 7/7 成功，修复空处置字段 HTTP 400 后最终 SHA `1b217cfb737567b6c06a47fce30ba1af9bfb59d7` 的 [A3 #43810932033](https://github.com/kunlong-luo/merchivra/actions/runs/43810932033) 再次首次 **7/7 SUCCESS**。这不是可信 WMS/FBA/FBM 仓库实收、原始成本冲回凭证、真实净利润或 G1/G2/G3 放行；Seller/Ads OFF、生产 #104 NO-GO。
+
+> **V171 / 2026-11-16（合成技术 A3 已通过）**：新 [退货实收人工证据与 COGS 禁入门禁](../finance/return-receipt-evidence-v171.md)，V96 复合外键关联当前 V34 商品/V63 证据，支持不可变申报、第二人审核和动态 STALE；Next16 财务退款页提供操作/审计。**不新增可信 FBA/FBM 实物收货或 GL**，只有真实仓储来源认证/不可重复数量、G1 会计规则与财务对账完成后才考虑成本回转。生产 #104 NO-GO，Seller/Ads OAuth OFF。
+
+> **2026-11-15 / V170 已合并且完整 A3 技术验收通过**：[退款原币和历史 COGS 证据准备度](../finance/refund-cost-readiness-v170.md) 已接入 Next 财务页，业务模型 PR #150 + 事务隔离修复 PR #151，代码 `09b1195850592ac66b3022714a4f81f19b6a9512`。首次 [A3 #43694186657](https://github.com/kunlong-luo/merchivra/actions/runs/43694186657) 在无匹配合成退款时 HTTP 500，修复后 [A3 #43694623744](https://github.com/kunlong-luo/merchivra/actions/runs/43694623744) **run_attempt=2、7/7 SUCCESS**（attempt1 仅完整 Compose 因外部阿里云 Maven 502 失败，PG18 已通过；重试失败任务成功）。这不代表已核验退货实收、成本回转或完整净利润；G1/G2/G3 仍阻断，Seller/Ads OFF，生产 #104 NO-GO。
+
+> **V170 第一轮 A3 阻塞已修复并重验（2026-11-15）**：原合并提交 `04fc6081...` 的 [A3 #43694186657](https://github.com/kunlong-luo/merchivra/actions/runs/43694186657) PG18/HTTP 于新增合成退款 500 失败。PR #151 已隔离原币期间汇总和逐笔 V63 证据事务：后者正常拒绝(409)应表现为风险缺口，而不是整页 500；完整真账、G1 和 COGS 核销仍未批准。
+
+> **2026-11-15 / V170 P0 退款 COGS 风险准备度（技术 A3 已验收）**：依 [V170 定义](../finance/refund-cost-readiness-v170.md)，增加按入账 UTC 期间/原币的 Finances PRODUCT_REFUND 来源全范围统计、最多 50 条有序退款事件及 V63 证据修订复核状态，Next16 财务页展示实际可见阻塞。**没有可信物理实收便不得把人工 RESTOCKED_CLAIMED 写成真实 COGS 回转或净利润**，也不得把 Finances signed refund 在 V162 再扣一次；G1/G2/G3 及生产 #104 仍未放行。
+
+> **V169（2026-11-14）已合并并通过精确 main SHA 全套 A3**：[费用原币八类准备度和 Next 财务页面](../finance/cost-profit-readiness-v169.md)。PR #147 首轮 [A3 #43587863847](https://github.com/kunlong-luo/merchivra/actions/runs/43587863847) 失败，是合成用例把一笔 V164 费用错当全科目合计。PR #148 改为 PG18 全类别全部来源独立 SQL 校验，修复提交 `8c12e042161d4eb0369fd64873eec9f91c30b7ac` 的 [A3 #43588250536](https://github.com/kunlong-luo/merchivra/actions/runs/43588250536) **7/7 SUCCESS**。**P0 全成本真实费用核销、退款汇率和净利润尚未完成**；G1/G2/G3 未批，Seller/Ads OAuth OFF，生产 #104 NO-GO。
+
+> **2026-11-14 / V169 P0 全成本可视化准备度（待快速 CI/完整 A3）**：[按业务月、科目、原币的人工费用准备度查询与 Next 财务工作台](../finance/cost-profit-readiness-v169.md)。完整范围聚合 + 50 条 keyset 来源穿透，保留 V165/V168 冲突、V164 已批准但未核验的分摊与剩余余额。**不是净利润已核销**；本地真实 Amazon/银行/Ads G1/G2/G3 仍待审批，#104 NO-GO。
+
+> **2026-11-14 / V168 已合并且 PG18 A3 技术验收通过（财务 G1 未核销）**：V167 已完成具体 Settlement 行的手工费证据链接；本轮补 [同一交易行多份费用来源归属碰撞](../finance/shared-settlement-line-collision-v168.md) 的全库计数、有限反向钻取、V164 审批 409 和 PostgreSQL V95 原始行/审批 SQL 保护。金额/引用相同仍非双扣证明，V162/V64/Next 全成本利润核销尚未完成；GitHub 技术测试≠真实 Amazon/银行账单认证。[PR #145](https://github.com/kunlong-luo/merchivra/pull/145) 合并代码 `c2f0c72c` 的 [完整 A3 #43586824346](https://github.com/kunlong-luo/merchivra/actions/runs/43586824346) 首次 7/7 SUCCESS；该结果只代表合成技术验收，完整利润/真实 Amazon 账单仍未核验。生产 #104 NO-GO，Seller/Ads OAuth OFF，Next16 仍为正式目标、Vite 仅受控回退。
+
+> **2026-11-14 / V167 已合并并通过合成 A3 技术验收（财务未核销）**：V166 冲突案件和初步独立复核已经落地；本阶段新增 V94 手工费用与已入库 Settlement **具体交易行**的范围校验、只追加本地关联及独立未证实研判（见 [V167](../finance/settlement-line-evidence-v167.md)）。不得凭相同订单参考/金额/导入标签判为真正双扣；当前 V162 全成本与 V64/Next 已核验净利润仍未贯通，生产 #104 NO-GO、Seller/Ads OAuth 关闭、Vite 暂留回退。PR #143 合并提交 `a57894b6` 的 [完整 A3 #43575075275](https://github.com/kunlong-luo/merchivra/actions/runs/43575075275) 首次 7/7 SUCCESS，含真实 PG18/Flyway V94 和合成双 Owner HTTP；仍不能列为真实账单核销、全成本净利润完成或生产上线证据。
+
 # V108 — MVP 收尾、集中测试与上线准入（2026-11-08）
+
+## 2026-11-14 / V166 费用来源身份冲突案件审计（**最新已验收技术基线**）
+
+> [PR #141](https://github.com/kunlong-luo/merchivra/pull/141) 已合并代码 SHA `7425547766a1854bb30c23a8dfb24c78326ac31f`。[同 SHA 完整 A3 #43573659587](https://github.com/kunlong-luo/merchivra/actions/runs/43573659587) **run_attempt=1、7/7 SUCCESS**，真实 PG18/Flyway V93 + Spring HTTP 双 Owner 扫描、候选 UUID、幂等、独立初判、SQL 不可变审计，以及 Next/Chromium/HTTPS 合成回切通过；[同 SHA 快速 CI #43573659582](https://github.com/kunlong-luo/merchivra/actions/runs/43573659582) SUCCESS。V166 的研判状态**没有解除 V165 409 的能力**，未完成真实第三方票据、行级费用同一性、可撤销财务裁决、全成本净利润或 G1 签署。#12 OPEN，#104 NO-GO，#115 历史 TLS 根因未证实。
+
+## 2026-11-14 / V166 费用来源身份冲突案件审计（V166 交付内容）
+
+> 本轮新增 [V166 冲突候选案件与不可变双人审核](../finance/cost-collision-cases-v166.md)：PostgreSQL 18 Flyway **V93** 存储服务器发现的具体候选 UUID、8 类固定冲突编码、案件创建人及时间。可幂等扫描、独立 Owner 一次性研判、只追加审计、不可改写事实。审批时**仍由 V165 旧规则 409 持续阻断**，不提供只靠人工判断解除财务不确定性的放行按钮。
+
+- **不宣称完成财务对账**：案件 `POTENTIAL_DUPLICATE` 仍只是猜测；`NOT_SAME_CHARGE_UNVERIFIED` 也不是有真实外部交易证据的反证。没有原始文件内容真实性核验、Refund/Ads/Settlement 金额级可验证同一性、正式实际净利润或新 Amazon 生产授权。
+- **门禁**：本轮是新增 PG18 结构和敏感 Owner 写入接口，需要先过 PR Java25/Gradle + Next/Compose 快速 CI，再合并并让**精确 main SHA** 执行 A3 全部七项，其中真实 PG18/HTTP 两名 Owner 候选案件初判、幂等、自审 403、伪造 `CLEAR` 400、重复审核 409、SQL UPDATE/DELETE 应拒绝；不能复用 V165 的通过结果。
+- **下一真正 P0**：对已记录案件进行真正的来源交易金额与单据核实、可撤销/可回算的财务裁决，并以同源身份与金额守恒驱动 V162/V64/Next 多维利润，#12 OPEN；生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 继续 NO-GO、TLS [#115](https://github.com/kunlong-luo/merchivra/issues/115) 历史根因未知。
+
+---
+
+## 2026-11-14 / V165 跨来源身份拦截（V165 历史已验收技术基线）
+
+- **实际开发**：[PR #138](https://github.com/kunlong-luo/merchivra/pull/138) 完成本地 8 类来源标识精确扫描与 V164 费用分摊审批事务中 409 拦截；[PR #139](https://github.com/kunlong-luo/merchivra/pull/139) 隔离不相关合成单据的身份摘要，仍严格验证真正同名来源键和同 SHA 需隔离。只按来源键/自称 SHA 判断**候选重叠**；同金额或同日期不会直接判重。
+- **首轮失败不抹去**：功能主线 `4e95dc019b13aa84f71590bb46d7d61ac3bc4749`，[A3 #43570834637](https://github.com/kunlong-luo/merchivra/actions/runs/43570834637) **首次 6/7 SUCCESS、1 FAILED**；此前 V98 Settlement 与 V164 费用测试碰巧使用固定 `a*64` 合成自称单据摘要，新 V165 正确阻断了旧测试期望的批准。
+- **新主线验收通过**：`15f705a03890b5bb3b792da19047657a119029e0`，[完整 A3 #43571700251](https://github.com/kunlong-luo/merchivra/actions/runs/43571700251) **run_attempt=1、7/7 SUCCESS**：真实独立 PG18/Flyway、Spring HTTP 双 Owner、相同金额但不同身份不拦截、手工 Ads 同来源键阻断批准 409 且无审计副作用、后续相同自称单据摘要实时提示，加上 V164 金额守恒及 Next/Vite Chromium、合成 HTTPS 回退。[同 SHA 快速 CI #43571700366](https://github.com/kunlong-luo/merchivra/actions/runs/43571700366) 首次成功。
+- **仍未完成产品 P0**：上述结果只是**本地候选身份冲突隔离**，并非真实账单行级交易对账/重复费用确认、第三方发票真实性、会计入账或真实利润。财务审批裁决/取消/反冲、跨时点不可变成本快照、V162/V64/Next 全成本利润瀑布及真实 G1 签署仍待开发。#12 OPEN；#104 生产 NO-GO；#115 历史 TLS 根因未证实，Seller/Ads 真实 OAuth 继续关闭。
+
+---
+
+## 2026-11-14 / V165 首轮真实 PG18 发现合成跨用例身份重叠（**验收跟踪**）
+
+- [V165 PR #138](https://github.com/kunlong-luo/merchivra/pull/138) 已合并 `4e95dc019b13aa84f71590bb46d7d61ac3bc4749`。但 [首次完整 A3 #43570834637](https://github.com/kunlong-luo/merchivra/actions/runs/43570834637) **run_attempt=1，6/7 SUCCESS、1 FAILED**：V164 的手工费用单据在隔离 PG18 中用固定自称 SHA `a*64`，与此前 V98 合成 Settlement 报告摘要相同。V165 扫描正确地标记了跨来源候选冲突，导致旧 V164 测试原本预期的批准返回 HTTP 409 而非 200。**不能为使测试通过而移除身份拦截**。
+- 修正两个合成脚本：不相关 V164/V165 手工凭证每次使用独立 64 位十六进制合成摘要；V165 专门的“确实相同来源键或 SHA”场景仍保持跨来源 409 和新导入同单据风险标记。修正测试数据后必须对**新的精确 main SHA**运行完整 PG18/HTTP + Next/Vite 合成 HTTPS 七项 A3，第一次失败的记录保留。
+- 仍没有真实 Amazon Seller/Ads OAuth、外部发票或财务 G1 的真实性证明。P0 [#12](https://github.com/kunlong-luo/merchivra/issues/12) OPEN，生产 #104 NO-GO，TLS 历史 #115 OPEN。
+
+---
+
+## 2026-11-14 / V165 本地成本来源身份冲突隔离（V165 初次工程实施）
+
+> 在 V164 精确金额守恒后，增加 [V165 8 类本地来源身份重叠扫描/审批时 409 保守拦截](../finance/cost-identity-collision-v165.md)：同租户、同 Marketplace、按**来源键与人工宣称的文件摘要**精确匹配 V91/V36/V64/Finances/Settlement 数据，而不是按金额/日期猜测重复。新增 Owner no-store 只读 HTTP，V164 单一来源费用分摊审核 `accept=true` 的事务内重新扫描；若有精确身份重叠保留待审、不追加批准审计。事后新导入来源可使已批方案重新出现风险，但批准依旧 `APPROVED_UNVERIFIED`。
+
+- **判定边界**：`POTENTIAL_IDENTITY_COLLISION_HOLD` 是需要人工独立核查的**候选冲突**，不是“已证明重复”；`NO_LOCAL_IDENTITY_MATCH_UNVERIFIED` 仍不意味着外部平台财务完整、可信或银行已核对。没有新增真实 Amazon Seller/Ads API、没有自动入利润，也不将 V164 已审人工来源变成 `REVIEWED_COST`。
+- **必须验收**：本轮增加金融审批时的 SQL 查询与权限 HTTP，需 Java 25/Gradle 单测、真实隔离 PG18 + 双合成 Owner + 8 类本地身份重叠 + 等额不同来源不误判、CSRF/409 和完整 A3；只有新代码精确 main SHA 首次 7/7 后才可宣布技术通过。V164 [#43569333074](https://github.com/kunlong-luo/merchivra/actions/runs/43569333074) 是历史基线。
+- **剩余 P0**：真实第三方身份线索/账单行级去重与人工财务裁决日志、冻结整期成本源快照和跨期金额归属、V162/V64 受信成本合并、Next SKU/订单/期间利润瀑布。P0 [#12](https://github.com/kunlong-luo/merchivra/issues/12) OPEN；生产 G1/G2/G3 [#104](https://github.com/kunlong-luo/merchivra/issues/104) NO-GO，历史合成 TLS 问题 [#115](https://github.com/kunlong-luo/merchivra/issues/115) 根因未证实。
+
+---
+
+## 2026-11-14 / V164 成本分摊与原币金额守恒（V164 已验收历史技术基线）
+
+> **实际交付与验收**：[PR #135](https://github.com/kunlong-luo/merchivra/pull/135) Flyway V92 及 SKU/订单/期间成本分摊、未分摊余额、Owner 独立审批/审计；[修复 PR #136](https://github.com/kunlong-luo/merchivra/pull/136) 使用 `BigDecimal.setScale(6, UNNECESSARY)` 确保精确、无舍入、统一六位小数的金额 API。
+
+- **保留首次真实失败**：#135 的主线 `d2d38296e00e908d8f52e2ada05ab48d5d7f9c2d`，[完整 A3 #43568896651](https://github.com/kunlong-luo/merchivra/actions/runs/43568896651) **首次 6/7 SUCCESS、1 FAILED**，真实 PG18 HTTP 触发 7.25 与 7.250000 输出 scale 不匹配。金额实际相等，但财务接口序列化不稳定，故验收不能通过。
+- **修复验收通过**：#136 合并主线 `a68564e4ec4649727844073d66fa5eca096e24b2`，[精确主线完整 A3 #43569333074](https://github.com/kunlong-luo/merchivra/actions/runs/43569333074) **run_attempt=1、7/7 SUCCESS**，包括**真实独立 PostgreSQL 18/Flyway、两位独立 Owner HTTP、Session/CSRF、原始人工费用 10.000000 = 已分摊 7.250000 + 未分摊 2.750000、拒绝超额/重复/自审、SQL 不可变来源与审计守卫**，以及 Java 25、Next/Vite Chromium 与合成 CA HTTPS 回退。[同 SHA 快速 CI #43569332781](https://github.com/kunlong-luo/merchivra/actions/runs/43569332781) 首次 SUCCESS。
+- **P0 业务仍未完成**：这仅验证本地 `MANUAL_UNVERIFIED` 来源的 `APPROVED_UNVERIFIED` 分摊，**不代表真实 Ads/Finances/Settlement 成本来源核验、防双计、完整净利润或银行/法定会计签署**。下一阶段 V165 优先做独立来源身份对账与费用归属异常隔离，再将受信成本接入 V162/V64 和 Next 多维利润报表；[#12](https://github.com/kunlong-luo/merchivra/issues/12) 保持 OPEN。
+- **生产依旧 NO-GO**：[#104](https://github.com/kunlong-luo/merchivra/issues/104) G1/G2/G3 未批准；[#115](https://github.com/kunlong-luo/merchivra/issues/115) 历史 TLS 间歇问题根因未证实，Seller/Ads 实际授权/远程读写继续关闭；正式 ERP 前端目标 Next.js 16，Vite 暂留回滚。
+
+---
+
+## 2026-11-14 / V164 手工成本凭证分摊和金额守恒（V164 实现记录）
+
+> 当前 P0 重点已从来源存证推进到有确定金额守恒的 **SKU/订单/期间单一维度成本分摊**。本轮实现 Flyway **V92**、不可变正金额分摊明细、未分摊余额、同一来源一个待审/已审方案、被驳回方案历史、第二名 Owner 与原凭证 maker 和提案人相互独立的一次性批准/驳回、只读审计与 Owner/Session/CSRF/no-store API。见 [V164 实施与边界](../finance/cost-allocation-v164.md)。
+
+- **当前不是净利润**：V163 人工来源即便通过本地复核，仍是 `REVIEWED_UNVERIFIED`；V164 全额分配也只等于 `APPROVED_UNVERIFIED`。未核验第三方平台/Ads 真实性和跨来源防双计前，不得流入 V162、V64 或 Next “真实净利润”。
+- **必须验收**：本次有 PG18 DDL、金额事务和新增 HTTP，PR 快速 Java 25/Next/Compose CI 通过后，修改里程碑工作流触发**精确合并 main SHA** 的七项 A3（PG18/Flyway、实际 Spring/Session/CSRF、Next/Vite/Chromium 与合成 HTTPS 切换）。V163 最近通过的完整 A3 [#43552262026](https://github.com/kunlong-luo/merchivra/actions/runs/43552262026) 是历史基线，不能代替 V164 新变更。
+- **后续真 P0**：独立可核验的 Ads/Finances/Settlement 来源身份反双计、费用票据真实性、全成本多维报表及完整回溯、财务 G1 业务规则批准；[#12](https://github.com/kunlong-luo/merchivra/issues/12) 保持 OPEN。生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 仍 NO-GO，TLS 间歇问题 [#115](https://github.com/kunlong-luo/merchivra/issues/115) 根因未证实，真实 Seller/Ads API/OAuth 关闭。正式 ERP 目标 Next.js 16，Vite 暂作为尚未切流前的回退。
+
+---
+
+## 2026-11-14 / V163 手工成本来源入库和独立审核（V163 历史状态）
+
+> 已新增 [V163 成本凭证存证/审核规则](../finance/cost-source-review-v163.md)：PostgreSQL 18 Flyway **V91**，租户/Marketplace/原币约束、跨类别同来源键唯一防重、原始凭证 metadata 不可变触发器、一次性不同 Owner 双人审核及追加审计。后端 Owner Session/CSRF 新增成本凭证登记、列表、复核、审计 API。所有来源仍 **MANUAL_UNVERIFIED**，复核通过为 **REVIEWED_UNVERIFIED**，不是真实第三方 Ads/财务核验，**不自动接入 V162 扣减或 V64 利润报告**。
+
+- **验证边界**：V163 改了真实 PG18 DDL、敏感资金与 HTTP 读写 API；PR 必须通过 Java 25/Gradle 财务来源/权限负例与文档 CI。合并后须对**精确 main SHA**重新执行完整 A3 (PG18/Flyway + Spring Session/CSRF + Next/Vite 合成 HTTPS/Chromium)，不能沿用 V160 的 7/7、也不能用 V162 的纯算法 CI 代替。实际第三方费用真实性/反重复凭证与 maker-checker 财务 G1 审批仍需另审。
+- **剩余真正 P0**：持久化成本来源与当前 V33、Ads 离线报告、库存/物流票据的**跨来源防双计**；按 SKU/订单/期间的有金额守恒的分摊与未分摊池、版本化 V64 全成本报表、Next.js 成本覆盖与利润瀑布、真实来源签署。跟踪 [利润 P0 #12](https://github.com/kunlong-luo/merchivra/issues/12)。
+- **生产与前端**：[G1/G2/G3 #104](https://github.com/kunlong-luo/merchivra/issues/104) 仍 OPEN/NO-GO；Next.js 16 是正式目标，Vite 目前仍是旧默认与安全回退；Amazon Seller/Ads 真实授权和远程读写继续关闭；V148 TLS 历史问题 [#115](https://github.com/kunlong-luo/merchivra/issues/115) 未证实根因。
+
+---
+
+## 2026-11-14 / V161 利润优先产品目标 + Next.js 单一前端（V161 方向）
+
+> **正式产品方向**：Merchivra 首要价值是**完整成本归集 → 可追溯利润核算 → 订单/SKU/店铺/站点/期间经营报表**。采购、库存、FBA/FBM、广告、订单、Finances、Settlement 和回款是成本与收入来源，而不是优先级高于利润的孤立子系统。详见 [V161 利润优先产品/交付计划](../product/profit-first-next-primary-v161.md) 和 [仍待 G1 签署的财务口径](../product/finance-rulebook.md)。
+
+- **当前真实代码边界**：已有 V33 单订单贡献、V61 SKU 预览、V62 多 SKU 受审分配、V64 冻结整期原币贡献及 CSV，**但未实现完整净利润**：广告、头程、仓储、FBM 配送、退款成本、汇率及其他期间费用并未全部可验证纳入。必须显式显示缺项/未知状态，禁止将“贡献估算”命名为“已实现净利润”。
+- **现在的重点**：P0-A 成本科目/真实来源与金额防重复 → P0-B 多类费用分摊/退款历史归属 → P0-C 全成本利润引擎与覆盖率 → P0-D Next 利润中心多维报表与 CSV → P0-E G1 财务样本及全链路对账验收。真实 Amazon Seller/Ads API 依旧需维护者在本地最后授权；在此之前用合成和获审手工来源建设逻辑。
+- **Next.js 正式唯一前端目标**：Next.js 16 + React 19 App Router 为主，Vite/Nginx 仅作为**尚未实际目标切流期间**的默认旧部署与短期回滚。不得再为 Vite 开辟长期第二套业务 UI；通过目标 HTTPS、会话/CSRF/租户权限、业务对照、实际受控切流和人工准入后再切换 Compose 默认及移除 Vite 代码。GitHub Pages 仅是独立静态展示，不是登录 ERP。Next 目标 [#63](https://github.com/kunlong-luo/merchivra/issues/63) 技术 Issue 虽关闭，不证明真实生产切流。
+- **验收分级**：V160 已有精确 main SHA [a960f7cf93c3dfc8a0f8ab96b534fd0a7252e49a](https://github.com/kunlong-luo/merchivra/commit/a960f7cf93c3dfc8a0f8ab96b534fd0a7252e49a) 的[完整 A3 #43428867257](https://github.com/kunlong-luo/merchivra/actions/runs/43428867257) 首次 **7/7 SUCCESS**。它仅验证合成运行时；V161 属产品优先级与 UI 信息布局更新，需按风险运行前端快速 CI。任何新金融公式必须有金额守恒、多币种、跨期退款/费用防重负例和 G1 真实样本批准；**不能从 V160 A3 推断 V161 财务已验收**。
+- **生产与历史故障**：[G1/G2/G3 #104](https://github.com/kunlong-luo/merchivra/issues/104) 继续 OPEN/NO-GO；[#115](https://github.com/kunlong-luo/merchivra/issues/115) V148 历史 HTTPS 根因未证实；真实 Seller/Ads OAuth 和远程读写保持关闭。
+
+---
+
+## 2026-11-13 / V160 自构建镜像与候选 SHA 绑定（历史 V160 技术记录）
+
+> V160 是新的**运行时镜像构建配置变更**：Spring、Next 和 Vite 回退最终镜像均支持从受信构建流程注入 `MERCHIVRA_BUILD_REVISION` OCI label（默认空值，不假造源 commit）。[目标运行容器只读核对](../operations/v160-target-image-evidence.md) 要求独立审查过的三份不可变本地 image ID、人工确认的候选 SHA 和明确授权的 Docker context；只读取固定 metadata，决不读取 Env/日志、自动构建、重启或部署。镜像标签和本地 image ID 匹配**不是**签名验证，更不是发布批准。实际目标未经此 PR 访问。
+
+- **风险对应验收**：因为 V160 修改了镜像与 Compose 构建行为，合并到 main 后必须触发**精确新 SHA** 的完整 A3，不能沿用此前 V157 或 V159 CI 代替。V159 最近主线快速 CI [#43427553987](https://github.com/kunlong-luo/merchivra/actions/runs/43427553987) 首次 SUCCESS，V157 最近运行时 A3 [#43422914368](https://github.com/kunlong-luo/merchivra/actions/runs/43422914368) 首次 7/7；二者都不证明 V160 的新镜像。
+- **唯一生产准入**：[G1/G2/G3 #104](https://github.com/kunlong-luo/merchivra/issues/104) 仍 OPEN/NO-GO：缺真正签名或制品可信验证、真实目标 HTTPS/IAM/KMS/ClamAV、离站加密 PG18 PITR/RPO/RTO、外部 Alertmanager 人类 ACK 和组织授权签署。真实 Seller/Ads OAuth 和出站读写全部关闭。[#115](https://github.com/kunlong-luo/merchivra/issues/115) 历史 V148 间歇 HTTPS 故障根因未证实。
+- 本里程碑不生成正式 release、没有生产批准权；只允许受权运维将**安全脱敏元数据**带入线下独立审查。报告始终 `productionApproved=false`、`deploymentPermitted=false`。
+
+---
+
+## 2026-11-13 / V159 目标 HTTPS 预检证据质量（历史 V159 记录）
+
+> **已验收基线分开记录**：最近一次**完整 A3** 为 [V157 main 5ac412dab7e71a0703c4887614bfba17fbe2eb25](https://github.com/kunlong-luo/merchivra/commit/5ac412dab7e71a0703c4887614bfba17fbe2eb25) / [#43422914368](https://github.com/kunlong-luo/merchivra/actions/runs/43422914368) 首次 7/7 SUCCESS（仅隔离 PG18、Next/Vite、HTTPS 技术测试）。最近一次**主线快速 CI** 为 V158 [main c911c7c9659cb1d4031d896a8586d61b32b00ee7](https://github.com/kunlong-luo/merchivra/commit/c911c7c9659cb1d4031d896a8586d61b32b00ee7) / [#43424933763](https://github.com/kunlong-luo/merchivra/actions/runs/43424933763) 首次 SUCCESS。V159 的 PR/验收必须另行记录，不能沿用上一个 SHA 宣称本次通过。
+
+- **V159 范围**：[V151–V159 目标 HTTPS 只读核查](../architecture/next-target-ingress-v151.md) 强制 Spring Ping/CSRF API 的 `Content-Type` 必须单一且为 `application/json`；要求受权运维提供 `--candidate-sha` 以供审计对照，但`operatorClaimedCandidateSha` **不是**目标实际运行镜像的独立验证。保持不向 CI 访问外网、匿名 GET/验证 TLS/禁止真实 Amazon、无自动发布和所有隐私脱敏。
+- **生产依旧 NO-GO**：[G1/G2/G3 #104](https://github.com/kunlong-luo/merchivra/issues/104) 缺真实目标 TLS/IAM/KMS/ClamAV/PG18 离站 PITR/外部告警人类 ACK 和三组正式签署；[#63](https://github.com/kunlong-luo/merchivra/issues/63) 已由维护者按技术范围关闭并非正式生产上线，[#115](https://github.com/kunlong-luo/merchivra/issues/115) 历史 HTTPS 根因仍待可靠证据。
+- **回归策略**：本阶段只修改目标只读审计探针、测试与说明，不修改运行时服务；快速 CI 中的专项负例和文档静态一致性必须通过。不为只读运维脚本重复完整 A3；如未来改真实部署/认证、DB、安全运行时，要重新做风险对应验证。
+
+---
+
+## 2026-11-13 / V158 目标生产证据分工（历史 V158 记录）
+
+> **最近已完整验收的代码主线是 V157**：[main `5ac412dab7e71a0703c4887614bfba17fbe2eb25`](https://github.com/kunlong-luo/merchivra/commit/5ac412dab7e71a0703c4887614bfba17fbe2eb25)，[完整 A3 #43422914368](https://github.com/kunlong-luo/merchivra/actions/runs/43422914368) **首次执行 7/7 SUCCESS**（隔离 PG18/Flyway/HTTP、Next/Vite Chromium、真实合成 CA HTTPS Next→Vite→Next 回切、Java25/Gradle/Compose）。此证据仅属于该 SHA 的**隔离技术验收**。V158 为**只读证据清单和文档纠偏**，不能把 V157 的 A3 当成 V158 改动的新 SHA 验收，也无需仅为文档清单重复完整 A3。
+
+- **A0/A1/A2/A3 技术范围**：采购/供应商/仓库分页 [#62](https://github.com/kunlong-luo/merchivra/issues/62) CLOSED；FBA 关联分页 [#108](https://github.com/kunlong-luo/merchivra/issues/108) 按合成技术范围 CLOSED。Next 技术跟踪 [#63](https://github.com/kunlong-luo/merchivra/issues/63) 在 2026-11-13 由维护者标记 CLOSED；**这是项目管理决定，不是实际外部环境已受控切流/真实 TLS/IAM/KMS 验收或上线批准**。
+- **P0 A5 / [#104](https://github.com/kunlong-luo/merchivra/issues/104)** 保持 OPEN、生产 **NO-GO**：G1 产品/运营/财务真实政策和样本、G2 目标 TLS/可信代理/MFA/KMS/ClamAV/租户权限、G3 离站加密 PG18 物理备份/WAL/真实 PITR RPO/RTO/外部告警人工 ACK 与独立签署仍缺目标证据。Amazon Seller/Ads 真实授权与远程读写继续关闭。
+- **V158 工程交付**：[只读生产证据责任清单](../operations/v158-production-evidence-worklist.md) 从 V143 **已脱敏**预检 JSON 生成结构缺项、责任人角色与真实证据需求；任何格式完整的自填声明也始终 **NO-GO/exit 2**。该工具不访问目标环境、不验证签名、不批准或部署。真实证据只在授权人员的受信系统内核验。
+- **P1 / [#115](https://github.com/kunlong-luo/merchivra/issues/115)** 保持 OPEN：V148 HTTPS canary 首轮失败时未记录阶段，故无法事后断定根因；V149–V157 的日志和就绪规则加固、后续一次通过不是历史缺陷已被确证并根治。
+- **当前顺序**：授权人员提供目标 G1/G2/G3 原件与签署 → 运维只读复核/弥补真实基础设施缺口 → 独立发布批准 → 再讨论实际部署与本地受控 Seller/Ads 授权（仍需单独批准）。**不能承诺生产日期**。
+
+---
+
+
+## 历史：2026-11-13 / V150 最终合成技术验收（已由 V157 证据覆盖）
+
+> **精确已验收代码主线 SHA**：[`2e96bf421d1b8e0c2a2999ab63a236d80ea3a9d9`](https://github.com/kunlong-luo/merchivra/commit/2e96bf421d1b8e0c2a2999ab63a236d80ea3a9d9)。[V150 完整 A3 #43361557152](https://github.com/kunlong-luo/merchivra/actions/runs/43361557152) **第 1 次尝试 7/7 SUCCESS**：真实一次性 PostgreSQL 18/Flyway/HTTP、Java 25/Gradle、Next/Vite Chromium、Docker Compose 和临时本地 CA 验证的 HTTPS 切流。技术合成测试不能代表目标生产环境，也不能代替逐需求 G1/G2/G3 签字。
+
+- [PR #118](https://github.com/kunlong-luo/merchivra/pull/118) 在可登录的 Next→Vite→Next 合成 HTTPS 测试前，新增独立匿名 CookieJar 的**真实安全会话就绪检查**：匿名 /auth/me 401、/auth/csrf 200 且有令牌、JSESSIONID 必须 Secure/HttpOnly/SameSite=Strict。只对启动期临时 502/503/504 或连接中断进行有上限重试；证书不受信、CSRF 异常、错误授权状态或不安全 Cookie 均立即 fail-closed。沿用 V149 脱敏失败阶段诊断。
+- [#115](https://github.com/kunlong-luo/merchivra/issues/115) **仍开放**：V148 A3 首次 HTTPS AssertionError 具体根因无法从当时仅含异常类型的日志确认；V150 是就绪检查加固且本次首次运行成功，**不构成历史问题已定位/已根治的证明**。
+- 采购/仓储 [#62](https://github.com/kunlong-luo/merchivra/issues/62) 和 FBA 来源分页 [#108](https://github.com/kunlong-luo/merchivra/issues/108) 维持合成技术验收 CLOSED。Next 目标环境受控切流 [#63](https://github.com/kunlong-luo/merchivra/issues/63)、实际生产 G1/G2/G3/PITR/KMS/Alertmanager [#104](https://github.com/kunlong-luo/merchivra/issues/104)、维护者本地真实 Seller/Ads 只读 OAuth 和数据核验均仍 BLOCKED；未向公网发布真实 ERP，未进行真实 Amazon 写入。
+- [RTM-002](../requirements/implementation-acceptance-rtm-v148.md) 的 25 个 P0 代码/test 入口与人审缺项继续生效；本次 A3 只验证此 SHA 的**合成技术**，非每一条 FR 在真实店铺上完成产品/财务签署。
+
+---
+
+## 2026-11-13 / V149 主线回归（最新技术证据）
+
+> **精确主线 SHA** [`57d55b6e54e07cac1473259763ce48e4d96e9816`](https://github.com/kunlong-luo/merchivra/commit/57d55b6e54e07cac1473259763ce48e4d96e9816)：[完整 V149 A3 #43358590421](https://github.com/kunlong-luo/merchivra/actions/runs/43358590421) **第 1 次运行 7/7 SUCCESS**（Java25/Gradle、Next/Vite/Chromium、隔离 PG18/Flyway/真实 HTTP、Compose、CA 验证的本地 HTTPS 代理与同会话 Next→Vite→Next 回滚）。[PR #116](https://github.com/kunlong-luo/merchivra/pull/116) 仅加入 HTTPS canary **固定阶段、无敏感内容**的失败诊断及脱敏单测，并未更改匿名拒绝/CSRF/Secure Cookie/真实 OAuth 安全门槛。
+
+- #62 与 #108 已依据此前合成技术验收关闭；[RTM-002](../requirements/implementation-acceptance-rtm-v148.md) 提供 25 个 P0 的实际源码/测试入口与仍需人工认可的边界。
+- [#115](https://github.com/kunlong-luo/merchivra/issues/115) **保持开放**：V148 先失败再成功的本地 HTTPS 断言根因未确定；V149 只增强脱敏定位并且本次首次全绿，不代表“零失败”或实际生产 SLA。
+- [#63](https://github.com/kunlong-luo/merchivra/issues/63) 目标生产 Next 受控切流、维护者本地真实 Amazon Seller/Ads 授权与只读来源验收、[#104](https://github.com/kunlong-luo/merchivra/issues/104) 真实 TLS/IAM/KMS/离站 PG18 PITR/Alertmanager 外部值班 ACK/G1/G2/G3 仍**全部未放行**。不在公开 CI 启用真实凭据、生产 API 写入或实际公网 ERP。
+- 后续任何业务、安全或部署代码变更都须重新绑定**新的 main SHA**做风险对应验收；单纯文档说明不得冒充该新 SHA 的全 A3 通过。
+
+---
+
+## 2026-11-13 / V148 技术验收结论（覆盖下方 V146/V147 历史当前状态）
+
+> **当前精确主线 SHA**：[`a09fc4b2c8fa49b843e28642fb0fb39b7f114a5e`](https://github.com/kunlong-luo/merchivra/commit/a09fc4b2c8fa49b843e28642fb0fb39b7f114a5e)。[V148 完整 A3 #43356548084](https://github.com/kunlong-luo/merchivra/actions/runs/43356548084) 第 **2 次尝试 7/7 jobs SUCCESS**；包括 Java25/Gradle、Next/Vite/Chromium、隔离 PostgreSQL18/Flyway/HTTP/Compose、V146 本地 CA-verified HTTPS 下一致 Session 回滚。**首次尝试 V146 HTTPS canary 发生 fail-closed AssertionError（A3 曾失败），必须保留此不稳定性记录**，不得写成一次就成功。
+
+- **P0 #62** 采购/供应商/仓储分页 V144 技术关闭；**P0 [#108](https://github.com/kunlong-luo/merchivra/issues/108)** V147 FBA PO/ASN 来源历史/候选 keyset（原 LIMIT 200/100）由 [PR #110](https://github.com/kunlong-luo/merchivra/pull/110) 实现，V148 [PR #111](https://github.com/kunlong-luo/merchivra/pull/111) 修复旧浏览器 fixture、[PR #113](https://github.com/kunlong-luo/merchivra/pull/113) 触发准确主线 A3；在二次完整 A3 7/7 后 **#108 已按合成技术范围关闭**。
+- **当前 RTM**：[RTM-002 P0 代码/测试/真实来源/签署追踪](../requirements/implementation-acceptance-rtm-v148.md)。25 个 P0、3 个 P1、1 个 P2 需求均有当前代码/test 入口映射或明确欠缺；**代码/CI 存在不自动代表逐 AC 全验收**，真实 Seller/Ads/银行来源与产品/财务签署仍待用户/负责人独立执行。
+- **当前真正阻塞**：[Next.js 目标生产切流 #63](https://github.com/kunlong-luo/merchivra/issues/63)、[G1/G2/G3 真实 IAM/HTTPS/KMS/PG18 PITR/告警及签署 #104](https://github.com/kunlong-luo/merchivra/issues/104)、用户本地真实 Amazon Seller/Ads **只读**授权联调，仍全部不因合成 A3 自动变为通过。下一阶段需先落实有权限的**目标环境验收条件**；不可自动启用生产 OAuth 或远程写。
+- **维护原则**：任何后续业务/高风险改动都要在新 SHA 上重新验收。V148 的 CI 首次 TLS 断言失败应另行复查并对失败阶段添加无敏感信息诊断；重试成功不能作为生产可用性统计上的“零故障”。
+
+---
+
+## 2026-11-13 主线 V146 状态补丁（本文件现行优先级，V108 以下为历史执行记录）
+
+> **核查基线**：`main` [`945ffb299f8dccfe321c6792960cb461d5c4bf30`](https://github.com/kunlong-luo/merchivra/commit/945ffb299f8dccfe321c6792960cb461d5c4bf30)（V146 / PR #107）；[相同 SHA 的快速 CI #43284799168](https://github.com/kunlong-luo/merchivra/actions/runs/43284799168) **success**、[完整 A3 #43284799417](https://github.com/kunlong-luo/merchivra/actions/runs/43284799417) **7/7 jobs success**。后者确实运行 Java 25/Gradle、React/Vite、Next/Chromium、隔离 PostgreSQL 18 + Flyway + HTTP/恢复及 Compose；**只证明该 SHA 的合成技术验收**，不等于真实 Amazon/Ads/银行、目标生产部署、正式业务/财务验收或 G1/G2/G3 签署。后续合并新代码必须用**新 SHA**重验。
+
+### 现行执行状态（取代下文 V108–V145 的“当前”“待做”历史快照）
+
+| 阶段 / 优先级 | 截至 V146 的真实状态 | 继续执行 / 关闭条件 |
+| --- | --- | --- |
+| A0 / CI 分层 | **已落地**：快速 PR CI + 显式完整里程碑检查 | 继续风险分层；生产风险变更需专项 PG18 / 安全检查，不因减少重复测试而跳过 |
+| A1 / 采购供应商仓储分页 P0 [#62](https://github.com/kunlong-luo/merchivra/issues/62) | **已关闭（V144）**：采购、供应商、仓储目录/余额/待收货/流水及相关关键选择器均已实现 keyset；[V144 A3 #43221779773](https://github.com/kunlong-luo/merchivra/actions/runs/43221779773) 7/7 通过，包含超过旧 LIMIT 的真实隔离 PG18 HTTP | 不能再把 #62 原始 LIMIT 100/200/500 缺口当作仍未开发；旧数组端点仅供兼容，未来新增功能另立审计 |
+| A1 / FBA 来源关联 P0 [#108](https://github.com/kunlong-luo/merchivra/issues/108) | **V147 PR [#110](https://github.com/kunlong-luo/merchivra/pull/110) 分支已实现、主线待验收**：新增 PO/ASN 来源历史与候选全库 keyset、17 个真实 Springdoc/Orval 操作、React 分页和 Flyway V90；旧 200/100 数组接口仅兼容。[分支 full_suite #43354930355](https://github.com/kunlong-luo/merchivra/actions/runs/43354930355) PG18 226/126 真实 HTTP + Java/Next/Compose **4/4 success** | 合并时确认移除临时工作流，以最终 main SHA 重跑完整 **A3 7/7** 才可按技术范围关闭 #108；真实 Seller/Ads、目标生产环境及 G1/G2/G3 独立保持未批准，详见 [V147 专项](../inventory/fba-purchase-pagination-v147.md) |
+| A2 / Next 私有 ERP [#63](https://github.com/kunlong-luo/merchivra/issues/63) | **部分完成**：Node 24 standalone、真实 Spring Session/CSRF/PG18 Compose；V144 覆盖 11 条 Next 工作台与跨登录缓存边界；V146 完成隔离 CA 验证的本地 HTTPS、Secure Cookie、同 Origin Next → Vite → Next 保持 Session 的回退测试 | **仍开放**：真实目标域名/CA、可信代理、证书轮换、MFA/IAM、正式 ingress、真实环境回滚/截图审阅、切流授权。详见 [V146](../architecture/next-https-cutover-v146.md) |
+| A3 / 合成技术验收 | **V146 当前 main 已完整 7/7 通过**，不等于“剩余 P0 全部完成”或产品/生产签字 | #108 等最后代码修订后锁定候选 commit，并再次执行完整 A3；建立每个 P0 FR 的代码、合同、模拟测试、真实来源、批准人和未完成事项的逐项 RTM，不能只沿用 V86 静态快照 |
+| A4 / 真实 Seller、Ads 与外部数据 | **未开始生产授权验收**；已有官方 SDK/读取代码和 Mock/隔离测试 | 维护者**仅在本地**用自有账户和已获批准的角色逐项只读 OAuth/SP-API/Ads、429/撤销/游标/订单/财务数据对账；银行/外部物流需要单独界定来源、范围和批准；远程写入另行审批 |
+| A5 / 生产发布 [#104](https://github.com/kunlong-luo/merchivra/issues/104) | **BLOCKED**：V142 仅隔离 PITR/内部 webhook；V143 只读发布预检无法自行批准；V146 HTTPS 也仅本地受控测试 | G1 产品/财务、G2 安全/架构、G3 运维/发布**真实独立签署**；目标环境 TLS/IAM/KMS、真实加密离站备份和 PITR/RPO/RTO、实际 Alertmanager 外部送达 ACK、ClamAV、容量/回滚及审计均须验证。参见 [V143 预检](../operations/v143-production-release-preflight.md) |
+
+### 当前未兑现的交付物与责任边界
+
+1. **代码 P0**：先关闭 #108 FBA PO/ASN 来源历史/候选的全库分页安全断点；V145 只迁移合同、没有修复数组上限；禁止把原先已关闭的 #62 重开或重复建设采购分页。
+2. **正式验收文档 P0**：`docs/requirements/traceability.md` 目前仍是设计矩阵，缺少按 FR 列出的“实现代码 / 模拟 SHA / 真实授权 / 负责人签署 / 放行状态”新鲜证据。A3 功能候选冻结前需补正式 RTM；无证据填“待验证”，不可按版本号自动填“通过”。
+3. **真实目标环境 P0**：#63 和 #104 的 HTTPS/IAM/密钥、PostgreSQL 18 真实生产恢复、外部告警、业务财务规则和人工作业签署必须由维护者/有权限负责人执行；CI 不得持有真实 Seller/Ads/银行密钥，GitHub Pages 只能是只读合成展示。
+4. **非首发 P1**：真实银行/外部物流、完整净利润与正式会计回转、进一步自动采购/预测/通知，均须先经 G1 决定首发范围、来源与口径；不能因为某个模块有 UI/模拟流程就标为正式集成完成。老 Issue #2–#24 的 OPEN 状态也不等于代码未开发，后续应逐条按合并 PR/实际代码核对并关闭或重定范围。
+
+**下一个客观顺序**：#108 代码/安全/专项 PG18 → 新 main SHA 全 A3 + RTM 状态记录 → #63 受控目标 Next 切流/回滚 → 用户本地 Seller/Ads 及外部来源只读试点 → #104 独立 G1/G2/G3 与目标基础设施签署 → 明确批准后 Beta/正式部署。没有经过这些验收就**不能承诺上线日期**。本段是**计划/状态纠偏**，不表示 V147 代码已经实现或有人代替用户批准真实生产授权。
+
+---
+
 
 > **唯一现行执行计划。** 覆盖 `docs/roadmap.md` 中 V92 及更早阶段的“当前/下一步”历史表述；旧版里程碑记录仍留存，不应作为现行版本信息。此计划明确由项目维护者批准：先补完 P0 功能，再集中运行完整回归；正式 Amazon Seller/Ads 授权最后在用户本地进行。此决策**不是**生产发布批准、G1/G2/G3 的业务签署，也不代表所有功能已完成。
 
@@ -50,7 +273,37 @@
 - 记录工作流运行时间、PR 执行次数及失败类型。不要只按“运行 2 分钟”评估消耗，也要关注多次重复工作流与排查时间。
 - 文档：`docs/testing/ci-policy.md`、`AGENTS.md`、`Agent.md`、`docs/roadmap.md` 均引用此现行计划；里程碑入口不可因后续重构被删。
 
-## 第一批可执行 P0 核查清单
+> **A1 源码对标补充（2026-11-08）**：已对 Wimoor、ERPNext、metasfresh 及 Amazon 官方 SDK/示例的实际源码完成 [BENCH-001 对照](../architecture/open-source-erp-benchmark-2026-11-08.md)。结论是保持现有业务状态机、Gradle/PG18/React/官方 SDK，不因竞品有更多界面而增加新 P0。**先做 Issue #62 的真实全库分页/历史入口，再做 #63 Next 正式切换**；供应商应付/采购付款、库存历史可视化等仅为需 G1 评审的 P1 候选。
+
+> **A1 / V110 实施进展**：采购订单 `/orders/page` 的服务端状态/单号检索、租户/过滤器绑定 keyset 和 Next/React 采购表格翻页已经作为第一批代码变更提交；范围与 [专项单测、尚待执行的 PG18 HTTP 里程碑冒烟](../purchasing/purchase-order-pages-v110.md) 在此记录。**Issue #62 其他供应商、仓库库存/待收货、流水截断仍未修复，Next 正式部署 #63 仍未实施。** 本表记录最初断点，不因新增兼容接口而改写历史证据。
+
+> **A1 / V111 实施进展（2026-11-08）**：供应商 `/suppliers/page` 已新增租户绑定的编号前缀与 ACTIVE/ARCHIVED 过滤、稳定编码+UUID 游标；采购草稿、供应商采购规则输入及目录已改走可搜索的服务端分页选择。实现与单元测试详见 [V111 专项](../purchasing/supplier-directory-pages-v111.md)，其 PG18 HTTP（含第 201 个供应商创建本地 DRAFT）留到显式 `full_suite` / 集中里程碑，未执行之前不记为通过。订单/采购规则只读供应商名称映射仍可能在当前页外退回 UUID。**Issue #62 继续开启**：仓库流水 100 条、库存与待收货 500 条上限未解决；Next 正式切换 #63 同样未完成。旧 V108 原始缺口表仍是历史基线，不应当作 V111 改动尚未开展的实时状态。
+
+> **A1 / V112 实施进展（2026-11-08）**：本地仓库库存流水新增 `/warehouse-ledger/page`，支持按仓库+租户隔离的时间戳/UUID 倒序游标、服务器流水类型与 SKU 字面搜索，保留签名数量、收货/操作/质检/批次来源 ID 和业务原因。仓库工作台已替换“最近 100 条”局部视图，保留兼容旧接口。索引使用 Flyway V82。专项 Java/Vitest 及完整 PG18 HTTP 脚本详见 [V112](../purchasing/warehouse-ledger-pages-v112.md)；PG18 仅在 `full_suite` / A3 运行，尚未验证通过。**Issue #62 仍需解决库存余额/待收货的 500 条上限及分页契约迁移，Issue #63 Next 正式切换未完成。**
+
+> **A1 / V113 实施进展（2026-11-08）**：仓库库存余额与已审批/部分收货明细新增全库游标接口 `/warehouse-stock/page`、`/pending-receipts/page`，工作台接入服务端按 SKU、采购单号及状态搜索；旧 500 条兼容接口保留。新增 `/warehouse-stock/item` 在人工库存操作前精确查询 tenant+warehouse+ACTIVE SKU，**未加载或请求失败不是零库存**，现有事务内 expected-on-hand 与 lot-position 校验不变。Flyway V83 索引及 [V113 专项单测/待运行 PG18 HTTP 冒烟](../purchasing/warehouse-stock-pending-pages-v113.md) 已纳入开发分支；普通 PR 快速 CI 与集中 PG18 证据独立记录。**Issue #62 中的仓库目录旧 200 条上限、OpenAPI/Orval 统一与 A3 PG18 全链验收仍然未完成，Issue #63 Next 正式切换未完成。**
+
+> **A1 / V114 实施进展（2026-11-08）**：新增可搜索、租户/过滤绑定 `/warehouses/page` 和精确 `/warehouses/item`，采购收货、调拨、ASN/批次/异常等仓库下拉选择改为全库游标组件，不再被旧 `LIMIT 200` 阻断。另新增 [采购读取域 OpenAPI/Orval V114](../purchasing/warehouse-directory-orval-v114.md)：V110–V114 八项读取 API 采用 Orval v8 生成客户端 + Zod 响应验证，按构建/测试前置钩子生成而非手工签入；采购写入及附属子模块尚未全部迁移，不能视为整个采购域 Orval 工作完成。225 仓库专项 JUnit/Vitest 与一次性 PG18 HTTP（含第 201 仓人工库存 COUNT）已列入 `full_suite`，**未执行的 PG18 不记为通过**；Next 正式切换与真实 Amazon 授权仍未放行。
+
+> **A1 / V115 实施进展（2026-11-08）**：完成 V114 采购 OpenAPI 的核心写入扩展：供应商/仓库/PO DRAFT、提交/审批/取消、真实收货、仓库库存操作及采购明细查询改由 Orval 生成客户端发送，原币金额字符串与 Session-CSRF/后端审批和库存事务锁保持不变。只读仓库标签新增最多 100 个 ID 的租户作用域批量解析，解决第 201 个仓库在 ASN、QC、收货与批次来源链中只显示 UUID；V48 FIFO/FEFO 与 V49 批次操作继续补齐精确 SKU 余额查询，UNKNOWN **不得**被当作零库存。详见 [V115 变更、专项测试和未执行项](../purchasing/core-writes-orval-warehouse-labels-v115.md)。独立采购附属模块尚未全部迁移，A3 PG18 验收仍需明确执行，Next 正式切换 #63 与真实 Seller 授权继续保持关闭。
+
+> **A1 / V116 实施进展（2026-11-09）**：按现有 Java Controller 真实合同，供应商 ASN（9）、采购 QC/退货（13）、V46 收货批次（9）、V47 待检库位/分件（9）共 **40 条附属采购读写 API** 纳入同一 OpenAPI/Orval，采购源规范现累计 58 个唯一操作。已有前端业务函数签名、TanStack Query 与 Zod 校验不变，POST 统一使用 Session/CSRF 安全 transport；动态路径 UUID 校验避免生成 URL 直接插入非法字符串。详见 [V116 范围、测试与剩余缺口](../purchasing/asn-qc-receipt-bins-orval-v116.md)。底层审核、批次隔离、实际收货证据和 Spring 事务锁未改。**旧 ASN/事件等 LIMIT 200 不因 Orval 生成消失；V48/V49、供应商采购计划等附属域及集中 PG18 验收继续保留未完成，Next 正式部署 Issue #63 仍未放行。**
+
+> **A1 / V117 实施进展（2026-11-09）**：V48 已放行实物批次/分段质检/上架/FIFO-FEFO 拣货、V49 库位调拨/过期隔离/盘点观察/审计来源链纳入已有 OpenAPI/Orval 请求生成链；现累计 **71 个采购唯一 operationId**。新增 ASN 通知与不可覆盖事件日志的 Session 租户/PO/ASN 游标绑定服务端全量分页，前端展示第 201 条后真实通知和事件，旧 200 条兼容 API 保留供旧消费者使用。专项 Java 225 通知/事件、CSRF 和 Vitest 测试随 [V117 说明](../purchasing/released-lots-asn-pages-v117.md) 落库。**PG18 全量权限/并发/事务验收仍由 A3 集中执行，不以 CI 快速测试代替**。采购计划/供应商报价、索赔/批次证据、Next 正式切换 #63 与真实 Amazon 授权继续未完成。
+
+> **A1 / V118 实施进展（2026-11-09）**：复用现有 OpenAPI 3.1/Orval v8 生成方式，把 V42 供应商 MOQ/箱规/原币报价/采购计划（11）、V45 差异与供应商索赔（14）、V51 处置证明元数据（3）及 V72 本地交付概览读（1）共 **29 条已实现 API** 纳入生成请求合同，采购累计 **100 个唯一 operationId**；前端保留 Zod 运行校验、CSRF、Session、幂等键、UNKNOWN 防护和服务器审批规则。V52 真实附件仍走专门的 multipart MIME/大小/哈希和 CSRF 边界，不直接拿 JSON Orval mutator 代替。本次还在 V72 页面明确提示：`/delivery/overview` 旧 `LIMIT 300` 及其汇总仅为当前最多 300 行，**绝不是全租户总量**。修复全库汇总仍在 P0 待办；A3 PostgreSQL 18 真实验收、Next 正式切换与 Amazon 本地授权依旧未执行。详情见 [V118 变更](../purchasing/planning-disputes-proof-orval-v118.md)。
+
+> **A1 / V119 实施进展（2026-11-09）**：采购 V72 `/delivery/overview` 旧 `LIMIT 300` 总量截断已通过新的全租户数据库 `GET /delivery/summary` 聚合及 `GET /delivery/lines/page`（订单更新时间+订单/明细 UUID 绑定游标，每页 50）在主 React 采购交付工作台中解决；旧 API 仅作兼容。新增 2 项 Orval 读合同，采购 OpenAPI 累计 **102 个唯一 operationId**。服务端汇总直接从**全部本地符合条件的采购行**计算，UI 不再把 300 条局部求和误作全租户总计；仍保留 ASN 申报≠承运商、QC≠FBA 可售及无历史事实不猜测的规则。[V119 实现、专项测试及 A3 待执行说明](../purchasing/delivery-full-store-v119.md)。真实 PG18 性能/权限/并发/全链验证与 Next 正式切换 #63 仍未放行，Amazon 真实授权继续关闭。
+
+> **A1 / V120 实施进展（2026-11-09）**：复用 V73 已有的供应商本地履约 90 天证据分数和人工催办真实分页，把 6 条 GET/POST 接入 OpenAPI/Orval；V52 已执行供应商退货新增仓库+租户绑定的 `/lot-supplier-returns/warehouses/{warehouseId}/page` 全库 keyset，连同旧兼容读/人工发运/独立收货报告 4 条一起纳入生成合同（本阶段 +10，采购规范累计 **112 个唯一操作**）。现有 V50 处置工作台加入独立 Owner 报告发运和人工收货及可翻页历史；保留 VOID/UNKNOWN、隔离库存**不二次扣减**、发运/收货仅本地声明非第三方核验、样本不足不评分的安全语义。详见 [V120 说明](../purchasing/supplier-followup-return-traces-v120.md)。V50 处置候选的旧定额、V51/52 原件字节与源证据链、A3 PG18 真实安全回归及 #63 Next 正式运行继续未完成，Amazon 真实授权保持关闭。
+
+> **A1 / V121 实施进展（2026-11-09）**：V50 盘点复核、跨仓目的仓 ACK、已隔离处置历史和未规划隔离来源均新增 Session tenant+warehouse+domain 绑定的全库 keyset（每页 50），React 工作台不再以旧 `LIMIT 200` 截断审批/来源候选。V51 盘盈/少收来源选择也使用 V50 服务器分页，原有 V51 纠正审批 `PENDING/ALL` 页保留。V50/V51 共 **18 条 GET/POST** 纳入 OpenAPI/Orval v8，采购规范累计 **130 个唯一 operationId**；Java/Vitest 模拟 225 条每类 5 页、跨租户/跨仓库/跨记录类型游标拒绝以及 CSRF/库存来源/409 校验。旧兼容接口保留但主工作台不依赖旧历史定额。详见 [V121 记录](../purchasing/lot-reconciliation-pages-v121.md)。**PG18 全量真实 Flyway/HTTP、并发+权限+库存、Next runtime #63、Amazon 本地生产授权仍未验收或开启。**
+
+> **A2/A3 / V122（2026-11-09）**：为 Next.js 16.4.5 App Router 创建独立 **Node 24 standalone 多阶段/非 root 镜像** `apps/web/Dockerfile.next` 和可选择的私有 `deploy/compose.next.yaml`；默认仅暴露 `127.0.0.1:3001`，原 Vite/Nginx `web` 保持不变，可作为即时代理回切。编译时明确将 `/api` 代理指向 Compose 内部 `server:8080`，不通过浏览器暴露后端身份/秘密。普通 CI 新增有效 Compose 配置、Next Build、非 root/端口/禁 Seller/禁注入 Secrets 和 Vite 回退校验；V122 完整 Compose 里程碑将通过 Node 容器与 Spring/PG18 真登录、Session+CSRF 及 Cookie/权限校验。**本轮合并后 `milestone-validation.yml` 变更会自动触发一次主线精确 SHA 的全量 PG18、Chromium、Compose 回归，运行结果必须实查**，不能以绿色普通 PR 代替。详情与受控切流/回退见 [V122](../architecture/next-node-cutover-v122.md)。生产公网 TLS、真实 Seller/Ads 本地授权、外部秘密与 G1/G2/G3 签署仍需用户最终批准，故当前不声称正式上线。
+
+> **A3 / V123 集中测试实测发现（2026-11-09）**：V122 main `08dce7a` 首轮 [A3 #42602507335](https://github.com/kunlong-luo/merchivra/actions/runs/42602507335) **失败**，必须保持发布阻塞。Compose 三服务 + **Next16 standalone Node ↔ Spring ↔ PG18 真实 Session/CSRF** 全链通过，但 Chromium 的 V72 合成 Mock 未适配 V119 的 `/delivery/summary` 与 `/lines/page`，PG18 `/pending-receipts/page` 的状态+搜索 SQL 意外拼接 `$2AND` 引发 HTTP 500；V119/V120 真 PG18 冒烟到达并通过。V123 修复这些确诊断点并加入 SQL 拼接单测，合并后通过更新的 milestone workflow **再次在新的 main SHA 运行完整 PG18/Chromium/Compose**。详见 [V123 失败证据与修复记录](../testing/a3-regression-v123.md)。未全绿之前任何快速 CI 或历史测试均不能替代 A3；真实 Amazon 授权与正式生产仍关闭。
+
+## 第一批可执行 P0 核查清单（V108 历史基线；采购分页现已完成，参见顶部 V146 状态）
 
 | 核查对象 | 当前有证据的缺口 | 下一步 |
 | --- | --- | --- |
@@ -61,3 +314,6 @@
 | 财务/产品验收 | V64 报表与 V66 Ads 本地来源已实现，真实银行/Ads/Seller 未验收，G1/G2/G3 未签署 | 先按事实记录未验证项，最后由维护者本地接入真实来源并办理正式准入 |
 
 **上线时间**：可把私人 Beta 作为 A4 的近期目标，但任何“2–4 周”只能是预算估计，不能在真实授权/安全/业务验收尚未做完时承诺日历上线日期。正式公网发布日期暂不设定。
+
+
+> **A1 / V145（2026-11-12）**：FBA 本地 PO/ASN 来源关联的五条现有接口纳入真实 Springdoc/Orval，FBA 入仓合同累计 15 项操作。前端移除手写请求并保留 UUID、Zod、CSRF/no-store；见 [V75/V145 合同与测试范围](../inventory/fba-purchase-link-v75.md)。关联历史 200 条与候选 100 条硬上限仍存在，另由 #108 跟踪；#62 已按 V144 验收关闭。新提交完整 A3 需实查；#108 记录后续 FBA 分页缺口；#63 Next 切流与 #104 目标生产签署、真实 Amazon 本地授权仍未完成。

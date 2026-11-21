@@ -1,5 +1,7 @@
 # DEP-001 · 成熟依赖复用决策与 Pagevela 工程经验
 
+> **2026-11-08 现行补充**：本文件最初来自早期 M0/M2 的依赖评审，具体“还没有某测试/Starter”和 TanStack Router 的候选可能已被后续代码覆盖。当前请以 [V108 开发策略](../roadmap/mvp-freeze-release-v108.md)、[V109 文档中心](../README.md) 和 [BENCH-001 源码对标 / 开源许可决策](open-source-erp-benchmark-2026-11-08.md) 为准：Gradle/Java25/PG18/React19/Next16 候选、官方 Amazon SDK/Orval/TanStack/Base UI 均已选型，**不为对标 Wimoor 另引入 Maven、Vue 或微服务**。
+
 **状态：已在 main 建立第一批基础依赖；并不代表已完成全部技术选型。**
 
 参考：[Pagevela](https://github.com/kunlong-luo/pagevela) 的 CI、Vitest、Playwright、依赖更新、并发持久化协调器设计，而不是复制其简历产品业务代码。

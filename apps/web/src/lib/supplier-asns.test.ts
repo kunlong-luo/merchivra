@@ -63,8 +63,8 @@ describe('V43 supplier ASN contract',()=>{
   expect(posts).toHaveLength(3)
   expect(posts[0].url).toBe('/api/v1/purchasing/supplier-asns/orders/'+orderId)
   expect(JSON.parse(String(posts[0].options?.body))).toEqual(request)
-  expect(posts[0].options?.headers).toMatchObject({
-   'X-CSRF-TOKEN':'valid-supplier-asn-csrf-token'})
+  expect(new Headers(posts[0].options?.headers).get('X-CSRF-TOKEN'))
+   .toBe('valid-supplier-asn-csrf-token')
   expect(JSON.parse(String(posts[2].options?.body))).toEqual({
    expectedArrivalDate:'2026-11-11',expectedPreviousEta:'2026-11-10',
    reason:'Supplier delay'})

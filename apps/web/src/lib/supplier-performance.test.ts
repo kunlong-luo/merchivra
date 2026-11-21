@@ -58,7 +58,7 @@ describe('V73 supplier evidence and manual follow-up client',()=>{
   const result=await scanPurchaseFollowups()
   expect(result.matchedCount).toBe(1)
   const scan=calls.find(x=>x.url.endsWith('/scan'))
-  expect(scan?.options?.headers).toMatchObject({'X-CSRF-TOKEN':'v73-token-1234567890'})
+  expect(new Headers(scan?.options?.headers).get('X-CSRF-TOKEN')).toBe('v73-token-1234567890')
   expect(String(scan?.options?.body)).not.toContain('tenantId')
  })
  it('POST state change does not allow additional arbitrary fields',async()=>{

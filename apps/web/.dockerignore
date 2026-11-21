@@ -1,0 +1,17 @@
+node_modules
+.next
+dist
+coverage
+.vite
+*.tsbuildinfo
+.env
+.env.*
+!.env.example
+.git
+.gitignore
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+*.log

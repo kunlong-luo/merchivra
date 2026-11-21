@@ -1,6 +1,6 @@
 import {afterEach,describe,expect,it,vi} from 'vitest'
 import {
- fetchLotCountCases,submitLotCount,decideLotCount,
+ fetchLotCountCases,fetchLotCountCasesPage,fetchDestinationTransfersPage,fetchLotDispositionsPage,submitLotCount,decideLotCount,
  fetchDestinationTransfers,acknowledgeDestinationTransfer,
  fetchLotDispositions,fetchUnplannedQuarantines,proposeLotDisposition,
  decideLotDisposition,reportLotDispositionCompletion
@@ -66,7 +66,7 @@ describe('V50 local lot reconciliation evidence contracts',()=>{
    reason:'Physical cartons were recounted'})
   const post=calls.find(c=>c.opts?.method==='POST')
   expect(post?.url).toBe('/api/v1/purchasing/lot-reconciliation/counts')
-  expect(post?.opts?.headers).toMatchObject({'X-CSRF-TOKEN':'v50-valid-test-csrf-token'})
+  expect(new Headers(post?.opts?.headers).get('X-CSRF-TOKEN')).toBe('v50-valid-test-csrf-token')
   expect(JSON.parse(String(post?.opts?.body))).toMatchObject({
    requestKey:key,observationActionId:actionId})
  })
@@ -114,5 +114,28 @@ describe('V50 local lot reconciliation evidence contracts',()=>{
   expect(calls.filter(c=>c.opts?.method==='POST')).toHaveLength(3)
   expect(JSON.parse(String(calls.filter(c=>c.opts?.method==='POST')[2].opts?.body)))
    .toEqual({reference:'DIS-1001',reason:'Disposal documented by operator'})
+ })
+})
+
+describe('V121 scoped reconciliation history pages',()=>{
+ it('parses count pages and carries the opaque continuation cursor',async()=>{
+  const calls=mock(()=>({items:[count('PENDING_REVIEW')],nextCursor:'opaque_page',
+   hasMore:true,pageSize:50}))
+  const first=await fetchLotCountCasesPage(warehouse)
+  expect(first.items).toHaveLength(1)
+  expect(first.hasMore).toBe(true)
+  await fetchLotCountCasesPage(warehouse,first.nextCursor)
+  expect(calls[1].url).toContain('cursor=opaque_page')
+ })
+ it('rejects malformed response rather than treating missing evidence as empty',async()=>{
+  mock(()=>({items:[],nextCursor:null,hasMore:'unknown',pageSize:50}))
+  await expect(fetchDestinationTransfersPage(warehouse)).rejects.toThrow()
+ })
+ it('keeps destination transfer and disposition pagination read-only',async()=>{
+  const calls=mock(url=>({items:url.includes('transfers')?[transfer('MISMATCH')]:
+   [disposition('APPROVED')],nextCursor:null,hasMore:false,pageSize:50}))
+  expect((await fetchDestinationTransfersPage(warehouse)).items).toHaveLength(1)
+  expect((await fetchLotDispositionsPage(warehouse)).items).toHaveLength(1)
+  expect(calls.every(c=>c.opts?.method==='GET')).toBe(true)
  })
 })

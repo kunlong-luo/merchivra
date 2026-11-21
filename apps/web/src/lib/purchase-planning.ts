@@ -1,7 +1,12 @@
 import {z} from 'zod'
-import {csrfHeader} from './auth'
+import {
+ listSupplierSkuRulesLegacy,listSupplierSkuRulesPage,upsertSupplierSkuRule,
+ deleteSupplierSkuRule,listLocalPurchaseRecommendationsLegacy,
+ listLocalPurchaseRecommendationsPage,listLocalPurchasePlansLegacy,
+ listLocalPurchasePlansPage,createLocalPurchasePlanProposal,
+ convertLocalPurchasePlan,cancelLocalPurchasePlan
+} from '../generated/purchasing-v114'
 
-const base='/api/v1/purchasing/planning'
 const rule=z.object({supplierId:z.string().uuid(),productSkuId:z.string().uuid(),
  minimumOrderQuantity:z.number().int().positive(),packMultiple:z.number().int().positive(),
  leadTimeDays:z.number().int().nonnegative(),currency:z.string(),unitCost:z.string(),
@@ -39,51 +44,41 @@ export type NewPlanRequest={
  expectedRuleUpdatedAt:string;expectedOnHand:number;expectedOrderQuantity:number
 }
 
-async function api<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown):Promise<T> {
- const response=await fetch(url,{method,credentials:'same-origin',cache:'no-store',
-  headers:{Accept:'application/json',...(method==='GET'?{}:await csrfHeader()),
-   ...(body===undefined?{}:{'Content-Type':'application/json'})},
-  ...(body===undefined?{}:{body:JSON.stringify(body)})})
- if(!response.ok){
-  if(response.status===403)throw Error('当前账号无采购计划操作权限')
-  if(response.status===404)throw Error('仓库、供应商、SKU 或采购计划不存在')
-  if(response.status===409)throw Error('采购计划已存在或库存及供应商规则已经变化，请刷新核实')
-  throw Error('采购计划操作失败：HTTP '+response.status)
- }
- return response.status===204?undefined as T:schema.parse(await response.json())
-}
-export const fetchSupplierSkuRules=()=>api(base+'/supplier-rules',z.array(rule))
+// V118: source-backed Orval methods, retaining the Zod runtime guards and
+// existing business-facing function signatures for current TanStack consumers.
+const pathId=(id:string)=>z.string().uuid().parse(id)
+const decode=<T>(res:Promise<{data:unknown}>,schema:z.ZodType<T>):Promise<T>=>
+ res.then(r=>schema.parse(r.data))
 export type CursorPage<T>={items:T[];nextCursor:string|null;hasMore:boolean;pageSize:number}
 const pageOf=<T extends z.ZodTypeAny>(item:T)=>z.object({
  items:z.array(item).max(100),nextCursor:z.string().min(1).nullable(),
  hasMore:z.boolean(),pageSize:z.number().int().min(1).max(100)
 }).refine(p=>p.hasMore===(p.nextCursor!==null),{message:'Invalid page cursor'})
-function pageUrl(path:string,cursor:string|null,limit=50){
- const params=new URLSearchParams({limit:String(limit)})
- if(cursor)params.set('cursor',cursor)
- return path+'/page?'+params.toString()
-}
-export const fetchSupplierSkuRulesPage=(cursor:string|null=null)=>api(
- pageUrl(base+'/supplier-rules',cursor),pageOf(rule))
-export const fetchLocalPurchaseRecommendationsPage=(warehouseId:string,cursor:string|null=null)=>api(
- pageUrl(base+'/warehouses/'+encodeURIComponent(warehouseId)+'/recommendations',cursor),
- pageOf(recommendation))
-export const fetchLocalPurchasePlansPage=(warehouseId:string,cursor:string|null=null)=>api(
- pageUrl(base+'/warehouses/'+encodeURIComponent(warehouseId)+'/plans',cursor),pageOf(plan))
+const params=(cursor:string|null)=>({limit:50,...(cursor?{cursor}:{})})
 
+export const fetchSupplierSkuRules=()=>
+ decode(listSupplierSkuRulesLegacy(),z.array(rule))
+export const fetchSupplierSkuRulesPage=(cursor:string|null=null)=>
+ decode(listSupplierSkuRulesPage(params(cursor)),pageOf(rule))
+export const fetchLocalPurchaseRecommendationsPage=(warehouseId:string,cursor:string|null=null)=>
+ decode(listLocalPurchaseRecommendationsPage(pathId(warehouseId),params(cursor)),
+  pageOf(recommendation))
+export const fetchLocalPurchasePlansPage=(warehouseId:string,cursor:string|null=null)=>
+ decode(listLocalPurchasePlansPage(pathId(warehouseId),params(cursor)),pageOf(plan))
 export const setSupplierSkuRule=(supplierId:string,productSkuId:string,
  minimumOrderQuantity:number,packMultiple:number,leadTimeDays:number,
- currency:string,unitCost:string)=>api(base+'/supplier-rules',rule,'POST',{
- supplierId,productSkuId,minimumOrderQuantity,packMultiple,leadTimeDays,currency,unitCost})
-export const removeSupplierSkuRule=(supplierId:string,skuId:string)=>api(
- base+'/supplier-rules/'+encodeURIComponent(supplierId)+'/'+encodeURIComponent(skuId),
- z.unknown(),'DELETE')
-export const fetchLocalPurchaseRecommendations=(warehouseId:string)=>api(
- base+'/warehouses/'+encodeURIComponent(warehouseId)+'/recommendations',
- z.array(recommendation))
-export const fetchLocalPurchasePlans=(warehouseId:string)=>api(
- base+'/warehouses/'+encodeURIComponent(warehouseId)+'/plans',z.array(plan))
-export const proposeLocalPurchasePlan=(body:NewPlanRequest)=>api(
- base+'/plans',plan,'POST',body)
-export const actOnLocalPurchasePlan=(id:string,action:'convert'|'cancel')=>api(
- base+'/plans/'+encodeURIComponent(id)+'/'+action,plan,'POST')
+ currency:string,unitCost:string)=>
+ decode(upsertSupplierSkuRule({supplierId,productSkuId,minimumOrderQuantity,
+  packMultiple,leadTimeDays,currency,unitCost}),rule)
+export const removeSupplierSkuRule=(supplierId:string,skuId:string)=>
+ deleteSupplierSkuRule(pathId(supplierId),pathId(skuId)).then(()=>undefined)
+export const fetchLocalPurchaseRecommendations=(warehouseId:string)=>
+ decode(listLocalPurchaseRecommendationsLegacy(pathId(warehouseId)),
+  z.array(recommendation))
+export const fetchLocalPurchasePlans=(warehouseId:string)=>
+ decode(listLocalPurchasePlansLegacy(pathId(warehouseId)),z.array(plan))
+export const proposeLocalPurchasePlan=(body:NewPlanRequest)=>
+ decode(createLocalPurchasePlanProposal(body),plan)
+export const actOnLocalPurchasePlan=(id:string,action:'convert'|'cancel')=>
+ decode(action==='convert'?convertLocalPurchasePlan(pathId(id)):
+  cancelLocalPurchasePlan(pathId(id)),plan)

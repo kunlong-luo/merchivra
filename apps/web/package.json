@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "preview": "vite preview --host 127.0.0.1",
-    "api:generate": "orval --config orval.config.ts",
+    "api:generate": "orval --config orval.config.ts && npm run api:generate:purchasing",
     "api:generate:fba": "orval --config orval.fba.config.ts",
     "api:generate:ads": "orval --config orval.ads.config.ts",
     "api:generate:ops": "orval --config orval.ops.config.ts",
@@ -20,7 +20,15 @@
     "dev:next": "next dev --hostname 127.0.0.1 --port 3001",
     "build:next": "next build",
     "start:next": "next start --hostname 0.0.0.0 --port 3000",
-    "typecheck:next": "tsc --noEmit --project tsconfig.next.json"
+    "typecheck:next": "tsc --noEmit --project tsconfig.next.json",
+    "predev": "node scripts/ensure-purchasing-generated.mjs",
+    "pretest": "node scripts/ensure-purchasing-generated.mjs",
+    "pretypecheck": "node scripts/ensure-purchasing-generated.mjs",
+    "prebuild": "node scripts/ensure-purchasing-generated.mjs",
+    "predev:next": "node scripts/ensure-purchasing-generated.mjs",
+    "pretypecheck:next": "node scripts/ensure-purchasing-generated.mjs",
+    "prebuild:next": "node scripts/ensure-purchasing-generated.mjs",
+    "api:generate:purchasing": "orval --config orval.purchasing.config.ts"
   },
   "dependencies": {
     "@base-ui/react": "1.9.0",

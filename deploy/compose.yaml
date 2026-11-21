@@ -33,6 +33,9 @@ services:
   server:
     build:
       context: ../apps/server
+      args:
+        # Blank in dev/CI; a trusted release builder must set a reviewed main SHA.
+        MERCHIVRA_BUILD_REVISION: ${MERCHIVRA_BUILD_REVISION:-}
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
@@ -50,6 +53,8 @@ services:
       MERCHIVRA_SPAPI_RATE_LIMIT_ENABLED: ${MERCHIVRA_SPAPI_RATE_LIMIT_ENABLED:-false}
       MERCHIVRA_SPAPI_RATE_LIMIT_COOLDOWN_MS: ${MERCHIVRA_SPAPI_RATE_LIMIT_COOLDOWN_MS:-2000}
       MERCHIVRA_DEMO_ENABLED: 'true' # Only invented fixtures; real OAuth fails closed in Demo mode.
+      # Explicit synthetic-only bypass, never use as a production upload source.
+      MERCHIVRA_EVIDENCE_AV_REQUIRED: 'false'
       MERCHIVRA_ORDERS_SYNC_ENABLED: ${MERCHIVRA_ORDERS_SYNC_ENABLED:-false}
       MERCHIVRA_ORDERS_SYNC_MODE: ${MERCHIVRA_ORDERS_SYNC_MODE:-MOCK}
       MERCHIVRA_ORDERS_SYNC_LIVE_APPROVED: ${MERCHIVRA_ORDERS_SYNC_LIVE_APPROVED:-false}
@@ -79,6 +84,8 @@ services:
   web:
     build:
       context: ../apps/web
+      args:
+        MERCHIVRA_BUILD_REVISION: ${MERCHIVRA_BUILD_REVISION:-}
     ports:
       - "127.0.0.1:3000:80"
     depends_on:

@@ -2,6 +2,7 @@ import type {Metadata,Viewport} from 'next'
 import type {ReactNode} from 'react'
 import '../src/style.css'
 import './design-system.css'
+import '../src/visual-refresh.css'
 
 export const metadata:Metadata={
   title:'Merchivra ERP · 运营工作台',

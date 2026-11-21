@@ -20,6 +20,8 @@
 | **P1** | `CONTRIBUTING.md` | 缺少 Next TS、Orval 和当前 CI 入口，可能引导贡献者把历史设计 JSON 当 API 合同 | **本轮补充**快速贡献流程与风险分层 |
 | **P1** | 文档链接和导航 | 核心入口相对路径依赖手工维护，容易因迁移文件破链 | **本轮加入**无需额外依赖的本地链接/现行策略校验，并纳入快速 CI |
 
+> **补充研究（2026-11-08）**：已按源码确认 [开源 Amazon ERP / ERPNext / metasfresh / 官方 SDK 对标矩阵](../architecture/open-source-erp-benchmark-2026-11-08.md)。该矩阵明确了 V20 历史“未做调拨/退货”已过时，并坚持当前 #62/#63 P0 顺序，不把对标候选直接当新上线功能或合法复制代码的许可。
+
 ## 本次修订不表示完成的事项
 
 1. [P0 #62：供应商、采购、仓库完整服务端查询](https://github.com/kunlong-luo/merchivra/issues/62) 仍未实现。V107 的本地采购/流水过滤**不代表数据库全量筛选**。后端实际有 `orders LIMIT 100`、`suppliers LIMIT 200`、`ledger LIMIT 100`、`stock/pendingReceipts LIMIT 500`；详见 [代码证据](../testing/p0-purchasing-read-cap-audit-v108.md)。

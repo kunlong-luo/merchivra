@@ -95,6 +95,95 @@ public class SupplierAsnService {
             ORDER BY a.created_at DESC,a.id DESC LIMIT 200
             """,SupplierAsnService::asn,tenant,order);
     }
+    /** V117: complete order-bound supplier notices, never the legacy first 200. */
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Asn> listPage(UUID tenant,UUID order,
+        int requested,String cursor) {
+        if(tenant==null || order==null)throw bad("Tenant and order required");
+        int limit=LocalKeysetPage.limit(requested);
+        String[] parts=LocalKeysetPage.decode(cursor,5);
+        OffsetDateTime afterTime=null;
+        UUID afterId=null;
+        if(parts!=null) {
+            if(!"asn-v117".equals(parts[0]) ||
+               !tenant.toString().equals(parts[1]) ||
+               !order.toString().equals(parts[2]))
+                throw bad("ASN page cursor belongs to a different scope");
+            try {
+                afterTime=OffsetDateTime.parse(parts[3]);
+                afterId=UUID.fromString(parts[4]);
+            } catch(java.time.format.DateTimeParseException|IllegalArgumentException e){
+                throw bad("Invalid ASN page cursor");
+            }
+        }
+        String sql=ASN_SQL+" AND a.purchase_order_id=?"
+            +(parts==null?"":" AND (a.created_at,a.id)<(?,?)")
+            +" ORDER BY a.created_at DESC,a.id DESC LIMIT ?";
+        List<Asn> rows=parts==null
+            ?jdbc.query(sql,SupplierAsnService::asn,tenant,order,limit+1)
+            :jdbc.query(sql,SupplierAsnService::asn,tenant,order,afterTime,afterId,limit+1);
+        return LocalKeysetPage.pack(rows,limit,a->LocalKeysetPage.encode(
+            "asn-v117",tenant.toString(),order.toString(),a.createdAt(),a.id()));
+    }
+
+    private static Event mapEvent(ResultSet rs,int i) throws SQLException {
+        int count=rs.getInt("quantity");
+        boolean quantityMissing=rs.wasNull();
+        return new Event(rs.getObject("id",UUID.class).toString(),
+            rs.getString("event_type"),
+            rs.getObject("actor_user_id",UUID.class).toString(),
+            quantityMissing?null:count,
+            rs.getObject("old_eta",LocalDate.class)==null?null:
+                rs.getObject("old_eta",LocalDate.class).toString(),
+            rs.getObject("new_eta",LocalDate.class)==null?null:
+                rs.getObject("new_eta",LocalDate.class).toString(),
+            rs.getString("note"),instant(rs,"created_at"));
+    }
+
+    /** V117: complete per-notice immutable event history; validates the parent PO. */
+    @Transactional(readOnly=true)
+    public LocalKeysetPage.Page<Event> eventsPage(UUID tenant,UUID order,UUID asnId,
+        int requested,String cursor) {
+        if(tenant==null || order==null || asnId==null)
+            throw bad("Tenant, order and ASN required");
+        int limit=LocalKeysetPage.limit(requested);
+        String[] parts=LocalKeysetPage.decode(cursor,6);
+        OffsetDateTime afterTime=null;
+        UUID afterId=null;
+        if(parts!=null) {
+            if(!"asn-events-v117".equals(parts[0]) ||
+               !tenant.toString().equals(parts[1]) ||
+               !order.toString().equals(parts[2]) ||
+               !asnId.toString().equals(parts[3]))
+                throw bad("ASN event page cursor belongs to a different scope");
+            try {
+                afterTime=OffsetDateTime.parse(parts[4]);
+                afterId=UUID.fromString(parts[5]);
+            } catch(java.time.format.DateTimeParseException|IllegalArgumentException e){
+                throw bad("Invalid ASN event page cursor");
+            }
+        }
+        List<UUID> owned=jdbc.queryForList("""
+            SELECT id FROM erp_purchase_asn
+            WHERE tenant_id=? AND purchase_order_id=? AND id=?
+            """,UUID.class,tenant,order,asnId);
+        if(owned.size()!=1)throw missing();
+        String sql="""
+            SELECT e.id,e.event_type,e.actor_user_id,e.quantity,
+                e.old_eta,e.new_eta,e.note,e.created_at
+            FROM erp_purchase_asn_event e
+            WHERE e.tenant_id=? AND e.asn_id=?
+            """+(parts==null?"":" AND (e.created_at,e.id)<(?,?)")
+            +" ORDER BY e.created_at DESC,e.id DESC LIMIT ?";
+        List<Event> rows=parts==null
+            ?jdbc.query(sql,SupplierAsnService::mapEvent,tenant,asnId,limit+1)
+            :jdbc.query(sql,SupplierAsnService::mapEvent,
+                tenant,asnId,afterTime,afterId,limit+1);
+        return LocalKeysetPage.pack(rows,limit,event->LocalKeysetPage.encode(
+            "asn-events-v117",tenant.toString(),order.toString(),asnId.toString(),
+            event.createdAt(),event.id()));
+    }
+
     private Asn get(UUID tenant,UUID id) {
         return jdbc.query(ASN_SQL+" AND a.id=?",SupplierAsnService::asn,tenant,id)
             .stream().findFirst().orElseThrow(SupplierAsnService::missing);

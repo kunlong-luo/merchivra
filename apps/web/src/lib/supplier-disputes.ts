@@ -1,7 +1,13 @@
 import {z} from 'zod'
-import {csrfHeader} from './auth'
+import {
+ listPurchaseVariancesLegacy,listPurchaseVariancesPage,reportPurchaseVariance as requestVariance,
+ changePurchaseVariance,listSupplierClaimsLegacy,listSupplierClaimsPage,
+ listSupplierClaimSourcesPage,createLocalSupplierClaim,changeLocalSupplierClaim,
+ listSupplierVarianceEventsLegacy,listSupplierVarianceEventsPage,
+ listSupplierClaimEventsLegacy,listSupplierClaimEventsPage,
+ listSupplierDisputePerformance
+} from '../generated/purchasing-v114'
 
-const base='/api/v1/purchasing/disputes'
 const variance=z.object({
  id:z.string().uuid(),orderId:z.string().uuid(),lineId:z.string().uuid(),
  asnId:z.string().uuid().nullable(),
@@ -41,69 +47,55 @@ export type CreateSupplierClaim={
  requestedQuantity:number;remedy:'REPLACEMENT'|'CREDIT_REQUEST';reason:string
 }
 
-async function api<T>(url:string,schema:z.ZodType<T>,method='GET',body?:unknown):Promise<T>{
- const response=await fetch(url,{method,credentials:'same-origin',cache:'no-store',
-  headers:{Accept:'application/json',...(method==='GET'?{}:await csrfHeader()),
-    ...(body===undefined?{}:{'Content-Type':'application/json'})},
-  ...(body===undefined?{}:{body:JSON.stringify(body)})})
- if(!response.ok){
-  if(response.status===403)throw Error('仅当前租户 Owner 可以处理供应商索赔')
-  if(response.status===404)throw Error('采购单、差异或索赔来源不可用')
-  if(response.status===409)throw Error('采购实收、来源或双人审批状态已变化，请刷新再审阅')
-  throw Error('本地采购差异 API HTTP '+response.status)
- }
- return schema.parse(await response.json())
-}
+// Source-backed V118 dispute contracts; response DTO and cursor invariants
+// remain runtime-checked, rather than treating typed generated code as proof.
+const pathId=(id:string)=>z.string().uuid().parse(id)
+const decode=<T>(res:Promise<{data:unknown}>,schema:z.ZodType<T>):Promise<T>=>
+ res.then(r=>schema.parse(r.data))
 export type CaseFilter='ACTIONABLE'|'ALL'
 const claimSource=z.object({
  sourceType:z.enum(['VARIANCE','QC']),sourceId:z.string().uuid(),
  maxQuantity:z.number().int().positive(),createdAt:z.string()
 })
 export type SupplierClaimSource=z.infer<typeof claimSource>
-const cursorPage=<T extends z.ZodType>(item:T)=>z.object({
+const cursorPage=<T extends z.ZodTypeAny>(item:T)=>z.object({
  items:z.array(item).max(100),
  nextCursor:z.string().min(1).nullable(),hasMore:z.boolean(),
  pageSize:z.number().int().min(1).max(100)
 }).refine(v=>v.hasMore===(v.nextCursor!==null),{
  message:'无效的业务游标分页响应'
 })
-const pageUrl=(path:string,cursor:string|null,filter?:CaseFilter)=>{
- const params=new URLSearchParams({limit:'50',...(filter?{filter}:{})})
- if(cursor)params.set('cursor',cursor)
- return base+path+'/page?'+params.toString()
-}
+const paging=(cursor:string|null)=>({limit:50,...(cursor?{cursor}:{})})
 export const fetchPurchaseVariancesPage=(orderId:string,filter:CaseFilter,
- cursor:string|null=null)=>api(
- pageUrl('/orders/'+encodeURIComponent(orderId)+'/variances',cursor,filter),
- cursorPage(variance))
+ cursor:string|null=null)=>
+ decode(listPurchaseVariancesPage(pathId(orderId),{...paging(cursor),filter}),cursorPage(variance))
 export const fetchSupplierClaimsPage=(orderId:string,filter:CaseFilter,
- cursor:string|null=null)=>api(
- pageUrl('/orders/'+encodeURIComponent(orderId)+'/claims',cursor,filter),
- cursorPage(claim))
-/** The backend excludes claimed sources across ALL rows, including cancelled. */
-export const fetchSupplierClaimSourcesPage=(orderId:string,
- cursor:string|null=null)=>api(
- pageUrl('/orders/'+encodeURIComponent(orderId)+'/claim-sources',cursor),
- cursorPage(claimSource))
+ cursor:string|null=null)=>
+ decode(listSupplierClaimsPage(pathId(orderId),{...paging(cursor),filter}),cursorPage(claim))
+export const fetchSupplierClaimSourcesPage=(orderId:string,cursor:string|null=null)=>
+ decode(listSupplierClaimSourcesPage(pathId(orderId),paging(cursor)),cursorPage(claimSource))
 export const fetchSupplierCaseEventsPage=(id:string,type:'variances'|'claims',
- cursor:string|null=null)=>api(
- pageUrl('/'+type+'/'+encodeURIComponent(id)+'/events',cursor),
- cursorPage(event))
+ cursor:string|null=null)=>
+ decode(type==='variances'?
+  listSupplierVarianceEventsPage(pathId(id),paging(cursor)):
+  listSupplierClaimEventsPage(pathId(id),paging(cursor)),cursorPage(event))
 
-export const fetchPurchaseVariances=(orderId:string)=>api(
- base+'/orders/'+encodeURIComponent(orderId)+'/variances',z.array(variance))
-export const reportPurchaseVariance=(orderId:string,body:ReportVariance)=>api(
- base+'/orders/'+encodeURIComponent(orderId)+'/variances',variance,'POST',body)
-export const actPurchaseVariance=(id:string,action:'review'|'close')=>api(
- base+'/variances/'+encodeURIComponent(id)+'/'+action,variance,'POST')
-export const fetchSupplierClaims=(orderId:string)=>api(
- base+'/orders/'+encodeURIComponent(orderId)+'/claims',z.array(claim))
-export const createSupplierClaim=(body:CreateSupplierClaim)=>api(
- base+'/claims',claim,'POST',body)
+export const fetchPurchaseVariances=(orderId:string)=>
+ decode(listPurchaseVariancesLegacy(pathId(orderId)),z.array(variance))
+export const reportPurchaseVariance=(orderId:string,body:ReportVariance)=>
+ decode(requestVariance(pathId(orderId),body),variance)
+export const actPurchaseVariance=(id:string,action:'review'|'close')=>
+ decode(changePurchaseVariance(pathId(id),action),variance)
+export const fetchSupplierClaims=(orderId:string)=>
+ decode(listSupplierClaimsLegacy(pathId(orderId)),z.array(claim))
+export const createSupplierClaim=(body:CreateSupplierClaim)=>
+ decode(createLocalSupplierClaim(body),claim)
 export const actSupplierClaim=(id:string,action:'submit'|'approve'|'close'|'cancel',
- note?:string)=>api(base+'/claims/'+encodeURIComponent(id)+'/'+action,
- claim,'POST',action==='close'?{note}:undefined)
-export const fetchSupplierPerformance=()=>api(
- base+'/supplier-performance',z.array(performance))
-export const fetchSupplierCaseEvents=(id:string,type:'variances'|'claims')=>api(
- base+'/'+type+'/'+encodeURIComponent(id)+'/events',z.array(event))
+ note?:string)=>
+ decode(changeLocalSupplierClaim(pathId(id),action,
+  action==='close'?{note:note??''}:undefined),claim)
+export const fetchSupplierPerformance=()=>
+ decode(listSupplierDisputePerformance(),z.array(performance))
+export const fetchSupplierCaseEvents=(id:string,type:'variances'|'claims')=>
+ decode(type==='variances'?listSupplierVarianceEventsLegacy(pathId(id)):
+  listSupplierClaimEventsLegacy(pathId(id)),z.array(event))

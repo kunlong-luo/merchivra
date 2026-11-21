@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Merchivra verified local FBA inbound API
  * Owner Session; MOCK/MANUAL_UNVERIFIED evidence only. No Amazon writes.
- * OpenAPI spec version: 92.0.0
+ * OpenAPI spec version: 147.0.0
  */
 import {
   useMutation,
@@ -25,9 +25,17 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  Candidate,
+  CandidatePage,
   Create,
   Detail,
+  Linked,
+  LinkedPage,
   ListFbaInboundShipmentPageParams,
+  ListFbaPurchaseCandidatesPageParams,
+  ListFbaPurchaseLinksPageParams,
+  Propose,
+  Reason,
   Receipt,
   Resolve,
   Shipment,
@@ -454,6 +462,807 @@ const {mutation: mutationOptions, request: requestOptions} = options ?
       > => {
       return useMutation(getDispatchFbaInboundShipmentMutationOptions(options), queryClient);
     }
+
+export type listFbaPurchaseLinksResponse200 = {
+  data: Linked[]
+  status: 200
+}
+
+export type listFbaPurchaseLinksResponseSuccess = (listFbaPurchaseLinksResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listFbaPurchaseLinksResponse = (listFbaPurchaseLinksResponseSuccess)
+
+export const getListFbaPurchaseLinksUrl = (marketplaceId: string,
+    shipmentId: string,) => {
+
+
+
+
+  return `/api/v1/fba/marketplaces/${marketplaceId}/shipments/${shipmentId}/purchase-links`
+}
+
+export const listFbaPurchaseLinks = async (marketplaceId: string,
+    shipmentId: string, options?: Parameters<typeof merchivraFetch>[1]): Promise<listFbaPurchaseLinksResponse> => {
+
+  return merchivraFetch<listFbaPurchaseLinksResponse>(getListFbaPurchaseLinksUrl(marketplaceId,shipmentId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFbaPurchaseLinksQueryKey = (marketplaceId: string,
+    shipmentId: string,) => {
+    return [
+    `/api/v1/fba/marketplaces/${marketplaceId}/shipments/${shipmentId}/purchase-links`
+    ] as const;
+    }
+
+
+export const getListFbaPurchaseLinksQueryOptions = <TData = Awaited<ReturnType<typeof listFbaPurchaseLinks>>, TError = ErrorType<unknown>>(marketplaceId: string,
+    shipmentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseLinks>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFbaPurchaseLinksQueryKey(marketplaceId,shipmentId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFbaPurchaseLinks>>> = ({ signal }) => listFbaPurchaseLinks(marketplaceId,shipmentId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: marketplaceId !== null && marketplaceId !== undefined && shipmentId !== null && shipmentId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseLinks>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListFbaPurchaseLinksQueryResult = NonNullable<Awaited<ReturnType<typeof listFbaPurchaseLinks>>>
+export type ListFbaPurchaseLinksQueryError = ErrorType<unknown>
+
+
+export function useListFbaPurchaseLinks<TData = Awaited<ReturnType<typeof listFbaPurchaseLinks>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    shipmentId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseLinks>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFbaPurchaseLinks>>,
+          TError,
+          Awaited<ReturnType<typeof listFbaPurchaseLinks>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFbaPurchaseLinks<TData = Awaited<ReturnType<typeof listFbaPurchaseLinks>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    shipmentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseLinks>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFbaPurchaseLinks>>,
+          TError,
+          Awaited<ReturnType<typeof listFbaPurchaseLinks>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFbaPurchaseLinks<TData = Awaited<ReturnType<typeof listFbaPurchaseLinks>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    shipmentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseLinks>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListFbaPurchaseLinks<TData = Awaited<ReturnType<typeof listFbaPurchaseLinks>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    shipmentId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseLinks>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListFbaPurchaseLinksQueryOptions(marketplaceId,shipmentId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type proposeFbaPurchaseLinkResponse200 = {
+  data: Linked
+  status: 200
+}
+
+export type proposeFbaPurchaseLinkResponseSuccess = (proposeFbaPurchaseLinkResponse200) & {
+  headers: Headers;
+};
+;
+
+export type proposeFbaPurchaseLinkResponse = (proposeFbaPurchaseLinkResponseSuccess)
+
+export const getProposeFbaPurchaseLinkUrl = (marketplaceId: string,
+    shipmentId: string,) => {
+
+
+
+
+  return `/api/v1/fba/marketplaces/${marketplaceId}/shipments/${shipmentId}/purchase-links`
+}
+
+export const proposeFbaPurchaseLink = async (marketplaceId: string,
+    shipmentId: string,
+    propose: Propose, options?: Parameters<typeof merchivraFetch>[1]): Promise<proposeFbaPurchaseLinkResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return merchivraFetch<proposeFbaPurchaseLinkResponse>(getProposeFbaPurchaseLinkUrl(marketplaceId,shipmentId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(propose)
+  }
+);}
+
+
+
+
+
+export const getProposeFbaPurchaseLinkMutationKey = () => ['proposeFbaPurchaseLink'] as const;
+
+export const getProposeFbaPurchaseLinkMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof proposeFbaPurchaseLink>>, TError,ProposeFbaPurchaseLinkMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof proposeFbaPurchaseLink>>, TError,ProposeFbaPurchaseLinkMutationVariables, TContext> => {
+
+const mutationKey = getProposeFbaPurchaseLinkMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof proposeFbaPurchaseLink>>, ProposeFbaPurchaseLinkMutationVariables> = (props) => {
+          const {marketplaceId,shipmentId,data} = props ?? {};
+
+          return  proposeFbaPurchaseLink(marketplaceId,shipmentId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ProposeFbaPurchaseLinkMutationResult = NonNullable<Awaited<ReturnType<typeof proposeFbaPurchaseLink>>>
+    export type ProposeFbaPurchaseLinkMutationBody = BodyType<Propose>
+    export type ProposeFbaPurchaseLinkMutationError = ErrorType<unknown>
+    export type ProposeFbaPurchaseLinkMutationVariables = {marketplaceId: string;shipmentId: string;data: BodyType<Propose>}
+
+    export const useProposeFbaPurchaseLink = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof proposeFbaPurchaseLink>>, TError,ProposeFbaPurchaseLinkMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof proposeFbaPurchaseLink>>,
+        TError,
+        ProposeFbaPurchaseLinkMutationVariables,
+        TContext
+      > => {
+      return useMutation(getProposeFbaPurchaseLinkMutationOptions(options), queryClient);
+    }
+
+export type confirmFbaPurchaseLinkResponse200 = {
+  data: Linked
+  status: 200
+}
+
+export type confirmFbaPurchaseLinkResponseSuccess = (confirmFbaPurchaseLinkResponse200) & {
+  headers: Headers;
+};
+;
+
+export type confirmFbaPurchaseLinkResponse = (confirmFbaPurchaseLinkResponseSuccess)
+
+export const getConfirmFbaPurchaseLinkUrl = (marketplaceId: string,
+    shipmentId: string,
+    linkId: string,) => {
+
+
+
+
+  return `/api/v1/fba/marketplaces/${marketplaceId}/shipments/${shipmentId}/purchase-links/${linkId}/confirm`
+}
+
+export const confirmFbaPurchaseLink = async (marketplaceId: string,
+    shipmentId: string,
+    linkId: string,
+    reason: Reason, options?: Parameters<typeof merchivraFetch>[1]): Promise<confirmFbaPurchaseLinkResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return merchivraFetch<confirmFbaPurchaseLinkResponse>(getConfirmFbaPurchaseLinkUrl(marketplaceId,shipmentId,linkId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(reason)
+  }
+);}
+
+
+
+
+
+export const getConfirmFbaPurchaseLinkMutationKey = () => ['confirmFbaPurchaseLink'] as const;
+
+export const getConfirmFbaPurchaseLinkMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmFbaPurchaseLink>>, TError,ConfirmFbaPurchaseLinkMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof confirmFbaPurchaseLink>>, TError,ConfirmFbaPurchaseLinkMutationVariables, TContext> => {
+
+const mutationKey = getConfirmFbaPurchaseLinkMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof confirmFbaPurchaseLink>>, ConfirmFbaPurchaseLinkMutationVariables> = (props) => {
+          const {marketplaceId,shipmentId,linkId,data} = props ?? {};
+
+          return  confirmFbaPurchaseLink(marketplaceId,shipmentId,linkId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type ConfirmFbaPurchaseLinkMutationResult = NonNullable<Awaited<ReturnType<typeof confirmFbaPurchaseLink>>>
+    export type ConfirmFbaPurchaseLinkMutationBody = BodyType<Reason>
+    export type ConfirmFbaPurchaseLinkMutationError = ErrorType<unknown>
+    export type ConfirmFbaPurchaseLinkMutationVariables = {marketplaceId: string;shipmentId: string;linkId: string;data: BodyType<Reason>}
+
+    export const useConfirmFbaPurchaseLink = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof confirmFbaPurchaseLink>>, TError,ConfirmFbaPurchaseLinkMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof confirmFbaPurchaseLink>>,
+        TError,
+        ConfirmFbaPurchaseLinkMutationVariables,
+        TContext
+      > => {
+      return useMutation(getConfirmFbaPurchaseLinkMutationOptions(options), queryClient);
+    }
+
+export type revokeFbaPurchaseLinkResponse200 = {
+  data: Linked
+  status: 200
+}
+
+export type revokeFbaPurchaseLinkResponseSuccess = (revokeFbaPurchaseLinkResponse200) & {
+  headers: Headers;
+};
+;
+
+export type revokeFbaPurchaseLinkResponse = (revokeFbaPurchaseLinkResponseSuccess)
+
+export const getRevokeFbaPurchaseLinkUrl = (marketplaceId: string,
+    shipmentId: string,
+    linkId: string,) => {
+
+
+
+
+  return `/api/v1/fba/marketplaces/${marketplaceId}/shipments/${shipmentId}/purchase-links/${linkId}/revoke`
+}
+
+export const revokeFbaPurchaseLink = async (marketplaceId: string,
+    shipmentId: string,
+    linkId: string,
+    reason: Reason, options?: Parameters<typeof merchivraFetch>[1]): Promise<revokeFbaPurchaseLinkResponse> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return merchivraFetch<revokeFbaPurchaseLinkResponse>(getRevokeFbaPurchaseLinkUrl(marketplaceId,shipmentId,linkId),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(reason)
+  }
+);}
+
+
+
+
+
+export const getRevokeFbaPurchaseLinkMutationKey = () => ['revokeFbaPurchaseLink'] as const;
+
+export const getRevokeFbaPurchaseLinkMutationOptions = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeFbaPurchaseLink>>, TError,RevokeFbaPurchaseLinkMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof revokeFbaPurchaseLink>>, TError,RevokeFbaPurchaseLinkMutationVariables, TContext> => {
+
+const mutationKey = getRevokeFbaPurchaseLinkMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof revokeFbaPurchaseLink>>, RevokeFbaPurchaseLinkMutationVariables> = (props) => {
+          const {marketplaceId,shipmentId,linkId,data} = props ?? {};
+
+          return  revokeFbaPurchaseLink(marketplaceId,shipmentId,linkId,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type RevokeFbaPurchaseLinkMutationResult = NonNullable<Awaited<ReturnType<typeof revokeFbaPurchaseLink>>>
+    export type RevokeFbaPurchaseLinkMutationBody = BodyType<Reason>
+    export type RevokeFbaPurchaseLinkMutationError = ErrorType<unknown>
+    export type RevokeFbaPurchaseLinkMutationVariables = {marketplaceId: string;shipmentId: string;linkId: string;data: BodyType<Reason>}
+
+    export const useRevokeFbaPurchaseLink = <TError = ErrorType<unknown>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof revokeFbaPurchaseLink>>, TError,RevokeFbaPurchaseLinkMutationVariables, TContext>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient): UseMutationResult<
+        Awaited<ReturnType<typeof revokeFbaPurchaseLink>>,
+        TError,
+        RevokeFbaPurchaseLinkMutationVariables,
+        TContext
+      > => {
+      return useMutation(getRevokeFbaPurchaseLinkMutationOptions(options), queryClient);
+    }
+
+export type listFbaPurchaseCandidatesResponse200 = {
+  data: Candidate[]
+  status: 200
+}
+
+export type listFbaPurchaseCandidatesResponseSuccess = (listFbaPurchaseCandidatesResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listFbaPurchaseCandidatesResponse = (listFbaPurchaseCandidatesResponseSuccess)
+
+export const getListFbaPurchaseCandidatesUrl = (marketplaceId: string,
+    shipmentId: string,
+    lineId: string,) => {
+
+
+
+
+  return `/api/v1/fba/marketplaces/${marketplaceId}/shipments/${shipmentId}/purchase-links/lines/${lineId}/candidates`
+}
+
+export const listFbaPurchaseCandidates = async (marketplaceId: string,
+    shipmentId: string,
+    lineId: string, options?: Parameters<typeof merchivraFetch>[1]): Promise<listFbaPurchaseCandidatesResponse> => {
+
+  return merchivraFetch<listFbaPurchaseCandidatesResponse>(getListFbaPurchaseCandidatesUrl(marketplaceId,shipmentId,lineId),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFbaPurchaseCandidatesQueryKey = (marketplaceId: string,
+    shipmentId: string,
+    lineId: string,) => {
+    return [
+    `/api/v1/fba/marketplaces/${marketplaceId}/shipments/${shipmentId}/purchase-links/lines/${lineId}/candidates`
+    ] as const;
+    }
+
+
+export const getListFbaPurchaseCandidatesQueryOptions = <TData = Awaited<ReturnType<typeof listFbaPurchaseCandidates>>, TError = ErrorType<unknown>>(marketplaceId: string,
+    shipmentId: string,
+    lineId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseCandidates>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFbaPurchaseCandidatesQueryKey(marketplaceId,shipmentId,lineId);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFbaPurchaseCandidates>>> = ({ signal }) => listFbaPurchaseCandidates(marketplaceId,shipmentId,lineId, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: marketplaceId !== null && marketplaceId !== undefined && shipmentId !== null && shipmentId !== undefined && lineId !== null && lineId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseCandidates>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListFbaPurchaseCandidatesQueryResult = NonNullable<Awaited<ReturnType<typeof listFbaPurchaseCandidates>>>
+export type ListFbaPurchaseCandidatesQueryError = ErrorType<unknown>
+
+
+export function useListFbaPurchaseCandidates<TData = Awaited<ReturnType<typeof listFbaPurchaseCandidates>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    shipmentId: string,
+    lineId: string, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseCandidates>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFbaPurchaseCandidates>>,
+          TError,
+          Awaited<ReturnType<typeof listFbaPurchaseCandidates>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFbaPurchaseCandidates<TData = Awaited<ReturnType<typeof listFbaPurchaseCandidates>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    shipmentId: string,
+    lineId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseCandidates>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFbaPurchaseCandidates>>,
+          TError,
+          Awaited<ReturnType<typeof listFbaPurchaseCandidates>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFbaPurchaseCandidates<TData = Awaited<ReturnType<typeof listFbaPurchaseCandidates>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    shipmentId: string,
+    lineId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseCandidates>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListFbaPurchaseCandidates<TData = Awaited<ReturnType<typeof listFbaPurchaseCandidates>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    shipmentId: string,
+    lineId: string, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseCandidates>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListFbaPurchaseCandidatesQueryOptions(marketplaceId,shipmentId,lineId,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type listFbaPurchaseCandidatesPageResponse200 = {
+  data: CandidatePage
+  status: 200
+}
+
+export type listFbaPurchaseCandidatesPageResponseSuccess = (listFbaPurchaseCandidatesPageResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listFbaPurchaseCandidatesPageResponse = (listFbaPurchaseCandidatesPageResponseSuccess)
+
+export const getListFbaPurchaseCandidatesPageUrl = (marketplaceId: string,
+    shipmentId: string,
+    lineId: string,
+    params?: ListFbaPurchaseCandidatesPageParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/fba/marketplaces/${marketplaceId}/shipments/${shipmentId}/purchase-links/lines/${lineId}/candidates/page?${stringifiedParams}` : `/api/v1/fba/marketplaces/${marketplaceId}/shipments/${shipmentId}/purchase-links/lines/${lineId}/candidates/page`
+}
+
+export const listFbaPurchaseCandidatesPage = async (marketplaceId: string,
+    shipmentId: string,
+    lineId: string,
+    params?: ListFbaPurchaseCandidatesPageParams, options?: Parameters<typeof merchivraFetch>[1]): Promise<listFbaPurchaseCandidatesPageResponse> => {
+
+  return merchivraFetch<listFbaPurchaseCandidatesPageResponse>(getListFbaPurchaseCandidatesPageUrl(marketplaceId,shipmentId,lineId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFbaPurchaseCandidatesPageQueryKey = (marketplaceId: string,
+    shipmentId: string,
+    lineId: string,
+    params?: ListFbaPurchaseCandidatesPageParams,) => {
+    return [
+    `/api/v1/fba/marketplaces/${marketplaceId}/shipments/${shipmentId}/purchase-links/lines/${lineId}/candidates/page`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListFbaPurchaseCandidatesPageQueryOptions = <TData = Awaited<ReturnType<typeof listFbaPurchaseCandidatesPage>>, TError = ErrorType<unknown>>(marketplaceId: string,
+    shipmentId: string,
+    lineId: string,
+    params?: ListFbaPurchaseCandidatesPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseCandidatesPage>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFbaPurchaseCandidatesPageQueryKey(marketplaceId,shipmentId,lineId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFbaPurchaseCandidatesPage>>> = ({ signal }) => listFbaPurchaseCandidatesPage(marketplaceId,shipmentId,lineId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: marketplaceId !== null && marketplaceId !== undefined && shipmentId !== null && shipmentId !== undefined && lineId !== null && lineId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseCandidatesPage>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListFbaPurchaseCandidatesPageQueryResult = NonNullable<Awaited<ReturnType<typeof listFbaPurchaseCandidatesPage>>>
+export type ListFbaPurchaseCandidatesPageQueryError = ErrorType<unknown>
+
+
+export function useListFbaPurchaseCandidatesPage<TData = Awaited<ReturnType<typeof listFbaPurchaseCandidatesPage>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    shipmentId: string,
+    lineId: string,
+    params: undefined |  ListFbaPurchaseCandidatesPageParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseCandidatesPage>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFbaPurchaseCandidatesPage>>,
+          TError,
+          Awaited<ReturnType<typeof listFbaPurchaseCandidatesPage>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFbaPurchaseCandidatesPage<TData = Awaited<ReturnType<typeof listFbaPurchaseCandidatesPage>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    shipmentId: string,
+    lineId: string,
+    params?: ListFbaPurchaseCandidatesPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseCandidatesPage>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFbaPurchaseCandidatesPage>>,
+          TError,
+          Awaited<ReturnType<typeof listFbaPurchaseCandidatesPage>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFbaPurchaseCandidatesPage<TData = Awaited<ReturnType<typeof listFbaPurchaseCandidatesPage>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    shipmentId: string,
+    lineId: string,
+    params?: ListFbaPurchaseCandidatesPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseCandidatesPage>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListFbaPurchaseCandidatesPage<TData = Awaited<ReturnType<typeof listFbaPurchaseCandidatesPage>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    shipmentId: string,
+    lineId: string,
+    params?: ListFbaPurchaseCandidatesPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseCandidatesPage>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListFbaPurchaseCandidatesPageQueryOptions(marketplaceId,shipmentId,lineId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export type listFbaPurchaseLinksPageResponse200 = {
+  data: LinkedPage
+  status: 200
+}
+
+export type listFbaPurchaseLinksPageResponseSuccess = (listFbaPurchaseLinksPageResponse200) & {
+  headers: Headers;
+};
+;
+
+export type listFbaPurchaseLinksPageResponse = (listFbaPurchaseLinksPageResponseSuccess)
+
+export const getListFbaPurchaseLinksPageUrl = (marketplaceId: string,
+    shipmentId: string,
+    params?: ListFbaPurchaseLinksPageParams,) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? 'null' : String(value))
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0 ? `/api/v1/fba/marketplaces/${marketplaceId}/shipments/${shipmentId}/purchase-links/page?${stringifiedParams}` : `/api/v1/fba/marketplaces/${marketplaceId}/shipments/${shipmentId}/purchase-links/page`
+}
+
+export const listFbaPurchaseLinksPage = async (marketplaceId: string,
+    shipmentId: string,
+    params?: ListFbaPurchaseLinksPageParams, options?: Parameters<typeof merchivraFetch>[1]): Promise<listFbaPurchaseLinksPageResponse> => {
+
+  return merchivraFetch<listFbaPurchaseLinksPageResponse>(getListFbaPurchaseLinksPageUrl(marketplaceId,shipmentId,params),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListFbaPurchaseLinksPageQueryKey = (marketplaceId: string,
+    shipmentId: string,
+    params?: ListFbaPurchaseLinksPageParams,) => {
+    return [
+    `/api/v1/fba/marketplaces/${marketplaceId}/shipments/${shipmentId}/purchase-links/page`, ...(params ? [params] : [])
+    ] as const;
+    }
+
+
+export const getListFbaPurchaseLinksPageQueryOptions = <TData = Awaited<ReturnType<typeof listFbaPurchaseLinksPage>>, TError = ErrorType<unknown>>(marketplaceId: string,
+    shipmentId: string,
+    params?: ListFbaPurchaseLinksPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseLinksPage>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListFbaPurchaseLinksPageQueryKey(marketplaceId,shipmentId,params);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listFbaPurchaseLinksPage>>> = ({ signal }) => listFbaPurchaseLinksPage(marketplaceId,shipmentId,params, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: marketplaceId !== null && marketplaceId !== undefined && shipmentId !== null && shipmentId !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseLinksPage>>, TError, TData> & { queryKey: DataTag<QueryKey, TData, TError> }
+}
+
+export type ListFbaPurchaseLinksPageQueryResult = NonNullable<Awaited<ReturnType<typeof listFbaPurchaseLinksPage>>>
+export type ListFbaPurchaseLinksPageQueryError = ErrorType<unknown>
+
+
+export function useListFbaPurchaseLinksPage<TData = Awaited<ReturnType<typeof listFbaPurchaseLinksPage>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    shipmentId: string,
+    params: undefined |  ListFbaPurchaseLinksPageParams, options: { query:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseLinksPage>>, TError, TData>> & Pick<
+        DefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFbaPurchaseLinksPage>>,
+          TError,
+          Awaited<ReturnType<typeof listFbaPurchaseLinksPage>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  DefinedUseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFbaPurchaseLinksPage<TData = Awaited<ReturnType<typeof listFbaPurchaseLinksPage>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    shipmentId: string,
+    params?: ListFbaPurchaseLinksPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseLinksPage>>, TError, TData>> & Pick<
+        UndefinedInitialDataOptions<
+          Awaited<ReturnType<typeof listFbaPurchaseLinksPage>>,
+          TError,
+          Awaited<ReturnType<typeof listFbaPurchaseLinksPage>>
+        > , 'initialData'
+      >, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+export function useListFbaPurchaseLinksPage<TData = Awaited<ReturnType<typeof listFbaPurchaseLinksPage>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    shipmentId: string,
+    params?: ListFbaPurchaseLinksPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseLinksPage>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+  ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> }
+
+export function useListFbaPurchaseLinksPage<TData = Awaited<ReturnType<typeof listFbaPurchaseLinksPage>>, TError = ErrorType<unknown>>(
+ marketplaceId: string,
+    shipmentId: string,
+    params?: ListFbaPurchaseLinksPageParams, options?: { query?:Partial<UseQueryOptions<Awaited<ReturnType<typeof listFbaPurchaseLinksPage>>, TError, TData>>, request?: SecondParameter<typeof merchivraFetch>}
+ , queryClient?: QueryClient
+ ):  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> } {
+
+  const queryOptions = getListFbaPurchaseLinksPageQueryOptions(marketplaceId,shipmentId,params,options)
+
+  const query = useQuery(queryOptions, queryClient) as  UseQueryResult<TData, TError> & { queryKey: DataTag<QueryKey, TData, TError> };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 
 export type recordFbaInboundReceiptResponse200 = {
   data: Detail

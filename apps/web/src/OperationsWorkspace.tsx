@@ -42,8 +42,12 @@ export default function OperationsWorkspace({tenantId,onOpenFbaException}:{
  {summary.isError&&<p className="setup-error" role="alert">
   当前运营待办统计暂不可用，不能将失败数据当作零：
   {summary.error instanceof Error?summary.error.message:'未知错误'}</p>}
- <div className="ops-summary" aria-label="异常待办状态统计">{([{title:'待处理',value:summary.data?.open},{title:'处理中',value:summary.data?.acknowledged},{title:'已处理',value:summary.data?.done},{title:'条件已消失',value:summary.data?.cleared},{title:'暂缓提醒中',value:summary.data?.snoozed}]).map(v=><div key={v.title}><span>{v.title}</span><strong>{summary.isPending||summary.isError?'—':v.value??0}</strong></div>)}</div>
- <section className="panel" aria-label="运营巡检与待办">
+ <div className="ops-summary mv3-ops-summary" aria-label="异常待办状态统计">{([{title:'待处理',value:summary.data?.open},{title:'处理中',value:summary.data?.acknowledged},{title:'已处理',value:summary.data?.done},{title:'条件已消失',value:summary.data?.cleared},{title:'暂缓提醒中',value:summary.data?.snoozed}]).map(v=><div key={v.title}><span>{v.title}</span><strong>{summary.isPending||summary.isError?'—':v.value??0}</strong></div>)}</div>
+ <div className="mv3-ops-provenance" role="note">
+  <strong>异常待办只代表当前租户已入库、已匹配的规则命中</strong>
+  <span>已处理并不代表供应商纠纷、FBA 异常、Amazon 财务或仓储实收已经关闭；所有源单依然需要独立证据和审批。</span>
+ </div>
+ <section className="panel mv3-ops-queue" aria-label="运营巡检与待办">
  <div className="panel-heading"><div><h2>智能运营待办</h2><p>复用 V10 队列，识别 SKU 映射、库存、退款、FBA 货件复核、Ads 日报待审核及 V77 本地处理证据变化/超期；同一来源不重复生成待办。</p></div><span className="status-chip chip-muted">仅建议 · 不自动改动业务事实</span></div>
  <div className="ops-toolbar">
   <div className="v105-ops-filter">

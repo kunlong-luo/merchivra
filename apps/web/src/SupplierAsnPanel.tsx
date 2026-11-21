@@ -1,8 +1,11 @@
-import {useState,type FormEvent} from 'react'
+import {useWarehouseLabelMap} from './useWarehouseLabelMap'
+import WarehousePicker from './WarehousePicker'
+import {useEffect,useState,type FormEvent} from 'react'
+import CursorPageControls from './CursorPageControls'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {PurchaseLine,LocalWarehouse} from './lib/purchasing'
 import {
- fetchSupplierAsns,fetchSupplierAsnEvents,createSupplierAsn,supplierAsnAction,updateSupplierAsnEta,
+ fetchSupplierAsnsPage,fetchSupplierAsnEventsPage,createSupplierAsn,supplierAsnAction,updateSupplierAsnEta,
  fetchSupplierAsnFindings,scanSupplierAsns,supplierAsnFindingState,
  type NewSupplierAsn,type SupplierAsnFindingState
 } from './lib/supplier-asns'
@@ -34,18 +37,29 @@ export default function SupplierAsnPanel({tenantId,orderId,orderStatus,lines,
  const [message,setMessage]=useState(''),[failure,setFailure]=useState('')
  const [editing,setEditing]=useState('')
  const root=['purchasing',tenantId]
- const asns=useQuery({queryKey:[...root,'asns',orderId],
-  queryFn:()=>fetchSupplierAsns(orderId),enabled:!!orderId,retry:false})
- const events=useQuery({queryKey:[...root,'asn-events',orderId,viewEvents],
-  queryFn:()=>fetchSupplierAsnEvents(orderId,viewEvents),
+ const [asnCursors,setAsnCursors]=useState<(string|null)[]>([null])
+ const [eventCursors,setEventCursors]=useState<(string|null)[]>([null])
+ const asnCursor=asnCursors.at(-1)??null
+ const eventCursor=eventCursors.at(-1)??null
+ useEffect(()=>{
+  setAsnCursors([null]);setEventCursors([null]);setViewEvents('')
+ },[orderId])
+ const asns=useQuery({queryKey:[...root,'asns-page',orderId,asnCursor],
+  queryFn:()=>fetchSupplierAsnsPage(orderId,asnCursor),
+  enabled:!!orderId,retry:false})
+ const events=useQuery({queryKey:[...root,'asn-events-page',orderId,viewEvents,eventCursor],
+  queryFn:()=>fetchSupplierAsnEventsPage(orderId,viewEvents,eventCursor),
   enabled:!!orderId&&!!viewEvents,retry:false})
  const findings=useQuery({queryKey:[...root,'asn-findings',filter],
   queryFn:()=>fetchSupplierAsnFindings(filter),retry:false})
+ const warehouseLabels=useWarehouseLabelMap(tenantId,
+  asns.data?.items.map(a=>a.warehouseId)??[],warehouses).labels
  const refresh=()=>void client.invalidateQueries({queryKey:root})
  const created=useMutation({
   mutationFn:(body:NewSupplierAsn)=>createSupplierAsn(orderId,body),
   onSuccess:()=>{setMessage('供应商预到货通知已创建；这还不是发货证据');
-   setFailure('');setRequestKey(crypto.randomUUID());setTracking('');refresh()},
+   setFailure('');setAsnCursors([null]);setRequestKey(crypto.randomUUID());
+   setTracking('');refresh()},
   onError:(error:Error)=>setFailure(error.message)})
  const action=useMutation({
   mutationFn:({id,kind}:{id:string;kind:'ship'|'cancel'})=>
@@ -74,7 +88,8 @@ export default function SupplierAsnPanel({tenantId,orderId,orderStatus,lines,
  const line=lines.find(l=>l.id===lineId)
  const remaining=line?line.orderedQuantity-line.receivedQuantity:0
  const canCreate=activeOrder&&!!line&&!!warehouseId&&
-  warehouses.some(w=>w.id===warehouseId&&w.status==='ACTIVE')&&
+  // WarehousePicker verifies tenant/ACTIVE on exact lookup; writes revalidate server-side.
+  !!warehouseId&&
   Number.isInteger(quantity)&&quantity>0&&quantity<=Math.min(remaining,1000000)&&
   /^\d{4}-\d{2}-\d{2}$/.test(eta)&&tracking.length<=120&&!created.isPending
  function submit(e:FormEvent){
@@ -101,13 +116,9 @@ export default function SupplierAsnPanel({tenantId,orderId,orderStatus,lines,
       <option key={l.id} value={l.id}>{l.productSkuId} ·
        剩余可收 {l.orderedQuantity-l.receivedQuantity}</option>)}
     </select>
-    <label htmlFor="asn-warehouse">预计入库的本地仓库</label>
-    <select id="asn-warehouse" value={warehouseId}
-     onChange={e=>{setWarehouseId(e.target.value);setRequestKey(crypto.randomUUID())}}>
-     <option value="">选择仓库</option>
-     {warehouses.filter(w=>w.status==='ACTIVE').map(w=>
-      <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}
-    </select>
+    <WarehousePicker tenantId={tenantId} id="asn-warehouse"
+    label="预计入库的本地仓库（全库）" value={warehouseId}
+    onChange={id=>{setWarehouseId(id);setRequestKey(crypto.randomUUID())}}/>
     <label htmlFor="asn-quantity">供应商预计发货件数</label>
     <input id="asn-quantity" type="number" min={1} max={Math.max(1,remaining)}
      value={quantity} onChange={e=>{setQuantity(Number(e.target.value));
@@ -124,22 +135,24 @@ export default function SupplierAsnPanel({tenantId,orderId,orderStatus,lines,
    <h3>采购单 ASN 与实际本地收货</h3>
    {asns.isPending?<p className="empty-state">读取预到货通知…</p>:
     asns.isError?<p className="setup-error" role="alert">{String(asns.error)}</p>:
-    !asns.data?.length?<p className="empty-state">当前采购单暂无供应商 ASN 记录。</p>:
+    !asns.data?.items.length?<p className="empty-state">当前页暂无供应商 ASN 记录。</p>:
     <div className="table-scroll" role="region" tabIndex={0} aria-label="供应商 ASN 列表">
      <table><thead><tr><th scope="col">发货参考 / 目标仓</th>
       <th scope="col">ASN 件数 / 实际已收</th><th scope="col">申报 ETA</th>
       <th scope="col">供应商申报状态</th><th scope="col">操作</th></tr></thead><tbody>
-      {asns.data.map(a=><tr key={a.id}>
+      {asns.data.items.map(a=><tr key={a.id}>
        <td>{a.trackingReference??a.id.slice(0,8)}
         <div className="secondary-cell">
-         {warehouses.find(w=>w.id===a.warehouseId)?.code??a.warehouseId}</div></td>
+         {warehouseLabels.get(a.warehouseId)?.code??a.warehouseId}</div></td>
        <td>{a.quantity} / {a.receivedQuantity}</td>
        <td>{a.expectedArrivalDate}</td>
        <td>{a.status==='SHIPPED'?'供应商申报已发货':
         a.status==='DRAFT'?'通知草稿':'已取消'}</td>
        <td><div className="sandbox-actions">
         <button type="button" className="refresh-button"
-         onClick={()=>setViewEvents(x=>x===a.id?'':a.id)}>
+         onClick={()=>{
+          setEventCursors([null]);setViewEvents(x=>x===a.id?'':a.id)
+         }}>
          {viewEvents===a.id?'收起变更历史':'查看变更历史'}</button>
         {a.status==='DRAFT'&&activeOrder&&
          <button type="button" className="primary-button" disabled={action.isPending}
@@ -177,16 +190,23 @@ export default function SupplierAsnPanel({tenantId,orderId,orderStatus,lines,
       </tr>)}
      </tbody></table>
     </div>}
+   {!!orderId&&asns.data&&<CursorPageControls label="供应商 ASN 全库"
+    page={asnCursors.length} hasMore={asns.data.hasMore}
+    nextCursor={asns.data.nextCursor} busy={asns.isFetching}
+    onPrev={()=>{setAsnCursors(x=>x.slice(0,-1));setViewEvents('');
+     setEventCursors([null])}}
+    onNext={cursor=>{setAsnCursors(x=>[...x,cursor]);setViewEvents('');
+     setEventCursors([null])}}/>}
    {!!viewEvents&&<div aria-label="ASN 不可覆盖的审计历史">
     <h3>ASN {viewEvents.slice(0,8)} · 事件历史</h3>
     {events.isPending?<p className="empty-state">读取供应商 ASN 事件…</p>:
      events.isError?<p className="setup-error" role="alert">{String(events.error)}</p>:
-     !events.data?.length?<p className="empty-state">尚无该 ASN 审计事件。</p>:
+     !events.data?.items.length?<p className="empty-state">当前页暂无 ASN 审计事件。</p>:
      <div className="table-scroll" role="region" tabIndex={0}>
       <table><thead><tr><th scope="col">时间</th><th scope="col">来源事件</th>
        <th scope="col">件数</th><th scope="col">预计日期变化</th>
        <th scope="col">业务备注</th></tr></thead><tbody>
-       {events.data.map(e=><tr key={e.id}>
+       {events.data.items.map(e=><tr key={e.id}>
         <td>{new Date(e.createdAt).toLocaleString('zh-CN')}</td>
         <td>{e.eventType}</td><td>{e.quantity??'—'}</td>
         <td>{e.oldEta??'—'} → {e.newEta??'—'}</td>
@@ -194,6 +214,11 @@ export default function SupplierAsnPanel({tenantId,orderId,orderStatus,lines,
        </tr>)}
       </tbody></table>
      </div>}
+    {!!events.data&&<CursorPageControls label="ASN 审计事件全历史"
+     page={eventCursors.length} hasMore={events.data.hasMore}
+     nextCursor={events.data.nextCursor} busy={events.isFetching}
+     onPrev={()=>setEventCursors(x=>x.slice(0,-1))}
+     onNext={cursor=>setEventCursors(x=>[...x,cursor])}/>}
    </div>}
   </>}
   <div className="panel-heading"><div><h3>供应商预到货异常待办</h3>

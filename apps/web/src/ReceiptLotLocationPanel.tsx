@@ -1,3 +1,4 @@
+import WarehousePicker from './WarehousePicker'
 import {useEffect,useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
@@ -85,14 +86,10 @@ export default function ReceiptLotLocationPanel({tenantId,orderId,warehouses}:{
    <p>所有库位属于本地 ERP。待检批次按实收数量拆分和定位，不会生成库存流水；
     质检仍针对整笔收货，拆分后的分段不能分别冒充已质检或已放行库存。</p>
   </div><button type="button" className="refresh-button" onClick={refresh}>刷新</button></div>
-  <label htmlFor="lot-warehouse">本地仓库</label>
-  <select id="lot-warehouse" value={warehouseId}
-   onChange={e=>{setWarehouseId(e.target.value);setReceiptId('');setPieceId('');
-    setTargetBin('');setBinCursors([null]);setPieceCursors([null]);setPressureCursors([null]);changed()}}>
-   <option value="">选择一个仓库</option>
-   {warehouses.filter(w=>w.status==='ACTIVE').map(w=>
-    <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}
-  </select>
+  <WarehousePicker tenantId={tenantId} id="lot-warehouse"
+    label="本地仓库（全库）" value={warehouseId}
+    onChange={id=>{setWarehouseId(id);setReceiptId('');setPieceId('');
+    setTargetBin('');setBinCursors([null]);setPieceCursors([null]);setPressureCursors([null]);changed()}}/>
   {!!warehouseId&&<>
    <h3>库位管理</h3>
    <p className="setup-hint">QC-HOLD 为虚拟接收待检区；可新增 QC_HOLD 库位分配待检收货。

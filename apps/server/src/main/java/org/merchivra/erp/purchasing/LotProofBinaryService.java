@@ -16,13 +16,17 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * Small, private, immutable original-file attachments. The SHA-256 is calculated
  * by the server from actual uploaded bytes (never trusted from the browser).
- * No assertion of supplier/carrier authenticity or malware scanning.
+ * Supplier/carrier authenticity is never asserted; production upload requires
+ * a clean external ClamAV clamd verdict before storage (V137).
  */
 @Service
 public class LotProofBinaryService {
     public static final int MAX_SIZE=2*1024*1024;
     private final JdbcTemplate jdbc;
-    public LotProofBinaryService(JdbcTemplate jdbc){this.jdbc=jdbc;}
+    private final LotProofAvScanner scanner;
+    public LotProofBinaryService(JdbcTemplate jdbc,LotProofAvScanner scanner){
+        this.jdbc=jdbc;this.scanner=scanner;
+    }
     public record FileInfo(String id,String proofId,String mediaType,
         int sizeBytes,String sha256,String uploadedBy) {}
     public record Download(FileInfo info,byte[] bytes) {}
@@ -83,8 +87,12 @@ public class LotProofBinaryService {
     public FileInfo metadata(UUID tenant,UUID proofId){
         return info(tenant,proofId);
     }
-    @Transactional(readOnly=true)
-    public Download download(UUID tenant,UUID proofId){
+    // V129: the file must NOT leave this transaction without a durable
+    // tenant/actor/file/sha access record. Audit failure rolls the request back.
+    // Never record the binary payload, bearer/session tokens, or filenames.
+    @Transactional
+    public Download download(UUID tenant,UUID actor,UUID proofId){
+        if(actor==null || proofId==null)throw bad("Owner and proof required");
         FileInfo meta=info(tenant,proofId);
         byte[] bytes=jdbc.query("""
             SELECT bytes FROM erp_local_lot_disposition_proof_file
@@ -93,12 +101,26 @@ public class LotProofBinaryService {
             .stream().findFirst().orElseThrow(LotProofBinaryService::missing);
         if(bytes.length!=meta.sizeBytes() || !digest(bytes).equals(meta.sha256()))
             throw conflict("Private original-file digest/length check failed");
+        // V137: legacy V52 originals predate malware screening, so production
+        // download MUST also require a fresh clean verdict, then durable V129
+        // access audit. An unscanned or infected original never leaves the API.
+        scanner.scan(bytes);
+        int recorded=jdbc.update("""
+            INSERT INTO erp_local_lot_proof_file_download_audit
+              (id,tenant_id,proof_id,file_id,downloaded_by,sha256)
+            VALUES (?,?,?,?,?,?)
+            """,UUID.randomUUID(),tenant,proofId,UUID.fromString(meta.id()),actor,meta.sha256());
+        if(recorded!=1)throw conflict("Private proof download audit unavailable");
         return new Download(meta,bytes);
     }
     @Transactional
     public FileInfo upload(UUID tenant,UUID actor,UUID proofId,UUID requestKey,byte[] data){
         if(proofId==null || requestKey==null)throw bad("Proof and request key required");
         String type=mediaType(data),sha=digest(data);
+        // V137: no original bytes may enter PostgreSQL unless clamd replied
+        // with exactly a clean verdict, except in an explicitly synthetic Demo.
+        // Scan BEFORE acquiring tenant/warehouse locks; any error fails closed.
+        scanner.scan(data);
         tenantLock(tenant);
         Proof p=proof(tenant,proofId);
         List<FileInfo> prior=jdbc.query("""

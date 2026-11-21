@@ -1,3 +1,4 @@
+import {useWarehouseLabelMap} from './useWarehouseLabelMap'
 import {useEffect,useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
@@ -48,6 +49,8 @@ export default function PurchaseQualityPanel({tenantId,orderId,warehouses}:{
   queryFn:()=>fetchQualityReturnSummary(inspectionId),enabled:!!inspectionId,retry:false})
  const findings=useQuery({queryKey:[...root,'quality-findings-page',filter,findingCursor],
   queryFn:()=>fetchQualityFindingsPage(filter,findingCursor),retry:false})
+ const warehouseLabels=useWarehouseLabelMap(tenantId,
+  receipts.data?.items.map(r=>r.warehouseId)??[],warehouses).labels
  const refresh=()=>void client.invalidateQueries({queryKey:root})
  const inspect=useMutation({
   mutationFn:()=>inspectQualityReceipt(receiptId,{requestKey:inspectionKey,
@@ -108,7 +111,7 @@ export default function PurchaseQualityPanel({tenantId,orderId,warehouses}:{
       {receipts.data.items.map(r=><tr key={r.id}>
        <td>{r.id.slice(0,8)}
         <div className="secondary-cell">
-         {warehouses.find(w=>w.id===r.warehouseId)?.code??
+         {warehouseLabels.get(r.warehouseId??'')?.code??
           (r.warehouseId??'历史收货未分配仓库')}</div></td>
        <td>{r.receivedQuantity}</td>
        <td>{r.inspectionId?r.acceptedQuantity+' / '+r.rejectedQuantity:'尚未质检'}</td>

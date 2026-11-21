@@ -1,9 +1,185 @@
+# V188B exact-main complete A3 after PR #195 isolates the read-only
+# cost-waterfall GET from fixed V64 nine-route Springdoc/Orval contract.
+# Run real PG18/HTTP V164+V188, React/Next Chromium, Session/CSRF,
+# Compose recovery, do not relax G1/Ads/bank/profit/production NO-GO.
+# V188 exact-main PG18 A3: existing V64 persisted cohort joined READ-ONLY
+# to V186 original-currency ownership and V187 local collision risk.
+# No real net profit, no bank/Ads authorization, no G1 approval, prod NO-GO.
+# V187: exact merged main SHA PG18/HTTP/Chromium A3 for full-period
+# eight V165 collisions + shared V168 report-line source candidates.
+# Local matches are never proof of actual duplicate debit/profit; OAuth OFF.
+# V186: verify exact merged main SHA full PG18/HTTP/Next/Chromium
+# for one V91 source across SKU/ORDER/PERIOD without duplicate expenses.
+# G1 policy unapproved, no refund COGS, Amazon OAuth OFF, prod #104 NO-GO.
+# V185: exact merged main SHA A3 for original-currency V92 cross-month
+# projection; Owner HTTP, PG18, React Next16 and zero profit posting.
+# G1/DEC-08 policy unapproved. Amazon/Ads OAuth OFF; production #104 NO-GO.
+# V184: exact-main A3 for two-query bounded V165/V182 source-page reads.
+# Preserve V183 full-period barrier, original-currency costs, no Amazon OAuth.
+# V183C: refresh strict Next Chromium synthetic cost fixture to V183
+# full-period evidenceBarriers / source verdict API; keep all screenshots.
+# V183B: fix Chromium 157 local DevTools port discovery under runner DBus
+# noise, retaining all V183 visual/PG18 assertions; new exact-main A3 needed.
+# V183: full-period V162/V64 profit proof barriers + V182 per-source verdicts,
+# PG18 synthetic HTTP/Next/Chromium at exact merged main SHA.
+# These are unverified local evidence diagnostics; no bank/Amazon authorization.
+# V182: exact merged main SHA full PG18/HTTP/Next/Chromium A3 for read-only
+# local settlement attribution. V94 immutable audit/V95 collision holds retained;
+# NEVER treat an imported line as independently attested Amazon charge.
+# V181B: exact-merged-main SHA automatic full A3 for V102 derived-on-read
+# canonical identity SHA-256; never Amazon signature / real fee verification.
+# Keep Seller/Ads OAuth OFF and production #104 NO-GO.
+# Next16 multi-workspace polish: pagination-aware counts, no invented stock or profit,
+# browser scoped order/FBA views and purchasing flow links; production remains NO-GO.
+# Next16 visual elevation: keep Vite controlled fallback, prove source-aware
+# financial hero, Chromium responsive UI and production #104 NO-GO.
+# V175-B: PG18 V101 tenant-enrolled WMS key-possession challenge, not verified operator.
+# V175-A: new PG18 V100 immutable QC evidence/three-owner guard. Full A3
+# must run at the exact merged main SHA; not real WMS identity or production GO.
+# V174 A3 PG18 V99 signed WMS observation discrepancy and cross-key global
+# receipt identity registry; NO trusted external operator, stock, COGS or GO.
+# V173 PG18 synthetic key revocation fixture: independent reviewer must revoke,
+# never the source enrollment author. Re-run all A3 on exact merged main SHA.
+# V173 exact main SHA: Ed25519 signed local WMS evidence; PG18 V98
+# source-key independence, immutable evidence and no real physical/COGS claim.
+# V172: immutable LOCAL two-person warehouse parcel candidates, same V171
+# refund/order/item composite FK, unique warehouse source identity, full
+# source-quantity conservation, no WMS/FBA/COGS/stock claim. Exact main SHA A3.
+# V171 form null/absent disposition guard: fail with HTTP 400, not 500.
+# Rerun exact merged main SHA PG18 and all A3 checks after fix.
+# V171 PG18 V96 immutable manual customer return receipt evidence,
+# V63 current reviewed refund item/fingerprint, independent Owner/no COGS.
+# Exact merged main SHA full 7-job A3 required. #104 remains NO-GO.
+# V170 first main PG18 A3 #43694186657 failed: synthetic LIVE
+# refund triggered HTTP 500 after V63 @Transactional business 409 poisoned
+# the outer read-only transaction. Use TransactionTemplate REPEATABLE_READ
+# only for the original-currency source snapshot; probe V63 after commit.
+# Rerun ALL 7 A3 jobs on the new exact merged main SHA; not production GO.
+# V170 exact merged SHA A3: PG18 UTC-scoped V63 refund/COGS risk queue,
+# signed per-currency Finances source amounts, 50+ keyset refund events,
+# historical cost evidence freshness and NO physical receipt/GL posting.
+# Real Amazon Seller/Ads OAuth OFF; #104 production NO-GO.
+# V169 PG18 first exact main A3 #43587863847 failed its PG18 job: the new
+# category assertion incorrectly expected one source's 7.25 to equal
+# a whole category with earlier synthetic A3 costs. Recheck summed
+# approved V92 source allocations via independent PG18 SQL then rerun
+# the entire A3 on the new exact merged main SHA.
+# V169 exact merged-main A3: PG18/V91-V95 period cost readiness read model,
+# original-currency category totals, pending-null, 50-row keyset and Next UI.
+# This is source exposure, NEVER verified net profit or production release.
+# V168 exact merged SHA: PG18 V95 shared Settlement line reverse lineage,
+# approval 409 even without V165 key overlap, linked-line immutability.
+# A3 synthetic evidence is NOT verified Amazon charges or production GO.
+# V167 exact merged-main A3: PG18 V94 scoped Settlement line links,
+# immutable snapshots, independent Owner triage, no verified double debit or net profit.
+# No production G1/G2/G3 or Seller/Ads OAuth approval is implied.
+# V166 full A3 on exact merged main: PG18 V93 collision cases,
+# independent one-shot Owner triage/audit and unchanged V165 approval holds.
+# Never treat local candidate classification as verified profit/production GO.
+# V165 fix: full PG18 A3 correctly held a V164 mock invoice with claimed
+# SHA a*64 also used by V98 synthetic Settlement mock. Unique per-fixture
+# SHA allows unrelated tests; dedicated V165 exact-hash hold must still fail.
+# V165 first exact-main run #43570834637 remains 6/7 FAILED.
+# V165 exact-main A3: current PG18/HTTP local cost identity overlap
+# must block manual allocation approval, but equal amounts alone do not.
+# Same source references in different namespaces are candidate signals,
+# not verified double-charging or a production release approval.
+# V164 correction: first exact-main PG18 full A3 observed 7.25 vs
+# 7.250000 in public allocation summary. Force fresh SHA full A3 after
+# lossless six-decimal BigDecimal serialization fix. No production GO.
+# V164 exact-main full PG18/Flyway A3: immutable expense allocation, partial
+# original-currency remainder and independent review. No net profit or GO.
+# V163 A3 follow-up: fix deterministic V161 Next navigation label selector
+# found on first full run 43551775269; rerun exact merged main for PG18,
+# session/CSRF, browser and synthetic HTTPS without hiding failed history.
+# V163 exact-main A3 after PG18 V91 immutable source, Owner Session/CSRF,
+# cost provenance API and maker/checker. No production GO or Amazon OAuth.
+# V160: exact-main A3 after adding OCI revision labels to all three
+# runtime images and Compose build args, with operator-only read-only image
+# identity evidence. No production signature or G1/G2/G3 approval.
+# V157: strict loopback TLS ingress readiness: hard-fail bad TLS (even
+# urllib wrapped), malformed/fake Spring identity, redirects or wrong upstream;
+# retry only bounded transport/502-504/stale verified cutover. NO production GO.
+# V156: exact-main A3 after safe substage diagnostics for synthetic TLS
+# Vite rollback/Next rollforward; historical V148 root cause unproven.
+# Never equate this with production G1/G2/G3 release approval.
+# V155: correct exact Spring Boot Actuator vendor JSON media types for
+# private PostgreSQL-backed Next readiness; trigger new merged SHA A3.
+# V154: exact-main-SHA full A3 after Next container requires both real
+# Spring Ping identity and private PostgreSQL-backed Actuator status UP.
+# No new public Actuator routes, no production or Amazon release authority.
+# V153: exact-main-SHA A3 on actual Node standalone Compose readiness:
+# HTTP 200 MUST include real Spring Ping JSON, no redirect, no static fallback.
+# Retain all signed G1/G2/G3 and real Amazon production blocks.
+# V150: exact-main-SHA A3 after validating anonymous 401/CSRF/Secure
+# Session readiness over CA-verified local HTTPS before the cutover canary.
+# V149: exact-main-SHA A3 after secret-safe V146 HTTPS canary stage logging.
+# This is diagnostics only; no production or external TLS approval.
+# V148: exact-main-SHA A3 after PR #111 repairs synthetic Chromium V75
+# API route fixture for new V147 keyset pagination; retain all production gates.
+# V147: exact-main-SHA A3 verifies PG18 full FBA PO/ASN keyset pages,
+# actual Springdoc/Orval 17-operation contract, scoped cursor rejection,
+# both frontends, and keeps Amazon/OAuth plus production G1/G2/G3 closed.
+# V146: exact-main-SHA A3 adds REAL disposable CA-verified local HTTPS
+# Nginx with Spring Secure Session, 11 Next workbenches, same-cookie
+# Vite rollback and Next rollforward; NO production TLS claim or OAuth.
+# V145: exact-main-SHA A3 verifies actual Springdoc/Orval FBA PO/ASN link
+# contracts with existing PG18 HTTP, Session/CSRF and Chromium flows.
+# V144: exact main-SHA full A3: 11 actual Next/PG18 session routes,
+# cross-session TanStack isolation, all P0 purchasing cursor regression,
+# V143 production approval remains blocked.
+# V143: exact main-SHA A3 includes G1/G2/G3 secret-safe release preflight
+# proving production stays BLOCKED without verified target and signoffs.
+# V142: exact-main-SHA A3 validates real disposable PG18 physical WAL
+# archiving, recovery_target_time pause/exclusion and actual private
+# Alertmanager-v2 -> webhook delivery. Production remains unapproved.
+# V141: exact-main-SHA full A3 includes actual PG18 service-container
+# filesystem/WAL collector, read-only SQL, V68 isolated restore attestation,
+# explicit archive/PITR and external alert delivery NOT approved in CI.
+# V140: exact-main-SHA full A3 with V88 governance audit full keyset,
+# V89 per-tenant advisory original-byte threshold and 138-event PG18 HTTP.
+# V139: exact-main-SHA full A3 after refreshing the authenticated V138
+# synthetic Owner CSRF token following login; retain all safety negatives.
+# V138: exact-main-SHA full A3 after V52 private original retention,
+# instant holds, dual-Owner no-delete reviews and PG18 Flyway V88 HTTP.
+# V137: exact-main-SHA A3 after ClamAV INSTREAM production fail-closed
+# private original upload/download gate, with synthetic Demo-only bypass.
+# V136: rerun exact-main-SHA full A3 after index-first V133/V134 pages
+# fixed the V135 PG18 12k-position plan gate failure; retain all probes.
+# V135: one exact-main-SHA full A3 after PG18 12k-position/6k-action
+# EXPLAIN ANALYZE BUFFERS seven-query regression, no production data.
+# V134: one exact-main-SHA full A3 after V49 expiry-alert keysets,
+# PG18 Flyway V87, 325-row real HTTP full navigation and cursor checks.
+# V133: one exact-main-SHA full A3 after V48 325-position paging,
+# exact receipt source allocation and PG18 Flyway V86 true HTTP proof.
+# V132: one exact-main-SHA full A3 on V49 source/destination action history
+# keyset, V85 PG18 index and 225-record authenticated true HTTP smoke.
+# V131: rerun exact-main-SHA full A3 after Next V104 hydration-safe
+# dialog open regression while retaining one-confirmation-only write assertions.
+# V130: one post-merge exact-main-SHA full A3 after fixing FIFO/FEFO
+# >500 position selection and the React preview lower-bound contract.
+# V129: one exact-main-SHA full A3 after adding the forward-only PG18
+# V84 private original-download audit and fail-closed Java behavior.
+# V128: one post-merge full A3 on the private Next -> Spring Compose
+# readiness healthcheck change, in addition to the existing real PG18/Chromium gates.
+# V126: finalize Chromium Next hydration rule-row regression while
+# retaining the real PostgreSQL18+HTTP success of the V125 run.
+# V125: full main-SHA PG18 + Chromium milestone recheck after 70-second
+# V97 supplier followup query timeout fix (page before ASN/receipt LATERAL).
+# V124 A3: repeat complete PG18+Chromium suite on exact merged main SHA
+# after V113 wildcard expectation and V107 accessible table label fixes.
+# V123 A3: this workflow change triggers a fresh *full* regression at the
+# repaired main SHA after V122 PG18 + browser failures. Successful V122
+# Docker/Session alone does not count as A3 success.
+# V122 A3: merging this workflow update to main intentionally triggers ONE
+# full disposable PG18/Flyway + Node standalone/Compose + Chromium validation
+# at the merged main SHA. It is NOT production deployment approval.
 # V108: one-click, disposable, complete release-candidate regression.
 # Run from Actions > MVP milestone full validation > Run workflow (main).
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V108-initial-baseline' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V188B-A3-bounded-V64-openapi-waterfall' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -25,6 +201,63 @@ on:
           - pre-Beta
           - release-candidate
           - security-regression
+          - V122-A3-Next-runtime-baseline
+          - V126-A3-Next-ops-and-PG18-final-gate
+          - V128-A3-Next-healthcheck-release-gate
+          - V129-A3-private-proof-download-audit
+          - V130-A3-FIFO-FEFO-500-position-pick
+          - V131-A3-Next-V104-confirm-hydration
+          - V132-A3-lot-history-keyset-PG18
+          - V133-A3-released-lot-all-positions-exact-allocation
+          - V134-A3-warehouse-expiry-alert-full-keyset
+          - V135-A3-large-tenant-lot-query-plans
+          - V136-A3-index-first-lot-query-plans
+          - V137-A3-private-evidence-av-fail-closed
+          - V138-A3-private-proof-governance-no-delete
+          - V139-A3-V138-owner-CSRF-refresh
+          - V140-A3-proof-audit-capacity-warning
+          - V141-A3-PG18-WAL-disk-restore-observability
+          - V142-A3-isolated-PG18-PITR-Alertmanager-delivery
+          - V143-A3-failclosed-G1-G2-G3-production-preflight
+          - V144-A3-session-cache-11-Next-routes-purchasing-P0
+          - V145-A3-FBA-PO-ASN-generated-contracts
+          - V146-A3-disposable-HTTPS-Next-Vite-session-cutover
+          - V147-A3-FBA-PO-ASN-full-source-keysets
+          - V148-A3-FBA-keyset-Chromium-fixture-recheck
+          - V149-A3-local-HTTPS-canary-safe-stage-diagnostics
+          - V150-A3-HTTPS-secure-auth-readiness-gate
+          - V153-A3-Next-Node-Spring-identity-healthcheck
+          - V154-A3-Next-PG18-Actuator-private-readiness
+          - V155-A3-Actuator-vendor-JSON-private-PG18-readiness
+          - V156-A3-HTTPS-cutover-safe-substage-diagnostics
+          - V157-A3-strict-loopback-TLS-ingress-readiness
+          - V160-A3-runtime-image-OCI-revision-evidence
+          - V163-A3-PostgreSQL18-cost-provenance-maker-checker
+          - V163-A3-Next-finance-nav-regression-and-PG18-review
+          - V164-A3-PG18-cost-allocation-amount-conservation
+          - V164-A3-exact-six-decimal-amounts-and-cost-allocation
+          - V165-A3-cross-source-identity-collision-hold
+          - V165-A3-unique-synthetic-evidence-and-identity-guard
+          - V166-A3-PG18-collision-case-maker-checker-audit
+          - V167-A3-PG18-settlement-line-evidence-review
+          - V174-A3-PG18-global-signed-wms-reconciliation
+          - V175-A3-PG18-immutable-independent-qc-review
+          - V175B-A3-PG18-three-owner-key-possession
+          - NEXT16-A3-visual-command-center-business-finance
+          - NEXT16-A3-orders-fba-purchasing-ops-finance-drilldown
+          - NEXT16-A3-v179-readonly-source-evidence-drawers
+          - V180-A3-profit-snapshot-deltas-cost-line-risk
+          - V181-A3-immutable-settlement-report-line-identity
+          - V182-A3-cost-attribution-evidence-classification
+          - V183-A3-full-period-profit-evidence-gates
+          - V183B-A3-chromium-cdp-port-fallback
+          - V183C-A3-profit-evidence-next-fixture
+          - V184-A3-batch-finance-attribution
+          - V185-A3-original-currency-periodization
+          - V186-A3-single-cost-ownership-bridge
+          - V187-A3-full-period-cross-source-risk
+          - V188-A3-source-aware-period-profit-waterfall
+          - V188B-A3-bounded-V64-openapi-waterfall
 
 permissions:
   contents: read

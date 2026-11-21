@@ -34,13 +34,21 @@ describe('V96 full supplier cases and evidence without legacy page caps',()=>{
   const urls=serve(response(variance))
   const page=await fetchPurchaseVariancesPage(order,'ACTIONABLE','after-200')
   expect(page.items[0].state).toBe('OPEN')
-  expect(urls[0]).toContain('/orders/'+order+'/variances/page?limit=50&filter=ACTIONABLE&cursor=after-200')
+  const url=new URL(urls[0],'http://localhost')
+  expect(url.pathname).toBe('/api/v1/purchasing/disputes/orders/'+order+'/variances/page')
+  expect(url.searchParams.get('limit')).toBe('50')
+  expect(url.searchParams.get('filter')).toBe('ACTIONABLE')
+  expect(url.searchParams.get('cursor')).toBe('after-200')
  })
  it('finds a DRAFT claim beyond 200',async()=>{
   const urls=serve(response(claim))
   const page=await fetchSupplierClaimsPage(order,'ALL','after-200')
   expect(page.items[0].status).toBe('DRAFT')
-  expect(urls[0]).toContain('/orders/'+order+'/claims/page?limit=50&filter=ALL&cursor=after-200')
+  const url=new URL(urls[0],'http://localhost')
+  expect(url.pathname).toBe('/api/v1/purchasing/disputes/orders/'+order+'/claims/page')
+  expect(url.searchParams.get('limit')).toBe('50')
+  expect(url.searchParams.get('filter')).toBe('ALL')
+  expect(url.searchParams.get('cursor')).toBe('after-200')
  })
  it('uses database-authored eligible QC sources instead of partial client lists',async()=>{
   const urls=serve(response({sourceType:'QC',sourceId:id,maxQuantity:2,

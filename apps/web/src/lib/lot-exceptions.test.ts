@@ -48,7 +48,7 @@ describe('V51 independently reviewed inventory exceptions',()=>{
    sourceId:source,sourceReceiptId:receipt,evidenceReference:'RCPT-2026-001',
    reason:'Physical count and signed receipt reviewed'})
   const post=calls.find(x=>x.options.method==='POST')
-  expect(post?.options.headers).toMatchObject({'X-CSRF-TOKEN':'valid-v51-csrf-token'})
+  expect(new Headers(post?.options.headers).get('X-CSRF-TOKEN')).toBe('valid-v51-csrf-token')
   expect(JSON.parse(String(post?.options.body))).toMatchObject({
    sourceReceiptId:receipt,requestKey:key,sourceId:source})
  })

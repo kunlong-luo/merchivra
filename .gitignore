@@ -33,3 +33,7 @@ apps/web/out/
 *.xlsx
 # Build/test
 coverage/
+# V114: reproducible generated local-purchasing contracts (from reviewed OpenAPI)
+apps/web/src/generated/purchasing-v114.ts
+apps/web/src/generated/purchasing-models/
+apps/web/src/generated/.purchasing-v114-hash

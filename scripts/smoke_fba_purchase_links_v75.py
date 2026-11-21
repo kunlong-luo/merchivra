@@ -170,3 +170,100 @@ assert sql(f"""SELECT COUNT(*) FROM fba_inbound_purchase_link
 assert sql(f"""SELECT COUNT(*) FROM fba_inventory_observation WHERE tenant_id='{tenant}'
  AND seller_marketplace_id='{market}'""")=="0"
 print("PASS V75: PG18 scoped ID proof, strict SKU mapping, SHIPPED ASN, split allocation, replay/withdrawal, second Owner confirm, dispatch gate, audit and no FBA stock writes")
+
+
+# V147 true PostgreSQL 18 HTTP paging: 225 historical revoked links plus
+# the existing confirmed link on one shipment. Synthetic SQL creates only
+# disposable fixture rows after all V75 lifecycle assertions; production guards
+# above prevent these fixture statements from reaching a real tenant.
+second_user=call("/api/v1/auth/me",browser=second)["userId"]
+sql(f"""INSERT INTO fba_inbound_purchase_link
+    (id,tenant_id,shipment_id,inbound_line_id,purchase_order_id,
+     purchase_order_line_id,asn_id,request_key,proof_reference,state,
+     proposed_by,revoked_by,created_at,revoked_at)
+SELECT gen_random_uuid(),'{tenant}'::uuid,'{first}'::uuid,'{line}'::uuid,
+       '{order}'::uuid,'{poLine}'::uuid,NULL,gen_random_uuid(),
+       'V147 disposable revoked history reference ' || g.n,
+       'REVOKED','{me["userId"]}'::uuid,'{second_user}'::uuid,
+       now()-INTERVAL '7 days'+g.n*INTERVAL '1 second',now()
+FROM generate_series(1,225) AS g(n);""")
+assert sql(f"""SELECT COUNT(*) FROM fba_inbound_purchase_link
+ WHERE tenant_id='{tenant}' AND shipment_id='{first}'""")=="226"
+seen=set();cursor=None;pages=0
+while True:
+    q={"limit":50}
+    if cursor:q["cursor"]=cursor
+    data=call(route+"/page?"+urlencode(q))
+    assert data["pageSize"]==50 and len(data["items"])<=50,data
+    assert data["hasMore"]==bool(data["nextCursor"]),data
+    for row in data["items"]:
+        assert row["id"] not in seen
+        assert row["shipmentId"]==first and row["inboundLineId"]==line
+        seen.add(row["id"])
+    pages+=1
+    cursor=data["nextCursor"]
+    if not data["hasMore"]:break
+    assert pages<=6,"Pagination must terminate"
+assert len(seen)==226 and pages==5,(len(seen),pages)
+first_page=call(route+"/page?"+urlencode({"limit":50}))
+source_cursor=first_page["nextCursor"]
+assert source_cursor
+call(route+"/page?"+urlencode({"limit":50,"state":"REVOKED","cursor":source_cursor}),expected=400)
+call(route+"/page?"+urlencode({"limit":50,"inboundLineId":str(uuid4()),"cursor":source_cursor}),expected=400)
+call(link2+"/page?"+urlencode({"limit":50,"cursor":source_cursor}),expected=400)
+call(route+"/page?limit=101",expected=400)
+call(route+"/page?state=UNKNOWN",expected=400)
+call(route+"/page?cursor=not_valid_%",expected=400)
+call(fba+"/"+str(uuid4())+"/purchase-links/page",expected=404)
+only_revoked=call(route+"/page?"+urlencode({"limit":50,"state":"REVOKED"}))
+assert only_revoked["items"] and all(x["state"]=="REVOKED" for x in only_revoked["items"])
+
+# More than the legacy 100 candidates for the SAME explicitly mapped seller SKU.
+# Distinct timestamps and UUID keyset values make every page position reproducible.
+sql(f"""INSERT INTO erp_purchase_order
+ (id,tenant_id,supplier_id,order_number,currency_code,status,created_by,approved_by,updated_at)
+SELECT md5('v147-purchase-order-'||g.n)::uuid,
+ '{tenant}'::uuid,'{supplier}'::uuid,
+ 'V147-PO-'||lpad(g.n::text,3,'0'),'USD','APPROVED',
+ '{me["userId"]}'::uuid,'{second_user}'::uuid,now()-g.n*INTERVAL '1 second'
+FROM generate_series(1,125) g(n);
+INSERT INTO erp_purchase_order_line
+ (id,tenant_id,purchase_order_id,product_sku_id,ordered_quantity,unit_cost)
+SELECT md5('v147-purchase-line-'||g.n)::uuid,'{tenant}'::uuid,
+ md5('v147-purchase-order-'||g.n)::uuid,'{product}'::uuid,10,1.000000
+FROM generate_series(1,125) g(n);""")
+candidate_route=route+"/lines/"+line+"/candidates/page"
+seen_candidate=set();cursor=None;candidate_pages=0
+while True:
+    q={"limit":50}
+    if cursor:q["cursor"]=cursor
+    page=call(candidate_route+"?"+urlencode(q))
+    assert page["pageSize"]==50 and len(page["items"])<=50,page
+    assert page["hasMore"]==bool(page["nextCursor"]),page
+    for value in page["items"]:
+        key=(value["purchaseOrderLineId"],value["asnId"])
+        assert key not in seen_candidate,key
+        assert value["asnId"] is None or value["asnStatus"]=="SHIPPED"
+        seen_candidate.add(key)
+    candidate_pages+=1
+    cursor=page["nextCursor"]
+    if not page["hasMore"]:break
+    assert candidate_pages<=4,"Candidate pages must terminate"
+assert len(seen_candidate)==126 and candidate_pages==3,(len(seen_candidate),candidate_pages)
+candidate_first=call(candidate_route+"?limit=50")
+candidate_cursor=candidate_first["nextCursor"]
+assert candidate_cursor
+call(candidate_route+"?"+urlencode({"limit":50,"purchaseLineId":poLine,
+    "cursor":candidate_cursor}),expected=400)
+call(link2+"/lines/"+line2+"/candidates/page?"+urlencode({
+    "limit":50,"cursor":candidate_cursor}),expected=400)
+call(candidate_route+"?limit=0",expected=400)
+call(candidate_route+"?cursor=not_valid_%",expected=400)
+exact=call(candidate_route+"?"+urlencode({"purchaseLineId":poLine,"limit":50}))
+assert len(exact["items"])==1 and exact["items"][0]["asnId"]==asnId,exact
+null_line=sql("SELECT md5('v147-purchase-line-1')::uuid")
+no_asn=call(candidate_route+"?"+urlencode({"purchaseLineId":null_line}))
+assert len(no_asn["items"])==1 and no_asn["items"][0]["asnId"] is None,no_asn
+assert sql(f"""SELECT COUNT(*) FROM fba_inventory_observation
+ WHERE tenant_id='{tenant}' AND seller_marketplace_id='{market}'""")=="0"
+print("PASS V147: PG18 226 link records/5 pages, 126 PO+nullable ASN candidates/3 pages, scope-bound cursors, tenant isolation and no FBA stock mutation")

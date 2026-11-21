@@ -1,10 +1,13 @@
-import {useState,type FormEvent} from 'react'
+import {useWarehouseLabelMap} from './useWarehouseLabelMap'
+import CursorPageControls from './CursorPageControls'
+import WarehousePicker from './WarehousePicker'
+import {useEffect,useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
-import {fetchWarehouseStock} from './lib/purchasing'
+import {fetchWarehouseStockItem} from './lib/purchasing'
 import {fetchStockBins} from './lib/lot-locations'
-import {fetchLotPositions} from './lib/released-lots'
-import {actLotPosition,fetchLotActionHistory,fetchLotExpiryAlerts,fetchLotLineage,
+import {fetchLotPositionsPage} from './lib/released-lots'
+import {actLotPosition,fetchLotActionHistoryPage,fetchLotExpiryAlertsPage,fetchLotLineage,
  type LotActionRequest} from './lib/lot-lifecycle'
 
 const labels:Record<LotActionRequest['actionType'],string>={
@@ -19,6 +22,12 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
  const root=['purchasing',tenantId]
  const client=useQueryClient()
  const [warehouseId,setWarehouseId]=useState('')
+ const [expiryCursors,setExpiryCursors]=useState<(string|null)[]>([null])
+ const expiryCursor=expiryCursors.at(-1)??null
+ useEffect(()=>setExpiryCursors([null]),[tenantId,warehouseId])
+ const [positionCursors,setPositionCursors]=useState<(string|null)[]>([null])
+ const positionCursor=positionCursors.at(-1)??null
+ useEffect(()=>setPositionCursors([null]),[tenantId,warehouseId])
  const [positionId,setPositionId]=useState('')
  const [type,setType]=useState<LotActionRequest['actionType']>('MOVE')
  const [destWarehouse,setDestWarehouse]=useState('')
@@ -28,23 +37,34 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
  const [reason,setReason]=useState('')
  const [requestKey,setRequestKey]=useState(()=>crypto.randomUUID())
  const [historyId,setHistoryId]=useState('')
+ const [historyCursors,setHistoryCursors]=useState<(string|null)[]>([null])
+ const historyCursor=historyCursors.at(-1)??null
+ useEffect(()=>setHistoryCursors([null]),[tenantId,historyId])
  const [success,setSuccess]=useState(''),[error,setError]=useState('')
- const positions=useQuery({queryKey:[...root,'lot-positions',warehouseId],
-  queryFn:()=>fetchLotPositions(warehouseId),enabled:!!warehouseId,retry:false})
- const stock=useQuery({queryKey:[...root,'stock',warehouseId],
-  queryFn:()=>fetchWarehouseStock(warehouseId),enabled:!!warehouseId,retry:false})
- const alerts=useQuery({queryKey:[...root,'expiry-alerts',warehouseId],
-  queryFn:()=>fetchLotExpiryAlerts(warehouseId),enabled:!!warehouseId,retry:false})
- const chosen=positions.data?.find(p=>p.id===positionId)
+ const positions=useQuery({queryKey:[...root,'lot-positions-page',warehouseId,positionCursor],
+  queryFn:()=>fetchLotPositionsPage(warehouseId,positionCursor),
+  enabled:!!warehouseId,retry:false})
+ const alerts=useQuery({queryKey:[...root,'expiry-alerts-page',warehouseId,expiryCursor],
+  queryFn:()=>fetchLotExpiryAlertsPage(warehouseId,expiryCursor),
+  enabled:!!warehouseId,retry:false})
+ const chosen=positions.data?.items.find(p=>p.id===positionId)
  const targetWh=type==='TRANSFER'?destWarehouse:warehouseId
  const bins=useQuery({queryKey:[...root,'bins',targetWh],
   queryFn:()=>fetchStockBins(targetWh),enabled:!!targetWh,retry:false})
- const history=useQuery({queryKey:[...root,'lot-history',historyId],
-  queryFn:()=>fetchLotActionHistory(historyId),enabled:!!historyId,retry:false})
+ const history=useQuery({queryKey:[...root,'lot-history-page',historyId,historyCursor],
+  queryFn:()=>fetchLotActionHistoryPage(historyId,historyCursor),
+  enabled:!!historyId,retry:false})
  const ancestry=useQuery({queryKey:[...root,'lot-lineage',historyId],
   queryFn:()=>fetchLotLineage(historyId),enabled:!!historyId,retry:false})
- const usable=chosen?(stock.data?.find(s=>s.productSkuId===chosen.productSkuId)
-  ?.onHandQuantity??0):0
+ const warehouseLabels=useWarehouseLabelMap(tenantId,
+  ancestry.data?.map(a=>a.warehouseId)??[],warehouses).labels
+ const stockItem=useQuery({
+  queryKey:[...root,'stock-item-exact',warehouseId,chosen?.productSkuId],
+  queryFn:()=>fetchWarehouseStockItem(warehouseId,chosen!.productSkuId),
+  enabled:!!warehouseId&&!!chosen,retry:false
+ })
+ // An SKU absent from old first-500 rows is UNKNOWN, never zero.
+ const usable=stockItem.data?.onHandQuantity
  const chosenBinAllowed=bins.data?.some(b=>b.id===destBin&&
   b.status==='ACTIVE'&&b.purpose==='STORAGE')??false
  const expiryExceeded=!!chosen?.expiryDate&&
@@ -60,15 +80,16 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
       :'已将人工确认的过期商品从可用仓库台账扣除，保存隔离审计')
    setError('');setReason('');setDestBin('');setRequestKey(crypto.randomUUID());refresh()
   },onError:(e:Error)=>setError(e.message)})
- const canPost=!!chosen&&!positions.isFetching&&!stock.isFetching&&
+ const canPost=!!chosen&&!positions.isFetching&&!stockItem.isFetching&&
+  !stockItem.isError&&
   reason.trim().length>=5&&reason.trim().length<=300&&
   (type==='MOVE'?chosen.remainingQuantity>0&&chosenBinAllowed&&destBin!==chosen.binId:
    type==='TRANSFER'?!!destWarehouse&&destWarehouse!==warehouseId&&chosenBinAllowed&&
     !expiryExceeded&&Number.isSafeInteger(quantity)&&quantity>=1&&
-    quantity<=Math.min(chosen.remainingQuantity,usable):
+    quantity<=Math.min(chosen.remainingQuantity,usable??-1):
    type==='EXPIRED_QUARANTINE'?expiryExceeded&&
     Number.isSafeInteger(quantity)&&quantity>=1&&
-    quantity<=Math.min(chosen.remainingQuantity,usable):
+    quantity<=Math.min(chosen.remainingQuantity,usable??-1):
     Number.isSafeInteger(observed)&&observed>=0&&observed<=1000000)&&
   !action.isPending
  const refresh=()=>void client.invalidateQueries({queryKey:root})
@@ -89,7 +110,7 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
    destinationBinId:['MOVE','TRANSFER'].includes(type)?destBin:null,
    quantity:['TRANSFER','EXPIRED_QUARANTINE'].includes(type)?quantity:0,
    expectedRemaining:chosen.remainingQuantity,
-   expectedOnHand:['TRANSFER','EXPIRED_QUARANTINE'].includes(type)?usable:null,
+   expectedOnHand:['TRANSFER','EXPIRED_QUARANTINE'].includes(type)?usable??null:null,
    observedQuantity:type==='COUNT_OBSERVATION'?observed:null,
    reason:reason.trim()})
  }
@@ -100,42 +121,52 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
     跨仓调拨同步修改两个仓库的签名流水；过期隔离会减少可用库存；
     盘点观察只保存差异证据，不会擅自调整库存。</p>
   </div><button type="button" className="refresh-button" onClick={refresh}>刷新</button></div>
-  <label htmlFor="v49-wh">来源本地仓库</label>
-  <select id="v49-wh" value={warehouseId} onChange={e=>{
-   setWarehouseId(e.target.value);setPositionId('');setDestWarehouse('');
-   setDestBin('');setHistoryId('');change()}}>
-   <option value="">选择来源仓库</option>
-   {warehouses.filter(w=>w.status==='ACTIVE').map(w=>
-    <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}
-  </select>
+  <WarehousePicker tenantId={tenantId} id="v49-wh"
+    label="来源本地仓库（全库）" value={warehouseId}
+    onChange={id=>{
+   setWarehouseId(id);setPositionId('');setDestWarehouse('');
+   setDestBin('');setHistoryId('');change()}}/>
   {!!warehouseId&&<>
    <h3>近 30 天到期与已过期批次</h3>
    <p className="setup-hint">根据人工登记的到期日期提示；未登记日期的批次无法自动推断有效期。
     以下预警不会自动扣库存，过期隔离必须由 Owner 人工确认。</p>
    {alerts.isPending?<p className="empty-state">读取库位到期预警…</p>:
     alerts.isError?<p className="setup-error" role="alert">{String(alerts.error)}</p>:
-    !alerts.data?.length?<p className="empty-state">暂无可验证的近 30 天到期库位记录。</p>:
+    !alerts.data?.items.length?<p className="empty-state">本页暂无近 30 天到期库位记录。</p>:
     <div className="table-scroll" role="region" tabIndex={0}>
      <table><thead><tr><th scope="col">批次</th><th scope="col">库位</th>
       <th scope="col">余量</th><th scope="col">到期日</th>
       <th scope="col">状态</th></tr></thead><tbody>
-      {alerts.data.map(a=><tr key={a.positionId}>
+      {(alerts.data?.items??[]).map(a=><tr key={a.positionId}>
        <td>{a.lotCode}</td><td>{a.binCode}</td><td>{a.remainingQuantity}</td>
        <td>{a.expiryDate}</td><td>{a.urgency==='EXPIRED'?'已过期 · 待人工隔离':'近 30 天到期'}</td>
       </tr>)}</tbody></table>
     </div>}
+   {alerts.data&&<CursorPageControls label="V49 过期和近 30 天预警全库记录"
+     page={expiryCursors.length} hasMore={alerts.data.hasMore}
+     nextCursor={alerts.data.nextCursor} busy={alerts.isFetching}
+     onPrev={()=>setExpiryCursors(v=>v.slice(0,-1))}
+     onNext={cursor=>setExpiryCursors(v=>[...v,cursor])}/>}
    <h3>有来源的已上架批次</h3>
    <label htmlFor="v49-position">来源批次库位</label>
    <select id="v49-position" value={positionId} onChange={e=>{
     setPositionId(e.target.value);setDestBin('');change()}}>
     <option value="">选择有实际余量的批次库位</option>
-    {(positions.data??[]).filter(p=>p.remainingQuantity>0).map(p=>
+    {(positions.data?.items??[]).filter(p=>p.remainingQuantity>0).map(p=>
      <option key={p.id} value={p.id}>
       {p.lotCode} · {p.binCode} · {p.remainingQuantity} 件</option>)}
    </select>
+   {positions.isError&&<p className="setup-error" role="alert">{String(positions.error)}</p>}
+   {positions.data&&<CursorPageControls label="V48 已上架批次库位全库位置选择"
+     page={positionCursors.length} hasMore={positions.data.hasMore}
+     nextCursor={positions.data.nextCursor} busy={positions.isFetching}
+     onPrev={()=>{setPositionId('');setHistoryId('');
+      setPositionCursors(v=>v.slice(0,-1));change()}}
+     onNext={cursor=>{setPositionId('');setHistoryId('');
+      setPositionCursors(v=>[...v,cursor]);change()}}/>}
    {!!chosen&&<>
     <p className="setup-hint">原始实收来源 {chosen.receiptId.slice(0,8)}；
-     当前库位 {chosen.remainingQuantity} 件；SKU 仓库签名可用 {usable} 件；
+     当前库位 {chosen.remainingQuantity} 件；SKU 仓库签名可用 {usable===undefined?'未知（未取得精确余额）':usable} 件；
      有效期 {chosen.expiryDate??'未登记'}。</p>
     <form className="team-invite-form" onSubmit={submit}>
      <label htmlFor="v49-action">实际操作类型</label>
@@ -146,13 +177,9 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
        <option key={id} value={id}>{label}</option>)}
      </select>
      {type==='TRANSFER'&&<>
-      <label htmlFor="v49-dst-wh">目标仓库</label>
-      <select id="v49-dst-wh" value={destWarehouse}
-       onChange={e=>{setDestWarehouse(e.target.value);setDestBin('');change()}}>
-       <option value="">选择不同的目标仓库</option>
-       {warehouses.filter(w=>w.status==='ACTIVE'&&w.id!==warehouseId).map(w=>
-        <option key={w.id} value={w.id}>{w.code} · {w.name}</option>)}
-      </select>
+      <WarehousePicker tenantId={tenantId} id="v49-dst-wh"
+    label="目标仓库（全库）" value={destWarehouse} excludeId={warehouseId}
+    onChange={id=>{setDestWarehouse(id);setDestBin('');change()}}/>
      </>}
      {['MOVE','TRANSFER'].includes(type)&&<>
       <label htmlFor="v49-dest-bin">目标 STORAGE 库位</label>
@@ -166,7 +193,7 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
      {['TRANSFER','EXPIRED_QUARANTINE'].includes(type)&&<>
       <label htmlFor="v49-qty">真实操作件数</label>
       <input id="v49-qty" type="number" min={1}
-       max={Math.min(chosen.remainingQuantity,usable)} value={quantity}
+       max={Math.min(chosen.remainingQuantity,usable??0)} value={quantity}
        onChange={e=>{setQuantity(Number(e.target.value));change()}}/>
      </>}
      {type==='COUNT_OBSERVATION'&&<>
@@ -204,7 +231,7 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
        {(ancestry.data??[]).map((a,i)=><tr key={a.positionId}>
         <td>{i===0?'最初放行来源':'后续跨仓链路'}</td>
         <td>{a.receiptId.slice(0,8)} · {a.lotCode}</td>
-        <td>{warehouses.find(w=>w.id===a.warehouseId)?.code??a.warehouseId.slice(0,8)}
+        <td>{warehouseLabels.get(a.warehouseId)?.code??a.warehouseId.slice(0,8)}
          {' / '+a.binCode}</td>
         <td>{a.placedQuantity} / {a.remainingQuantity}</td>
        </tr>)}
@@ -213,16 +240,21 @@ export default function LotLifecyclePanel({tenantId,warehouses}:{
     <h3>不可覆盖的批次操作审计</h3>
     {history.isPending?<p className="empty-state">读取操作历史…</p>:
      history.isError?<p className="setup-error" role="alert">{String(history.error)}</p>:
-     !history.data?.length?<p className="empty-state">当前批次尚无 V49 操作记录。</p>:
+     !history.data?.items.length?<p className="empty-state">本页无 V49 操作记录。</p>:
      <div className="table-scroll" role="region" tabIndex={0}>
       <table><thead><tr><th scope="col">时间</th><th scope="col">类型</th>
        <th scope="col">件数/盘点</th><th scope="col">来源</th><th scope="col">说明</th></tr></thead><tbody>
-       {history.data.map(a=><tr key={a.id}>
+       {(history.data?.items??[]).map(a=><tr key={a.id}>
         <td>{new Date(a.createdAt).toLocaleString('zh-CN')}</td>
         <td>{labels[a.actionType]}</td><td>{a.observedQuantity??a.quantity}</td>
         <td>{a.sourcePositionId.slice(0,8)}</td><td>{a.reason}</td>
        </tr>)}</tbody></table>
      </div>}
+    {history.data&&<CursorPageControls label="批次来源与目标操作全库历史"
+      page={historyCursors.length} hasMore={history.data.hasMore}
+      nextCursor={history.data.nextCursor} busy={history.isFetching}
+      onPrev={()=>setHistoryCursors(v=>v.slice(0,-1))}
+      onNext={cursor=>setHistoryCursors(v=>[...v,cursor])}/>}
    </>}
   </>}
   {success&&<p role="status" className="panel-caption">{success}</p>}

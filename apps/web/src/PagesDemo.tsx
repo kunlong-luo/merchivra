@@ -92,6 +92,20 @@ export default function PagesDemo(){
        GitHub Pages 不执行采购、退款、授权、银行对账或任何后端写入。</span></div>
      <span className="mock-pill">SYNTHETIC</span></div>
     {screen==='overview'&&<>
+     <section className="demo-hero" aria-label="仅供浏览的虚构经营总览">
+      <div className="demo-hero-main">
+       <div className="demo-hero-label">MERCHIVRA / COMMERCE INTELLIGENCE</div>
+       <h2>经营有全貌，数字有出处。</h2>
+       <p>从订单和库存质量到成本贡献，所有指标都应有证据。
+        此处只展示虚构数据和产品界面，不连接真实店铺。</p>
+       <button type="button" className="demo-hero-action"
+        onClick={()=>setScreen('finance')}>查看模拟财务与利润入口 →</button>
+      </div>
+      <aside><span>当前可核实净利润</span>
+       <strong>不可计算</strong>
+       <small>没有真实已核验来源、平台账单和银行对账，不生成虚假的最终利润。</small>
+      </aside>
+     </section>
      <div className="metric-grid">
       <Metric name="模拟站点" value="02" detail="独立 USD / EUR，未合并币种"/>
       <Metric name="模拟待处理工单" value="12" detail="本地虚构异常，非真实监控"/>

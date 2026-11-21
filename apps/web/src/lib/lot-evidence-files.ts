@@ -12,9 +12,61 @@ const trace=z.object({id,dispositionId:id,sourceReceiptId:id,
  status:z.enum(['DISPATCH_REPORTED','SUPPLIER_RECEIPT_REPORTED','RECEIPT_MISMATCH']),
  dispatchedBy:id,receivedQuantity:z.number().int().nonnegative().nullable(),
  receiptReference:z.string().nullable(),receivedReportedBy:id.nullable()})
+const governance=z.object({
+ proofId:id,fileId:id,legalHold:z.boolean(),
+ holdSetBy:id.nullable(),holdReleaseRequestedBy:id.nullable(),
+ retentionUntil:z.string().datetime({offset:true}).nullable(),
+ retentionProposedUntil:z.string().datetime({offset:true}).nullable(),
+ retentionProposedBy:id.nullable(),
+ disposalState:z.enum(['NONE','REQUESTED','REVIEWED_NO_DELETE']),
+ disposalRequestedBy:id.nullable(),disposalReviewedBy:id.nullable()
+})
+const capacity=z.object({
+ fileCount:z.number().int().nonnegative(),
+ originalBytes:z.number().int().nonnegative(),
+ heldFiles:z.number().int().nonnegative(),
+ retentionUnsetFiles:z.number().int().nonnegative(),
+ pendingRetentionFiles:z.number().int().nonnegative(),
+ reviewedDisposalFiles:z.number().int().nonnegative()
+}).refine(p=>p.heldFiles<=p.fileCount&&p.retentionUnsetFiles<=p.fileCount&&
+ p.pendingRetentionFiles<=p.fileCount&&p.reviewedDisposalFiles<=p.fileCount,{
+ message:'租户私有证据容量统计不一致'
+})
+const governanceHistoryEvent=z.object({
+ id,action:z.enum(['PLACE_HOLD','REQUEST_HOLD_RELEASE','APPROVE_HOLD_RELEASE',
+  'PROPOSE_RETENTION','APPROVE_RETENTION','REQUEST_DISPOSAL','REVIEW_DISPOSAL']),
+ actorUserId:id,reason:z.string().min(10).max(500),
+ retentionCandidate:z.string().datetime({offset:true}).nullable(),
+ recordedAt:z.string().datetime({offset:true})
+})
+const governanceHistoryPage=z.object({
+ items:z.array(governanceHistoryEvent).max(50),
+ nextCursor:z.string().min(1).nullable(),
+ hasMore:z.boolean(),pageSize:z.literal(50)
+}).refine(p=>(!p.hasMore||!!p.nextCursor),{
+ message:'治理审计页缺少服务器游标'
+})
+const capacityAlert=z.object({
+ status:z.enum(['UNCONFIGURED','NORMAL','WARNING']),
+ warningBytes:z.number().int().min(1048576).max(1099511627776).nullable(),
+ originalBytes:z.number().int().nonnegative(),
+ fileCount:z.number().int().nonnegative(),
+ advisoryOnly:z.literal(true)
+}).refine(p=>(p.status==='UNCONFIGURED')===(p.warningBytes===null)&&
+ (p.warningBytes===null||p.status===(p.originalBytes>=p.warningBytes?
+  'WARNING':'NORMAL')),{message:'租户证据容量警告状态不一致'})
+export type LotProofHistoryEvent=z.infer<typeof governanceHistoryEvent>
+export type LotProofHistoryPage=z.infer<typeof governanceHistoryPage>
+export type LotProofCapacityAlert=z.infer<typeof capacityAlert>
+export type LotProofGovernance=z.infer<typeof governance>
+export type LotProofCapacity=z.infer<typeof capacity>
+export type LotProofGovernanceAction='PLACE_HOLD'|'REQUEST_HOLD_RELEASE'|
+ 'APPROVE_HOLD_RELEASE'|'PROPOSE_RETENTION'|'APPROVE_RETENTION'|
+ 'REQUEST_DISPOSAL'|'REVIEW_DISPOSAL'
 export type LotUploadedProof=z.infer<typeof info>
 export type LotSupplierReturnTrace=z.infer<typeof trace>
 const fileRoot='/api/v1/purchasing/lot-proof-files'
+const governanceRoot='/api/v1/purchasing/lot-proof-governance'
 const returnRoot='/api/v1/purchasing/lot-supplier-returns'
 async function request<T>(path:string,schema:z.ZodType<T>,method='GET',
  body?:unknown):Promise<T>{
@@ -49,6 +101,23 @@ export async function uploadProofFile(proofId:string,requestKey:string,file:File
 export function proofDownloadHref(proofId:string){
  return fileRoot+'/'+encodeURIComponent(proofId)+'/download'
 }
+export const fetchProofHistory=(proofId:string,cursor:string|null=null)=>{
+ const query=new URLSearchParams({limit:'50'})
+ if(cursor)query.set('cursor',cursor)
+ return request(governanceRoot+'/'+id.parse(proofId)+'/history/page?'+query,
+  governanceHistoryPage)
+}
+export const fetchProofCapacityAlert=()=>request(
+ governanceRoot+'/capacity-alert',capacityAlert)
+export const changeProofCapacityThreshold=(body:{
+ action:'SET'|'DISABLE';warningBytes?:number|null;reason:string
+})=>request(governanceRoot+'/capacity-threshold',capacityAlert,'POST',body)
+export const fetchProofGovernance=(proofId:string)=>request(
+ governanceRoot+'/'+id.parse(proofId),governance)
+export const fetchProofCapacity=()=>request(governanceRoot+'/capacity',capacity)
+export const commandProofGovernance=(proofId:string,body:{
+ action:LotProofGovernanceAction;reason:string;retentionUntil?:string
+})=>request(governanceRoot+'/'+id.parse(proofId)+'/commands',governance,'POST',body)
 export const fetchSupplierReturnTraces=(warehouseId:string)=>request(
  returnRoot+'/warehouses/'+encodeURIComponent(warehouseId),z.array(trace))
 export const reportSupplierReturnDispatch=(body:{

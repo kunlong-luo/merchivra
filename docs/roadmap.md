@@ -1,8 +1,11 @@
 # PLAN-001 · 文档先行与分阶段交付路线
 
-> **现行执行基线：V108 / 2026-11-08。** 项目维护者已决定转向 **补齐 P0 → 功能冻结 → 集中回归 → 本地真实 Seller/Ads 验收 → Beta/正式发布**，并缩减每次代码提交的重复重型测试。权威路线及上线准入见 **[V108 MVP 收尾与集中验收计划](roadmap/mvp-freeze-release-v108.md)**；下面 V92 及更早声称“当前”的内容均是**历史快照**，不作为当前 P0 清单。当前 main 基线为合并的 V107；Amazon 生产授权/写入仍关闭，GitHub Pages 是合成数据演示。
+> **2026-11-13 / 当前主线 V146 纠偏：** [唯一现行执行计划及顶部 V146 状态补丁](roadmap/mvp-freeze-release-v108.md) 已据 `main` [`945ffb299f`](https://github.com/kunlong-luo/merchivra/commit/945ffb299f8dccfe321c6792960cb461d5c4bf30) 修订。[完整 A3 #43284799417](https://github.com/kunlong-luo/merchivra/actions/runs/43284799417) **7/7 SUCCESS（合成隔离验证）**；原 [采购/供应商/仓储分页 #62](https://github.com/kunlong-luo/merchivra/issues/62) **已于 V144 关闭**，不再是当前 A1 缺口。当前尚待处理 [FBA 来源历史/候选分页 #108](https://github.com/kunlong-luo/merchivra/issues/108)、[目标环境 Next 正式切流 #63](https://github.com/kunlong-luo/merchivra/issues/63)、[真实 G1/G2/G3 及目标生产验收 #104](https://github.com/kunlong-luo/merchivra/issues/104) 与维护者本地真实 Seller/Ads 联调。下文 V108/V92 及更早“当前”表述保留**当时历史状态**，不能覆盖这一新的执行基线；不得据合成 CI 宣称生产上线。
+
+
+> **历史执行基线：V108 / 2026-11-08（最新状态见上方 V146 纠偏）。** 项目维护者已决定转向 **补齐 P0 → 功能冻结 → 集中回归 → 本地真实 Seller/Ads 验收 → Beta/正式发布**，并缩减每次代码提交的重复重型测试。权威路线及上线准入见 **[V108 MVP 收尾与集中验收计划](roadmap/mvp-freeze-release-v108.md)**；下面 V92 及更早声称“当前”的内容均是**历史快照**，不作为当前 P0 清单。当前 main 基线为合并的 V107；Amazon 生产授权/写入仍关闭，GitHub Pages 是合成数据演示。
 >
-> **A0 已落地（V108 PR #64）**：完成快速 CI 与单独的里程碑回归工作流，首次 [V108 隔离基线](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593) 已通过。**当前 A1**：优先 [P0 #62](https://github.com/kunlong-luo/merchivra/issues/62) 采购/供应商/仓库完整历史与服务端游标，然后 [P0 #63](https://github.com/kunlong-luo/merchivra/issues/63) Next.js 16 正式切换。此后的文档现况由 [V109 文档审计](governance/docs-audit-v109.md) 统一索引；**Mock CI 不等于真实 Amazon/银行或生产批准**。
+> **A0 历史状态（V108 PR #64）**：完成快速 CI 与单独的里程碑回归工作流，首次 [V108 隔离基线](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593) 已通过。**当时 A1**：优先 [P0 #62](https://github.com/kunlong-luo/merchivra/issues/62) 采购/供应商/仓库完整历史与服务端游标，然后 [P0 #63](https://github.com/kunlong-luo/merchivra/issues/63) Next.js 16 正式切换。此后的文档现况由 [V109 文档审计](governance/docs-audit-v109.md) 统一索引；**Mock CI 不等于真实 Amazon/银行或生产批准**。
 
 ---
 

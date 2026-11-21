@@ -154,3 +154,8 @@ The role/database creation process is **not a Flyway migration**, `bootRun` life
 默认 MERCHIVRA_CONTRACT_EXPORT_ENABLED=false，生产环境不要启用。仅本地隔离 PG18 环境显式启用时，环回地址可以访问 /v3/api-docs/finance-profits。
 
 从仓库根目录将 curl 的 JSON 输出保存到 /tmp/finance-live.json，执行 node scripts/normalize-finance-openapi.mjs /tmp/finance-live.json apps/web/openapi/finance-profits.json。之后 cd apps/web && npm ci && npm run api:generate && npm run api:check && npm run typecheck && npm test && npm run build。提交正确锁文件、已核对契约与生成产物；CI 与真实 PG18 输出再次对比。旧 docs/api/openapi.json 为 G2 草案，不能用于代码生成。
+
+
+### V145 · FBA 采购来源合同
+
+现有 FBA PO/ASN 关联五项 API 现与本地货件共同由 `fba-inbound.json` / Orval 生成（共 15 项），前端保留 UUID、Zod 和 Session/CSRF/no-store 校验。真实 PG18 导出仍由 full_suite 逐字节比对。仅核对 MVC 合同可运行 `./apps/server/gradlew -p apps/server test --tests '*FbaPurchaseLinkOpenApiV145Test'`（Java 25；模拟 bootstrap、关闭 Flyway，不访问数据库），再将 `apps/server/build/fba-openapi-v145.json` 交给 `node scripts/normalize-fba-openapi.mjs`。生成与漂移检查使用既有 `npm run api:generate` / `npm run api:check`，不得手改产物。[业务边界与未完成的历史分页](inventory/fba-purchase-link-v75.md)。

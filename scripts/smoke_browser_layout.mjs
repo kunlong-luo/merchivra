@@ -8,6 +8,7 @@ import { mkdtemp, readFile, mkdir, writeFile, rm } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve, extname } from 'node:path'
+import { portFromChromeStderr } from './chrome_devtools_port.mjs'
 
 const dist = resolve(process.argv[2] ?? 'apps/web/dist')
 // When set, run the same synthetic API + Chrome assertions against the real
@@ -37,6 +38,57 @@ const v106OtherEvent={
   ...v106FinanceRows[0],id:'97979797-9797-4979-8979-000000000001',
   marketplaceId:v106OtherMarket,eventKey:'FIN-V106-EU-ONLY',
   currency:'EUR',amount:'23.000000'
+}
+
+const v180Ids=['90909090-9090-4090-8090-909090909091','90909090-9090-4090-8090-909090909092']
+const v180Jobs=v180Ids.map(id=>({
+ id,state:'SUCCEEDED',after:'2026-09-01',before:'2026-10-01',
+ currency:'USD',totalOrders:2,processedOrders:2,eligibleOrders:1,
+ blockedOrders:1,retryCount:0,failureCode:null,manualAdsReference:'12.00',
+ manualAdsCount:1,createdAt:'2026-11-01T00:00:00Z',
+ completedAt:'2026-11-01T00:01:00Z',cohortFrozen:true,
+ globalSourceSnapshot:false,financialSourceComplete:false,
+ bankVerified:false,ledgerPosted:false
+}))
+const v180Report=(id)=>{
+ const old=id===v180Ids[1]
+ return {job:v180Jobs.find(x=>x.id===id),
+  totals:{currency:'USD',eligibleOrders:1,blockedOrders:1,reviewedEvents:2,
+   signedSales:old?'100.00':'101.10',signedAmazonFees:'-10.00',
+   signedFbaFees:'-2.00',provisionalCogs:'-50.00',
+   contribution:old?'38.00':'39.10'},
+  skus:[],orders:[
+   {orderId:'90909090-9090-4090-8090-909090909101',position:0,
+    state:'ELIGIBLE',readiness:'READY',currency:'USD',
+    sales:old?'100.00':'101.10',fees:'-10.00',fba:'-2.00',
+    cogs:'-50.00',contribution:old?'38.00':'39.10',
+    extractedAt:'2026-11-01T00:02:00Z',extractSha256:'a'.repeat(64)},
+   {orderId:'90909090-9090-4090-8090-909090909102',position:1,
+    state:'BLOCKED',readiness:'V180_SYNTHETIC_COST_MISSING',
+    currency:'USD',sales:null,fees:null,fba:null,cogs:null,
+    contribution:null,extractedAt:'2026-11-01T00:03:00Z',
+    extractSha256:'b'.repeat(64)}
+  ],orderOffset:0,hasMore:false}
+}
+const v180Cost={
+ sourceId:'90909090-9090-4090-8090-909090909103',
+ businessDate:'2026-11-01',category:'ADS_SPEND',currency:'USD',
+ claimedAmount:'19.25',metadataReviewState:'REVIEWED_METADATA_ONLY',
+ activeAllocationState:'APPROVED_UNVERIFIED',
+ approvedUnverifiedAllocationAmount:'11.00',
+ approvedUnverifiedUnallocatedAmount:'8.25',
+ localIdentityStatus:'SHARED_REFERENCE_UNVERIFIED',approvalHeld:true,
+ linkedSettlementLineCount:2,sharedSettlementLineCount:1,
+ // V183 synthetic fixture must satisfy the real strict Zod contract.
+ // Local conflict status is NOT a verified duplicate or profit eligibility.
+ localAttributionStatus:'CONFLICT_EVIDENCE',
+ localAttributionReasonCodes:[
+  'SHARED_SETTLEMENT_LINE_CLAIM',
+  'INDEPENDENT_EXTERNAL_CHARGE_PROOF_NOT_AVAILABLE'
+ ],
+ frozenIdentityCount:1,missingCaptureCount:1,
+ independentReviewAuditComplete:false,
+ externallyVerified:false,allowedToDeductFromProfit:false
 }
 let mode = 'guest'
 // V104: mutable synthetic local PO for cancel/confirm without live operations.
@@ -139,6 +191,98 @@ const server = createServer(async (req, res) => {
       scannedSourceTransactions:0,scannedSettlements:0,scannedOrders:0,
       partialScan:false,issueCount:0,findings:[]
     })
+  // V180: synthetic V64 frozen versions / fee-to-bill reference only.
+  if(url.pathname==='/api/v1/finance/marketplaces/'+market+'/profit-reports'
+     && req.method==='GET')return respond(res,v180Jobs)
+  if(url.pathname.startsWith('/api/v1/finance/marketplaces/'+market+
+      '/profit-reports/') && req.method==='GET'){
+    const id=url.pathname.split('/').at(-1)
+    return v180Ids.includes(id)?respond(res,v180Report(id)):
+      respond(res,{error:'missing synthetic report'},404)
+  }
+  if(url.pathname==='/api/v1/finance/marketplaces/'+market+
+      '/cost-profit-readiness' && req.method==='GET')
+    return respond(res,{
+     marketplaceId:market,periodStart:url.searchParams.get('periodStart'),
+     periodEndExclusive:url.searchParams.get('periodEndExclusive'),
+     buckets:[{category:'ADS_SPEND',currency:'USD',sourceCount:1,
+      independentlyReviewedMetadataCount:1,claimedAmount:'19.25',
+      reviewedUnverifiedAmount:'19.25',
+      approvedUnverifiedAllocationAmount:'11.00',
+      approvedUnverifiedUnallocatedAmount:'8.25',sharedLineSourceCount:1,
+      externallyVerified:false,allowedToDeductFromProfit:false}],
+     sources:[v180Cost],hasMore:false,nextBeforeDate:null,nextBeforeId:null,
+     // One synthetic source with two V94 links (new V102 capture + legacy
+     // missing snapshot); global blockers must include all sources, not just
+     // the 50-row local page. No actual bank/Amazon expenses are certified.
+     evidenceBarriers:{
+      sourceCount:1,metadataReviewPendingSourceCount:1,
+      noSettlementAssociationSourceCount:0,
+      missingFrozenCaptureSourceCount:1,
+      sharedSettlementLineSourceCount:1,
+      pendingLineReviewSourceCount:1,
+      missingLineAuditSourceCount:0,
+      multipleLineClaimsSourceCount:1,
+      externallyUnverifiedSourceCount:1,
+      blockerCodes:[
+       'EIGHT_COST_CATEGORIES_NOT_EXTERNALLY_ATTESTED',
+       'BANK_SETTLEMENT_NOT_RECONCILED',
+       'REALIZED_PROFIT_PROVENANCE_INCOMPLETE',
+       'CREATION_TIME_V102_CAPTURE_GAPS',
+       'SHARED_SETTLEMENT_LINE_CLAIMS'
+      ],
+      eligibleForV162OrV64Profit:false
+     },
+     categoriesWithoutVerifiedExternalCoverage:[
+      'ADS_SPEND','INBOUND_FREIGHT','FBA_STORAGE','FBM_SHIPPING',
+      'RETURN_HANDLING','IMPORT_DUTY','PAYMENT_AND_FX','OTHER_OPERATING'
+     ],
+     fullCostCovered:false,bankReconciled:false,
+     realizedNetProfitVerified:false,realizedNetProfit:null
+    })
+  // V181 composite imported-line identity: one fresh frozen link and one
+  // pre-V102 link with explicitly absent capture. All local synthetic GETs.
+  const costLinks='/api/v1/finance/marketplaces/'+market+
+    '/cost-sources/'+v180Cost.sourceId+'/settlement-line-links'
+  const v181New='90909090-9090-4090-8090-909090909104'
+  const v181Old='90909090-9090-4090-8090-909090909105'
+  if(url.pathname===costLinks && req.method==='GET')
+    return respond(res,[v181New,v181Old].map((id,i)=>({
+      id,sourceId:v180Cost.sourceId,reportId:v180Ids[0],
+      lineNumber:i+1,sourceAmount:'19.25',sourceCurrency:'USD',
+      signedLineAmount:'-19.25',lineCurrency:'USD',
+      similarity:'AMOUNT_ONLY_NO_IDENTITY',state:'OPEN',
+      evidenceOrigin:'LOCAL_LINE_ASSOCIATION',
+      recordedBy:account,recordedAt:'2026-11-20T00:00:00Z',
+      reviewedBy:null,reviewedAt:null,confirmedDuplicate:false,
+      financialHoldCleared:false,netProfitVerified:false
+    })))
+  if(url.pathname===costLinks+'/'+v181New+'/composite-identity'
+    && req.method==='GET')
+    return respond(res,{
+      linkId:v181New,captureStatus:'FROZEN_IMPORTED_LINE_METADATA_UNVERIFIED',
+      reportId:v180Ids[0],lineNumber:1,amazonReportId:'V181-MOCK-REPORT-1',
+      reportDocumentId:'V181-MOCK-DOC-1',reportDocumentSha256:'a'.repeat(64),
+      transactionType:'Order',amountType:'ItemFees',
+      amountDescription:'Synthetic fulfillment fee',
+      externalOrderId:'V181-SYNTHETIC-ORDER',
+      lineSignedAmount:'-19.25',currency:'USD',
+      recordedBy:account,capturedAt:'2026-11-20T00:00:00Z',
+      externalChargeVerified:false,duplicateDebitVerified:false,
+      bankVerified:false,netProfitEligible:false
+    })
+  if(url.pathname===costLinks+'/'+v181Old+'/composite-identity'
+    && req.method==='GET')
+    return respond(res,{
+      linkId:v181Old,captureStatus:'CAPTURE_NOT_AVAILABLE',
+      reportId:v180Ids[0],lineNumber:2,
+      amazonReportId:null,reportDocumentId:null,
+      reportDocumentSha256:null,transactionType:null,amountType:null,
+      amountDescription:null,externalOrderId:null,
+      lineSignedAmount:null,currency:null,recordedBy:null,capturedAt:null,
+      externalChargeVerified:false,duplicateDebitVerified:false,
+      bankVerified:false,netProfitEligible:false
+    })
   // Finance: real 50-row server cursor shape, not a fake client paginator.
   // Every row and Marketplace is synthetic; no Amazon credentials or calls.
   if(url.pathname===`/api/v1/finance/marketplaces/${market}/events`){
@@ -157,17 +301,70 @@ const server = createServer(async (req, res) => {
   }
   if(url.pathname==='/api/v1/purchasing/suppliers' && req.method==='GET')
     return respond(res,v107Suppliers)
+  // V111/V114: the real React supplier and warehouse pickers now require
+  // server-scoped pages; old array mock alone silently emptied the workspace.
+  if(url.pathname==='/api/v1/purchasing/suppliers/page' && req.method==='GET'){
+    const status=url.searchParams.get('status')??'ALL'
+    const prefix=(url.searchParams.get('prefix')??'').toUpperCase()
+    return respond(res,emptyCursorPage(v107Suppliers.filter(x=>
+      (status==='ALL'||x.status===status)&&x.code.startsWith(prefix))))
+  }
   if(url.pathname==='/api/v1/purchasing/warehouses' && req.method==='GET')
     return respond(res,[{id:v107WarehouseId,code:'WH-V107',
       name:'V107 Local Warehouse',status:'ACTIVE'}])
+  if(url.pathname==='/api/v1/purchasing/warehouses/page' && req.method==='GET'){
+    const status=url.searchParams.get('status')??'ALL'
+    const prefix=(url.searchParams.get('prefix')??'').toUpperCase()
+    const rows=[{id:v107WarehouseId,code:'WH-V107',
+      name:'V107 Local Warehouse',status:'ACTIVE'}]
+      .filter(x=>(status==='ALL'||x.status===status)&&x.code.startsWith(prefix))
+    return respond(res,emptyCursorPage(rows))
+  }
+  if(url.pathname==='/api/v1/purchasing/warehouses/item' && req.method==='GET'){
+    if(url.searchParams.get('warehouseId')!==v107WarehouseId)
+      return respond(res,{message:'Unknown synthetic warehouse'},404)
+    return respond(res,{id:v107WarehouseId,code:'WH-V107',
+      name:'V107 Local Warehouse',status:'ACTIVE'})
+  }
   if(url.pathname==='/api/v1/purchasing/warehouse-stock' && req.method==='GET'
      && url.searchParams.get('warehouseId')===v107WarehouseId)
     return respond(res,[{warehouseId:v107WarehouseId,
       productSkuId:v107SkuId,internalSku:'V107-LOCAL-SKU',
       recordedReceivedQuantity:3,onHandQuantity:2}])
+  if(url.pathname==='/api/v1/purchasing/warehouse-stock/page' && req.method==='GET'
+     && url.searchParams.get('warehouseId')===v107WarehouseId)
+    return respond(res,emptyCursorPage([{warehouseId:v107WarehouseId,
+      productSkuId:v107SkuId,internalSku:'V107-LOCAL-SKU',
+      recordedReceivedQuantity:3,onHandQuantity:2}]))
+  if(url.pathname==='/api/v1/purchasing/warehouse-stock/item' && req.method==='GET'
+     && url.searchParams.get('warehouseId')===v107WarehouseId
+     && url.searchParams.get('productSkuId')===v107SkuId)
+    return respond(res,{warehouseId:v107WarehouseId,
+      productSkuId:v107SkuId,internalSku:'V107-LOCAL-SKU',
+      recordedReceivedQuantity:3,onHandQuantity:2})
   if(url.pathname==='/api/v1/purchasing/warehouse-ledger' && req.method==='GET'
      && url.searchParams.get('warehouseId')===v107WarehouseId)
     return respond(res,v107Ledger)
+  if(url.pathname==='/api/v1/purchasing/warehouse-ledger/page' && req.method==='GET'
+     && url.searchParams.get('warehouseId')===v107WarehouseId){
+    const movementType=url.searchParams.get('movementType')??'ALL'
+    const search=(url.searchParams.get('search')??'').toUpperCase()
+    return respond(res,emptyCursorPage(v107Ledger.filter(x=>
+      (movementType==='ALL'||x.movementType===movementType)&&
+       x.internalSku.toUpperCase().includes(search))))
+  }
+  // V110: purchase list status/search are handled by server, not client-side
+  // filtering of the first 100 records. Fake fixture is explicitly synthetic.
+  if(url.pathname==='/api/v1/purchasing/orders/page' && req.method==='GET'){
+    const status=url.searchParams.get('status')??'ALL'
+    const search=(url.searchParams.get('search')??'').toUpperCase()
+    const size=Number(url.searchParams.get('limit')??50)
+    const rows=[{...v104Order,status:v104Cancelled?'CANCELLED':'DRAFT'},
+      v107OtherOrder].filter(row=>(status==='ALL'||row.status===status) &&
+        row.orderNumber.toUpperCase().includes(search))
+    return respond(res,{items:rows.slice(0,size),
+      nextCursor:null,hasMore:false,pageSize:size})
+  }
   if(url.pathname==='/api/v1/purchasing/orders' && req.method==='GET')
     return respond(res,[{...v104Order,status:v104Cancelled?'CANCELLED':'DRAFT'},
       v107OtherOrder])
@@ -278,9 +475,13 @@ const server = createServer(async (req, res) => {
         decision:null,reviewedBy:null,reviewNote:null,reviewedAt:null}],
       receipts:[],amazonVerified:false,fbaStockCredited:false
     })
+  // V147 reads complete source keyset pages; keep the historical array stub
+  // for legacy clients, but return real pagination metadata for /page.
   if (url.pathname === '/api/v1/fba/marketplaces/' + market +
-      '/shipments/abcd1111-1111-4111-8111-111111111111/purchase-links')
-    return respond(res,[{
+      '/shipments/abcd1111-1111-4111-8111-111111111111/purchase-links' ||
+      url.pathname === '/api/v1/fba/marketplaces/' + market +
+      '/shipments/abcd1111-1111-4111-8111-111111111111/purchase-links/page') {
+    const fixture=[{
       id:'abcd3333-3333-4333-8333-333333333333',
       shipmentId:'abcd1111-1111-4111-8111-111111111111',
       inboundLineId:'abcd2222-2222-4222-8222-222222222222',
@@ -294,15 +495,20 @@ const server = createServer(async (req, res) => {
       state:'PROPOSED',proofReference:'V75 synthetic proof is NOT Amazon evidence',
       proposedBy:'abcd6666-6666-4666-8666-666666666666',
       confirmedBy:null,createdAt:'2026-11-02T00:00:00Z',confirmedAt:null
-    }])
-  if (url.pathname.endsWith('/purchase-links/lines/abcd2222-2222-4222-8222-222222222222/candidates'))
-    return respond(res,[{
+    }]
+    return respond(res,url.pathname.endsWith('/page') ? emptyCursorPage(fixture) : fixture)
+  }
+  if (url.pathname.endsWith('/purchase-links/lines/abcd2222-2222-4222-8222-222222222222/candidates') ||
+      url.pathname.endsWith('/purchase-links/lines/abcd2222-2222-4222-8222-222222222222/candidates/page')) {
+    const fixture=[{
       purchaseOrderId:'abcd4444-4444-4444-8444-444444444444',
       purchaseOrderLineId:'abcd5555-5555-4555-8555-555555555555',
       orderNumber:'PO-V75-LOCAL',supplierName:'V75 mock supplier',
       orderedQuantity:20,localReceivedQuantity:4,asnId:null,
       asnStatus:null,asnQuantity:null,asnReceivedQuantity:0
-    }])
+    }]
+    return respond(res,url.pathname.endsWith('/page') ? emptyCursorPage(fixture) : fixture)
+  }
   if (url.pathname === '/api/v1/purchasing/supplier-performance/scorecards'
       || url.pathname === '/api/v1/purchasing/supplier-performance/scorecards/page') {
     const scorecards=[{
@@ -320,8 +526,12 @@ const server = createServer(async (req, res) => {
   if (url.pathname === '/api/v1/purchasing/supplier-performance/followups'
       || url.pathname === '/api/v1/purchasing/supplier-performance/followups/page')
     return respond(res,url.pathname.endsWith('/page')?emptyCursorPage([]):[])
-  if (url.pathname === '/api/v1/purchasing/delivery/overview')
-    return respond(res,{
+  // V123: the real V119 board uses an all-tenant summary and a separate
+  // keyset page. Keep the V72 legacy response for backward compatibility.
+  if (['/api/v1/purchasing/delivery/overview',
+       '/api/v1/purchasing/delivery/summary',
+       '/api/v1/purchasing/delivery/lines/page'].includes(url.pathname)) {
+    const delivery={
       asOfDateUtc:'2026-11-02',
       totals:{lineCount:1,pendingQuantity:18,reportedUnreceivedQuantity:0,
         awaitingQcReleaseQuantity:0,warningLines:1,overdueLines:0,
@@ -340,7 +550,14 @@ const server = createServer(async (req, res) => {
         replenishmentSellerSku:null,replenishmentPricingSource:null,
         deliveryState:'NO_ASN_RECORDED'
       }]
-    })
+    }
+    if(url.pathname.endsWith('/summary'))
+      return respond(res,{asOfDateUtc:delivery.asOfDateUtc,totals:delivery.totals})
+    if(url.pathname.endsWith('/lines/page'))
+      return respond(res,{items:delivery.lines,nextCursor:null,
+        hasMore:false,pageSize:Number(url.searchParams.get('limit')??50)})
+    return respond(res,delivery)
+  }
   if (url.pathname === '/api/v1/replenishment/marketplaces/' + market + '/priorities')
     return respond(res, [{
       sellerSku:'TEST-SKU-100',stockState:'NO_OBSERVATION',
@@ -549,14 +766,27 @@ async function main() {
   ], { stdio:['ignore','ignore','pipe'] })
   let log=''
   chrome.stderr.on('data',x => { log+=(String(x)).slice(0,2000) })
+  // Chrome 157 on disposable Linux runners can announce DevTools on
+  // stderr before (or without) writing DevToolsActivePort. Do not treat
+  // DBus warnings or that missing file alone as a browser/layout failure:
+  // the browser's own announced loopback CDP endpoint is equivalent.
+  // We still exercise every existing Chromium assertion after connecting.
   let port
-  for(let i=0;i<140;i++){
-    try { port=Number((await readFile(join(profile,'DevToolsActivePort'),'utf8')).split('\n')[0]) }
-    catch { /* startup */ }
+  for(let i=0;i<200;i++){
+    try {
+      const fromFile=Number((await readFile(join(profile,'DevToolsActivePort'),'utf8')).split('\n')[0])
+      if(Number.isInteger(fromFile)&&fromFile>0&&fromFile<=65535)port=fromFile
+    }
+    catch { /* Chrome may not materialize the active-port file yet. */ }
+    if(!port){
+      port=portFromChromeStderr(log)
+    }
     if(port)break
+    if(chrome.exitCode!==null)
+      throw new Error('Chrome exited before announcing a CDP port: '+log.slice(-600))
     await sleep(100)
   }
-  assert.ok(port,'Chrome startup failed: '+log.slice(-600))
+  assert.ok(port,'Chrome startup failed without CDP endpoint: '+log.slice(-600))
   const conn=await connect(port)
   socket=conn.ws
   const send=conn.send
@@ -638,6 +868,12 @@ async function main() {
       assert.equal(await evaluate(send,
         "!!document.querySelector('.mock-banner')"),false,
         'Next /orders must not use the separate mock Gateway')
+      assert.equal(await evaluate(send,
+        "document.querySelector('.mv3-evidence-strip[aria-label=\\\"当前订单页来源质量\\\"]')?.textContent?.includes('仅统计本次服务端筛选已加载的记录')"),
+        true,'Next order evidence strip must disclose current-page scope')
+      assert.equal(await evaluate(send,
+        "document.querySelectorAll('.mv3-evidence-grid > div').length"),
+        3,'Next order evidence grid must expose three scoped facts')
       await screenshot(send,'v100-next-real-orders-360.png',true)
       await evaluate(send,"history.back()")
       await waitFor(send,`location.pathname==='/core' &&
@@ -649,6 +885,9 @@ async function main() {
         document.querySelector('.core-subtab.selected')?.textContent?.includes('FBA 库存') &&
         document.querySelector('.core-data-scroll tbody tr')?.textContent?.includes('TEST-SKU-100')`,
         'V100 real FBA inventory route')
+      assert.equal(await evaluate(send,
+        "document.querySelector('.mv3-evidence-strip[aria-label=\\\"当前 FBA 页观测质量\\\"]')?.textContent?.includes('UNKNOWN 不等于 0')"),
+        true,'Next FBA must distinguish unknown quantity from observed zero')
       await screenshot(send,'v100-next-real-fba-360.png',true)
       await evaluate(send,"history.back()")
       await waitFor(send,`location.pathname==='/core' &&
@@ -768,16 +1007,42 @@ async function main() {
 
       await evaluate(send, "(() => {const btn=[...document.querySelectorAll('.nav-link')]" +
         ".find(b=>b.textContent.includes('运营自动化'));if(!btn)throw Error('Missing operations navigation');btn.click();})()")
+      // Next's App Router may hydrate the list between successive remote
+      // evaluations. Assert content after the row is present, not that the
+      // first row still exists at the exact instant of the next CDP call.
       await waitFor(send,
-        "document.querySelector('.v105-ops-table tbody tr')?.textContent?.includes('模拟测试')",
+        "[...document.querySelectorAll('.v105-ops-table tbody tr')].some(" +
+        "x=>x.textContent.includes('模拟测试'))",
         'operations triage')
-      assert.equal(await evaluate(send,
-        "document.querySelector('.v105-ops-table tbody tr')?.textContent?.includes('FBA 库存数据不完整')"),
-        true, 'operations rule label')
+      try {
+        await waitFor(send,
+          "[...document.querySelectorAll('.v105-ops-table tbody tr')].some(" +
+          "x=>x.textContent.includes('FBA 库存数据不完整'))",
+          'operations rule label')
+      } catch(error) {
+        console.error('V126 operations provenance diagnostic:',
+          await evaluate(send,
+            "[...document.querySelectorAll('.v105-ops-table tbody tr')]" +
+            ".slice(0,8).map(x=>x.textContent)"))
+        throw error
+      }
       await waitFor(send,
         "[...document.querySelectorAll('[aria-label=\"站点异常规则表\"] tbody tr')].some(x=>x.textContent.includes('库存'))",
         'V69 Marketplace rule settings')
       await layout(send,width,'operations-360')
+      // V179: open the tenant-scoped finding detail without updating state.
+      await evaluate(send,"document.querySelector('button[aria-label^=\\\"查看异常来源\\\"]')?.click()")
+      await waitFor(send,
+        "document.querySelector('.v179-evidence-drawer')?.textContent?.includes('原始来源键')",
+        'V179 Base UI operations source-evidence drawer')
+      assert.equal(await evaluate(send,
+        "document.querySelector('.v179-evidence-warning')?.textContent?.includes('DONE')"),
+        true,'V179 DONE must not certify the original business evidence')
+      await screenshot(send,'v179-ops-evidence-360.png')
+      await evaluate(send,"document.querySelector('.v179-evidence-close')?.click()")
+      await waitFor(send,
+        "!document.querySelector('.v179-evidence-drawer')",
+        'V179 source drawer should dismiss and release focus')
       await screenshot(send,'operations-360.png')
       // V105: Base UI Select must change the SERVER filter, not client-side
       // re-sort the currently fetched 50 rows. Column hiding is view-only.
@@ -919,10 +1184,10 @@ async function main() {
         set.call(el,'${v107WarehouseId}');
         el.dispatchEvent(new Event('change',{bubbles:true}))})()`)
       await waitFor(send,
-        "document.querySelectorAll('[aria-label=\\\"仓库完整库存流水\\\"] tbody tr').length===2",
+        "document.querySelectorAll('[aria-label=\\\"仓库本地库存流水\\\"] tbody tr').length===2",
         'V107 two synthetic local audit movements')
       assert.equal(await evaluate(send,
-        "document.querySelector('[aria-label=\\\"仓库完整库存流水\\\"]')?.textContent?.includes('86868686-8686-4686-8686-868686868686')"),
+        "document.querySelector('[aria-label=\\\"仓库本地库存流水\\\"]')?.textContent?.includes('86868686-8686-4686-8686-868686868686')"),
         true,'V107 original inventory operation ID is retained')
       await evaluate(send,
         "document.querySelector('[aria-label=\\\"筛选本地库存流水类型\\\"]')?.click()")
@@ -933,14 +1198,20 @@ async function main() {
         "([...document.querySelectorAll('.v105-filter-item')].find(x=>" +
         "x.textContent.includes('调拨转出')))?.click()")
       await waitFor(send,
-        "document.querySelectorAll('[aria-label=\\\"仓库完整库存流水\\\"] tbody tr').length===1 && " +
-        "document.querySelector('[aria-label=\\\"仓库完整库存流水\\\"] tbody tr')?.textContent?.includes('调拨转出')",
+        "document.querySelectorAll('[aria-label=\\\"仓库本地库存流水\\\"] tbody tr').length===1 && " +
+        "document.querySelector('[aria-label=\\\"仓库本地库存流水\\\"] tbody tr')?.textContent?.includes('调拨转出')",
         'V107 filtered local ledger rows')
       assert.equal(await evaluate(send,
-        "document.querySelector('[aria-label=\\\"仓库完整库存流水\\\"] tbody tr')?.textContent?.includes('V107 synthetic transfer audit')"),
+        "document.querySelector('[aria-label=\\\"仓库本地库存流水\\\"] tbody tr')?.textContent?.includes('V107 synthetic transfer audit')"),
         true,'V107 immutable warehouse business reason retained')
       await evaluate(send,
-        "document.querySelector('[aria-label=\\\"仓库完整库存流水\\\"]')?.scrollIntoView({block:'center'})")
+        "document.querySelector('[aria-label=\\\"仓库本地库存流水\\\"]')?.scrollIntoView({block:'center'})")
+      assert.equal(await evaluate(send,
+        "document.querySelectorAll('.mv3-workflow-steps a[href^=\\\"#purchase-\\\"]').length"),
+        6,'Procurement flow shortcuts must point to six sections')
+      assert.equal(await evaluate(send,
+        "[...document.querySelectorAll('.mv3-workflow-steps a')].every(a=>document.getElementById(a.hash.slice(1)))"),
+        true,'Procurement flow links must resolve to real sections')
       await layout(send,width,'v107-warehouse-360')
       await screenshot(send,'v107-warehouse-360.png')
       assert.equal(v104CancelWrites,0,'V107 view filters cannot write to purchasing')
@@ -977,10 +1248,30 @@ async function main() {
           const button=[...row.querySelectorAll('button')]
             .find(b=>b.textContent.trim()==='取消');
           if(!button)throw Error('No cancellable PO');button.click()})()`
-        await evaluate(send,openCancel)
-        await waitFor(send,
-          "document.querySelector('[role=\\\"alertdialog\\\"]')?.textContent?.includes('确认取消采购单')",
-          'V104 Base UI alert dialog visible')
+        // Next can show the server-rendered row before its React click handler
+        // hydrates. Retry only opening this non-writing dialog until it is
+        // actually mounted; all zero-write, focus and explicit-approval
+        // assertions below remain mandatory.
+        const openCancelWhenHydrated=async label=>{
+          try {
+            await waitFor(send,`(() => {
+              if(document.querySelector('[role="alertdialog"]')?.textContent?.includes('确认取消采购单'))
+                return true;
+              ${openCancel};
+              return false;
+            })()`,label)
+          } catch(e) {
+            const state=await evaluate(send,`({
+              path:location.pathname,
+              rows:[...document.querySelectorAll('[aria-label="采购单列表"] tbody tr')]
+                .map(r=>r.textContent.slice(0,150)),
+              popup:document.querySelector('[role="alertdialog"]')?.textContent?.slice(0,250)
+            })`)
+            console.error('V104 Next confirmation diagnostics:',JSON.stringify(state))
+            throw e
+          }
+        }
+        await openCancelWhenHydrated('V104 Base UI alert dialog visible')
         assert.equal(v104CancelWrites,0,'opening a dialog must not mutate purchase orders')
         await waitFor(send,
           "!!document.activeElement?.closest('.v104-confirm-popup')",
@@ -991,25 +1282,120 @@ async function main() {
           "!document.querySelector('[role=\\\"alertdialog\\\"]')",
           'V104 dismissal returns to purchase order')
         assert.equal(v104CancelWrites,0,'cancel action must never write')
-        await evaluate(send,openCancel)
+        await openCancelWhenHydrated('V104 confirmation reopen')
         await waitFor(send,
           "!!document.querySelector('.v104-confirm-approve')",
-          'V104 confirmation reopen')
+          'V104 confirmation controls after reopening')
         await evaluate(send,"document.querySelector('.v104-confirm-approve')?.click()")
         await waitFor(send,
           "document.querySelector('.core-workspace')?.textContent?.includes('采购单状态已更新：CANCELLED')",
           'V104 confirmed local PO cancel updates status')
         assert.equal(v104CancelWrites,1,'one explicit confirmation must send one local POST')
+        // V179: a purchase detail is an explicit, closeable evidence area.
+        await evaluate(send,`(() => {const row=[...document.querySelectorAll('[aria-label="采购单列表"] tbody tr')]
+          .find(r=>r.textContent.includes('PO-V104-CONFIRM-SYNTHETIC'));
+          const btn=[...row.querySelectorAll('button')].find(b=>b.textContent.trim()==='明细');
+          if(!btn)throw Error('Missing local PO detail');btn.click()})()`)
+        await waitFor(send,
+          "!!document.querySelector('.v179-purchase-detail-head')",
+          'V179 selected purchase detail heading')
+        assert.equal(await evaluate(send,
+          "document.querySelector('.v179-purchase-detail-head')?.textContent?.includes('采购明细与分批收货')"),
+          true,'V179 PO details remain tied to selected purchase')
+        await screenshot(send,'v179-purchase-evidence-360.png')
+        await evaluate(send,
+          "document.querySelector('.v179-purchase-detail-head button')?.click()")
+        await waitFor(send,"!document.querySelector('.v179-purchase-detail')",
+          'V179 purchase detail can close without writes')
+        assert.equal(v104CancelWrites,1,'V179 detail must not post another mutation')
         await layout(send,width,'v104-confirm-360')
         // V106: the finance scope is selected with Base UI, and rows are
         // server-cursor pages. Verify there is no cross-Marketplace mixing.
         mode='finance'
         await evaluate(send,`(() => {const link=[...document.querySelectorAll('.nav-link')]
-          .find(x=>x.textContent.includes('财务与对账'));
+          .find(x=>x.getAttribute('href')==='/finance' && x.textContent.includes('利润与成本报表'));
           if(!link)throw Error('Missing finance link');link.click()})()`)
         await waitFor(send,
           "document.querySelectorAll('.v106-finance-events-table tbody tr').length===50",
           'V106 50-row first finance event page')
+        // Visual refresh must NOT replace the source-aware finance ledger.
+        // Assert real DOM hierarchy & loaded CSS in a Chromium Next route.
+        assert.equal(await evaluate(send,
+          "document.querySelectorAll('.page-context-tag').length"),
+          3,'navigation title preserves explicit provenance and session context')
+        assert.equal(await evaluate(send,
+          "document.querySelector('.finance-signal-strip')?.textContent?.includes('尚未认证')"),
+          true,'finance summary cannot advertise verified net profit')
+        assert.equal(await evaluate(send,
+          "getComputedStyle(document.querySelector('.finance-signal-strip')).display"),
+          'grid','new finance layout CSS must load in Next.js runtime')
+        // V180 synthetic cost-profit evidence is not validated Amazon truth.
+        // Check real Next16 V64 HTML and Base UI expense links (read only).
+        await waitFor(send,
+          "document.querySelector('.v180-blockers')?.textContent?.includes('V180_SYNTHETIC_COST_MISSING')",
+          'V180 current-page block reason must preserve original source code')
+        assert.equal(await evaluate(send,
+          "document.querySelector('.v180-page-facts')?.textContent?.includes('当前页阻断')"),
+          true,'V180 blockers are explicitly scoped to the loaded page')
+        await waitFor(send,
+          "document.querySelector('#v180-report-compare option[value=\\\"90909090-9090-4090-8090-909090909092\\\"]')!==null",
+          'V180 second frozen report must be available')
+        await evaluate(send,`(() => {
+          const el=document.getElementById('v180-report-compare')
+          const setter=Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set
+          setter.call(el,'90909090-9090-4090-8090-909090909092')
+          el.dispatchEvent(new Event('change',{bubbles:true}))
+        })()`)
+        await waitFor(send,
+          "document.querySelector('[aria-label=\\\"同原币同期间报表快照差额\\\"]')?.textContent?.includes('+1.1')",
+          'V180 version comparison computes precise original-currency difference')
+        await screenshot(send,'v180-profit-version-360.png')
+        // V183: strict Zod must accept only the current fully specified
+        // whole-period evidence contract. Keep all existing V180/V181
+        // drawer and composite-identity assertions after this check.
+        await waitFor(send,
+          "document.querySelector('section[aria-label=\\\"八类成本核算准备度\\\"]')?.textContent?.includes('全期间来源 1 条')",
+          'V183 full-period proof blockers from live-shaped synthetic API')
+        assert.equal(await evaluate(send,
+          "document.querySelector('section[aria-label=\\\"八类成本核算准备度\\\"]')?.textContent?.includes('未获外部费用真实性认证 1 条')"),
+          true,'V183 unverified full-period costs must remain blocked')
+        assert.equal(await evaluate(send,
+          "document.querySelector('section[aria-label=\\\"八类成本核算准备度\\\"]')?.textContent?.includes('本地归属冲突')"),
+          true,'V183 source-level collision must remain visible')
+        await waitFor(send,
+          "document.querySelector('button[aria-label^=\\\"查看费用来源审计\\\"]')!==null",
+          'V180 synthetic manual fee reconciliation link exists')
+        await evaluate(send,
+          "document.querySelector('button[aria-label^=\\\"查看费用来源审计\\\"]')?.click()")
+        await waitFor(send,
+          "document.querySelector('.v179-evidence-drawer')?.textContent?.includes('共用的账单行数量')",
+          'V180 cost source drawer exposes shared line provenance')
+        assert.equal(await evaluate(send,
+          "document.querySelector('.v179-evidence-drawer')?.textContent?.includes('允许进入真实净利润')"),
+          true,'V180 unverified fees are not eligible for real profit')
+        await screenshot(send,'v180-cost-source-360.png')
+        await waitFor(send,
+          "document.querySelectorAll('.v181-line-option').length===2",
+          'V181 V94 cost links expose both new and legacy examples')
+        await evaluate(send,"document.querySelector('.v181-line-option')?.click()")
+        await waitFor(send,
+          "document.querySelector('.v181-line-identity-result')?.textContent?.includes('V181-MOCK-REPORT-1')",
+          'V181 frozen imported report + SHA256 composite identity')
+        assert.equal(await evaluate(send,
+          "document.querySelector('.v181-line-identity-result')?.textContent?.includes('外部真伪未认证')"),
+          true,'V181 imported line metadata is not certified external charge identity')
+        await screenshot(send,'v181-frozen-line-source-360.png')
+        await evaluate(send,"document.querySelectorAll('.v181-line-option')[1]?.click()")
+        await waitFor(send,
+          "document.querySelector('.v181-line-identity-result')?.textContent?.includes('历史 V94 关联无 V102')",
+          'V181 old links are NOT silently backfilled with invented evidence')
+        await screenshot(send,'v181-legacy-line-not-captured-360.png')
+        await evaluate(send,"document.querySelector('.v179-evidence-close')?.click()")
+        await waitFor(send,
+          "!document.querySelector('.v179-evidence-drawer')",
+          'V180 cost source evidence drawer must close')
+        await evaluate(send,"window.scrollTo(0,0)")
+        await screenshot(send,'v177-finance-command-center-360.png')
         assert.equal(await evaluate(send,
           "document.querySelectorAll('.v106-finance-events-table thead th').length"),
           7,'V106 default finance columns')

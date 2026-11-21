@@ -79,6 +79,22 @@ public class PurchaseFollowupService {
         ) r ON TRUE
         WHERE f.tenant_id=? AND (?='ALL' OR f.state IN ('OPEN','ACKNOWLEDGED'))
         """;
+    /**
+     * V125 PG18 release-gate: find at most (limit + 1) immutable finding
+     * identifiers BEFORE joining ASN and receipt aggregate LATERAL sources.
+     * Those source sums must never be executed across all historical rows
+     * merely to display the next 50. Materialized CTE preserves the exact
+     * state-rank/changed_at/id keyset and snapshot inside this one SQL statement.
+     */
+    private static final String PAGED_FINDING_IDS = """
+        WITH page_ids AS MATERIALIZED (
+          SELECT f.id FROM erp_purchase_followup_finding f
+          WHERE f.tenant_id=? AND (?='ALL' OR f.state IN ('OPEN','ACKNOWLEDGED'))
+        """;
+    private static final String PAGED_FINDINGS_SELECT=FINDINGS_SELECT.replace(
+        "FROM erp_purchase_followup_finding f",
+        "FROM page_ids page JOIN erp_purchase_followup_finding f ON f.id=page.id");
+
     private static Finding mapFinding(ResultSet rs,int i) throws SQLException {
         long ordered=rs.getLong("ordered_quantity");
         long asn=rs.getLong("active_units"),unlinked=rs.getLong("unlinked_units");
@@ -197,8 +213,17 @@ public class PurchaseFollowupService {
             args.add(rank);args.add(rank);
             args.add(cursorTime(cursor[3]));args.add(cursorId(cursor[4]));
         }
+        // The first two arguments and optional keyset refer to page_ids.
         args.add(limit+1);
-        List<RankedFinding> rows=jdbc.query(FINDINGS_SELECT+where+FINDINGS_SORT,
+        // The detailed select is Session-tenant-scoped again after page_ids;
+        // this avoids a cross-tenant join even if a future FK loses its scope.
+        args.add(tenant);
+        args.add(filter);
+        List<RankedFinding> rows=jdbc.query(
+            PAGED_FINDING_IDS+where+FINDINGS_SORT+"""
+            )
+            """+PAGED_FINDINGS_SELECT+" ORDER BY "+FINDINGS_RANK+
+                ",f.changed_at DESC,f.id DESC",
             (rs,i)->new RankedFinding(mapFinding(rs,i),
                 priority(rs.getString("state")),
                 rs.getObject("changed_at",OffsetDateTime.class).toInstant().toString()),

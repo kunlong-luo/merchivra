@@ -1,3 +1,4 @@
+import {useWarehouseLabelMap} from './useWarehouseLabelMap'
 import {useEffect,useState,type FormEvent} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {LocalWarehouse} from './lib/purchasing'
@@ -33,6 +34,8 @@ export default function ReceiptBatchPanel({tenantId,orderId,currentUserId,wareho
   queryFn:()=>fetchReceiptBatchSummary(orderId),enabled:!!orderId,retry:false})
  const events=useQuery({queryKey:[...root,'receipt-batch-events-page',auditId,auditCursor],
   queryFn:()=>fetchReceiptBatchEventsPage(auditId,auditCursor),enabled:!!auditId,retry:false})
+ const warehouseLabels=useWarehouseLabelMap(tenantId,
+  batches.data?.items.map(b=>b.warehouseId)??[],warehouses).labels
  const clearPageSelection=()=>{setEditId('');setAuditId('');setAuditCursors([null])}
  const refresh=()=>void client.invalidateQueries({queryKey:root})
  const relabel=useMutation({mutationFn:()=>relabelReceiptBatch(editId,expectedLot,
@@ -73,7 +76,7 @@ export default function ReceiptBatchPanel({tenantId,orderId,currentUserId,wareho
       <th scope="col">状态</th><th scope="col">操作</th></tr></thead><tbody>
       {batches.data.items.map(b=><tr key={b.receiptId}>
        <td>{b.lotCode}<div className="secondary-cell">
-        {warehouses.find(w=>w.id===b.warehouseId)?.code??b.warehouseId}
+        {warehouseLabels.get(b.warehouseId)?.code??b.warehouseId}
         {' · 收货 '+b.receiptId.slice(0,8)}</div></td>
        <td>{b.receivedQuantity}</td>
        <td>{b.status==='PENDING_QC'?'尚未质检':

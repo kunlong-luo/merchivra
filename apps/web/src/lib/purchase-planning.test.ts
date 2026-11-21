@@ -47,8 +47,8 @@ describe('V42 supplier purchasing plans',()=>{
   expect(JSON.parse(String(post?.options?.body))).toEqual({
    supplierId:supplier,productSkuId:sku,minimumOrderQuantity:20,
    packMultiple:12,leadTimeDays:14,currency:'USD',unitCost:'2.50'})
-  expect(post?.options?.headers).toMatchObject({
-   'X-CSRF-TOKEN':'valid-csrf-token-for-testing'})
+  expect(new Headers(post?.options?.headers).get('X-CSRF-TOKEN'))
+   .toBe('valid-csrf-token-for-testing')
  })
  it('sends exact freshness evidence and converts only after separate human action',async()=>{
   const calls:Array<{url:string;options?:RequestInit}>=[]
