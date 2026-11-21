@@ -1,3 +1,5 @@
+# V184: exact-main A3 for two-query bounded V165/V182 source-page reads.
+# Preserve V183 full-period barrier, original-currency costs, no Amazon OAuth.
 # V183C: refresh strict Next Chromium synthetic cost fixture to V183
 # full-period evidenceBarriers / source verdict API; keep all screenshots.
 # V183B: fix Chromium 157 local DevTools port discovery under runner DBus
@@ -161,7 +163,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V183C-A3-profit-evidence-next-fixture' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V184-A3-batch-finance-attribution' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -234,6 +236,7 @@ on:
           - V183-A3-full-period-profit-evidence-gates
           - V183B-A3-chromium-cdp-port-fallback
           - V183C-A3-profit-evidence-next-fixture
+          - V184-A3-batch-finance-attribution
 
 permissions:
   contents: read
