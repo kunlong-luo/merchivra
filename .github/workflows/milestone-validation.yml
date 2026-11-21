@@ -1,5 +1,6 @@
 # V192: exact-main PG18 execution of the V188 read-only V64 order/SKU
-# consistency SQL, including cancellation, missing SKU and blocked-order SKU.
+# consistency SQL; TEMP fixtures include V62 defaults and CHECKs to mirror
+# genuine NOT NULL source rows, plus cancellation/missing/blocked SKU cases.
 # Never upgrade a local arithmetic scenario into verified net profit.
 # V191: Node 24 + pinned pnpm 12.20.0, pnpm-lock.yaml frozen installs,
 # two Docker images, Orval/Next/Vite, PG18 real HTTP, Chromium and mock Compose.
