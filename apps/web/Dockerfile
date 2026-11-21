@@ -3,10 +3,10 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY . .
-RUN npm run build
+RUN npm run build:vite
 
 FROM nginx:alpine
-# V160: also bind the retained Vite/Nginx rollback image to a revision.
+# Explicit Vite/Nginx fallback image. The default Compose web runs Dockerfile.next.
 ARG MERCHIVRA_BUILD_REVISION=""
 LABEL org.opencontainers.image.source="https://github.com/kunlong-luo/merchivra" \
       org.opencontainers.image.revision="${MERCHIVRA_BUILD_REVISION}"
