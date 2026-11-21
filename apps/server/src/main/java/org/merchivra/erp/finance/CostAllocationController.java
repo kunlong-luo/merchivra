@@ -53,6 +53,18 @@ public class CostAllocationController {
                 allocationId,access.authenticatedUser(auth),
                 decision.accept(),decision.reason()));
     }
+    @Operation(operationId="previewManualPeriodCostAccrualV185")
+    @GetMapping("/{allocationId}/periodization-preview")
+    public ResponseEntity<PeriodCostAccrualPreviewV185.Preview> periodization(
+        @Parameter(hidden=true) Authentication auth,
+        @Parameter(hidden=true) HttpServletRequest request,
+        @PathVariable UUID marketplaceId,@PathVariable UUID sourceId,
+        @PathVariable UUID allocationId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.periodizationPreview(access.currentTenant(auth,request),
+                marketplaceId,sourceId,allocationId));
+    }
+
     @Operation(operationId="auditManualCostAllocation")
     @GetMapping("/{allocationId}/audit")
     public ResponseEntity<List<CostAllocationService.Audit>> audit(

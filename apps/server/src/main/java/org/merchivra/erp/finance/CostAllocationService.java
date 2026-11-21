@@ -243,6 +243,23 @@ public class CostAllocationService {
         audit(tenant,batchId,actor,state);
         return view(src,batch(tenant,sourceId,batchId,false),tenant);
     }
+    /**
+     * V185: existing source/plan scope and V92 immutable PERIOD lines only.
+     * No period booking, FX lookup, refund reversal or verified profit writes.
+     */
+    @Transactional(readOnly=true,
+        isolation=org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
+    public PeriodCostAccrualPreviewV185.Preview periodizationPreview(
+        UUID tenant,UUID marketplace,UUID sourceId,UUID allocationId) {
+        Source scoped=source(tenant,marketplace,sourceId,false);
+        Batch existing=batch(tenant,sourceId,allocationId,false);
+        if(!"PERIOD".equals(existing.targetKind()))
+            throw conflict("Only V92 PERIOD allocations have a month projection");
+        return PeriodCostAccrualPreviewV185.calculate(sourceId,allocationId,
+            existing.state(),scoped.amount().toPlainString(),
+            scoped.currency(),lines(tenant,allocationId));
+    }
+
     public List<Audit> history(UUID tenant,UUID mp,UUID sourceId,UUID batchId) {
         source(tenant,mp,sourceId,false);
         batch(tenant,sourceId,batchId,false);
