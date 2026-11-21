@@ -27,7 +27,7 @@ flowchart LR
 | Web | Next.js 16.4.5 App Router、React 19、TypeScript 6、Node 24、**pnpm 12.20.0** |
 | 表格/客户端 | TanStack Query/Table、Orval、Zod、Base UI；原币和 UNKNOWN/Mock 状态不混淆 |
 | 部署/验收 | 本地 Docker Compose、Next Node standalone、PG18/HTTP/Chromium/A3；无自动公网发布 |
-| 不再采用 | Vue、Maven、PostgreSQL 17、以 Vite 为默认 ERP 的方案 |
+| 不再采用 | Vue 系列、Maven 构建、PostgreSQL 17 版本、默认 Vite ERP 部署 |
 
 `apps/web/pnpm-lock.yaml` 是唯一 JS 锁文件；GitHub Actions 使用 pnpm 冻结安装。Amazon SP-API SDK/Mock Gateway 代码存在**不代表**真实卖家已授权，Ads 与 Seller 各自有独立权限边界。
 
