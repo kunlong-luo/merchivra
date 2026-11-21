@@ -4,6 +4,14 @@
 
 V188/V188B 统一期间利润原币瀑布验收归档（2026-11-21）：业务 [PR #194](https://github.com/kunlong-luo/merchivra/pull/194) 合并 SHA `7d6214aa294f4ea859008a0b3d4ca3c4fd40d5aa`，合并前 [快速 CI #44870721053](https://github.com/kunlong-luo/merchivra/actions/runs/44870721053) Java25/Gradle、React19/Next16/Vite、Compose SUCCESS；**该业务 SHA 第一次 [完整 A3 #44870830613](https://github.com/kunlong-luo/merchivra/actions/runs/44870830613) 未通过**，真实 Springdoc 生成的 V188 `/profit-reports` 新端点触发严格 V64 九操作 Orval 合同脚本 `scripts/normalize-finance-openapi.mjs` 拒绝，不能宣称当时验收通过。 [修复 PR #195](https://github.com/kunlong-luo/merchivra/pull/195) 合并 SHA `6352344738cb660257077c3294706223b4f59646`，保留固定 V64 九路由/Orval 不变，把 V188 Owner/no-store 的只读 GET 移到 `/api/v1/finance/marketplaces/{marketplaceId}/cost-waterfall-preview/{jobId}`；[快速 CI #44871058792](https://github.com/kunlong-luo/merchivra/actions/runs/44871058792) SUCCESS。仅修改里程碑工作流触发标签的 [PR #196](https://github.com/kunlong-luo/merchivra/pull/196) 合并新精确 main SHA `a480ec14204155b69382605ebb144dff90fdc988`，此 SHA [完整 A3 #44871461466](https://github.com/kunlong-luo/merchivra/actions/runs/44871461466) **run_attempt=1、7/7 核心 SUCCESS**：真实 PostgreSQL18/Flyway、严格 V64 九路由合同与 V188 合成 V64/V91/V92 Owner HTTP 原币阻断、Java25、React19/Next16/Vite Chromium、Compose/Session/CSRF/恢复，额外设计专项按策略 SKIPPED。V188 只计算 V64 已冻结订单局部贡献扣减 V92 `APPROVED_UNVERIFIED` **人工来源费用的原币算术敏感度**；不是 V162 `REVIEWED_COST`、实际平台费用、认可跨期会计利润、退款 COGS 回转、FX 或银行结算。所有 `realizedNetProfit=null`，无真实利润解锁；G1/DEC-06/07/08、Amazon Seller/Ads OAuth OFF、生产 #104 NO-GO 保持不变。
 
+## V192：读时核对 V64 订单—SKU 金额守恒（2026-11-21）
+
+本轮直接复用已有 V62 `finance_profit_report_order` / `finance_profit_report_sku` 和主键索引，不新增成本表、财务凭证、Flyway 或 API。V62 的数据库 CHECK 只能分别保证**单笔订单**和**单条 SKU**有符号公式成立；它不能强制“某订单所有 SKU 的销售、Amazon 费、FBA 费、历史 COGS、贡献额五列合计”等于父订单。因此两个订单的 SKU 差异也可能一正一负，在整个期间汇总时互相抵消。
+
+V188 在原有租户 + V64 `job_id` 的只读 `REPEATABLE_READ` **同一 SQL 聚合查询**中增加 `LEFT JOIN LATERAL` SKU 明细核算：逐个 ELIGIBLE 订单至少有一条 SKU，五列各自精确对等；PENDING/BLOCKED 订单不能带被误读为合格的 SKU 行。任一不一致，`sku_mismatch_count>0`，返回 **HTTP 409**，不给出金额敏感度；哪怕整期订单总数、五列全期金额和原有独立算术都能相互抵消，也不自动放行。
+
+回归覆盖：Java 25 纯规则负例、同一事务不写财务表；新增 `scripts/smoke_v192_profit_sku_conservation.py` 在一次性 PostgreSQL 18 的 **TEMP V62 表**上执行**真实 V188 查询原文**，验证单 SKU、多 SKU、对冲差异、缺 SKU、非合格订单附带 SKU 与构成项错位。快 CI 只做脚本语法/Java，完整 PG18 通过对应 A3 核验；**没有**触碰真实卖家、外部银行、原币认证或 G1 业务政策。这只是历史财务证据一致性防线，仍保留 `realizedNetProfit=null`、Seller/Ads OAuth OFF 和生产 #104 NO-GO。
+
 ## 产品目标
 
 V64 已有按照 UTC 订单时间冻结的持久任务及逐订单已知范围贡献：`销售 + 带符号 Amazon 费用 + 带符号 FBA 费用 − 订单历史 COGS`。V162 的纯引擎定义了八类附加费用及不同来源应避免重复扣费的守恒规则；V164/V185/V186 为 V91 人工费用来源提供单一主分摊维度、获批未核验金额、期间算术投影，V187 为不同来源的本地身份重叠提供整期风险计数。然而原先 Next.js V64 报表未能把这些层**作为一个可验证的计算序列**显示。
