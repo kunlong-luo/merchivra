@@ -1,6 +1,7 @@
 import {useEffect,useState} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import SourceEvidenceDrawer from './components/SourceEvidenceDrawer'
+import PeriodProfitWaterfallPanelV188 from './PeriodProfitWaterfallPanelV188'
 import {compareFrozenReports,summarizeCandidatePage} from './lib/profit-report-insights'
 import {createPeriodProfitReport,exportPeriodProfitUrl,
  getPeriodProfitAudit,getPeriodProfitJobs,getPeriodProfitReport,
@@ -154,6 +155,8 @@ export default function PeriodProfitReportPanel({tenantId,marketplaceId}:{
     ].map(([label,value])=><div key={label}><span>{label} · {j.currency}</span>
      <strong>{value}</strong></div>)}
    </div>
+   <PeriodProfitWaterfallPanelV188 tenantId={tenantId}
+    marketplaceId={marketplaceId} reportId={j.id}/>
    <p className="setup-hint">单独的人工广告参考金额：{j.currency} {j.manualAdsReference}，
     {j.manualAdsCount} 条（MANUAL_UNVERIFIED），不进入贡献利润公式。
     未分配退款、其他调整、税费、汇兑、真实广告账单仍可能未覆盖。</p>
