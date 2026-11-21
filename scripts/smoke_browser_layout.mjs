@@ -8,6 +8,7 @@ import { mkdtemp, readFile, mkdir, writeFile, rm } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve, extname } from 'node:path'
+import { portFromChromeStderr } from './chrome_devtools_port.mjs'
 
 const dist = resolve(process.argv[2] ?? 'apps/web/dist')
 // When set, run the same synthetic API + Chrome assertions against the real
@@ -745,10 +746,7 @@ async function main() {
     }
     catch { /* Chrome may not materialize the active-port file yet. */ }
     if(!port){
-      const announced=log.match(/DevTools listening on ws:\/\/127\.0\.0\.1:(\d+)\/devtools\/browser\//)
-      const candidate=announced?Number(announced[1]):0
-      if(Number.isInteger(candidate)&&candidate>0&&candidate<=65535)
-        port=candidate
+      port=portFromChromeStderr(log)
     }
     if(port)break
     if(chrome.exitCode!==null)
