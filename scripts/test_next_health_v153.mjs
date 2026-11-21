@@ -10,6 +10,8 @@ import {runInNewContext} from 'node:vm'
 
 const compose=JSON.parse(readFileSync(0,'utf8'))
 const cmd=compose.services?.['next-web']?.healthcheck?.test
+assert.deepEqual(compose.services?.web?.healthcheck?.test,cmd,
+  'Primary web and Next canary must share the same fail-closed healthcheck')
 assert.deepEqual(cmd?.slice(0,3),['CMD','node','-e'])
 assert.equal(cmd?.length,4)
 const program=cmd[3]
