@@ -39,6 +39,7 @@ public class CostAttributionEvidenceService {
         long independentlyReviewedCount,long auditBackedReviewCount,
         long strongLocalMatchCount,long sharedLineCount,long incompatibleLineCount,
         boolean independentReviewAuditComplete,boolean localCollisionApprovalHeld,
+        String localIdentityStatus,
         boolean externalChargeVerified,boolean duplicateDebitVerified,
         boolean financialHoldCleared,boolean netProfitEligible) {}
 
@@ -105,7 +106,7 @@ public class CostAttributionEvidenceService {
             c.links(),c.frozen(),c.missingCapture(),
             c.independentlyReviewed(),c.auditBackedReviews(),
             c.exactReferenceAndAmount(),c.sharedLines(),c.incompatibleLines(),
-            reviewComplete,preview.approvalHeld(),
+            reviewComplete,preview.approvalHeld(),preview.status(),
             false,false,false,false);
     }
 
