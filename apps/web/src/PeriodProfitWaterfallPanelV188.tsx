@@ -59,7 +59,7 @@ export default function PeriodProfitWaterfallPanelV188({
    <p className="v180-compare-hold" role="status">
     <strong>敏感度状态：</strong>{stateNames[p.sensitivityState]??p.sensitivityState}。
     候选订单 {p.totalOrders}，可计算 {p.eligibleOrders}，
-    阻断 {p.blockedOrders}；本期人工来源 {p.reviewedCostSourceCount}，
+    阻断 {p.blockedOrders}；本期人工来源 {p.manualCostSourceCount}，
     疑似跨来源冲突 {p.potentialCollisionSourceCount}，
     共用结算行来源 {p.sharedSettlementLineSourceCount}。
    </p>
