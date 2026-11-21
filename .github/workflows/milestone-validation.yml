@@ -1,3 +1,6 @@
+# V192: exact-main PG18 execution of the V188 read-only V64 order/SKU
+# consistency SQL, including cancellation, missing SKU and blocked-order SKU.
+# Never upgrade a local arithmetic scenario into verified net profit.
 # V191: Node 24 + pinned pnpm 12.20.0, pnpm-lock.yaml frozen installs,
 # two Docker images, Orval/Next/Vite, PG18 real HTTP, Chromium and mock Compose.
 # No alternate package manager, live Amazon credentials or production approval.
@@ -185,7 +188,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V191-A3-pnpm-only-locked-web-build' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V192-A3-V64-order-SKU-profit-evidence-conservation' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -266,6 +269,7 @@ on:
           - V188B-A3-bounded-V64-openapi-waterfall
           - V190-A3-Next-default-web-Vite-opt-in-rollback
           - V191-A3-pnpm-only-locked-web-build
+          - V192-A3-V64-order-SKU-profit-evidence-conservation
 
 permissions:
   contents: read
