@@ -62,8 +62,12 @@ jobs:
           set -euo pipefail
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          rm scripts/migrate_pnpm_v191.py .github/workflows/one-time-pnpm-migration.yml
+          rm scripts/migrate_pnpm_v191.py
+          rm -rf scripts/__pycache__
           git add -A
+          # GitHub Actions token cannot update workflow files; the connected
+          # maintainer tool will apply those reviewed changes separately.
+          git restore --staged -- .github/workflows
           git diff --cached --check
           git diff --cached --name-status
           test -f apps/web/pnpm-lock.yaml
