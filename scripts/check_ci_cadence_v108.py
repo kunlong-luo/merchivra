@@ -24,7 +24,13 @@ assert "workflow_call:" in ci and "workflow_dispatch:" in ci
 assert "full_suite:" in ci
 assert "if: inputs.full_suite == true" in ci
 assert ci.count("if: inputs.full_suite == true") >= 4
-assert "Gradle Wrapper tests (fast on every PR and main push)" in ci
+assert "Gradle Wrapper tests (fast on every main push)" in ci
+ci_header = ci.split("jobs:", 1)[0]
+assert "push:" in ci_header and "branches: [main]" in ci_header
+assert "pull_request:" not in ci_header
+assert "github.head_ref" not in ci
+assert "visual-refresh-browser:" not in ci
+assert "if: inputs.full_suite == true" in ci
 assert "Next 16 App Router TS gate" in ci
 assert "npm run api:check" in ci and "npm run test" in ci
 assert "compose-deployment-config:" in ci
@@ -37,7 +43,8 @@ for name, contents in (("browser", browser), ("compose", chain)):
     assert "pull_request:" not in header, name
     assert "push:" not in header, name
 
-assert "pull_request:" not in pages.split("jobs:", 1)[0]
+assert "pull_request:" not in pages
+assert "if: github.event_name" not in pages
 assert "workflow_dispatch:" in milestone
 assert "workflow_call:" not in milestone.split("jobs:", 1)[0]
 assert "uses: ./.github/workflows/ci.yml" in milestone
@@ -47,4 +54,4 @@ assert "full_suite: true" in milestone
 assert 'test "$GITHUB_REF_NAME" = "main"' in milestone
 assert "真实" in policy and "PG18" in policy
 
-print("PASS V108: quick PR/main checks; full PG18/Chromium/Compose on milestone")
+print("PASS V189: direct-main quick CI; full PG18/Chromium/Compose on milestone")

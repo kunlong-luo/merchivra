@@ -1,12 +1,10 @@
-# V108: fast automatic checks on PR/main; full PG18 + Next runtime checks
+# V108/V189: fast checks on direct main pushes; full PG18 + Next runtime checks
 # via workflow_dispatch(full_suite=true) or milestone-validation.yml.
 # High-risk auth, stock, finance and tenant changes still require targeted tests.
 name: CI
 
 on:
   push:
-    branches: [main]
-  pull_request:
     branches: [main]
   workflow_dispatch:
     inputs:
@@ -47,7 +45,7 @@ jobs:
           test -x apps/server/gradlew
           printf '%s  %s\n' 423cb469ccc0ecc31f0e4e1c309976198ccb734cdcbb7029d4bda0f18f57e8d9 apps/server/gradle/wrapper/gradle-wrapper.jar | sha256sum -c -
           grep -F 'distributionSha256Sum=72f44c9f8ebcb1af43838f45ee5c4aa9c5444898b3468ab3f4af7b6076c5bc3f' apps/server/gradle/wrapper/gradle-wrapper.properties
-      - name: Gradle Wrapper tests (fast on every PR and main push)
+      - name: Gradle Wrapper tests (fast on every main push)
         run: ./apps/server/gradlew -p apps/server --no-daemon --console plain test
       - name: JaCoCo report (full milestone only)
         if: inputs.full_suite == true
@@ -122,9 +120,9 @@ jobs:
 
   pg18-migrations:
     name: PostgreSQL 18 / real Flyway migrations
-    # V175 exception: finance integrity needs real PG18 before PR merge.
-    # Other PRs retain V108 quick CI cadence; no LIVE Amazon credentials.
-    if: inputs.full_suite == true || (github.event_name == 'pull_request' && github.head_ref == 'feat/v175-qc-independent-review-foundation') || (github.event_name == 'pull_request' && github.head_ref == 'feat/v175b-wms-key-possession-challenge')
+    # Run full PG18 integrity checks in explicitly requested milestone suites.
+    # Never require LIVE Amazon credentials.
+    if: inputs.full_suite == true
     runs-on: ubuntu-latest
     timeout-minutes: 20
     services:
@@ -623,11 +621,3 @@ jobs:
           path: /tmp/merchivra-v143-production-gate-blocked.json
           if-no-files-found: warn
           retention-days: 7
-
-
-  # Focused browser budget: only the visual design PR runs Chromium BEFORE merge.
-  # This reuses the real Vite/Next 16 synthetic layout workflow, with screenshots.
-  visual-refresh-browser:
-    name: Next.js 16 design review / Chromium 360px and desktop
-    if: github.event_name == 'pull_request' && (github.head_ref == 'feat/next16-command-center-visual-refresh' || github.head_ref == 'feat/next16-operations-workspace-polish' || github.head_ref == 'feat/v179-source-evidence-drilldown' || github.head_ref == 'feat/v180-profit-reconciliation-visibility' || github.head_ref == 'feat/v181-immutable-settlement-line-identity')
-    uses: ./.github/workflows/browser-layout-smoke.yml

@@ -1,5 +1,5 @@
 # V108: build public synthetic-only Pages after main updates or manual dispatch;
-# no duplicate Pages build for each PR (quick CI already builds the web). 
+# Only main push or explicit manual run can deploy the synthetic showcase.
 # Public, read-only GitHub Pages SHOWCASE. Not the private ERP deployment.
 # No Spring Boot, PostgreSQL, credentials, Amazon calls or remote writes.
 name: Publish read-only React GitHub Pages showcase
@@ -44,17 +44,14 @@ jobs:
       - name: Verify public mode has no live login or OAuth clients
         run: node scripts/check_pages_dist.mjs apps/web/dist
       - name: Add GitHub Pages no-Jekyll marker
-        if: github.event_name != 'pull_request'
         run: touch apps/web/dist/.nojekyll
       - name: Upload Pages site artifact
-        if: github.event_name != 'pull_request'
         uses: actions/upload-pages-artifact@v4
         with:
           path: apps/web/dist
 
   deploy:
     name: Deploy public showcase
-    if: github.event_name != 'pull_request'
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
