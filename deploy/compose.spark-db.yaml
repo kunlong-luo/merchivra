@@ -1,6 +1,6 @@
 # Reuse the independently managed spark-db PostgreSQL 18/PostGIS instance.
 # This file is STANDALONE: do not combine with deploy/compose.yaml.
-# It launches ONLY the Merchivra API + React/Nginx; never creates/stops
+# It launches ONLY the Merchivra API + Next.js 16; never creates/stops
 # spark-postgres, spark-redis, their Docker volumes or the iot_farm database.
 #
 # docker compose --env-file .env -f deploy/compose.spark-db.yaml up -d --build
@@ -60,11 +60,60 @@ services:
       - spark_db
 
   web:
+    # Default local ERP is Next.js 16 and reuses existing spark-db unchanged.
     build:
       context: ../apps/web
+      dockerfile: Dockerfile.next
+      args:
+        MERCHIVRA_API_INTERNAL_URL: http://server:8080
     restart: unless-stopped
     ports:
-      - '127.0.0.1:${MERCHIVRA_WEB_PORT:-3000}:80'
+      - '127.0.0.1:${MERCHIVRA_WEB_PORT:-3000}:3000'
+    depends_on:
+      - server
+    networks:
+      - default
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          const options = {signal: AbortSignal.timeout(3000),
+          redirect: 'manual', cache: 'no-store'};
+          fetch('http://127.0.0.1:3000/api/v1/ping', options)
+          .then(async response => {
+          if (response.status !== 200
+          || !response.headers.get('content-type')?.toLowerCase().includes('application/json'))
+          return false;
+          const ping = await response.json();
+          if (!ping || ping.service !== 'merchivra'
+          || ping.status !== 'ok' || ping.stage !== 'M0') return false;
+          const health = await fetch('http://server:8080/actuator/health', options);
+          const media = health.headers.get('content-type')?.toLowerCase().split(';', 1)[0].trim();
+          if (health.status !== 200
+          || !(media === 'application/json'
+          || media === 'application/vnd.spring-boot.actuator.v3+json'
+          || media === 'application/vnd.spring-boot.actuator.v2+json'))
+          return false;
+          const state = await health.json();
+          return state && state.status === 'UP';
+          })
+          .then(ok => process.exit(ok ? 0 : 1))
+          .catch(() => process.exit(1));
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+
+  vite-web:
+    profiles: ['vite-fallback']
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:${MERCHIVRA_VITE_PORT:-3002}:80'
     depends_on:
       - server
     networks:

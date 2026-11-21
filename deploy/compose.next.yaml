@@ -1,5 +1,5 @@
-# V122: opt-in private Next.js Node App Router for disposable acceptance
-# and controlled cutover. Vite/Nginx web stays unchanged as rollback.
+# Legacy full-A3 canary: next-web is an additional Next.js instance on port 3001.
+# Normal web now runs Next.js; vite-web remains opt-in for rollback.
 # Only use behind reviewed HTTPS ingress; loopback staging port is NOT public.
 #
 # docker compose --env-file .env -f deploy/compose.yaml \

@@ -82,12 +82,59 @@ services:
     restart: unless-stopped
 
   web:
+    # Default local ERP is private Next.js 16 standalone.
     build:
       context: ../apps/web
+      dockerfile: Dockerfile.next
       args:
+        MERCHIVRA_API_INTERNAL_URL: http://server:8080
         MERCHIVRA_BUILD_REVISION: ${MERCHIVRA_BUILD_REVISION:-}
     ports:
-      - "127.0.0.1:3000:80"
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      - server
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD
+        - node
+        - -e
+        - >-
+          const options = {signal: AbortSignal.timeout(3000),
+          redirect: 'manual', cache: 'no-store'};
+          fetch('http://127.0.0.1:3000/api/v1/ping', options)
+          .then(async response => {
+          if (response.status !== 200
+          || !response.headers.get('content-type')?.toLowerCase().includes('application/json'))
+          return false;
+          const ping = await response.json();
+          if (!ping || ping.service !== 'merchivra'
+          || ping.status !== 'ok' || ping.stage !== 'M0') return false;
+          const health = await fetch('http://server:8080/actuator/health', options);
+          const media = health.headers.get('content-type')?.toLowerCase().split(';', 1)[0].trim();
+          if (health.status !== 200
+          || !(media === 'application/json'
+          || media === 'application/vnd.spring-boot.actuator.v3+json'
+          || media === 'application/vnd.spring-boot.actuator.v2+json'))
+          return false;
+          const state = await health.json();
+          return state && state.status === 'UP';
+          })
+          .then(ok => process.exit(ok ? 0 : 1))
+          .catch(() => process.exit(1));
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+
+  # Legacy Vite/Nginx is an explicit, disabled-by-default rollback.
+  vite-web:
+    profiles: ['vite-fallback']
+    build:
+      context: ../apps/web
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:${MERCHIVRA_VITE_PORT:-3002}:80"
     depends_on:
       - server
     restart: unless-stopped

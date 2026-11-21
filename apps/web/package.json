@@ -7,11 +7,11 @@
     "node": ">=24.11 <25"
   },
   "scripts": {
-    "dev": "vite --host 127.0.0.1",
-    "build": "tsc --noEmit && vite build",
+    "dev": "next dev --hostname 127.0.0.1 --port 3000",
+    "build": "next build",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "preview": "vite preview --host 127.0.0.1",
+    "preview": "next start --hostname 127.0.0.1 --port 3000",
     "api:generate": "orval --config orval.config.ts && npm run api:generate:purchasing",
     "api:generate:fba": "orval --config orval.fba.config.ts",
     "api:generate:ads": "orval --config orval.ads.config.ts",
@@ -28,7 +28,13 @@
     "predev:next": "node scripts/ensure-purchasing-generated.mjs",
     "pretypecheck:next": "node scripts/ensure-purchasing-generated.mjs",
     "prebuild:next": "node scripts/ensure-purchasing-generated.mjs",
-    "api:generate:purchasing": "orval --config orval.purchasing.config.ts"
+    "api:generate:purchasing": "orval --config orval.purchasing.config.ts",
+    "dev:vite": "vite --host 127.0.0.1",
+    "build:vite": "tsc --noEmit && vite build",
+    "preview:vite": "vite preview --host 127.0.0.1",
+    "start": "next start --hostname 0.0.0.0 --port 3000",
+    "predev:vite": "node scripts/ensure-purchasing-generated.mjs",
+    "prebuild:vite": "node scripts/ensure-purchasing-generated.mjs"
   },
   "dependencies": {
     "@base-ui/react": "1.9.0",
