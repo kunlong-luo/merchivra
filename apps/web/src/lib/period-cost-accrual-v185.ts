@@ -23,7 +23,7 @@ export const projection=z.object({
  currency:z.string().regex(/^[A-Z]{3}$/),
  sourceAmount:money,allocatedAmount:money,
  unallocatedAmount:money,projectedAmount:money,
- months:z.array(month).max(400),
+ months:z.array(month).max(500),
  overlappingServiceDays:z.boolean(),
  blockerCodes:z.array(z.string()).min(4),
  externalSourceVerified:z.literal(false),
