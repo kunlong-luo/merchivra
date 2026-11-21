@@ -23,7 +23,7 @@ policy = load("docs/roadmap/mvp-freeze-release-v108.md")
 assert "workflow_call:" in ci and "workflow_dispatch:" in ci
 assert "full_suite:" in ci
 assert "if: inputs.full_suite == true" in ci
-assert ci.count("if: inputs.full_suite == true") >= 4
+assert ci.count("if: inputs.full_suite == true") >= 3  # Next is built on every main push; no duplicate full-only build
 assert "Gradle Wrapper tests (fast on every main push)" in ci
 ci_header = ci.split("jobs:", 1)[0]
 assert "push:" in ci_header and "branches: [main]" in ci_header
