@@ -249,6 +249,85 @@ assert after_review["realizedNetProfit"] is None
 # A plan ID belonging to another V91 source cannot be read through this path.
 call(owner,path+"/"+proposal2["id"]+"/periodization-preview",expected=404)
 
+# V186: global single-source cost bridge. All SQL rows are synthetic
+# original-currency manual claims; even APPROVED_UNVERIFIED is not a GL debit.
+# A staged source without an active plan must remain UNASSIGNED, not zero.
+unowned=call(owner,root,"POST",{
+    "category":"OTHER_OPERATING","sourceKind":"MANUAL_INVOICE",
+    "sourceKey":"V186-UNASSIGNED-"+uuid4().hex[:14],
+    "documentSha256":uuid4().hex+uuid4().hex,
+    "businessDate":"2026-11-19","amount":"4.000000","currency":currency})
+assert unowned["id"]!=sid and unowned["id"]!=second_id
+bridge_url=f"/api/v1/finance/marketplaces/{market}/cost-ownership-bridge"
+period_q="?periodStart=2026-11-01&periodEndExclusive=2026-12-01"
+call(anonymous,bridge_url+period_q,expected=401)
+call(owner,bridge_url+"?periodStart=2026-11-01&periodEndExclusive=2026-11-01",
+     expected=400)
+call(owner,bridge_url+"?periodStart=2025-01-01&periodEndExclusive=2026-12-01",
+     expected=400)
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}/cost-ownership-bridge"
+     +period_q,expected=404)
+bridge=call(owner,bridge_url+period_q)
+assert bridge["sourceDateBasis"]=="V91_SOURCE_BUSINESS_DATE_NOT_ACCOUNTING_RECOGNITION_DATE"
+assert bridge["sourceCount"]==int(sql(f"""
+ SELECT count(*) FROM finance_cost_source_v91
+ WHERE tenant_id='{tenant}' AND seller_marketplace_id='{market}'
+   AND business_date>='2026-11-01' AND business_date<'2026-12-01'"""))
+assert bridge["sourceCount"]==sum(x["sourceCount"] for x in bridge["buckets"])
+assert not bridge["doubleCountingAcrossDimensionsAllowed"]
+assert bridge["realizedNetProfit"] is None
+for key in ("externalChargeVerified","refundCogsReversalVerified",
+            "fxConversionApproved","bankReconciled",
+            "ledgerPosted","netProfitEligible"):
+    assert bridge[key] is False,key
+for b in bridge["buckets"]:
+    assert not b["derivativeSkuOrderPeriodProfitDeductionsAllowed"]
+    assert not b["externalChargeVerified"] and not b["netProfitEligible"]
+    assert b["sourceCount"]==(b["approvedUnverifiedSourceCount"]+
+        b["pendingSourceCount"]+b["unassignedSourceCount"])
+    assert (b["approvedUnverifiedAllocatedAmount"] is None)==(
+        b["approvedUnverifiedSourceCount"]==0)
+    assert (b["approvedUnverifiedRemainderAmount"] is None)==(
+        b["approvedUnverifiedSourceCount"]==0)
+assert any(x["primaryDimension"]=="UNASSIGNED"
+           and x["category"]=="OTHER_OPERATING"
+           and x["unassignedSourceCount"]>=1 for x in bridge["buckets"])
+assert any(x["primaryDimension"]=="PERIOD"
+           and x["category"]=="INBOUND_FREIGHT"
+           and x["approvedUnverifiedSourceCount"]>=1 for x in bridge["buckets"])
+assert any(x["primaryDimension"]=="PERIOD"
+           and x["category"]=="FBA_STORAGE"
+           and x["approvedUnverifiedSourceCount"]>=1 for x in bridge["buckets"])
+assert "REFUND_COGS_REVERSAL_NEEDS_PHYSICAL_RECEIPT_AND_FINANCIAL_POLICY" in bridge["blockerCodes"]
+assert "SOURCE_WITHOUT_ACTIVE_V92_OWNER_DIMENSION" in bridge["blockerCodes"]
+# Independent source-once reconciliation. This is not checking equality
+# against the same V186 query: it uses raw V91 amounts grouped only by
+# original currency, never the many-to-one V92 allocation-line table.
+from decimal import Decimal
+real={}
+for entry in sql(f"""
+ SELECT btrim(currency_code)||'|'||
+        sum(amount)::numeric(30,6)::text
+ FROM finance_cost_source_v91
+ WHERE tenant_id='{tenant}' AND seller_marketplace_id='{market}'
+   AND business_date>='2026-11-01' AND business_date<'2026-12-01'
+ GROUP BY currency_code""").splitlines():
+    cc,amount=entry.split("|")
+    real[cc]=Decimal(amount)
+from_bridge={}
+for b in bridge["buckets"]:
+    from_bridge[b["currency"]]=from_bridge.get(b["currency"],Decimal(0))+Decimal(
+        b["sourceClaimedAmount"])
+assert from_bridge==real,"V186 dimension grouping must not multiply V91 source charges"
+empty_bridge=call(owner,bridge_url+
+    "?periodStart=2026-12-01&periodEndExclusive=2027-01-01")
+assert empty_bridge["sourceCount"]==int(sql(f"""
+ SELECT count(*) FROM finance_cost_source_v91
+ WHERE tenant_id='{tenant}' AND seller_marketplace_id='{market}'
+   AND business_date>='2026-12-01' AND business_date<'2027-01-01'"""))
+assert empty_bridge["realizedNetProfit"] is None
+assert not empty_bridge["netProfitEligible"]
+
 after=[sql(f"SELECT count(*) FROM {t}") for t in (
     "finance_source_event","finance_profit_report_job",
     "ads_report_reviewed_cost","bank_payout_observation")]
