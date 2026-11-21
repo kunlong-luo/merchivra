@@ -27,7 +27,7 @@ export default function CostCrossSourceRiskPanelV187({tenantId,marketplaceId,sta
   <p className="setup-hint">
    这里检查不同 V91 来源与 V165 多种参考编号/文档线索的重叠，
    以及 V168 多来源关联同一导入结算行。所有匹配只是本地风险线索，
-   **不是**真实重复扣费、发票认证或允许冲抵利润的结论。
+   不是 真实重复扣费、发票认证或允许冲抵利润的结论。
    风险汇总不受来源列表每页 50 条的限制。
   </p>
   {state.isPending?<p className="setup-hint" role="status">正在核对全期间来源冲突…</p>:
