@@ -26,7 +26,7 @@ FAKE={
 
 class V146SafeHttpsTests(unittest.TestCase):
     def test_only_fixed_loopback_tls_port_no_http_listener_and_deny_host_spoof(self):
-        for target,port in [("next",3001),("vite",3000)]:
+        for target,port in [("next",3001),("vite",3002)]:
             conf=smoke.config_for(target)
             self.assertIn("listen 127.0.0.1:3443 ssl;",conf)
             self.assertNotIn("listen 80;",conf)
@@ -71,7 +71,7 @@ class V146SafeHttpsTests(unittest.TestCase):
             self.assertEqual(good.stat().st_mode&0o777,0o600)
             self.assertIn("127.0.0.1:3001",good.read_text())
             smoke.write_config(good,"vite")
-            self.assertIn("127.0.0.1:3000",good.read_text())
+            self.assertIn("127.0.0.1:3002",good.read_text())
             self.assertNotIn("127.0.0.1:3001",good.read_text())
         with self.assertRaisesRegex(ValueError,"unsafe_config_path"):
             smoke.write_config(Path("/etc/nginx/nginx.conf"),"next")
