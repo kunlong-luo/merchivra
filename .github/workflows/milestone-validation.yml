@@ -1,3 +1,6 @@
+# V182: exact merged main SHA full PG18/HTTP/Next/Chromium A3 for read-only
+# local settlement attribution. V94 immutable audit/V95 collision holds retained;
+# NEVER treat an imported line as independently attested Amazon charge.
 # V181B: exact-merged-main SHA automatic full A3 for V102 derived-on-read
 # canonical identity SHA-256; never Amazon signature / real fee verification.
 # Keep Seller/Ads OAuth OFF and production #104 NO-GO.
@@ -151,7 +154,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V181B-A3-derived-settlement-line-fingerprint' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V182-A3-cost-attribution-evidence-classification' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -220,6 +223,7 @@ on:
           - NEXT16-A3-v179-readonly-source-evidence-drawers
           - V180-A3-profit-snapshot-deltas-cost-line-risk
           - V181-A3-immutable-settlement-report-line-identity
+          - V182-A3-cost-attribution-evidence-classification
 
 permissions:
   contents: read
