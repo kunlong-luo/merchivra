@@ -342,7 +342,7 @@ report_job=call(owner,report_root,"POST",{
     "requestKey":str(uuid4()),"after":"2026-11-01",
     "before":"2026-11-20"})
 job_id=report_job["id"]
-waterfall_url=report_root+"/"+job_id+"/cost-waterfall-preview"
+waterfall_url=f"/api/v1/finance/marketplaces/{market}/cost-waterfall-preview/"+job_id
 call(anonymous,waterfall_url,expected=401)
 call(owner,report_root+"/"+str(uuid4())+"/cost-waterfall-preview",expected=404)
 call(owner,f"/api/v1/finance/marketplaces/{uuid4()}/profit-reports/"
