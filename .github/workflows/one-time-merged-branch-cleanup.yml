@@ -1,0 +1,57 @@
+name: One-time safe cleanup of merged branches
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/one-time-merged-branch-cleanup.yml'
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  delete-verified-merged-branches:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Delete only unchanged heads of already merged PRs
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const full = `${owner}/${repo}`;
+            const merged = await github.paginate(github.rest.pulls.list, {owner, repo, state: 'closed', per_page: 100});
+            const open = await github.paginate(github.rest.pulls.list, {owner, repo, state: 'open', per_page: 100});
+            const branches = await github.paginate(github.rest.repos.listBranches, {owner, repo, per_page: 100});
+            const localHead = p => p.head?.repo?.full_name === full || p.head?.label === `${owner}:${p.head?.ref}`;
+            const mergedHeads = new Map();
+            for (const p of merged) {
+              if (!p.merged_at || p.base?.ref !== 'main' || !localHead(p)) continue;
+              const old = mergedHeads.get(p.head.ref);
+              if (!old || p.number > old.number) mergedHeads.set(p.head.ref, {number: p.number, sha: p.head.sha});
+            }
+            const openHeads = new Set(open.filter(localHead).map(p => p.head.ref));
+            let removed = 0;
+            const failures = [];
+            for (const b of branches) {
+              if (b.name === 'main' || b.protected || openHeads.has(b.name)) continue;
+              const proof = mergedHeads.get(b.name);
+              if (!proof || proof.sha !== b.commit.sha) continue;
+              try {
+                const live = (await github.rest.repos.getBranch({owner, repo, branch: b.name})).data;
+                if (live.protected || live.commit.sha !== proof.sha) {
+                  core.warning(`Skipped moved/protected branch ${b.name}`);
+                  continue;
+                }
+                await github.rest.git.deleteRef({owner, repo, ref: `heads/${b.name}`});
+                removed += 1;
+                core.info(`Deleted ${b.name}; exactly merged PR #${proof.number} (${proof.sha})`);
+              } catch (error) {
+                failures.push(`${b.name}: ${error.status ?? 'error'} ${error.message}`);
+              }
+            }
+            await core.summary.addHeading('Merged branch cleanup').addRaw(`Deleted ${removed} branch(es); retained all open-PR, nonmerged, protected, and changed-head branches. Failures: ${failures.length}.`).write();
+            for (const f of failures) core.error(f);
+            if (failures.length) core.setFailed(`${failures.length} branch deletions failed`);
