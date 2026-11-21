@@ -1,6 +1,9 @@
 # V182 — 按费用来源的结算行归属证据裁决（保守只读）
 
-状态：**业务分支待 CI 验收**；不等同于外部平台费用、重复扣费或银行到账认证。
+状态：**业务代码已合并，精确业务 main SHA 完整合成 A3 首次 7/7 通过**；不等同于外部平台费用、重复扣费或银行到账认证。
+
+**V182 本地结算行归属证据分类 A3 7/7（2026-11-21）**：业务 [PR #180](https://github.com/kunlong-luo/merchivra/pull/180) 已合并，精确 main 业务 SHA `85bc6adc6e7d79c603f2d736d0be53d4be3df833`；合并前 [快速 CI #44860177994](https://github.com/kunlong-luo/merchivra/actions/runs/44860177994) run_attempt=1 SUCCESS（Java25/Gradle、React19/Next16/Vite、Compose）；精确 SHA [完整 A3 #44860315026](https://github.com/kunlong-luo/merchivra/actions/runs/44860315026) run_attempt=1 **7/7 核心任务 SUCCESS**（PG18/Flyway、Java、React/Next16、Chromium、Compose HTTP、安全/恢复，额外设计专项按策略跳过）。V182 在现有 V165/V94/V95/V102 上同一只读快照归集，新增合成 PG18 HTTP 覆盖缺关联 UNKNOWN、V94 独立审核+审计后本地元数据支持、共用行/跨来源冲突优先；无新数据库审批表或利润入账。**本地支持不是外部 Amazon 扣费认证，冲突不等于重复扣费已证实，所有银行/利润认证及清除 hold 标志仍 false；Seller/Ads OAuth OFF，生产 #104 NO-GO**。
+
 
 ## 审计现状与不重复建设原则
 
