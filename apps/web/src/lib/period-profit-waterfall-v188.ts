@@ -32,7 +32,7 @@ export const periodProfitWaterfallV188=z.object({
  totalOrders:z.number().int().nonnegative(),
  eligibleOrders:z.number().int().nonnegative(),
  blockedOrders:z.number().int().nonnegative(),
- reviewedCostSourceCount:z.number().int().nonnegative(),
+ manualCostSourceCount:z.number().int().nonnegative(),
  potentialCollisionSourceCount:z.number().int().nonnegative(),
  sharedSettlementLineSourceCount:z.number().int().nonnegative(),
  eligibleSignedSales:money.nullable(),
@@ -63,9 +63,9 @@ export const periodProfitWaterfallV188=z.object({
  if(canShow!==Boolean(p.unverifiedCostSensitivityContribution!==null &&
   p.approvedUnverifiedLocalCostExposure!==null))
   ctx.addIssue({code:'custom',message:'未核验算术敏感度必须与阻断状态一致'})
- if(p.reviewedCostSourceCount!==p.costLines.reduce((n,b)=>n+b.sourceCount,0))
+ if(p.manualCostSourceCount!==p.costLines.reduce((n,b)=>n+b.sourceCount,0))
   ctx.addIssue({code:'custom',message:'成本来源不能跨维度重复计数'})
- if(p.potentialCollisionSourceCount>p.reviewedCostSourceCount)
+ if(p.potentialCollisionSourceCount>p.manualCostSourceCount)
   ctx.addIssue({code:'custom',message:'本地重复风险超过来源总数'})
 })
 export type PeriodProfitWaterfallV188=z.infer<typeof periodProfitWaterfallV188>
