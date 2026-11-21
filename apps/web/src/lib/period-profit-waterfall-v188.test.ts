@@ -12,7 +12,7 @@ const source={
  dateBasis:'V64_ORDER_UTC_V91_COST_SOURCE_BUSINESS_DATE',
  sourceSnapshotBasis:'V64_IMMUTABLE_ORDER_EXTRACTS_V91_V92_V165_V168_LIVE_READ',
  jobState:'SUCCEEDED',totalOrders:1,eligibleOrders:1,blockedOrders:0,
- reviewedCostSourceCount:1,potentialCollisionSourceCount:0,
+ manualCostSourceCount:1,potentialCollisionSourceCount:0,
  sharedSettlementLineSourceCount:0,
  eligibleSignedSales:'100.000000',eligibleSignedAmazonFees:'-10.000000',
  eligibleSignedFbaFees:'-5.000000',eligibleProvisionalCogs:'40.000000',
@@ -67,7 +67,7 @@ describe('V188 V64 to V92 original-currency candidate cost waterfall',()=>{
   expect(()=>periodProfitWaterfallV188.parse({
    ...source,approvedUnverifiedLocalCostExposure:'12.0000011'})).toThrow()
   expect(()=>periodProfitWaterfallV188.parse({
-   ...source,reviewedCostSourceCount:2})).toThrow()
+   ...source,manualCostSourceCount:2})).toThrow()
   expect(()=>periodProfitWaterfallV188.parse({
    ...source,sensitivityState:'CROSS_SOURCE_COLLISION_BLOCKED'})).toThrow()
  })
