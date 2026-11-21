@@ -2,7 +2,7 @@
 
 # V175-B · 外部仓储运营商身份与实收证据准入合同（设计草案）
 
-状态：**PROPOSED / NOT IMPLEMENTED / NO-GO**。本文件是 V175-A 后续实现和验收的约束清单，不是完成声明；不改变 #12、#104、G1/G2/G3 或 Seller/Ads OAuth 的关闭状态。
+状态：**B1 独立 Owner 登记/密钥持有权合成技术基础已实现；B2 真实外部运营主体/物理实收与 B3 获准库存/COGS 过账仍 PROPOSED / NOT IMPLEMENTED / NO-GO。** 下列 API/新表为原草案建议，不要重复实施已存在的 V101。本文件不改变 #12、#104、G1/G2/G3 或 Seller/Ads OAuth 的关闭状态。
 
 ## 当前边界
 
