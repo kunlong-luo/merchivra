@@ -400,6 +400,20 @@ assert not r["realizedNetProfitVerified"] and r["realizedNetProfit"] is None
 assert len(r["categoriesWithoutVerifiedExternalCoverage"])==8
 assert not r["hasMore"]
 assert r["nextBeforeDate"] is None and r["nextBeforeId"] is None
+# V183 full-period evidence blockers are derived independently of the page
+# cursor. Original money remains grouped by currency and category above.
+g=r["evidenceBarriers"]
+assert g["sourceCount"]==int(sql(f"""
+ SELECT count(*) FROM finance_cost_source_v91
+ WHERE tenant_id='{tenant}' AND seller_marketplace_id='{mp}'
+   AND business_date>='2026-11-01' AND business_date<'2026-12-01'"""))
+assert g["sourceCount"]==g["externallyUnverifiedSourceCount"]
+assert g["eligibleForV162OrV64Profit"] is False
+assert g["sharedSettlementLineSourceCount"]>=2
+assert g["pendingLineReviewSourceCount"]>=1
+assert g["noSettlementAssociationSourceCount"]>=1
+assert "BANK_SETTLEMENT_NOT_RECONCILED" in g["blockerCodes"]
+assert "REALIZED_PROFIT_PROVENANCE_INCOMPLETE" in g["blockerCodes"]
 rows={x["sourceId"]:x for x in r["sources"]}
 assert set((a["id"],b["id"],c["id"])).issubset(rows)
 assert rows[a["id"]]["activeAllocationState"]=="PENDING_REVIEW"
@@ -409,6 +423,14 @@ assert rows[b["id"]]["approvedUnverifiedAllocationAmount"]=="7.250000"
 assert rows[b["id"]]["approvedUnverifiedUnallocatedAmount"]=="2.750000"
 assert rows[b["id"]]["approvalHeld"] and rows[b["id"]]["sharedSettlementLineCount"]>=1
 assert rows[c["id"]]["approvalHeld"]
+for source,source_id in ((attribution_a,a["id"]),
+                         (url_b+"/settlement-attribution",b["id"]),
+                         (attribution_c,c["id"])):
+    assert rows[source_id]["localAttributionStatus"] == call(
+        owner,source)["status"]
+    assert rows[source_id]["localAttributionReasonCodes"]
+    assert rows[source_id]["frozenIdentityCount"]>=1
+    assert not rows[source_id]["externallyVerified"]
 for s in rows.values():
     assert not s["externallyVerified"] and not s["allowedToDeductFromProfit"]
 for bkt in r["buckets"]:
@@ -450,8 +472,12 @@ for bkt in r["buckets"]:
 # checked ABOVE on the known source; this is full-category conservation.
 assert rows[b["id"]]["approvedUnverifiedAllocationAmount"]=="7.250000"
 assert rows[b["id"]]["approvedUnverifiedUnallocatedAmount"]=="2.750000"
-assert not call(owner,readiness_url+
-    "?periodStart=2026-12-01&periodEndExclusive=2027-01-01")["buckets"]
+empty_month=call(owner,readiness_url+
+    "?periodStart=2026-12-01&periodEndExclusive=2027-01-01")
+assert not empty_month["buckets"]
+assert empty_month["evidenceBarriers"]["sourceCount"]==0
+assert empty_month["evidenceBarriers"]["blockerCodes"]
+assert empty_month["evidenceBarriers"]["eligibleForV162OrV64Profit"] is False
 # Stable keyset + unbounded grouped totals: add 52 synthetic manual sources
 # directly to disposable PG18; never pretend these SQL fixtures are LIVE fees.
 salt=uuid4().hex[:10]
@@ -473,6 +499,17 @@ assert r2["sources"] and not r2["hasMore"]
 assert not ({x["sourceId"] for x in r1["sources"]}&
             {x["sourceId"] for x in r2["sources"]})
 assert r1["buckets"]==r2["buckets"]  # full-range buckets, no page truncation
+# 52 new unreviewed/unassociated sources must stay in the FULL period
+# blockers on every page, even when none is currently in the 50-row view.
+assert r1["evidenceBarriers"]==r2["evidenceBarriers"]
+assert r1["evidenceBarriers"]["sourceCount"]==g["sourceCount"]+52
+assert r1["evidenceBarriers"]["noSettlementAssociationSourceCount"]>= (
+    g["noSettlementAssociationSourceCount"]+52)
+assert r1["evidenceBarriers"]["metadataReviewPendingSourceCount"]>= (
+    g["metadataReviewPendingSourceCount"]+52)
+assert r2["evidenceBarriers"]["externallyUnverifiedSourceCount"]== (
+    r2["evidenceBarriers"]["sourceCount"])
+assert not r2["evidenceBarriers"]["eligibleForV162OrV64Profit"]
 assert len(r1["sources"])+len(r2["sources"])==int(sql(f"""
  SELECT count(*) FROM finance_cost_source_v91
  WHERE tenant_id='{tenant}' AND seller_marketplace_id='{mp}'
