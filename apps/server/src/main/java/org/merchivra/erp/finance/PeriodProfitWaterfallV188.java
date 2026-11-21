@@ -104,11 +104,16 @@ public final class PeriodProfitWaterfallV188 {
             ||risk.anyLocalCollisionSourceCount()>risk.sourceCount()
             ||risk.potentialIdentityOverlapSourceCount()>risk.anyLocalCollisionSourceCount()
             ||risk.sharedSettlementLineSourceCount()>risk.anyLocalCollisionSourceCount()
+            ||job.financialSourceComplete()||job.bankVerified()||job.ledgerPosted()
             ||risk.duplicateDebitVerified()||risk.externalChargeVerified()
-            ||risk.refundCogsReversalVerified()||risk.netProfitEligible()
+            ||risk.refundCogsReversalVerified()||risk.accountingPolicyApproved()
+            ||risk.bankReconciled()||risk.netProfitEligible()
             ||risk.realizedNetProfit()!=null
+            ||ownership.doubleCountingAcrossDimensionsAllowed()
             ||ownership.externalChargeVerified()
-            ||ownership.refundCogsReversalVerified()||ownership.netProfitEligible()
+            ||ownership.refundCogsReversalVerified()||ownership.fxConversionApproved()
+            ||ownership.bankReconciled()||ownership.ledgerPosted()
+            ||ownership.netProfitEligible()
             ||ownership.realizedNetProfit()!=null)
             throw inconsistent("Frozen cohort, scoped cost or collision proof is inconsistent");
 
