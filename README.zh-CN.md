@@ -1,8 +1,8 @@
 # Merchivra ERP（麦奇维拉）
 
-> **2026-11-13 最新已验收代码 main V150：** [完整 A3 #43361557152](https://github.com/kunlong-luo/merchivra/actions/runs/43361557152) 基于精确提交 `2e96bf421d1b8e0c2a2999ab63a236d80ea3a9d9` **第 1 次尝试 7/7 SUCCESS**；[PR #118](https://github.com/kunlong-luo/merchivra/pull/118) 在合成本地 HTTPS Next→Vite→Next 切流前增加独立匿名 401、CSRF 和 Secure/HttpOnly/SameSite 会话就绪验证，只对连接错误/502–504 进行有限重试。此前 V148 首轮偶发 TLS AssertionError 的根因未确证，[#115](https://github.com/kunlong-luo/merchivra/issues/115) 仍追踪。[现行计划](docs/roadmap/mvp-freeze-release-v108.md) 和 [RTM-002 逐条需求追踪](docs/requirements/implementation-acceptance-rtm-v148.md) 区分代码/隔离 PG18 技术验证与真实数据、人工签署；采购/仓储 [#62](https://github.com/kunlong-luo/merchivra/issues/62) 和 FBA 来源 [#108](https://github.com/kunlong-luo/merchivra/issues/108) 仅按技术范围已关闭。**Next 目标环境切流 [#63](https://github.com/kunlong-luo/merchivra/issues/63)、生产 G1/G2/G3 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 和用户本地真实 Seller/Ads 只读授权仍未批准**；不得把 GitHub Pages 的虚构只读演示称为真实 ERP，真实 Amazon 远程写入继续关闭。
+> **2026-11-13 历史已验收代码 main V150：** [完整 A3 #43361557152](https://github.com/kunlong-luo/merchivra/actions/runs/43361557152) 基于精确提交 `2e96bf421d1b8e0c2a2999ab63a236d80ea3a9d9` **第 1 次尝试 7/7 SUCCESS**；[PR #118](https://github.com/kunlong-luo/merchivra/pull/118) 在合成本地 HTTPS Next→Vite→Next 切流前增加独立匿名 401、CSRF 和 Secure/HttpOnly/SameSite 会话就绪验证，只对连接错误/502–504 进行有限重试。此前 V148 首轮偶发 TLS AssertionError 的根因未确证，[#115](https://github.com/kunlong-luo/merchivra/issues/115) 仍追踪。[现行计划](docs/roadmap/mvp-freeze-release-v108.md) 和 [RTM-002 逐条需求追踪](docs/requirements/implementation-acceptance-rtm-v148.md) 区分代码/隔离 PG18 技术验证与真实数据、人工签署；采购/仓储 [#62](https://github.com/kunlong-luo/merchivra/issues/62) 和 FBA 来源 [#108](https://github.com/kunlong-luo/merchivra/issues/108) 仅按技术范围已关闭。**Next 目标环境切流 [#63](https://github.com/kunlong-luo/merchivra/issues/63)、生产 G1/G2/G3 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 和用户本地真实 Seller/Ads 只读授权仍未批准**；不得把 GitHub Pages 的虚构只读演示称为真实 ERP，真实 Amazon 远程写入继续关闭。
 
-> **Next.js 16 迁移预览（V99）：** 已开始直接实现 Next.js App Router，复用现有会话保护的真实 ERP 页面；现阶段还**没有**替换线上 Vite/Nginx。可在 `apps/web` 中运行 `npm ci`、`npm run build:next`、`npm run dev:next`（端口 3001，须启动本地 Spring Boot 8080 后端）。[迁移验收门槛](docs/architecture/next16-ab-migration-v99.md)。GitHub Pages 仍只提供虚构数据静态演示。
+> **2026-11-21：Next.js 16 已成为本地默认 Web 运行时。** `cd apps/web && npm ci && npm run dev` 启动 Next App Router（`127.0.0.1:3000`，需 Spring Boot `8080`）；`npm run build` 也构建 Next。默认 `deploy/compose.yaml` 和 `deploy/compose.spark-db.yaml` 的 `web` 为 Next Node，不再是 Vite/Nginx。Vite 仅通过 `npm run dev:vite` 或 Compose `--profile vite-fallback` 显式启动，回退端口默认 3002；GitHub Pages 继续构建纯静态模拟页面。此变更只面向本地，**生产 #104 仍 NO-GO，真实 Amazon OAuth 仍关闭**。
 
 > **GitHub Pages 公开只读演示：** [查看虚构数据的静态 React 界面](https://kunlong-luo.github.io/merchivra/)（需要仓库先启用 GitHub Pages）。**它不是可登录的 ERP 服务**：没有数据库、真实 Amazon 授权或采购/财务写入。[部署与首次启用说明](docs/deployment/github-pages-public-demo-v98.md)。
 
@@ -18,7 +18,7 @@
 
 | 服务 | 技术 | 职责 | 地址 |
 | --- | --- | --- | --- |
-| `web` 前端 | React 19 + Vite 构建、Nginx | 工作台和 `/api` 反向代理 | http://127.0.0.1:3000 |
+| `web` 前端 | React 19 + Next.js 16 独立 Node | 工作台、Spring `/api` 同源代理 | http://127.0.0.1:3000 |
 | `server` 后端 | Java 25 + Spring Boot 4.1.2 | Session/CSRF、业务 API、Flyway | http://127.0.0.1:8080 |
 | 数据库 | PostgreSQL **18** | 商品、采购、库存、订单、财务来源、审计和凭据原件 | 内置 `postgres` 或你的 `spark-postgres` |
 
@@ -28,7 +28,7 @@
 <summary>当前主要技术选型</summary>
 
 - 后端：Java 25、Spring Boot 4.1.2、Spring Security 7、Gradle 9.2.1、Flyway、官方 Amazon SP-API Java SDK（真实出站默认关闭）。
-- 前端：React 19、TypeScript 6、Vite 8、Node.js 24、TanStack React Query、Zod、Vitest。**已经完全弃用 Vue。**
+- 前端：React 19、Next.js 16 App Router、TypeScript 6、Node.js 24、TanStack React Query、Zod、Vitest；Vite 8 仅用于回退和静态模拟演示。**已经完全弃用 Vue。**
 - 数据：PostgreSQL 18，支持自建独立数据库；Docker Compose 可选择内置 PostgreSQL 或复用现有 PG18 服务。
 - 架构：模块化单体，业务数据有来源标记，关键仓储写入使用事务、证据、审计与操作人复核。
 
@@ -139,7 +139,7 @@ npm ci
 npm run dev
 ```
 
-开发页面通常是 http://127.0.0.1:5173；Vite 自动代理 `/api` 至 `127.0.0.1:8080`。**注意**：本机运行 Java 连接 `127.0.0.1:5432`，Docker 内运行 Java 连接 `spark-postgres:5432`。
+`npm run dev` 现在启动 Next.js 16，开发页面为 http://127.0.0.1:3000，`/api` 通过 Next rewrites 转发到 `127.0.0.1:8080`。只有执行 `npm run dev:vite` 才使用 Vite 的 5173 端口。**注意**：本机运行 Java 连接 `127.0.0.1:5432`，Docker 内运行 Java 连接 `spark-postgres:5432`。
 
 ## 五、部署、升级、停止和卸载
 
