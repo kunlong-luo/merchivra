@@ -52,7 +52,7 @@ jobs:
         run: ./apps/server/gradlew -p apps/server --no-daemon --console plain jacocoTestReport
 
   frontend:
-    name: React 19 / Vite baseline + Next.js 16 preview
+    name: React 19 / Next.js 16 primary + Vite rollback
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -81,13 +81,12 @@ jobs:
         run: |
           node --check ../../scripts/smoke_browser_layout.mjs
           node --test ../../scripts/chrome_devtools_port.test.mjs
-      - name: Build
+      - name: Build primary Next.js 16
         run: npm run build
+      - name: Build explicit Vite rollback
+        run: npm run build:vite
       - name: Next 16 App Router TS gate
         run: npm run typecheck:next
-      - name: Next 16 App Router production build (full milestone only)
-        if: inputs.full_suite == true
-        run: npm run build:next
       - name: Next 16 standalone App Router HTTP smoke (full milestone only)
         if: inputs.full_suite == true
         shell: bash
