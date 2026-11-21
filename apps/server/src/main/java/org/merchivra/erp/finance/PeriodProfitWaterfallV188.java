@@ -24,7 +24,7 @@ public final class PeriodProfitWaterfallV188 {
         "V188_V64_ELIGIBLE_CONTRIBUTION_MINUS_V92_APPROVED_UNVERIFIED_ORIGINAL_CURRENCY_V1";
 
     public record FrozenAmounts(long eligibleRows,long blockedRows,long pendingRows,
-        long wrongCurrencyRows,long missingAmountRows,
+        long wrongCurrencyRows,long missingAmountRows,long skuMismatchRows,
         String signedSales,String signedAmazonFees,String signedFbaFees,
         String provisionalCogs,String contribution) {}
 
@@ -95,11 +95,13 @@ public final class PeriodProfitWaterfallV188 {
             ||job.eligibleOrders()+job.blockedOrders()>job.processedOrders()
             ||frozen.eligibleRows()<0||frozen.blockedRows()<0||frozen.pendingRows()<0
             ||frozen.wrongCurrencyRows()<0||frozen.missingAmountRows()<0
+            ||frozen.skuMismatchRows()<0
             ||frozen.eligibleRows()!=job.eligibleOrders()
             ||frozen.blockedRows()!=job.blockedOrders()
             ||frozen.pendingRows()+frozen.eligibleRows()+frozen.blockedRows()
                 !=job.totalOrders()
             ||frozen.wrongCurrencyRows()!=0||frozen.missingAmountRows()!=0
+            ||frozen.skuMismatchRows()!=0
             ||risk.anyLocalCollisionSourceCount()<0
             ||risk.anyLocalCollisionSourceCount()>risk.sourceCount()
             ||risk.potentialIdentityOverlapSourceCount()>risk.anyLocalCollisionSourceCount()
