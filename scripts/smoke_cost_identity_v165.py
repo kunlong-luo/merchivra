@@ -850,6 +850,56 @@ call(checker,d_url+"/settlement-line-links/"+d_link["id"]+"/review","POST",{
     "disposition":"ESCALATED_NEEDS_PROOF",
     "reason":"Cannot rewrite a reviewed attribution"},expected=409)
 
+# V187 full-period local collision risk report uses V165's 8 matching
+# namespaces plus V168 shared imported settlement-line candidates.
+# It must count EACH V91 source once, independent of 20 sample limit.
+risk_base=f"/api/v1/finance/marketplaces/{mp}/cost-cross-source-risk"
+risk_q="?periodStart=2026-11-01&periodEndExclusive=2026-12-01"
+call(sess(),risk_base+risk_q,expected=401)
+call(owner,risk_base+"?periodStart=2026-11-01&"
+     "periodEndExclusive=2026-11-01",expected=400)
+call(owner,risk_base+"?periodStart=2025-01-01&"
+     "periodEndExclusive=2026-12-01",expected=400)
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}/cost-cross-source-risk"
+     +risk_q,expected=404)
+risk=call(owner,risk_base+risk_q)
+expected_sources=int(sql(f"""SELECT count(*) FROM finance_cost_source_v91
+ WHERE tenant_id='{tenant}' AND seller_marketplace_id='{mp}'
+   AND business_date>='2026-11-01' AND business_date<'2026-12-01'"""))
+assert risk["sourceCount"]==expected_sources
+assert risk["sourceCount"]==(risk["anyLocalCollisionSourceCount"]+
+    risk["noLocalMatchSourceCount"])
+assert risk["potentialIdentityOverlapSourceCount"]>=3  # Ads key, 2 manual docs
+assert risk["anyLocalCollisionSourceCount"]>=3
+assert risk["anyLocalCollisionSourceCount"]>=risk["sharedSettlementLineSourceCount"]
+assert risk["anyLocalCollisionSourceCount"]>=risk["potentialIdentityOverlapSourceCount"]
+assert "V165_CROSS_SOURCE_IDENTITY_OVERLAP_HOLD" in risk["blockerCodes"]
+assert len(risk["examples"])<=20
+assert risk["examplesTruncated"]==(risk["anyLocalCollisionSourceCount"]>20)
+if not risk["examplesTruncated"]:
+    index={x["sourceId"]:x for x in risk["examples"]}
+    assert {a["id"],b["id"],later["id"]}.issubset(index)
+    assert "MANUAL_ADS_SPEND_SAME_KEY" in index[a["id"]]["localSignalCodes"]
+    assert "OTHER_MANUAL_COST_SAME_CLAIMED_DOCUMENT" in index[b["id"]]["localSignalCodes"]
+    assert "OTHER_MANUAL_COST_SAME_CLAIMED_DOCUMENT" in index[later["id"]]["localSignalCodes"]
+assert risk["dateBasis"]=="V91_SOURCE_BUSINESS_DATE_NOT_ACCOUNTING_RECOGNITION_DATE"
+assert not any(risk[k] for k in (
+    "duplicateDebitVerified","externalChargeVerified",
+    "refundCogsReversalVerified","accountingPolicyApproved",
+    "bankReconciled","netProfitEligible"))
+assert risk["realizedNetProfit"] is None
+assert all(not x["duplicateDebitVerified"] and
+           not x["expenseDeductionAllowed"] for x in risk["examples"])
+# Absence of local matches cannot be used as a completeness certificate.
+empty_risk=call(owner,risk_base+
+    "?periodStart=2028-04-01&periodEndExclusive=2028-05-01")
+assert empty_risk["sourceCount"]==0
+assert empty_risk["anyLocalCollisionSourceCount"]==0
+assert empty_risk["noLocalMatchSourceCount"]==0
+assert empty_risk["examples"]==[]
+assert "ABSENCE_OF_LOCAL_MATCH_DOES_NOT_PROVE_NO_DUPLICATES" in empty_risk["blockerCodes"]
+assert not empty_risk["netProfitEligible"]
+
 after=[sql("SELECT count(*) FROM "+t) for t in
     ("finance_profit_report_job","bank_payout_observation","ads_report_reviewed_cost")]
 assert before==after,"Manual identity scan may not post finance/bank/Ads"
