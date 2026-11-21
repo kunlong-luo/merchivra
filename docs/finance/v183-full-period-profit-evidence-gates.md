@@ -1,6 +1,12 @@
 # V183：全期间财务真实性阻断清单与 V182 逐来源归属证据联动
 
-状态：**业务 PR 待 CI/精确业务 SHA A3 验收**。没有引入真实 Amazon/银行/WMS 外部凭证认证，不是可以入账的利润报表。
+状态：**业务已合并，精确 main SHA 完整 A3 7/7 SUCCESS**。没有引入真实 Amazon/银行/WMS 外部凭证认证，不是可以入账的利润报表。
+
+## 实际 CI、两次失败与最终验收归档
+
+**V183 全期间费用真实性阻断与利润中心证据联动：技术 A3 7/7 完成（2026-11-21）**。业务 [PR #182](https://github.com/kunlong-luo/merchivra/pull/182) 合并至 `main` SHA `9b55c1c306598d14717340ed9d8c7addb1a67571`，合并前 [快速 CI #44861901027](https://github.com/kunlong-luo/merchivra/actions/runs/44861901027) **SUCCESS**。其首次 [完整 A3 #44862039686](https://github.com/kunlong-luo/merchivra/actions/runs/44862039686) **FAILED**：Chromium 157 已宣布 loopback DevTools 端口，但 Linux runner 未写 `DevToolsActivePort`，浏览器尚未进入 UI 断言；其他 6/7 核心任务（含真实 PG18/Flyway 与合成 HTTP）SUCCESS。[修复 PR #183](https://github.com/kunlong-luo/merchivra/pull/183) 合并 `190879f6ff9d1a97c556ef7d18be8e5fcedb89df`，保留完整浏览器检查，增加端口发现回退及 Node 安全单测；其 [A3 #44862416930](https://github.com/kunlong-luo/merchivra/actions/runs/44862416930) **仍 FAILED**，这次已通过 Chrome/Vite 浏览器断言，但 Next 工作区旧 V169 合成响应缺少新增的 V183 `evidenceBarriers`/逐来源字段，前端 Zod 正确拒绝，费用来源按钮不可显示。随后 [修复 PR #184](https://github.com/kunlong-luo/merchivra/pull/184) 将合成财务响应升级到真实 V183 严格 schema，并新增整期未认证费用及本地冲突的 Next 浏览器断言，合并 `main` 精确 SHA **`cfed3a9e0a91f7bacdb7a77d4375fb37c9ab943e`**。该精确 SHA 的 [**最终完整 A3 #44862773635**](https://github.com/kunlong-luo/merchivra/actions/runs/44862773635) **run_attempt=1、7/7 核心任务 SUCCESS**：Java25/Gradle、PG18/Flyway、真实 Spring HTTP、Next16/React19、Chromium Vite/Next 全视口、Compose 配置及 Compose HTTP/Session/CSRF/恢复。独立设计专项按原有 CI 策略 SKIPPED，不是失败。
+
+**事实边界不可上调**：V183 的 `evidenceBarriers` 是整期间、非 50 行分页的本地证据缺口计数，V182 的 `SUPPORTING_LOCAL_METADATA_UNVERIFIED` 不是外部 Amazon 费用真伪认证。无关联不证明零成本；共用行不证明双重扣费；`eligibleForV162OrV64Profit=false`，`realizedNetProfit=null`，不自动解锁费用入账。没有真实 Amazon Seller/Ads/银行授权或外部真实性签署；**Seller/Ads OAuth OFF、生产 #104 NO-GO**。
 
 ## 为什么要做 V183
 
