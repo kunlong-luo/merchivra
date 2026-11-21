@@ -332,6 +332,70 @@ after=[sql(f"SELECT count(*) FROM {t}") for t in (
     "finance_source_event","finance_profit_report_job",
     "ads_report_reviewed_cost","bank_payout_observation")]
 assert before==after,"Local unverified costs must not post to real finance/Ads/bank"
+# V188: construct a disposable V64 FROZEN report through the existing Owner
+# API. The only new write is V64's own intentionally persisted synthetic
+# candidate cohort; the new cost-waterfall endpoint remains GET-only and may
+# NEVER turn V91/V92 claims into V162/V64 realized profit or bank evidence.
+# The period ends before today's date so V64 doesn't accept future cohorts.
+report_root=f"/api/v1/finance/marketplaces/{market}/profit-reports"
+report_job=call(owner,report_root,"POST",{
+    "requestKey":str(uuid4()),"after":"2026-11-01",
+    "before":"2026-11-20"})
+job_id=report_job["id"]
+waterfall_url=report_root+"/"+job_id+"/cost-waterfall-preview"
+call(anonymous,waterfall_url,expected=401)
+call(owner,report_root+"/"+str(uuid4())+"/cost-waterfall-preview",expected=404)
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}/profit-reports/"
+     +job_id+"/cost-waterfall-preview",expected=404)
+prior_cost_event_rows=sql(f"""SELECT count(*) FROM finance_source_event
+ WHERE tenant_id='{tenant}'""")
+prior_bank_rows=sql("SELECT count(*) FROM bank_payout_observation")
+waterfall=call(owner,waterfall_url)
+assert waterfall["reportJobId"]==job_id
+assert waterfall["marketplaceId"]==market
+assert waterfall["periodStart"]=="2026-11-01"
+assert waterfall["periodEndExclusive"]=="2026-11-20"
+assert waterfall["currency"]==currency
+assert waterfall["ruleVersion"]==(
+    "V188_V64_ELIGIBLE_CONTRIBUTION_MINUS_V92_APPROVED_UNVERIFIED_ORIGINAL_CURRENCY_V1")
+assert waterfall["sourceSnapshotBasis"]==(
+    "V64_IMMUTABLE_ORDER_EXTRACTS_V91_V92_V165_V168_LIVE_READ")
+assert waterfall["reviewedCostSourceCount"]==int(sql(f"""
+ SELECT count(*) FROM finance_cost_source_v91
+ WHERE tenant_id='{tenant}' AND seller_marketplace_id='{market}'
+   AND business_date>='2026-11-01' AND business_date<'2026-11-20'"""))
+assert waterfall["reviewedCostSourceCount"]==sum(
+    x["sourceCount"] for x in waterfall["costLines"])
+assert any(c["category"]=="INBOUND_FREIGHT" and
+           c["approvedUnverifiedAllocatedAmount"]=="7.250000"
+           and c["approvedUnverifiedRemainderAmount"]=="2.750000"
+           for c in waterfall["costLines"])
+assert any(c["category"]=="FBA_STORAGE" and
+           c["approvedUnverifiedAllocatedAmount"]=="10.000001"
+           and c["approvedUnverifiedRemainderAmount"]=="2.000000"
+           for c in waterfall["costLines"])
+assert any(c["category"]=="OTHER_OPERATING" and
+           c["primaryDimension"]=="UNASSIGNED" and
+           c["approvedUnverifiedAllocatedAmount"] is None
+           for c in waterfall["costLines"])
+assert waterfall["approvedUnverifiedLocalCostExposure"] is None
+assert waterfall["unverifiedCostSensitivityContribution"] is None
+assert waterfall["sensitivityState"] in (
+    "ORDER_FINANCIAL_BASELINE_INCOMPLETE",
+    "V92_UNVERIFIED_COST_DISTRIBUTION_INCOMPLETE")
+assert waterfall["financeFeesExcludedFromAdditionalCosts"] is True
+assert not any(waterfall[k] for k in (
+    "additionalCostExternallyVerified","accountingPolicyApproved",
+    "refundCogsReversalVerified","fxConversionApproved",
+    "bankSettlementVerified","ledgerPosted","realizedNetProfitVerified"))
+assert waterfall["realizedNetProfit"] is None
+assert "V64_ORDER_UTC_V91_SOURCE_BUSINESS_DATE_AXES_DIFFER" in waterfall["blockerCodes"]
+assert "REFUND_COGS_REVERSAL_NOT_VERIFIED" in waterfall["blockerCodes"]
+assert call(other,waterfall_url)["reportJobId"]==job_id
+assert sql(f"""SELECT count(*) FROM finance_source_event
+ WHERE tenant_id='{tenant}'""")==prior_cost_event_rows
+assert sql("SELECT count(*) FROM bank_payout_observation")==prior_bank_rows
+assert call(owner,waterfall_url)==waterfall  # stable evidence with no new writes
 print("PASS V164: real PG18 V91/V92 + Owner/CSRF maker-checker, immutable "
       "manual cost, exact 7.25/2.75 allocation, idempotency, 400/403/404/409, "
       "SQL immutable source/lines/audit, and zero GL/Ads/Finances/bank postings")
