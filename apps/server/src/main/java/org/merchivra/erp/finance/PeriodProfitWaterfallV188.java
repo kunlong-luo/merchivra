@@ -38,7 +38,7 @@ public final class PeriodProfitWaterfallV188 {
         String periodStart,String periodEndExclusive,String currency,
         String ruleVersion,String dateBasis,String sourceSnapshotBasis,
         String jobState,int totalOrders,int eligibleOrders,int blockedOrders,
-        long reviewedCostSourceCount,long potentialCollisionSourceCount,
+        long manualCostSourceCount,long potentialCollisionSourceCount,
         long sharedSettlementLineSourceCount,
         String eligibleSignedSales,String eligibleSignedAmazonFees,
         String eligibleSignedFbaFees,String eligibleProvisionalCogs,
