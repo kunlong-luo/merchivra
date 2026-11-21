@@ -22,7 +22,7 @@
 | 期间利润与防重 | [V185 跨月预览](finance/v185-original-currency-period-cost-preview.md) · [V186 单一来源归属](finance/v186-single-cost-source-ownership-bridge.md) · [V187 跨来源风险](finance/v187-full-period-cross-source-risk.md) · [V188 原币瀑布](finance/v188-period-profit-cost-waterfall-preview.md) | **敏感度计算 ≠ 已认证真实净利润** |
 | 退货与外仓 WMS | [退货成本准备度](finance/refund-cost-readiness-v170.md) · [外仓运营主体信任合同](finance/wms-operator-trust-contract-v175-b.md) | B1 技术基础已有，B2/B3 真实外部验证和库存/COGS 过账未完成 |
 | 采购与库存 | [采购入口](purchasing/local-purchase-workflow.md) · [库存与批次审计](inventory/fba-purchase-link-v75.md) | 本地持久业务与合成测试，不意味着真实 Amazon FBA 签收 |
-| 安全/集成 | [安全政策](../SECURITY.md) · [Seller OAuth 代码边界](security/seller-oauth.md) · [Amazon Gateway](integrations/README.md) | 真实 Seller/Ads OAuth 与外部 API 均关闭 |
+| 安全/集成 | [安全政策](../SECURITY.md) · [Seller OAuth 代码边界](security/seller-oauth.md) · [Amazon Gateway](integrations/amazon-sp-api.md) | 真实 Seller/Ads OAuth 与外部 API 均关闭 |
 | UI 与设计 | [设计系统](../DESIGN.md) · [Next.js 迁移技术记录](architecture/next-node-cutover-v122.md) | Next 已是**本地**默认；真实生产 TLS/切流仍 NO-GO |
 
 ## 如何判断文档的有效性
@@ -34,12 +34,12 @@
 
 ## 文档修改规则
 
-日常改动直接在 \`main\`，不为例行功能/文档创建分支或 PR。真实事实须指向代码路径、精确提交、CI 运行或尚未签署的 G1/G2/G3 记录。财务来源、币种、证据状态和 \`realizedNetProfit=null\` 不可被文案“升级”。本地检查：
+日常改动直接在 `main`，不为例行功能/文档创建分支或 PR。真实事实须指向代码路径、精确提交、CI 运行或尚未签署的 G1/G2/G3 记录。财务来源、币种、证据状态和 `realizedNetProfit=null` 不可被文案“升级”。本地检查：
 
-\`\`\`bash
+```bash
 python3 scripts/check_docs_consistency_v109.py
 python3 scripts/check_ci_cadence_v108.py
 (cd apps/web && pnpm install --frozen-lockfile && pnpm api:check && pnpm typecheck && pnpm test && pnpm build)
-\`\`\`
+```
 
 文档治理记录见 [V191 文档清理说明](governance/docs-audit-v191.md)。**静态 GitHub Pages 只显示虚构数据，不是带登录的线上 ERP。**
