@@ -1,62 +1,45 @@
-# Merchivra ERP · 文档导航与事实基线
+# Merchivra 文档中心
 
-> **当前文档入口（2026-11-14 / V161 利润优先产品方向与 Next 统一前端；V160 完整 A3 7/7 基线）。** 本页用于区分已经实现的代码、模拟测试、尚未批准的设计方案及真正的生产发布条件。早期 G1/G2 评审文件和 V1–V92 阶段记录仍保留原始历史意义，不再作为当前工程状态的依据。
+> **现行入口 · 2026-11-21 / V191。** 这里只索引**当前执行规范**和有证据的业务说明。V1–V190 的版本文档、早期设计草案和当时的测试结论保留历史原貌，**不能因为标题含“当前/最新”就优先于本页**。当前正式本地前端为 Next.js 16、唯一前端包管理器 pnpm 12.20.0；生产 #104 仍 NO-GO。
 
-## 从这里开始
+## 先读这四份
 
-| 想了解什么 | 当前权威文档 | 注意 |
-| --- | --- | --- |
-| 最新 P0 优先级、MVP 冻结与上线顺序 | [V108 MVP 收尾与集中验收计划](roadmap/mvp-freeze-release-v108.md) | **现行执行原则 + 顶部 V161 利润优先产品主线**；覆盖历史 roadmap 的“当前/下一步” |
-| V166 精确主线**技术验收** | [完整 A3 #43573659587](https://github.com/kunlong-luo/merchivra/actions/runs/43573659587) · [PR #141](https://github.com/kunlong-luo/merchivra/pull/141) | 代码 SHA `7425547766a1854bb30c23a8dfb24c78326ac31f`，首次 7/7 PG18/V93/Owner 案件初判/Next 成功；不是财务真实核验或上线许可 |
-| V166 冲突候选持久化与人工双人研判 | [V166 身份冲突案件与不可变审计](finance/cost-collision-cases-v166.md) | Flyway V93、真实本地候选 UUID、独立 Owner 一次性研判；**不解除 V165 阻断或计入利润** |
-| V165 精确主线**技术验收** | [完整 A3 #43571700251](https://github.com/kunlong-luo/merchivra/actions/runs/43571700251) · [修复 PR #139](https://github.com/kunlong-luo/merchivra/pull/139) | 精确代码 SHA `15f705a03890b5bb3b792da19047657a119029e0`，首次 7/7 PG18/HTTP/Next 成功；首次 #43570834637 的 6/7 合成 SHA 重叠仍保留；未验证真实第三方净利润 |
-| V165 额外成本跨来源身份重叠与保守审批阻断 | [V165 精确来源身份检查](finance/cost-identity-collision-v165.md) | 同租户/Marketplace 8 类本地线索、Owner no-store 只读 API、V164 批准时 409；无匹配 ≠ 外部核验 |
-| V164 当前精确主线**技术验收** | [完整 A3 #43569333074](https://github.com/kunlong-luo/merchivra/actions/runs/43569333074) · [PR #136](https://github.com/kunlong-luo/merchivra/pull/136) | SHA `a68564e4ec4649727844073d66fa5eca096e24b2`，首次 7/7 PG18/HTTP/Next 验收；首次 A3 #43568896651 的 6/7 格式失败仍保留；没有真实净利润/生产上线 |
-| V164 已复核手工来源的成本分摊与余额守恒 | [V164 成本分摊与未分摊池](finance/cost-allocation-v164.md) | PG18 Flyway V92 + 单一维度 SKU/订单/期间、严格原币和金额守恒、不可变一次性双人审核；不入真实利润 |
-| V163 手工成本来源、双人复核与审计 | [V163 成本凭证入库及复核](finance/cost-source-review-v163.md) | Flyway V91、OWNER Session/CSRF、唯一凭证键和不可变来源；审核仍未验证真实发票/自动入利润 |
-| V162 已实现的额外成本核算预览引擎 | [V162 全成本覆盖与金额防重](finance/full-cost-coverage-v162.md) | 8 类费用状态、原币和来源去重、已知费用扣除预览；**没有**真实来源自动归集/最终净利润/前端财务接入 |
-| **利润优先、全成本核算及 Next 单一前端目标** | [V161 利润优先产品计划](product/profit-first-next-primary-v161.md) · [财务口径 G1 候选](product/finance-rulebook.md) | 现有 V33/V61/V64 是贡献预览，不是已经完成全成本净利润；目标正式 ERP 采用 Next，Vite 暂作回滚 |
-| 采购订单 V110 服务端分页实施与证据边界 | [订单游标/筛选契约](purchasing/purchase-order-pages-v110.md) | V110–V144 已完成主要采购、供应商、仓储全库分页；[#62](https://github.com/kunlong-luo/merchivra/issues/62) 已关闭 |
-| 成熟开源 ERP 源码对标与复用决策 | [BENCH-001 · Wimoor / ERPNext / metasfresh / Amazon SDK](architecture/open-source-erp-benchmark-2026-11-08.md) | 以当前后端查询与权限事实作差距判断；不复制 GPL 源码、不盲目扩充 P0 |
-| 各模块代码/真实来源/验收状态 | [RTM-002 V148 代码与验收追踪](requirements/implementation-acceptance-rtm-v148.md) · [V109 文档审计](governance/docs-audit-v109.md) | 25 条 P0 分离代码/测试/真实来源/签署；V86 仅历史快照 |
-| 当前架构、模块与依赖 | [总体架构](architecture/overview.md) · [V99–V100 Next 迁移门槛](architecture/next16-ab-migration-v99.md) | 正式目标是 **Next 16 唯一 ERP 前端**；实际目标切换前仍保留 Vite/Nginx 旧默认部署和回滚 |
-| 本地运行、开发和环境变量 | [开发指南](development.md) · [Docker/PG18 部署](deployment/local-spark-db.md) | Java 25 / Gradle / PostgreSQL **18** / React 19 |
-| FBA 采购来源 V147–V148 | [V147 真实分页及范围](inventory/fba-purchase-pagination-v147.md) · [V75 本地证据](inventory/fba-purchase-link-v75.md) | [V148 A3 #43356548084](https://github.com/kunlong-luo/merchivra/actions/runs/43356548084) 二次尝试 7/7；[#108](https://github.com/kunlong-luo/merchivra/issues/108) 合成技术关闭，真实 Amazon 来源未验收 |
-| API 代码生成与原始合同 | [API 文档入口](api/README.md) · [Orval/真实 Controller](architecture/mature-tool-first-api-client-2026-11-01.md) | 设计版 OpenAPI JSON **不是**当前全量后端契约 |
-| GitHub Actions 测试与质量门槛 | [V108 CI 策略](testing/ci-policy.md) · [发布安全/恢复清单](testing/release-readiness-v68.md) | 普通 PR 快速检查；[完整里程碑 workflow](https://github.com/kunlong-luo/merchivra/actions/workflows/milestone-validation.yml) 手动集中执行 |
-| 本地权限、凭据与生产前安全 | [Security Policy](../SECURITY.md) · [Seller OAuth](security/seller-oauth.md) · [安全门槛](testing/release-readiness-v68.md) | Seller/Ads 真实授权与远程写入默认关闭 |
-| 目标环境 Next HTTPS 匿名入口预检 | [V151–V159 目标 TLS/Ingress 只读核查](architecture/next-target-ingress-v151.md) | **仅授权运维手工调用**；CI 不访问目标，退出 3 也不代表可部署 |
-| 当前 G1/G2/G3 缺项和分工 | [V158 生产证据清单](operations/v158-production-evidence-worklist.md) · [V143 生产预检](operations/v143-production-release-preflight.md) | 仅 V143 脱敏结果、始终 NO-GO；真实证据和授权签署须由组织人员提供 |
-| 目标镜像身份与发布候选核对 | [V160 运行容器 OCI revision 和不可变镜像 ID 核对](operations/v160-target-image-evidence.md) | 三个自构建镜像只读目标检查；需独立可信的预期 ID 与签名/制品审查，永远不能自动放行 |
-| 本地可复现的合成端到端 | [Compose Mock 全链路](testing/mock-full-chain.md) · [Chromium UI 冒烟](testing/browser-ui.md) | 合成数据不能替代 Amazon/Ads/银行真数据联调 |
-
-## 当前已实现与仍需验证的边界
-
-**已经有可运行的工程与业务代码**，并非只有设计文档：Spring Security Session/CSRF 与本地 Owner/员工权限、Seller/Marketplace 未授权配置、商品/SKU/Listing、订单与 FBA 观测、采购/供应商/仓储/质检、财务来源与成本报表、运营异常和部分同步 Worker。V99–V146 继续完成 Next App Router 工作台、Base UI/TanStack、全库分页、FBA 合同、真实隔离 PG18 验证与本地 HTTPS/同会话回滚，但正式公网 Next 切流仍未批准。参见 [功能审计历史](testing/core-coverage-audit-v86.md) 和 [P0 硬上限证据](testing/p0-purchasing-read-cap-audit-v108.md)。
-
-**尚未生产放行**（V146 本地 HTTPS 回滚与隔离 PITR/告警已验证，但目标环境仍未验收）：真实 Seller OAuth/SP-API 与独立 Ads OAuth 的本地联调、银行/外部物流来源、生产级密钥与最小权限、正式 HTTPS、恢复演练与 RPO/RTO、负载/异常恢复、财务口径及 G1/G2/G3 人工签署。不能以 GitHub Actions 绿灯宣称这些项目完成。[当前缺口和准入顺序](roadmap/mvp-freeze-release-v108.md)。
-
-**部署差别**：默认私有 ERP 是 React/Vite 构建 + Nginx、Spring Boot 和 PostgreSQL 18；Next 16 技术跟踪 [Issue #63](https://github.com/kunlong-luo/merchivra/issues/63) 已由维护者关闭；**这不代表生产流量切换、目标真实 TLS 或发布审批已完成**；唯一生产准入仍由 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 跟踪。[GitHub Pages](https://kunlong-luo.github.io/merchivra/) 只托管不含真实账号/数据库/业务写入的合成数据展示页，并不是 SaaS 或可登录 ERP。
-
-**证据分级**：设计提案 → 代码实现 → 快速 CI → 隔离 PG18/Compose/Chromium 模拟验收 → 用户本地真实接口联调 → 业务、安全、生产正式批准。任何较早级别都不能自动升级为较晚级别。最新完整合成里程碑：[V160 main SHA a960f7cf93c3dfc8a0f8ab96b534fd0a7252e49a · A3 run_attempt=1 7/7 success](https://github.com/kunlong-luo/merchivra/actions/runs/43428867257)（严格 TLS/重定向/后端身份及 HTTPS 回切；仅该 SHA 的隔离环境；V148 首轮 HTTPS canary 失败根因仍由 [#115](https://github.com/kunlong-luo/merchivra/issues/115) 跟踪）。FBA 来源分页 [#108](https://github.com/kunlong-luo/merchivra/issues/108) 已按技术范围关闭；[#63](https://github.com/kunlong-luo/merchivra/issues/63) 已按维护者技术跟踪决定关闭，但真实目标切流仍缺证据；当前权威生产签署门禁仍是 [#104](https://github.com/kunlong-luo/merchivra/issues/104)。
-
-## 设计与决策文件（作为评审资料，未被自动签署）
-
-| 主题 | 设计和审查 |
+| 目的 | 文档 |
 | --- | --- |
-| 产品范围/FR/NFR | [PRD](requirements/mvp.md) · [功能需求](requirements/functional.md) · [非功能需求](requirements/nonfunctional.md) |
-| 业务场景和规则 | [G1 评审包](product/g1-review-package.md) · [业务案例](product/business-scenarios.md) · [财务规则候选](product/finance-rulebook.md) |
-| 概念系统/数据 | [C4 总览](architecture/overview.md) · [概念 ERD](architecture/data-model.md) · [来源对账](architecture/source-reconciliation.md) · [事务一致性](architecture/consistency-boundaries.md) |
-| 平台外部契约 | [SP-API 设计](integrations/amazon-sp-api.md) · [操作矩阵](integrations/sp-api-operation-matrix.md) · [数据字段规则](integrations/amazon-data-contract.md) |
-| 认证与租户设计 | [Session 安全](security/local-auth.md) · [租户权限执行候选](security/tenant-enforcement.md) · [G2 OpenAPI 设计草案](api/README.md) |
-| 验收与签署 | [原需求追踪矩阵](requirements/traceability.md) · [G1 手工验收](requirements/g1-business-acceptance.md) · [G2 架构验收](requirements/g2-architecture-acceptance.md) · [决策登记](governance/decision-register.md) |
-| 历史评审/原型 | [评审归档](governance/review-report-2026-10-30.md) · [图纸](diagrams/index.md) · [设计规范](../DESIGN.md) |
+| **到底实现了什么、哪些仍未证实** | [当前技术与业务事实基线](current-status.md) |
+| **现在应该开发什么** | [现行 P0 执行计划：利润与财务证据链优先](roadmap/current-plan.md) |
+| **本地如何启动及开发** | [开发指南](development.md) · [两种 Compose 部署/卸载](deployment/local-spark-db.md) |
+| **何时测试、什么不能上线** | [分层 CI / 完整 A3](testing/ci-policy.md) · [安全与发布门禁](testing/release-readiness-v68.md) |
 
-G1/G2/G3 仍属于待批准的业务/架构/发布门槛。设计文件中“未实现”可能仅指该设计**在写作时的状态**；它不应覆盖 V108 的实际代码和 [GitHub Actions](https://github.com/kunlong-luo/merchivra/actions) 结果。也不能因代码已存在就自动批准设计里的税费、币种、库存、数据源或权限决策。
+## 按业务领域阅读
 
-## 历史资料与文档维护
+| 领域 | 入口 | 状态解释 |
+| --- | --- | --- |
+| 架构/技术选择 | [系统架构](architecture/overview.md) · [ADR](architecture/adrs/0001-modular-monolith.md) · [OpenAPI/Orval](api/README.md) | Java25 / Spring Boot4.1.2 / Gradle / PG18 / React19 / Next16 / pnpm；不使用 Vue/Maven |
+| 产品与财务口径 | [利润优先方向 V161](product/profit-first-next-primary-v161.md) · [G1 财务规则](product/finance-rulebook.md) | 产品方向成立；G1/DEC-06/07/08 不是已签署 |
+| 全成本与人工来源 | [V162 成本覆盖](finance/full-cost-coverage-v162.md) · [V163 手工来源](finance/cost-source-review-v163.md) · [V164 金额守恒](finance/cost-allocation-v164.md) | 技术能力/人工元数据核查，不等于真实可入账费用 |
+| 结算与真实性隔离 | [V181 原始身份快照](finance/v181-immutable-settlement-line-identity.md) · [V182 来源归属判定](finance/v182-settlement-attribution-evidence.md) · [V183 整期阻断](finance/v183-full-period-profit-evidence-gates.md) | 外部报告独立来源真实性仍待核查 |
+| 期间利润与防重 | [V185 跨月预览](finance/v185-original-currency-period-cost-preview.md) · [V186 单一来源归属](finance/v186-single-cost-source-ownership-bridge.md) · [V187 跨来源风险](finance/v187-full-period-cross-source-risk.md) · [V188 原币瀑布](finance/v188-period-profit-cost-waterfall-preview.md) | **敏感度计算 ≠ 已认证真实净利润** |
+| 退货与外仓 WMS | [退货成本准备度](finance/refund-cost-readiness-v170.md) · [外仓运营主体信任合同](finance/wms-operator-trust-contract-v175-b.md) | B1 技术基础已有，B2/B3 真实外部验证和库存/COGS 过账未完成 |
+| 采购与库存 | [采购入口](purchasing/local-purchase-workflow.md) · [库存与批次审计](inventory/fba-purchase-link-v75.md) | 本地持久业务与合成测试，不意味着真实 Amazon FBA 签收 |
+| 安全/集成 | [安全政策](../SECURITY.md) · [Seller OAuth 代码边界](security/seller-oauth.md) · [Amazon Gateway](integrations/README.md) | 真实 Seller/Ads OAuth 与外部 API 均关闭 |
+| UI 与设计 | [设计系统](../DESIGN.md) · [Next.js 迁移技术记录](architecture/next-node-cutover-v122.md) | Next 已是**本地**默认；真实生产 TLS/切流仍 NO-GO |
 
-- [阶段开发路线历史](roadmap.md) 以 V108 计划顶部的 V161 状态补丁为最新入口；V92 及更早“当前”的说法属于当时记录。
-- [早期架构评审报告](governance/g2-review-2026-10-30.md)、[文档状态管理](governance/document-control.md)、[风险登记](governance/risk-register.md) 作为决策背景保留。
-- 历史版本、测试运行 URL 和旧技术栈应保留“当时”标识，**不得**把已淘汰的 Vue、Maven、PostgreSQL 17 或无 CI/E2E 当成最新技术决策。
-- 修改部署、安全、授权、数据模型或 P0 接口时，应同步 [Agent 规则](../AGENTS.md)、本页、[开发指南](development.md) 和 [现行计划](roadmap/mvp-freeze-release-v108.md)；可运行 `python3 scripts/check_docs_consistency_v109.py` 验证核心文档本地链接与权威引用。
+## 如何判断文档的有效性
+
+1. **Current / 现行**：本页、[current-status.md](current-status.md)、[current-plan.md](roadmap/current-plan.md)、开发/部署/CI/安全文档。更新当前版本时同步修改，不新增相互冲突的“最新 Vxxx”首页。
+2. **Specification / 待批准**：G1/G2、需求与财务规则中的候选方案。代码存在、CI 通过或草案归档**不会**使其自动签署。
+3. **Evidence / 历史验收**：每篇 Vxxx 业务记录只说明其注明的 SHA/Actions/合成数据。注意失败与复测，不能推断今天的 HEAD 已跑过相同回归。
+4. **Archive / 历史计划**：[V108 MVP 计划](roadmap/mvp-freeze-release-v108.md)、[PLAN-001 长路线图](roadmap.md)、[V148 RTM 入口快照](requirements/implementation-acceptance-rtm-v148.md)、[V109 文档审计](governance/docs-audit-v109.md)。保留可追溯性，不再作为当前待办清单。
+
+## 文档修改规则
+
+日常改动直接在 \`main\`，不为例行功能/文档创建分支或 PR。真实事实须指向代码路径、精确提交、CI 运行或尚未签署的 G1/G2/G3 记录。财务来源、币种、证据状态和 \`realizedNetProfit=null\` 不可被文案“升级”。本地检查：
+
+\`\`\`bash
+python3 scripts/check_docs_consistency_v109.py
+python3 scripts/check_ci_cadence_v108.py
+(cd apps/web && pnpm install --frozen-lockfile && pnpm api:check && pnpm typecheck && pnpm test && pnpm build)
+\`\`\`
+
+文档治理记录见 [V191 文档清理说明](governance/docs-audit-v191.md)。**静态 GitHub Pages 只显示虚构数据，不是带登录的线上 ERP。**

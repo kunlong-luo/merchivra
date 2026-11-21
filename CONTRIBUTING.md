@@ -1,26 +1,52 @@
-# Contributing to Merchivra / 贡献指南
+# Contributing / 贡献指南
 
-Merchivra is **pre-alpha**, self-hosted and not production-approved. Before making code or documentation changes, read the [current docs hub](docs/README.md), [V108 P0/MVP plan](docs/roadmap/mvp-freeze-release-v108.md), [CI cadence](docs/testing/ci-policy.md) and [agent rules](AGENTS.md). Older Vxx design/roadmap notes may be historical; do not copy outdated Vue/Maven/PG17/JWT guidance into current instructions.
+> **现行维护策略（2026-11-21）**：Merchivra 仍为 **pre-alpha / production NO-GO**。项目维护者已决定**直接在 \`main\` 开发与提交**，不为日常功能、修复和文档工作创建临时开发分支或例行 PR。贡献者请先通过 Issue 讨论范围；此处不承诺外部直接 push 权限，也不要求维护者再建立重复分支。生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104)、真实 Seller/Ads 授权均保持关闭。
 
-## Recommended contribution steps
+先读：[当前事实基线](docs/current-status.md) · [现行执行计划](docs/roadmap/current-plan.md) · [文档导航](docs/README.md) · [分层测试](docs/testing/ci-policy.md) · [安全政策](SECURITY.md) · [Agent 约束](AGENTS.md)。
 
-1. Check existing issues first (including [P0 purchasing/warehouse pagination #62](https://github.com/kunlong-luo/merchivra/issues/62) and [Next.js production cutover #63](https://github.com/kunlong-luo/merchivra/issues/63)). Prefer completing MVP blockers over unrelated scope expansion.
-2. Use a short-lived branch from `main` with a focused PR. Include actual file/API changes, risk boundary, tests run, and any remaining unverified conditions; update appropriate docs and the [audit/index](docs/governance/docs-audit-v109.md).
-3. For server changes use **Java 25 / Gradle Wrapper / Spring Boot 4.1.2 / PostgreSQL 18**; never add Maven or alter old Flyway migrations. For frontend changes use **React 19 / Next 16 App Router preview + Vite fallback**, Node 24, locked npm dependencies and existing Orval/Zod/TanStack/Base UI.
-4. Run relevant fast tests from repository root:
+## 已采用的工具（不要重新引入旧栈）
 
-   ```bash
-   (cd apps/server && ./gradlew test)
-   (cd apps/web && npm ci && npm run api:check && npm run typecheck && npm run test && npm run build && npm run typecheck:next)
-   python3 scripts/check_ci_cadence_v108.py
-   python3 scripts/check_docs_consistency_v109.py
-   ```
+| 层 | 唯一/默认选择 |
+| --- | --- |
+| 后端 | Java 25、Spring Boot 4.1.2、Gradle Wrapper、PostgreSQL 18 + Flyway |
+| 前端 | React 19、Next.js 16.4.5 App Router、TypeScript 6、Node 24 |
+| 包管理 | **pnpm 12.20.0**，唯一锁文件 \`apps/web/pnpm-lock.yaml\`，不再维护另一个 JS lockfile |
+| API/组件 | Springdoc/OpenAPI + Orval、Zod、TanStack Query/Table、Base UI |
+| 运行 | 默认 Next 独立 Node；Vite/Nginx 仅显式回退与 Pages 虚构展示；Redis 可选 |
 
-5. Ordinary PRs trigger the **fast CI** only. For changes to tenant/role authorization, Seller secrets/OAuth, Session/CSRF, procurement approvals, inventory writes, money/FX or synchronization, immediately run focused security/integration tests. For cross-database or milestone candidates, run the [consolidated full validation workflow](https://github.com/kunlong-luo/merchivra/actions/workflows/milestone-validation.yml) on the target `main` commit. Record the tested SHA; a prior successful run does not validate later code.
-6. When adding an API endpoint, follow existing Session/CSRF, tenant isolation, original-currency/source semantics and mature Springdoc/Orval contract generation; do not treat the [historic G2 design JSON](docs/api/README.md) as live production schema.
+## 开发与自检
 
-Use concise commit messages (`feat:`, `fix:`, `docs:`, `test:`). Keep all real Amazon, Ads, buyer and bank data out of Git, public Actions, PRs, examples, logs and Pages assets. For vulnerabilities follow [SECURITY.md](SECURITY.md), never public issues with exploit details.
+\`\`\`bash
+git switch main
+git pull --ff-only origin main
 
-## Documentation ownership and status
+# 后端（Java 25）
+./apps/server/gradlew -p apps/server --no-daemon test
 
-The [V109 docs audit](docs/governance/docs-audit-v109.md) separates **CURRENT** documentation from **historical design snapshots**. Keep authoritative entrypoints and relative links accurate; preserve older dated evidence rather than silently claiming its unimplemented features are still missing, or claiming its mocked tests approved production.
+# 前端（Node 24，pnpm 12.20.0）
+cd apps/web
+corepack enable
+pnpm install --frozen-lockfile
+pnpm api:check
+pnpm typecheck
+pnpm test
+pnpm build
+pnpm build:vite # 仅为回退保真验证，不是默认 ERP
+cd ../..
+
+python3 scripts/check_docs_consistency_v109.py
+python3 scripts/check_ci_cadence_v108.py
+python3 scripts/check_next_runtime_v122.py
+\`\`\`
+
+在本地同时开发时，先启动 Spring API（\`127.0.0.1:8080\`），前端执行 \`pnpm dev\`（Next，\`127.0.0.1:3000\`）。完整 Docker/spark-db、备份安全和敏感环境变量操作请按[部署指南](docs/deployment/local-spark-db.md)执行；**严禁**对共享数据库运行 \`down -v\` 或合成恢复脚本。
+
+## 提交与验收要求
+
+1. 先审查现有模块、Flyway、OpenAPI/Orval、人工复核和重叠费用门禁；优先复用，不造平行账本、审批机制或又一套 REST 客户端。
+2. 对每个修改记录：需求/Issue、代码与测试范围、原始币种及来源状态、是否触碰租户/会话/审核/持久化；不把测试全绿写成真实 Amazon 已核验。
+3. 直接修改和提交 \`main\` 前核对 HEAD，保留可追溯提交消息；每次提交后检查 [快速 CI](https://github.com/kunlong-luo/merchivra/actions/workflows/ci.yml)。身份、金额、库存、Flyway、外部证据或跨进程变化需附相应真实 PG18/HTTP/浏览器证据，必要时运行 [完整 A3](https://github.com/kunlong-luo/merchivra/actions/workflows/milestone-validation.yml) 并记录精确 SHA。
+4. 后端必须做租户/Marketplace、Session、CSRF、Owner 双人审批和原币精度负例。不要把 \`UNKNOWN\` 费用填零、将人工 \`APPROVED_UNVERIFIED\` 当可入账凭证，或让 WMS 内部签名替代外部实收。
+5. 涉及用户当前操作的变更同步更新 [事实基线](docs/current-status.md)、[现行计划](docs/roadmap/current-plan.md)、[开发](docs/development.md)、[部署](docs/deployment/local-spark-db.md) 或 [CI](docs/testing/ci-policy.md) 的相关部分；旧里程碑文档保留历史时态。
+
+请勿向仓库、CI、Pages、日志或示例提交真实 Seller/Ads、银行、客户或 WMS 私有凭证。安全漏洞请使用[私密报告渠道](SECURITY.md)。
