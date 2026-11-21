@@ -1,3 +1,7 @@
+# V188B exact-main complete A3 after PR #195 isolates the read-only
+# cost-waterfall GET from fixed V64 nine-route Springdoc/Orval contract.
+# Run real PG18/HTTP V164+V188, React/Next Chromium, Session/CSRF,
+# Compose recovery, do not relax G1/Ads/bank/profit/production NO-GO.
 # V188 exact-main PG18 A3: existing V64 persisted cohort joined READ-ONLY
 # to V186 original-currency ownership and V187 local collision risk.
 # No real net profit, no bank/Ads authorization, no G1 approval, prod NO-GO.
@@ -175,7 +179,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V188-A3-source-aware-period-profit-waterfall' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V188B-A3-bounded-V64-openapi-waterfall' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -253,6 +257,7 @@ on:
           - V186-A3-single-cost-ownership-bridge
           - V187-A3-full-period-cross-source-risk
           - V188-A3-source-aware-period-profit-waterfall
+          - V188B-A3-bounded-V64-openapi-waterfall
 
 permissions:
   contents: read
