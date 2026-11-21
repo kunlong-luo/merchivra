@@ -1,161 +1,73 @@
-# Development guide
+# Merchivra 开发指南（当前 · V191）
 
-> **Current local runtime (2026-11-21):** Next.js 16 App Router is now the default for `pnpm run dev` (127.0.0.1:3000), `pnpm run build`, and both Docker Compose `web` services. The Vite/Nginx fallback must be requested explicitly as `pnpm run dev:vite`, `pnpm run build:vite`, or `--profile vite-fallback` (port 3002). This is a local developer cutover only, NOT target HTTPS/production approval; #104 remains NO-GO and Seller/Ads OAuth stays OFF. Java 25/Gradle, Spring Boot 4.1.2, PostgreSQL 18 and Node 24 remain the stack.
+> **2026-11-21 的当前规范**：Java 25 / Spring Boot 4.1.2 / Gradle Wrapper / PostgreSQL 18；React 19 + **Next.js 16.4.5 App Router**；Node 24 + **pnpm 12.20.0（只用这一种前端包管理器）**。默认本地 `web` 为 Next Node，不是 Vite SPA。项目处于 pre-alpha、生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) NO-GO，Seller/Ads OAuth 和真实写入禁止启用。完整状态见 [当前事实基线](current-status.md)。
 
-## Prerequisites
-**Java 25 LTS**, Gradle 9.2.1（项目内 Gradle Wrapper）, **Node.js 24.11+ (24.x)**, pnpm 12.20.0, Docker Compose. Frontend local Node selection: `cd apps/web && nvm use`. The same major versions are used in GitHub Actions and the Docker multi-stage builds.
+## 1. 安装和版本约束
 
-## One-command local stack
+- JDK **25**，Spring Boot **4.1.2**，使用 `apps/server/gradlew`（不要新建 Maven/pom）。
+- Node **24.x**（`apps/web/.nvmrc`），通过 Corepack 提供 `package.json` 固定的 pnpm **12.20.0**。
+- PostgreSQL **18**；使用 [内置 Compose](deployment/local-spark-db.md) 或经专有角色隔离的 spark-db；Redis 8 是可选项。
+- Web 依赖只从 `apps/web/pnpm-lock.yaml` 进行冻结安装。Next 16 是 App Router，Vite 是回退/Pages 构建；前端请求通过 Next `/api` rewrite 访问 Spring Boot。
+
+## 2. 最简单的三容器本地环境
+
 ```bash
 cp .env.example .env
-# Edit MERCHIVRA_DB_PASSWORD, and set a unique >=16-character bootstrap password.
-# Set MERCHIVRA_BOOTSTRAP_USERNAME and MERCHIVRA_BOOTSTRAP_PASSWORD.
-docker compose --env-file .env -f deploy/compose.yaml up --build
+# 本机编辑 .env，填数据库专用强密码和首次管理员账号/至少 16 位密码
+docker compose --env-file .env -f deploy/compose.yaml config -q
+docker compose --env-file .env -f deploy/compose.yaml up -d --build
+docker compose --env-file .env -f deploy/compose.yaml ps
 ```
 
-The web now requires local Session login; see [first-run authentication](security/local-auth.md). The web is available on 127.0.0.1:3000; API on 127.0.0.1:8080. Compose explicitly enables the synthetic demo endpoints via MERCHIVRA_DEMO_ENABLED=true. Demo data and simulated sync run history persist in PostgreSQL (separate demo_snapshot/demo_sync_run tables); see [demo guide](demo.md). Database and Redis are internal to the Compose network.
+默认只启动 `postgres`、`server`、`web`。访问 `http://127.0.0.1:3000`（Next），后端 `http://127.0.0.1:8080/api/v1/ping`。真实 OAuth/SP-API 不启用；演示配置只可用于合成场景。退出可执行 `docker compose --env-file .env -f deploy/compose.yaml down`，**不要加 `-v`**。若需要复用独立 spark-db，必须遵循[专用角色和数据库初始化](deployment/local-spark-db.md)，基础 Compose 文件不可合并使用。
 
-## Run independently
+## 3. 分别启动开发进程
+
+首先为 PostgreSQL 18 中的 `merchivra` 数据库创建独立账号（参照 [部署指南](deployment/local-spark-db.md)）；宿主机上启动 Spring：
+
 ```bash
-# Start PostgreSQL/Redis using docker compose if desired
-docker compose --env-file .env -f deploy/compose.yaml up -d postgres
-# Redis is OPTIONAL; start it only when actively testing Redis-backed Session/limits:
-# docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache up -d redis
-
-# Shell 1: these environment variables must be inherited by the Java process.
-export DB_HOST=127.0.0.1 DB_PORT=5432 DB_NAME=merchivra DB_USER=merchivra
-export DB_PASSWORD='your-local-dedicated-role-password'
-export MERCHIVRA_DEMO_ENABLED=true
+export DB_HOST=127.0.0.1 DB_PORT=5432
+export DB_NAME=merchivra DB_USER=merchivra
+# 使用本地安全方式注入 DB_PASSWORD；不得提交真实凭据
 export MERCHIVRA_BOOTSTRAP_USERNAME=your_admin
-export MERCHIVRA_BOOTSTRAP_PASSWORD='your-unique-16-plus-character-password'
-(cd apps/server && ./gradlew bootRun)
+# 使用本地安全方式注入至少 16 位的 MERCHIVRA_BOOTSTRAP_PASSWORD
+export MERCHIVRA_DEMO_ENABLED=false
+./apps/server/gradlew -p apps/server --no-daemon bootRun
+```
 
-# Shell 2 — Next.js 16 is the default; do not launch the old Vite process.
+另一个终端：
+
+```bash
 cd apps/web
+nvm use
+corepack enable
 pnpm install --frozen-lockfile
-pnpm run dev
+pnpm dev
 ```
 
-Vite proxies `/api` to the local Spring Boot API. The API reads `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` from environment (the Compose server receives the appropriate values).
+**Next.js 在 127.0.0.1:3000**，本地后端在 **127.0.0.1:8080**；默认 `next.config.ts` 将 `/api/**` 同源代理至后端。8080 不可用时前端不会凭空提供真实业务数据。只有显式执行 `pnpm dev:vite` 才会用 Vite 开发回退（默认端口 5173）。
 
-## V108 development cadence: fast PR tests, centralized milestone regression
+## 4. 常用命令
 
-The current `ci.yml` automatically runs Gradle tests, Orval contract drift detection, TypeScript, Vitest, Vite build, Next.js typecheck and static Compose security configuration checks. It **skips** the full PostgreSQL 18/HTTP/recovery job and Next production build/HTTP for ordinary pushes and PRs. Full Java/Next/PG18, Chromium (Vite+Next) and disposable Compose tests run together using [MVP milestone full validation](https://github.com/kunlong-luo/merchivra/actions/workflows/milestone-validation.yml) on the selected `main` commit. [Current policy](testing/ci-policy.md) still demands **immediate focused tests** for tenant/auth, Seller secrets, CSRF, money, stock movements, approvals, idempotency and other high-risk mutations. The [V108 baseline](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593) passed against disposable fixtures, not a live account.
+| 任务 | 命令 |
+| --- | --- |
+| Spring 单元测试 | `./apps/server/gradlew -p apps/server --no-daemon test` |
+| 前端冻结安装 | `cd apps/web && pnpm install --frozen-lockfile` |
+| Next 默认开发/构建 | `pnpm dev` / `pnpm build` |
+| 类型/单元测试 | `pnpm typecheck` / `pnpm test` |
+| API 生成合同与漂移核对 | `pnpm api:check` |
+| Vite 受控回退构建 | `pnpm build:vite` |
+| 文档与开发节奏检查 | `python3 scripts/check_docs_consistency_v109.py`、`python3 scripts/check_ci_cadence_v108.py` |
+| Next/Docker 静态安全检查 | `python3 scripts/check_next_runtime_v122.py` |
+| 完整 PG18/Chromium/Compose A3 | [GitHub Actions · MVP milestone full validation](https://github.com/kunlong-luo/merchivra/actions/workflows/milestone-validation.yml)（针对精确 `main` SHA） |
 
-## Tests
-```bash
-(cd apps/server && ./gradlew test)
-cd apps/web && pnpm install --frozen-lockfile && pnpm run typecheck && pnpm run test && pnpm run build
-```
+`api:check` 使用已审查 OpenAPI 契约和 Orval，不能将旧 G2 草案直接当生产 SDK。接口变更按 [API 合同](api/README.md) 完成 Springdoc 真实导出、规范化、Orval 生成、源码审计及漂移回归；业务服务必须保留租户/Marketplace、Owner、CSRF、金额原币与版本约束。
 
-The real registry-resolved `apps/web/pnpm-lock.yaml` is checked in (pnpm lockfile). CI and the Node 24 Docker build both use **`pnpm install --frozen-lockfile`** rather than resolving dependencies afresh. This improves dependency repeatability but does not guarantee production readiness; Gradle's managed Spring Boot dependency BOM remains pinned by Spring Boot 4.1.2. Existing Chromium/CDP, PG18/restore and Compose suites are **milestone/manual**, not automatically required on every PR. See [current CI policy](testing/ci-policy.md) and [historical toolchain upgrade](architecture/stack-upgrade-2026-10-30.md).
+## 5. 测试与环境边界
 
-## Warnings
-The application now has multiple local business workbenches, tenant-/Marketplace-scoped Session/CSRF APIs, staff/read roles and audited local purchasing/finance operations in addition to an opt-in synthetic demo. Demo is OFF by default; only explicitly disposable local Compose fixtures may enable it. Production IAM, real Seller OAuth/Ads permissions and live data have **not** been approved. Use localhost/disposable infrastructure only; do not publicly expose an authenticated instance or provide live Amazon credentials.
+- **日常**：直接提交 `main`，每次推送快速 CI（Java、pnpm、Next/Vite 构建、Orval、测试及 Compose 静态安全门禁）。不因免 PR 而不测试。
+- **有资金/库存/权限/迁移风险**：同批次覆盖独立 Owner、错误租户、重复归属、无证据和原币精度负例；跨进程/PG18 或回退变更按需跑完整 A3，引用精确 SHA。
+- **完全禁止**：真实 Seller/Ads 授权、写入、真实银行/买家凭据进入源码/CI/Pages；把 `UNKNOWN` 当 0、将合成费用写成已核验净利润、声称 WMS 签名等于物理实收。
+- **故障排查**：确认 3000 是 `pnpm dev` 或 Compose `web` 的 Next 进程，8080 是 Spring；旧 Vite 5173 进程和旧容器可造成“仍在用 Vite”的错觉。任何数据初始化/回滚操作先看 [部署卸载安全说明](deployment/local-spark-db.md)。
 
-## Authenticated core workspaces (current) and historical M2 origin
-
-After logging in, the default page is **核心业务数据**. It reads normalized PostgreSQL `seller_marketplace`, `marketplace_listing`, `sales_order` and `fba_inventory_observation` with the active tenant resolved by the backend Session. Initially, a newly bootstrapped Owner typically has **no marketplaces**, so the empty state is correct. The old tabs continue to display synthetic Mock data only. See [implemented read APIs](api/core-read-api.md) and [Agent policy](../Agent.md).
-
-This paragraph originally described an M2 **2026-10-30 snapshot** and is superseded: after V86–V92 the core Orders, Listing and FBA views include tenant/Marketplace scoped server keyset search/pagination, while other local purchasing reads still contain real `LIMIT 100/200/500` truncation problems. Those P0 gaps are tracked in [the audited source list](testing/p0-purchasing-read-cap-audit-v108.md) and [Issue #62](https://github.com/kunlong-luo/merchivra/issues/62). No pagination capability is evidence of authorized live Amazon ingestion. The Next.js 16 workbenches remain a pre-production migration until [Issue #63](https://github.com/kunlong-luo/merchivra/issues/63) is complete.
-
-## Local Seller setup (not Amazon authorization)
-
-The default authenticated **核心业务数据** workspace now includes a local Seller Account setup form and a small audit list. Creates a server-generated `UNCONFIGURED` placeholder and selected Marketplace metadata, never a real Seller authorization or token. All writes require Session + CSRF. PostgreSQL Flyway V4 adds setup labels, request idempotency and tenant-scoped local audit. See [local setup API](api/local-seller-setup.md).
-
-**Archived Oct 30 historical test (NOT the current database requirement):** [early disposable PG17 run](https://github.com/kunlong-luo/merchivra/actions/runs/41059134533) applied Flyway V1–V4. Since that historical test, the active database target is **PostgreSQL 18** and full isolated Flyway/Compose/Chromium tests have run; the current [V108 complete synthetic baseline](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593) passed. Neither result verifies the maintainer's real spark-db or Amazon credentials.
-
-**Compose root dotenv:** when invoking a Compose file under `deploy/` from the repository root, always pass `--env-file .env`. Without this explicit flag, Compose may search for `.env` in the Compose project directory rather than reading the repo-root file shown in these docs.
-
-## Full simulated source-to-query chain
-
-The explicit [TEST-004 simulated SP-API smoke](testing/mock-full-chain.md) exercises login, local setup, mocked paginated Orders/Listing/FBA, tenant-scoped SQL reads, audit/idempotency and backend restart through the Nginx proxy. Run the separate manual Compose workflow or the localhost-only Python script against disposable data. The full disposable Compose workflow is now a manual or [milestone-called](testing/ci-policy.md) workflow, not automatic for every feature PR. No live Amazon Seller/Finances credentials are used.
-
-### Verified Compose mock integration
-
-**Historical 2026-10-30 PG17-only evidence:** [early Compose run](https://github.com/kunlong-luo/merchivra/actions/runs/41061679196) built a disposable Nginx/Java/PG17 stack and validated initial US/DE Mock flows. **Current** CI Compose runs use **PostgreSQL 18** and include additional workflows; [V108 full milestone run](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593) is the latest confirmed synthetic end-to-end reference. Follow [TEST-004](testing/mock-full-chain.md); live Amazon OAuth/Finances, actual third-party data and production readiness are **not** verified.
-
-### V6 restart-resumable Mock page validation
-
-[V6 逐页断点恢复 Compose 验证成功](https://github.com/kunlong-luo/merchivra/actions/runs/41065562926): the standalone Compose suite submitted page 1 for a separate US LOCAL/UNCONFIGURED marketplace, restarted the Java API, resumed page 2, replayed the first request key safely, then validated the page count, epoch, core facts and audit. Run the manual [Mock full-chain workflow](https://github.com/kunlong-luo/merchivra/actions/workflows/mock-full-chain.yml) when changing page-commit behavior; no permanent heavy CI gate.
-
-## SP-API connector code (no real authorization)
-
-The backend includes Amazon's official SDK 1.13.0 plus `spapi/` typed and read-only core adapters. `MERCHIVRA_SPAPI_ENABLED=false` and `MERCHIVRA_SPAPI_ALLOW_WRITES=false` are the defaults, so this does **not** connect any seller. See [INT-004](integrations/sp-api-code-integration.md) for secure integration prerequisites and offline contract tests. Do not enable outbound for a real seller until OAuth authorization/secret vault and role verification are complete.
-
-## Optional public Seller OAuth code (disabled by default)
-
-Flyway V7 creates tenant-bound state and encrypted grant tables. Public-app website authorization includes Amazon login-URI handoff, short-lived Lax HttpOnly cookie, final Code exchange and local revoke/audit, but **never marks a Seller connected until separately verified**. Real OAuth is incompatible with Demo mode and requires a registered HTTPS redirect plus a protected AES-256 key and LWA app credentials. See [SEC-004](security/seller-oauth.md); do not put any credentials in this repo or public CI.
-
-## V8/V9 Marketplace verification and vault key rotation (code only)
-
-- V8 offers an opt-in, production-endpoint-only Sellers v1 Marketplace-participation check for Owner sessions, and 24-hour marketplace evidence before the internal Worker Vault releases a grant. Sellers v1 does **not** prove independent Seller identity or Amazon operation roles. Read [SEC-005](security/seller-verification.md).
-- V9 supports AES-256-GCM versioned keyrings and an Owner/CSRF per-account `POST /api/v1/seller-accounts/{accountId}/oauth/rotate-key` for transactional rewrap and metadata-only audit. It does **not** rotate Amazon LWA Refresh Tokens. Follow the careful old/new key staging procedure in [SEC-006](security/seller-key-rotation.md).
-- With real SP-API disabled, the independent Compose suite validates Flyway V7–V9 migration and fictional Mock regression; it does not test Amazon APIs, KMS, tenant-wide automatic rotation, roles or any live sync Worker. Never put real Seller secrets into CI or Demo fixtures.
-
-
-## Optional browser-responsive layout smoke
-
-See [TEST-005](testing/browser-ui.md) for a separate Chrome/Node 24 browser
-layout test with synthetic localhost-only Seller/Listing/Orders/FBA responses.
-It captures 360/390/768/1280 screenshots and checks no page-level horizontal
-overflow, local table scrolling, table columns, and source/UNKNOWN semantics.
-It is opt-in, does not install Impeccable or Playwright, and is not part of the
-M0–M2 fast CI. It does not test real login, database, or Amazon connections.
-
-## Gradle 9.2.1 / Java 25 build standard (2026-11-01)
-
-The maintainer retired Maven. **Use the checked-in Gradle Wrapper**, not `mvn` or `apps/server/pom.xml`. Spring Boot remains 4.1.2. From the repository root:
-
-```bash
-cd apps/server
-./gradlew --version
-./gradlew test             # JUnit 5 + Jacoco XML/HTML reports
-./gradlew bootRun          # DB_HOST/DB_NAME/DB_USER/DB_PASSWORD must be set
-./gradlew bootJar          # build/libs/merchivra-server.jar
-./gradlew -PstrictCoverage check  # optional strict >=83% total LINE coverage target
-```
-
-On Windows use `gradlew.bat`. Wrapper Gradle distribution is checksum-pinned in `gradle/wrapper/gradle-wrapper.properties`. The automatic CI runs Gradle tests under Temurin 25 and frontend checks; full disposable PostgreSQL 18/Flyway is run using the V108 manual/milestone workflow, not on every PR. The strict coverage target is a **future quality gate**: enable it when the test suite has reached the required baseline, do not claim it has passed unless the specific command did. No Maven files are needed to build the backend.
-
-## Optional Redis 8 (2026-11-01)
-
-Redis is now implemented as an opt-in Spring Session and SP-API admission store, **not a PostgreSQL replacement**. In an existing spark-db environment, set `MERCHIVRA_REDIS_PASSWORD` locally to the password of `spark-redis`, `MERCHIVRA_REDIS_SESSIONS_ENABLED=true`, and optionally `MERCHIVRA_SPAPI_RATE_LIMIT_ENABLED=true`. Container access uses `spark-redis:6379`; a host-run Java process uses the Redis port mapped to `127.0.0.1:6379` and needs `MERCHIVRA_REDIS_HOST=127.0.0.1`. Do not export real passwords in scripts committed to Git.
-
-The standalone `deploy/compose.yaml` uses disposable `redis:8.10.1-alpine` under `--profile optional-cache`, with `noeviction` only for local testing; normal dev still uses just PostgreSQL + server + web. See [Redis runtime guide](deployment/redis-session-spapi-v53.md) for restart and Redis-unavailable smoke, the shared `allkeys-lru` hazard and production gating.
-
-## IntelliJ IDEA 本地启动与 PostgreSQL SCRAM 验证（2026-11-01）
-
-用户 2026-11-01 的 IDEA Java 启动日志定位到了数据库身份认证：`The server requested SCRAM-based authentication, but no password was provided`。这是 Flyway 启动前获取 JDBC 连接失败，不能据此判定 SQL 迁移失败；GitHub V61 CI 在隔离 PG18 环境中已通过，但不会替你本机设置数据库密码。
-
-本机 IDEA 直接运行 `org.merchivra.erp.MerchivraApplication`（不是 Docker 内运行）时，打开 **Run → Edit Configurations → MerchivraApplication → Environment variables**，为这一个运行配置设置 `DB_HOST=127.0.0.1`、`DB_PORT=5432`、`DB_NAME=merchivra`、`DB_USER=merchivra` 和你在本机专用数据库角色设置的 **`DB_PASSWORD`**。如需首次初始化，再设置 `MERCHIVRA_BOOTSTRAP_USERNAME` 和 `MERCHIVRA_BOOTSTRAP_PASSWORD`。`application.yml` 的 JDBC 密码是 `${DB_PASSWORD:}`，未提供变量就为空。IntelliJ **不会自动读取** Compose `--env-file .env`；需要在 IDE 的进程环境中单独配置，或者使用经过审核的本地、未纳入 Git 的环境注入机制。
-
-先在本机终端测试数据库连通（`-W` 交互输入，不将口令放在命令行或日志中）：
-
-```bash
-psql "host=127.0.0.1 port=5432 dbname=merchivra user=merchivra" -W \
-  -c "SELECT current_database(), current_user, current_setting('server_version');"
-```
-
-如果 psql 连不上，检查 `spark-postgres` 或本机 PG18 是否运行、端口是否暴露、是否存在 `merchivra` 独立数据库及同名 LOGIN 角色、是否使用为该角色单独设置的密码。**不可使用管理员 root 密码代替，不要关闭 SCRAM 或执行 `down -v`**。
-
-如果 psql 成功而 IntelliJ 报 `no password was provided`，检查当前正在运行的 IDEA Run Configuration 是否保存并注入了 `DB_PASSWORD`；重新启动 Java 进程后重试。成功标准是 Hikari 成功获取连接、Flyway 验证/迁移完成，以及 Spring Boot 就绪，而不只是 Tomcat initialized。密钥不得提交到仓库或发在聊天里。
-
-## One-time PostgreSQL 18 cluster provisioning (only for external spark-db)
-
-The role/database creation process is **not a Flyway migration**, `bootRun` lifecycle action, or CI/Compose startup hook. For a genuinely new `spark-postgres` cluster with no existing `merchivra` role/database, an authorized administrator may explicitly run [`apps/server/scripts/provision-merchivra-database.sql`](../apps/server/scripts/provision-merchivra-database.sql) once, with per-statement autocommit and stop-on-error. It first creates a `NOLOGIN` role, creates the `merchivra` database, then revokes database-level PUBLIC privileges. Setting a strong SCRAM password via trusted GUI or interactive `psql`, enabling LOGIN **afterwards**, and testing `psql -W` are separate manual operations.
-
-**If either the database or role already exists, do not run the script**; inspect state and privileges instead. Never use this procedure on `iot_farm` or as a workaround for a missing IDEA `DB_PASSWORD`. The integrated `deploy/compose.yaml` has its own supported Postgres image bootstrap and must not execute this script. See [`docs/deployment/local-spark-db.md`](deployment/local-spark-db.md) for inspection, safe execution, GUI client transaction settings and password verification.
-
-## V64.1 · springdoc + Orval API 生成（2026-11-01）
-
-本项目现行 V61/V64 财务客户端由 Orval8.44.0 + TanStack Query5 基于真实 Controller 的 OpenAPI 自动生成。生成文件在 apps/web/src/generated，禁止手改。财务 Zod 运行时校验、Session Cookie、CSRF、no-store 保持有效。
-
-默认 MERCHIVRA_CONTRACT_EXPORT_ENABLED=false，生产环境不要启用。仅本地隔离 PG18 环境显式启用时，环回地址可以访问 /v3/api-docs/finance-profits。
-
-从仓库根目录将 curl 的 JSON 输出保存到 /tmp/finance-live.json，执行 node scripts/normalize-finance-openapi.mjs /tmp/finance-live.json apps/web/openapi/finance-profits.json。之后 cd apps/web && pnpm install --frozen-lockfile && pnpm run api:generate && pnpm run api:check && pnpm run typecheck && pnpm test && pnpm run build。提交正确锁文件、已核对契约与生成产物；CI 与真实 PG18 输出再次对比。旧 docs/api/openapi.json 为 G2 草案，不能用于代码生成。
-
-
-### V145 · FBA 采购来源合同
-
-现有 FBA PO/ASN 关联五项 API 现与本地货件共同由 `fba-inbound.json` / Orval 生成（共 15 项），前端保留 UUID、Zod 和 Session/CSRF/no-store 校验。真实 PG18 导出仍由 full_suite 逐字节比对。仅核对 MVC 合同可运行 `./apps/server/gradlew -p apps/server test --tests '*FbaPurchaseLinkOpenApiV145Test'`（Java 25；模拟 bootstrap、关闭 Flyway，不访问数据库），再将 `apps/server/build/fba-openapi-v145.json` 交给 `node scripts/normalize-fba-openapi.mjs`。生成与漂移检查使用既有 `pnpm run api:generate` / `pnpm run api:check`，不得手改产物。[业务边界与未完成的历史分页](inventory/fba-purchase-link-v75.md)。
+产品/财务现行任务见 [P0 计划](roadmap/current-plan.md)，技术架构见 [ARCH-001](architecture/overview.md)，合成浏览器/PG18/恢复覆盖见 [CI 策略](testing/ci-policy.md)。历史 V6–V145 同步、采购、OpenAPI 试验说明继续保存在各自版本文档，但**不再是当前开发入口**。

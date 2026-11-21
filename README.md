@@ -1,164 +1,61 @@
 # Merchivra ERP
 
-> **2026-11-21 Next.js-first local runtime:** The default `pnpm run dev` and `pnpm run build` now use Next.js 16; both bundled PostgreSQL and external spark-db Compose launch the standalone Node `web` on loopback port 3000. Vite/Nginx is an explicit rollback (`pnpm run dev:vite`, `pnpm run build:vite` or `--profile vite-fallback` on port 3002), and GitHub Pages remains a synthetic-only static showcase. Daily changes go directly to `main` with CI; full PG18/Chromium acceptance remains mandatory when risk requires it. Real Seller/Ads access remains OFF and production #104 NO-GO.
+**Open-source, self-hosted Amazon Seller ERP — designed around auditable, evidence-backed cost and profit accounting.**
 
-> **Next.js 16 App Router:** For host development, run Spring Boot on `127.0.0.1:8080`, then `cd apps/web && pnpm install --frozen-lockfile && pnpm run dev`; visit `http://127.0.0.1:3000`. The historical secondary Next canary is `pnpm run dev:next` on 3001. For the default Compose runtime use `docker compose --env-file .env -f deploy/compose.yaml up -d --build`; `web` is Next, not Vite. A local runtime change does **not** constitute production TLS or financial approval.
+> **Current baseline · November 21, 2026 · V191.** The project is **pre-alpha, local/isolated testing only**. The stack is Java 25 / Spring Boot 4.1.2 / Gradle / PostgreSQL 18 and React 19 / **Next.js 16.4.5** / Node 24, using **pnpm 12.20.0 exclusively** for the web app. Next.js is the default local runtime. Vite/Nginx is an explicit rollback and synthetic GitHub Pages build path.
+>
+> **Verified engineering ≠ production approval.** [V191 full A3](https://github.com/kunlong-luo/merchivra/actions/runs/44882890834) passed **7/7** for the exact [code commit `8dab971`](https://github.com/kunlong-luo/merchivra/commit/8dab97147010fdc440ee81abcfa67cd1d1d57261) in isolated PG18/HTTP/Chromium/Compose/Session tests. Real Seller/Ads OAuth, live bank/fee verification, and production are **NOT approved**; [#104](https://github.com/kunlong-luo/merchivra/issues/104) remains **NO-GO**.
 
-> **Public static GitHub Pages showcase:** [view read-only synthetic UI](https://kunlong-luo.github.io/merchivra/) (available only once Pages is enabled). This is **not** a hosted ERP: no login, database, Amazon OAuth, bank integration or writes. [Deployment and activation guide](docs/deployment/github-pages-public-demo-v98.md).
+[简体中文](README.zh-CN.md) · [Current status](docs/current-status.md) · [Active priorities](docs/roadmap/current-plan.md) · [Documentation hub](docs/README.md) · [Deployment](docs/deployment/local-spark-db.md) · [Development](docs/development.md) · [Security](SECURITY.md)
 
-**Open-source, self-hosted Amazon Seller ERP** — a Java 25 / Spring Boot 4.1 backend, React 19 / TypeScript frontend, and PostgreSQL 18 database.
+## Implemented functionality and hard limitations
 
-[简体中文](README.zh-CN.md) · [Detailed installation, deployment & removal guide (中文)](docs/deployment/local-spark-db.md) · [Architecture](docs/architecture/overview.md) · [Documentation hub](docs/README.md) · [Current MVP plan](docs/roadmap/mvp-freeze-release-v108.md) · [Roadmap history](docs/roadmap.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+Merchivra has local, tenant/Marketplace-scoped seller, catalog, orders, purchasing/FBA, inventory/lot, exceptions, and finance flows backed by Spring Boot and PostgreSQL. The React/Next.js workbenches use same-origin API access, Session/CSRF protections, and reviewed local business evidence. V64 provides **known-scope contribution**; V91–V102 and V162–V188 add manual source review, allocation conservation, settlement identity, full-period blockers, single source ownership and **read-only original-currency profit sensitivity**.
 
-> **Pre-alpha — localhost/testing only, not production-ready.** The actual React frontend, authenticated local business workflows, and isolated PostgreSQL 18 migrations are implemented and tested. Live Amazon Seller OAuth/SP-API is **disabled by default and not yet validated with real seller credentials**. Mock data is never presented as live Amazon data.
+**It does not yet calculate independently certified, fully loaded net profit.** Real Amazon/Ads/bank provenance, refund COGS reversals, FX/tax/accounting policies, independently verified warehouse receipts and G1 financial approvals remain open. A locally `APPROVED_UNVERIFIED` source cannot silently become a posted expense; `realizedNetProfit=null` is not zero. See the [scope matrix](docs/current-status.md) and [profit evidence plan](docs/roadmap/current-plan.md).
 
-## Services and architecture
+## Quick start — bundled PostgreSQL 18
 
-The **default deployment uses exactly three services**:
-
-| Service | Runtime | Purpose | Local endpoint |
-| --- | --- | --- | --- |
-| `web` | React 19 / Next.js 16 standalone Node | Authenticated ERP UI, same-origin `/api` rewrite to Spring | http://127.0.0.1:3000 |
-| `server` | Java 25, Spring Boot 4.1.2 | Session/CSRF, ERP APIs, Flyway migrations | http://127.0.0.1:8080 |
-| `postgres` **or existing `spark-postgres`** | PostgreSQL **18** | All business data, audit trails, uploaded evidence | Internal DB or existing PostgreSQL host |
-
-**Optional Redis 8 integration is implemented** for shared Spring Security Session/CSRF and atomic cross-instance Amazon SP-API admission, behind explicit flags (off by default). The bundled Redis remains behind `optional-cache`; existing `spark-redis` is reused without new containers. Your existing Redis `allkeys-lru` can evict session/throttle keys and is not adequate for production guarantees without an isolated no-eviction deployment. See the [Redis setup and safety guide](docs/deployment/redis-session-spapi-v53.md). Frontend remains **React-only (no Vue)**.
-
-## Option A — quick start, bundled PostgreSQL 18 (three containers)
-
-Requires Docker Engine and Docker Compose v2. From a terminal:
+Docker Engine and Compose v2 are required. From the repository root:
 
 ```bash
 git clone https://github.com/kunlong-luo/merchivra.git
 cd merchivra
 cp .env.example .env
-# Edit .env:
-#   MERCHIVRA_DB_PASSWORD=<strong random password>
-#   MERCHIVRA_BOOTSTRAP_USERNAME=<first admin username>
-#   MERCHIVRA_BOOTSTRAP_PASSWORD=<unique password of at least 16 characters>
-
+# Set a dedicated MERCHIVRA_DB_PASSWORD
+# Set MERCHIVRA_BOOTSTRAP_USERNAME and a strong password of at least 16 characters
 docker compose --env-file .env -f deploy/compose.yaml config -q
 docker compose --env-file .env -f deploy/compose.yaml up -d --build
-docker compose --env-file .env -f deploy/compose.yaml ps
 ```
 
-Visit **http://127.0.0.1:3000** and sign in with your initial admin credentials. The app starts local **fictional Demo** mode with the bundled Compose only; do not use real Amazon credentials here. The PostgreSQL 18 named Docker volume persists across container restarts. The API ping is at http://127.0.0.1:8080/api/v1/ping; health at `/actuator/health`.
+The default three services are `postgres`, `server`, and `web` (Next.js Node), all with loopback-only ingress. Open **http://127.0.0.1:3000**; the Spring health ping is **http://127.0.0.1:8080/api/v1/ping**.
 
-Optional Redis 8 container for local integration testing: `docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache up -d`.
-
-## Option B — reuse an existing spark-db PostgreSQL 18 (recommended if available)
-
-You can reuse the PostgreSQL **18/PostGIS 3.6** instance in your existing `spark-db` Compose stack, whose PostgreSQL container is `spark-postgres`, and whose shared external network is **`spark-iot-net`**.
-
-**Never point Merchivra at the existing `iot_farm` database.** Create a dedicated `merchivra` database with an independent non-superuser `merchivra` login, leaving all existing spark-db databases, extensions, volumes, Redis, and InfluxDB untouched.
-
-1. Start your original spark-db `postgres` service from its own Compose directory, then verify its network: `docker network inspect spark-iot-net`. The container must be attached to that network.
-2. For a NEW, explicitly approved PostgreSQL 18 cluster with **neither** the `merchivra` role nor database present, provision both manually using the pure-SQL bootstrap script. Do not run it on an existing or partially initialized setup:
-
-   ```bash
-   # From the repository root; inspect the cluster and existing objects first.
-   docker exec spark-postgres psql -X -U root -d postgres \
-     -c "SELECT current_database(),current_user,current_setting('server_version');"
-   docker exec spark-postgres psql -X -U root -d postgres \
-     -c "SELECT rolname,rolcanlogin FROM pg_roles WHERE rolname='merchivra';"
-   docker exec spark-postgres psql -X -U root -d postgres \
-     -c "SELECT datname FROM pg_database WHERE datname='merchivra';"
-
-   # Explicit one-time administrator execution; STOP on first error, autocommit.
-   # Never pass -1/--single-transaction.
-   docker exec -i spark-postgres psql -X -v ON_ERROR_STOP=1 \
-     -U root -d postgres < apps/server/scripts/provision-merchivra-database.sql
-   ```
-
-   The script creates a **NOLOGIN** restricted role, a dedicated database, and removes default PUBLIC database privileges. It never sets any password, changes `iot_farm`, or runs in Flyway, CI, bootRun, Docker, or Compose startup. In a trusted GUI role-password dialog or interactive `psql`, check `SHOW password_encryption;` equals `scram-sha-256` and set a unique strong password (interactive psql meta-command `\password merchivra`; **not executable SQL**). Only after the password is set, separately execute `ALTER ROLE merchivra LOGIN;` in your administrative SQL client. Test TCP with `psql -W` before configuring the app. See [complete local PostgreSQL provisioning guidance](docs/deployment/local-spark-db.md).
-
-3. In the Merchivra project directory, copy `.env.example` to `.env`. Set `MERCHIVRA_DB_NAME=merchivra`, `MERCHIVRA_DB_USER=merchivra`, `MERCHIVRA_DB_PASSWORD` to the new role's password, `MERCHIVRA_BOOTSTRAP_USERNAME`, and `MERCHIVRA_BOOTSTRAP_PASSWORD` (at least 16 characters). Keep `MERCHIVRA_DEMO_ENABLED=false` unless using *fictional* local data.
-4. Start **only two new containers** (web and server), which share the pre-existing PostgreSQL service as their third logical tier:
-
-   ```bash
-   docker compose --env-file .env -f deploy/compose.spark-db.yaml config -q
-   docker compose --env-file .env -f deploy/compose.spark-db.yaml up -d --build
-   docker compose --env-file .env -f deploy/compose.spark-db.yaml ps
-   ```
-
-The backend container connects to **`spark-postgres:5432` over `spark-iot-net`**, not to `127.0.0.1:5432` (which would refer to the backend container itself). Nothing in this deployment creates or deletes another PostgreSQL/Redis/InfluxDB container. Flyway operates **only within the separate `merchivra` database**.
-
-Detailed instructions including database checks, permissions, networking, backup, restoration, troubleshooting and uninstall: [spark-db deployment guide](docs/deployment/local-spark-db.md).
-
-## Local development — hot reload
-
-Requires **Java 25, Gradle 9.2.1（项目内 Gradle Wrapper）, Node.js 24.11+, npm, PostgreSQL 18**. With your existing spark-db database mapped to the **host's** `127.0.0.1:5432`, run:
-
-Backend terminal:
+If you already operate PostgreSQL 18 through `spark-db`, follow the [dedicated role/database bootstrap](docs/deployment/local-spark-db.md) first, then launch only the ERP API and web:
 
 ```bash
-export DB_HOST=127.0.0.1 DB_PORT=5432 DB_NAME=merchivra DB_USER=merchivra
-export DB_PASSWORD='your-dedicated-merchivra-password'
-export MERCHIVRA_BOOTSTRAP_USERNAME=your_admin
-export MERCHIVRA_BOOTSTRAP_PASSWORD='your-own-16-plus-character-password'
-(cd apps/server && ./gradlew bootRun)
+docker compose --env-file .env -f deploy/compose.spark-db.yaml config -q
+docker compose --env-file .env -f deploy/compose.spark-db.yaml up -d --build
 ```
 
-Frontend terminal:
+Do not combine the two base Compose files or run `down -v` on data you want to retain.
+
+## Local development — pnpm only
+
+Start Spring Boot locally on **127.0.0.1:8080** with an authorized PostgreSQL 18 connection; then:
 
 ```bash
 cd apps/web
+corepack enable
 pnpm install --frozen-lockfile
-pnpm run dev
+pnpm dev
 ```
 
-Next.js 16 now serves http://127.0.0.1:3000 from `pnpm run dev` and rewrites `/api` to Spring at `127.0.0.1:8080`. For the optional Vite fallback only, use `pnpm run dev:vite` (port 5173). For a locally executed backend the DB host is **127.0.0.1**; for a containerized backend sharing the Docker network it is **spark-postgres**.
+`pnpm dev` and `pnpm build` use Next.js 16 (port 3000); `pnpm api:check` validates Orval contracts; `pnpm typecheck` and `pnpm test` validate the web app. `pnpm dev:vite` / `pnpm build:vite` are explicit rollback/testing commands only, and `vite-web` requires its opt-in Compose profile. The sole JS lockfile is `apps/web/pnpm-lock.yaml`. Detailed setup, safe recovery and optional Redis integration are covered in the [development](docs/development.md) and [deployment](docs/deployment/local-spark-db.md) guides.
 
-## Deploy, upgrade, stop, uninstall
+## Delivery policy
 
-Choose **exactly one** base Compose file; do not stack `compose.yaml` and `compose.spark-db.yaml` in the same invocation. `deploy/compose.production.yaml` is an optional, **not production-certified**, HTTPS/environment overlay and does *not* supply TLS termination, secret management or backup automation.
+Regular work is committed **directly to `main`**, without routine feature branches/PRs. Every push runs quick CI; finance, stock, identity and database boundary changes also require focused tests and, where appropriate, a fresh exact-commit full A3. See the [test policy](docs/testing/ci-policy.md) and [contribution guide](CONTRIBUTING.md). The primary roadmap is to verify independent expenses and complete evidence-backed profit, **not** to replace unknown costs with zero.
 
-### A. Bundled DB
+[Public GitHub Pages showcase](https://kunlong-luo.github.io/merchivra/) is **synthetic-only**: no authenticated ERP, live Seller account, bank integration, database or writes.
 
-```bash
-# Stop without deleting data
-docker compose --env-file .env -f deploy/compose.yaml stop
-# Rebuild and restart while keeping persistent database volume
-docker compose --env-file .env -f deploy/compose.yaml up -d --build
-# Remove app containers and network, KEEP database volume
-docker compose --env-file .env -f deploy/compose.yaml down --remove-orphans
-```
-
-**Danger:** `docker compose --env-file .env -f deploy/compose.yaml down -v` also destroys the *bundled* PostgreSQL data volume. Only use this after intentionally choosing irreversible data deletion and verifying backups.
-
-### B. Existing spark-db
-
-```bash
-# Stop only Merchivra, leave spark-db and its databases untouched
-docker compose --env-file .env -f deploy/compose.spark-db.yaml stop
-# Remove only Merchivra web/server containers and private network
-docker compose --env-file .env -f deploy/compose.spark-db.yaml down --remove-orphans
-```
-
-**Never run `down -v` in your shared spark-db Compose project to uninstall Merchivra** — that could delete unrelated `iot_farm`, InfluxDB, Redis and other data. Even after removing Merchivra containers, the dedicated `merchivra` database remains in `spark-postgres`. If you explicitly wish to permanently drop that database, back it up first and then **manually** run `DROP DATABASE merchivra WITH (FORCE)` against PostgreSQL's `postgres` database. Only drop the dedicated role if it is not used elsewhere. Refer to the detailed [removal and backup procedures](docs/deployment/local-spark-db.md).
-
-## Is the frontend done?
-
-**The React frontend is implemented and buildable — it is not an empty scaffold.** It includes login and local tenant UI, Seller setup/connection screens, core Listings/Orders/FBA views, operations automation, team/read roles, purchasing/suppliers and warehouse lots, count and inter-warehouse discrepancy review, proof PDF/PNG/JPEG upload with server-side SHA-256, original supplier return reports, finance evidence and reconciliation views, plus a fictional Mock demo.
-
-**However, the full ERP is not production complete**: live Seller authorization, real Amazon Seller data, third-party logistics/supplier confirmation, production file security and full cross-tenant/business E2E require additional validation. Code and API screens are not evidence of a completed real-seller integration.
-
-The [V108 consolidated synthetic validation run 42448160593](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593) passed the Java/Next/Vite, PostgreSQL 18/Flyway, Mock Compose and browser gates for its particular commit. Ordinary PRs now run **fast checks only**. Neither result verifies private spark-db data, real Amazon OAuth or a production release. See the [documentation hub](docs/README.md) for authoritative and archived references.
-
-## Tests and troubleshooting
-
-```bash
-curl -f http://127.0.0.1:8080/api/v1/ping
-curl -f http://127.0.0.1:8080/actuator/health
-
-(cd apps/server && ./gradlew test)
-cd apps/web && pnpm install --frozen-lockfile && pnpm run typecheck && pnpm run test && pnpm run build
-```
-
-For errors, inspect the appropriate Compose `server` and `web` logs and verify database version, credentials, and network membership. **Do not delete database volumes to fix a connection error.**
-
-[Deployment manual](docs/deployment/local-spark-db.md) · [Development guide](docs/development.md) · [API docs](docs/api/README.md) · [V52 private evidence limits](docs/purchasing/lot-proof-files-supplier-trace-v52.md)
-
-## License
-
-[Apache-2.0](LICENSE). Do not commit real Seller credentials, `.env` files, buyer information or uploaded private proof documents.
+[License](LICENSE) · [Security reporting](SECURITY.md) · [Product design guidance](DESIGN.md).

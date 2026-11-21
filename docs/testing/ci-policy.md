@@ -1,60 +1,38 @@
-# TEST-003 · 分层 CI 与集中里程碑测试（V108 / 2026-11-08）
+# TEST-003 · 当前 CI / 完整 A3 验收策略（V191）
 
-**现行策略更新（2026-11-21）**：常规开发直接提交 `main`，`ci.yml` 在 `main` 推送执行 Gradle、OpenAPI/Orval、React/Vitest、默认 Next.js 构建、Vite 回退构建和 Compose 静态检查。PG18 全链路、真实 Next/Chromium、TLS/CSRF 回归仍由明确的里程碑 A3 触发，不能用快 CI 替代财务或上线验收。下面的 V108 PR 历史仅用于追溯。生产 #104 NO-GO，真实 Amazon OAuth/写入保持关闭。
+> **2026-11-21 · 当前维护约定**：日常开发与文档修改直接提交 `main`，不为每个 Vxxx 开发重复创建分支/PR。快速 CI 保证构建与高价值单测；PG18 全链路、Chromium/Next、真实 Docker Compose 是有条件执行的**隔离合成**里程碑验收；两者均**不是**真实 Amazon/银行核证或生产许可。见 [事实基线](../current-status.md)、[发布阻断](release-readiness-v68.md)。
 
-## 实际 GitHub Actions 触发
+## 实际 GitHub Actions 入口
 
-| 场景 | 自动运行 | 有意不自动运行 |
+| 工作流 | 触发/预算 | 通过说明 |
 | --- | --- | --- |
-| 每次 `main` push | `ci.yml`：Gradle、React/Orval/TypeScript/Vitest、Next 16 默认构建、Vite 回退构建、Compose 配置 | PG18 全量真实 HTTP/备份恢复、Chromium 双前端、完整 Compose 运行链 |
-| 手动完整 A3 | `milestone-validation.yml` 调用 PG18/Next/Chromium/Compose 全链路 | 真实 Amazon OAuth、外部数据真实性核销、生产 G1/G2/G3 授权 |
-| main 更新前端 | GitHub Pages 合成只读展示构建/发布（非 ERP 部署） | 不因此触发浏览器/真 Compose |
-| A3 MVP 冻结或 Beta/Release 候选、重要安全/数据库变更 | 在 main 上人工启动 `milestone-validation.yml`，一次调度完整 CI + 双前端 Chromium + 真 Compose；首次新增该工作流时触发一次隔离基线验证 | 无真实 Amazon Token、无生产 PG/银行数据 |
-| 单项故障定位 | 独立手工启动 `ci.yml` 的 `full_suite`，或独立 Chromium/Compose；必要时只重跑失败 job | 不强制对与改动无关的模块再跑所有回归 |
+| [`ci.yml`](../../.github/workflows/ci.yml) | 每次 `main` push，或手动/可复用工作流调用；普通 push 为快 CI | Java 25 Gradle tests、Node24/pnpm12 **冻结安装**、Orval、类型、Vitest、Next 默认生产构建、Vite 回退构建、Compose 静态安全/文档检查 |
+| [`milestone-validation.yml`](../../.github/workflows/milestone-validation.yml) | Actions 手动触发或修改此工作流时在 `main` 触发；按需执行完整 A3 | 精确 SHA，调用 `ci.yml(full_suite=true)` + 独立 Chromium 轨迹 + [真实合成 Compose 链路](../../.github/workflows/mock-full-chain.yml) |
+| [`browser-layout-smoke.yml`](../../.github/workflows/browser-layout-smoke.yml) | A3 引用或手动 | Vite 回退与 Next App Router 的真实 Chromium 浏览器合成场景 |
+| [`mock-full-chain.yml`](../../.github/workflows/mock-full-chain.yml) | A3 引用或手动 | 一次性 PostgreSQL18/HTTP、Session/CSRF、Next 独立 Node、受控 HTTPS Next→Vite→Next、持久恢复；不连接生产 |
+| [`github-pages.yml`](../../.github/workflows/github-pages.yml) | `main` 前端变更或手动 | `VITE_PUBLIC_DEMO` 虚构只读静态展示，**不是**有鉴权的 ERP 发布 |
 
-在 `ci.yml` 选择 `workflow_dispatch: full_suite=true` 会包括真实一次性 PG18/Flyway + HTTP/安全/恢复，以及 Next production build/HTTP；常规 PR 会**跳过**上述重型阶段。集中 workflow 调用相同已有工作流，避免复制测试脚本和网络环境逻辑。
+## 何时必须增加测试
 
-**不能推迟的安全底线：** 改动租户/Marketplace 鉴权、Session/CSRF、Seller Vault/OAuth、采购审批、库存原子写、财务币种/金额与重复入账、同步幂等或租约时，必须在同批开发执行对应测试；若跨数据库/跨进程高风险，人工运行专项 PG18/Compose 检查后才能认为该项完成。业务数据上线前仍需真授权、恢复、性能、G1/G2/G3 审批。
+1. **每次代码/文档提交**：核实快速 CI 的**该 SHA**结果，不能借前一个提交的 green 冒充新提交已验收。
+2. **资金/币种/审核/库存/授权等高风险变更**：立即运行聚焦的后端/PG18/HTTP/CSRF 负例，不因集中 A3 策略拖延安全性验证。
+3. **跨数据库/进程、版本化快照、Next 容器或部署回退**：按风险触发[完整 A3](https://github.com/kunlong-luo/merchivra/actions/workflows/milestone-validation.yml)；除业务绿灯外必须核对未运行/跳过的任务及 SHA。
+4. **真实目标上线/卖家接入**：必须独立取得合法角色/地区/银行及第三方凭证，G1/G2/G3 人工批准、TLS/KMS/备份/PITR、外部告警送达/ACK、撤销、恢复与性能证据；**不存在**“A3 绿色就自动部署”的路径。
 
-**合并标准**：普通 PR 通过快速 CI + 受影响的高价值单测；集中里程碑使用最终 commit 跑全部工作流全绿，留存 Actions URL。降低成本不得用先前成功的 commit 冒充当前候选已验收。生产准入仍以 `release-readiness-v68.md` 和新的 V108 放行条件为准。
+## 最新已确认工程技术证据
 
----
+- **V191 / `8dab97147010fdc440ee81abcfa67cd1d1d57261`**：[快速 CI #44882890791](https://github.com/kunlong-luo/merchivra/actions/runs/44882890791) 与 [完整 A3 #44882890834](https://github.com/kunlong-luo/merchivra/actions/runs/44882890834) SUCCESS，完整 A3 **7/7 核心任务成功**；真实 Seller/Ads/银行**未启用**。
+- [GitHub Pages #44882736480](https://github.com/kunlong-luo/merchivra/actions/runs/44882736480) 只验证虚构静态展示构建与隔离，不表示公开 ERP 已上线。
+- **文档提交后的新 HEAD** 必须查最新 CI，不能自动继承 V191 业务 SHA 的 A3 结果。
 
-## 早期阶段政策（历史归档，不再代表 V108 的触发逻辑）
+## 本地快速命令
 
-**状态：项目当前开发策略。** 遵照项目负责人决策：前期不追求严格 CI 和 E2E 覆盖率，以能持续编译、及时发现简单回归为主；在核心业务接近完整时，再补自动化端到端与发布质量门禁。
+```bash
+./apps/server/gradlew -p apps/server --no-daemon test
+(cd apps/web && pnpm install --frozen-lockfile && pnpm api:check && pnpm typecheck && pnpm test && pnpm build && pnpm build:vite)
+python3 scripts/check_ci_cadence_v108.py
+python3 scripts/check_docs_consistency_v109.py
+python3 scripts/check_next_runtime_v122.py
+```
 
-## 当前 main 的必需工作流（M0～M2）
-
-- 后端：`./apps/server/gradlew -p apps/server test`（只运行当前存在的快速单元测试）。
-- 前端：`pnpm install --frozen-lockfile`（已有真实解析的 `pnpm-lock.yaml`）、`pnpm run typecheck`、`pnpm run test`、`pnpm run build`。
-- 无 Playwright / Chromium / Firefox / WebKit、无 E2E 执行、无覆盖率阈值、无 Docker 全栈 CI、无性能预算或安全扫描的阻塞型门禁。
-- 不要求每个早期功能都拥有浏览器级自动化场景，不为 Mock 占位页创建 E2E 测试。
-
-## 各阶段何时加测试
-
-| 阶段 | CI 策略 | 非阻塞验证 | 暂缓项 |
-|---|---|---|---|
-| M0 骨架 | 快速单测 + 类型检查 + 构建 | 开发者手动跑一次 Compose/健康检查 | 全栈自动化、E2E |
-| M1 账号与同步 | 同上；为身份/敏感数据/同步幂等加少量定向单测或集成用例 | Mock 授权和失败恢复手工走查 | 大型 API/浏览器回归矩阵 |
-| M2 商品/订单/库存 | 同上；仅针对金额、状态、租户越权、库存 UNKNOWN 做关键负例 | 真实业务流程的手动验证记录 | E2E 作为合并门禁 |
-| M3 财务报表 | 视业务成熟度开始**编写**核心流程 E2E；初期仅手动/非阻塞运行 | 订单→费用→成本→利润→对账的模拟验算 | 浏览器全矩阵和严格覆盖率 |
-| M4 Beta/公开部署前 | 加入核心 Playwright E2E、必要的 DB/安全集成测试与部署验收 | 灰度/备份恢复演练 | 非关键边角场景可后续补充 |
-
-## 不可因 CI 轻量而省略的底线
-
-- 任何真实授权/租户数据投入使用前，必须验证服务端授权及隔离；不能仅因有 Spring Security 依赖就声称安全。
-- SKU/订单金额/退款/库存与异步同步状态的关键公式和不变量，开发时保留**少量高价值测试**；不复制成熟库自己的内部单测。
-- 源码与 GitHub Actions 中不能放真实 Amazon Secret、Refresh Token、买家 PII；不得将无鉴权的 M0 应用暴露到公网。
-- CI 当前通过，只表示已有的快速检查通过；**不表示已完成完整验收或生产就绪**。
-- 用户指定任何时候可以提前运行手动或单独测试；只是不设置繁重的早期自动阻塞门禁。
-
-## 延后执行触发点
-
-产品核心业务流程基本可以走通且数据模型相对稳定时，创建 Playwright/DB 端到端契约测试；在 M4 Beta 上线前纳入必要的主分支质量门禁。具体任务跟踪见 [M0 Issue #2](https://github.com/kunlong-luo/merchivra/issues/2)。
-
-相关：[TEST-001](test-plan.md)、[验收用例](../requirements/acceptance.md)、[Pagevela 借鉴](../architecture/dependency-adoption.md)。
-
-## V68 实施情况（2026-11-01）
-
-本项目已从早期 M0/M2 演进到 V68 发布前准备：新增 PostgreSQL18 一次性恢复演练、Spring Security MockMvc/真实 HTTP Session/CSRF 检查、35 次本地 GET 性能冒烟、Docker Compose 生产 overlay 静态安全检查。原先“无 PG18 / 无 Chromium / 无容器”等陈述仅保留为历史早期策略，**不再代表当前主线 CI 的真实覆盖范围**。实测以 GitHub Actions 记录为准，详细清单见 [V68](release-readiness-v68.md)。
+**核心限制**：真实费用来源、重复扣费真实性、退款 COGS 回转、外部 WMS 物理实收、跨币种会计政策和银行结算均未因上述合成测试自动核验。不得把 `realizedNetProfit=null` 重写为已确认利润。生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 一律 NO-GO；历史 [V108 CI 策略](../roadmap/mvp-freeze-release-v108.md) 为保留的阶段性记录，不优先于此页。

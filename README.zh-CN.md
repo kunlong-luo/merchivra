@@ -1,201 +1,66 @@
 # Merchivra ERP（麦奇维拉）
 
-> **2026-11-13 历史已验收代码 main V150：** [完整 A3 #43361557152](https://github.com/kunlong-luo/merchivra/actions/runs/43361557152) 基于精确提交 `2e96bf421d1b8e0c2a2999ab63a236d80ea3a9d9` **第 1 次尝试 7/7 SUCCESS**；[PR #118](https://github.com/kunlong-luo/merchivra/pull/118) 在合成本地 HTTPS Next→Vite→Next 切流前增加独立匿名 401、CSRF 和 Secure/HttpOnly/SameSite 会话就绪验证，只对连接错误/502–504 进行有限重试。此前 V148 首轮偶发 TLS AssertionError 的根因未确证，[#115](https://github.com/kunlong-luo/merchivra/issues/115) 仍追踪。[现行计划](docs/roadmap/mvp-freeze-release-v108.md) 和 [RTM-002 逐条需求追踪](docs/requirements/implementation-acceptance-rtm-v148.md) 区分代码/隔离 PG18 技术验证与真实数据、人工签署；采购/仓储 [#62](https://github.com/kunlong-luo/merchivra/issues/62) 和 FBA 来源 [#108](https://github.com/kunlong-luo/merchivra/issues/108) 仅按技术范围已关闭。**Next 目标环境切流 [#63](https://github.com/kunlong-luo/merchivra/issues/63)、生产 G1/G2/G3 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 和用户本地真实 Seller/Ads 只读授权仍未批准**；不得把 GitHub Pages 的虚构只读演示称为真实 ERP，真实 Amazon 远程写入继续关闭。
+**面向 Amazon Seller 的开源、自托管 ERP，以可追溯的全成本与利润核算为核心目标。**
 
-> **2026-11-21：Next.js 16 已成为本地默认 Web 运行时。** `cd apps/web && pnpm install --frozen-lockfile && pnpm run dev` 启动 Next App Router（`127.0.0.1:3000`，需 Spring Boot `8080`）；`pnpm run build` 也构建 Next。默认 `deploy/compose.yaml` 和 `deploy/compose.spark-db.yaml` 的 `web` 为 Next Node，不再是 Vite/Nginx。Vite 仅通过 `pnpm run dev:vite` 或 Compose `--profile vite-fallback` 显式启动，回退端口默认 3002；GitHub Pages 继续构建纯静态模拟页面。此变更只面向本地，**生产 #104 仍 NO-GO，真实 Amazon OAuth 仍关闭**。
+> **当前版本基线：2026-11-21 / V191。** 项目仍为 **pre-alpha**，只供本地/隔离环境开发测试。Java 25 / Spring Boot 4.1.2 / Gradle / PostgreSQL 18、React 19 / **Next.js 16.4.5** / Node 24、**pnpm 12.20.0（唯一前端包管理器）**。默认 Web 已是 Next.js；Vite 只用于受控回退与 GitHub Pages 虚构静态展示。
+>
+> **技术验收 ≠ 生产批准。** [V191 主线完整 A3](https://github.com/kunlong-luo/merchivra/actions/runs/44882890834) 在精确 [代码 SHA `8dab971`](https://github.com/kunlong-luo/merchivra/commit/8dab97147010fdc440ee81abcfa67cd1d1d57261) **7/7 SUCCESS**（PG18、Next/Vite Chromium、Compose、Session/CSRF 等合成范围）。真实 Seller/Ads OAuth、真实平台与银行核验均未授权；[生产门禁 #104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
 
-> **GitHub Pages 公开只读演示：** [查看虚构数据的静态 React 界面](https://kunlong-luo.github.io/merchivra/)（需要仓库先启用 GitHub Pages）。**它不是可登录的 ERP 服务**：没有数据库、真实 Amazon 授权或采购/财务写入。[部署与首次启用说明](docs/deployment/github-pages-public-demo-v98.md)。
+[English](README.md) · [当前状态](docs/current-status.md) · [现行开发计划](docs/roadmap/current-plan.md) · [文档中心](docs/README.md) · [部署指南](docs/deployment/local-spark-db.md) · [开发指南](docs/development.md) · [安全说明](SECURITY.md)
 
-**开源、自托管的 Amazon Seller ERP。** 采用 Java 25 / Spring Boot 4.1、React 19 / TypeScript、PostgreSQL 18，优先把核心业务代码、模拟工作流与本地部署打通；真实 Amazon 授权留给使用者在功能开发完成后本地进行。
+## 当前真正能做什么
 
-[English](README.md) · [完整部署与卸载指南](docs/deployment/local-spark-db.md) · [架构设计](docs/architecture/overview.md) · [文档总入口](docs/README.md) · [当前 MVP 计划](docs/roadmap/mvp-freeze-release-v108.md) · [历史路线图](docs/roadmap.md) · [贡献指南](CONTRIBUTING.md) · [安全说明](SECURITY.md)
+已实现本地店铺/租户、SKU/订单、采购/FBA、库存批次/异常、会话及审计等业务链路，提供 Next.js 多工作台、Spring API、PostgreSQL 持久化与模拟接口。财务已实现 V64 冻结的**已知范围贡献**和 V91–V102、V162–V188 的人工成本存证、分摊守恒、结算身份、整期阻断、唯一归属与原币瀑布**只读预览**。
 
-> **当前为 pre-alpha，不适合直接对公网开放。** React 前端可构建、可登录并操作已经实现的本地业务模块；真实 Amazon OAuth/SP-API、外部供应商/承运商及生产安全尚未全链路验收。不要把 Mock 演示数据当成真实店铺交易数据。
+**尚未实现可信的全成本净利润结论**：独立外部 Amazon/Ads/银行真实性核验、退货 COGS 回转、跨币种 FX/税费政策、外仓实体签收/库存入账和财务 G1/DEC-06/07/08 审批仍不完整。人工 `APPROVED_UNVERIFIED` 不是已证实成本，`realizedNetProfit=null` 不能伪装为零或已确认利润。见 [事实基线](docs/current-status.md) 和 [V188 利润瀑布](docs/finance/v188-period-profit-cost-waterfall-preview.md)。
 
-## 一、Merchivra 需要几个服务？
+## 一、本地启动（内置 PostgreSQL 18）
 
-默认运行 **三个服务**：
-
-| 服务 | 技术 | 职责 | 地址 |
-| --- | --- | --- | --- |
-| `web` 前端 | React 19 + Next.js 16 独立 Node | 工作台、Spring `/api` 同源代理 | http://127.0.0.1:3000 |
-| `server` 后端 | Java 25 + Spring Boot 4.1.2 | Session/CSRF、业务 API、Flyway | http://127.0.0.1:8080 |
-| 数据库 | PostgreSQL **18** | 商品、采购、库存、订单、财务来源、审计和凭据原件 | 内置 `postgres` 或你的 `spark-postgres` |
-
-**Redis 8 已接入（默认关闭）。** 可用于共享 Spring Security Session/CSRF 和跨实例 Amazon SP-API 原子限流；单实例开发仍可不启动 Redis。复用 `spark-db` 时使用已有的 `spark-redis`，不会增加 Merchivra 容器、修改 `iot_farm` 或删除其他项目的 Key。你的 Redis 当前 `allkeys-lru` 不适合直接承担生产级 Session/限流，需要独立实例或评审无淘汰策略。详见 [Redis 8 部署与安全指南](docs/deployment/redis-session-spapi-v53.md)。
-
-<details>
-<summary>当前主要技术选型</summary>
-
-- 后端：Java 25、Spring Boot 4.1.2、Spring Security 7、Gradle 9.2.1、Flyway、官方 Amazon SP-API Java SDK（真实出站默认关闭）。
-- 前端：React 19、Next.js 16 App Router、TypeScript 6、Node.js 24、TanStack React Query、Zod、Vitest；Vite 8 仅用于回退和静态模拟演示。**已经完全弃用 Vue。**
-- 数据：PostgreSQL 18，支持自建独立数据库；Docker Compose 可选择内置 PostgreSQL 或复用现有 PG18 服务。
-- 架构：模块化单体，业务数据有来源标记，关键仓储写入使用事务、证据、审计与操作人复核。
-
-</details>
-
-## 二、快速启动方案 A：自带数据库（全部三个容器）
-
-要求 Docker + Compose v2，无须预先安装 Java、Node 或 PostgreSQL：
+需要 Docker Engine 与 Compose v2。从仓库根目录：
 
 ```bash
 git clone https://github.com/kunlong-luo/merchivra.git
 cd merchivra
 cp .env.example .env
-# 编辑 .env：设置强随机 MERCHIVRA_DB_PASSWORD
-# 设置 MERCHIVRA_BOOTSTRAP_USERNAME 与至少 16 位的 MERCHIVRA_BOOTSTRAP_PASSWORD
-
+# 在 .env 填写 MERCHIVRA_DB_PASSWORD
+# 并设置 MERCHIVRA_BOOTSTRAP_USERNAME 与至少 16 位的强密码
 docker compose --env-file .env -f deploy/compose.yaml config -q
 docker compose --env-file .env -f deploy/compose.yaml up -d --build
-docker compose --env-file .env -f deploy/compose.yaml ps
 ```
 
-打开 **http://127.0.0.1:3000** 登录。默认仅启动 `postgres` + `server` + `web`；`MERCHIVRA_DEMO_ENABLED=true` 仅在此内置本地 Compose 中启用虚构演示。后端首次启动自动运行 Flyway，数据库卷持久化。
+默认三项服务为 `postgres`、`server`、`web`（Next.js Node），浏览器访问 **http://127.0.0.1:3000**，API 健康检查 **http://127.0.0.1:8080/api/v1/ping**。所有宿主端口仅绑定回环地址；本地服务不是公网生产部署。
 
-如需在本地验证**可选 Redis 8**：`docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache up -d`。
-
-## 三、快速启动方案 B：复用你已有的 spark-db（推荐）
-
-你的现有数据库服务是：
-
-- 容器：**`spark-postgres`**；数据库引擎：**PostgreSQL 18**（PostGIS 3.6）。
-- 外部 Docker 网络：**`spark-iot-net`**；容器间使用 **`spark-postgres:5432`**。
-- 当前系统数据库：`iot_farm`。**Merchivra 只创建和使用单独的 `merchivra` 数据库，不修改 `iot_farm`。**
-
-**步骤 1：** 启动已有的 spark-db 并确认网络可用：
+已有单独管理的 spark-db PostgreSQL 18，可选**只启动** Merchivra `server + web`，不触碰现有 `iot_farm` 数据库或数据卷。必须先按 [现有库的独立角色/数据库初始化步骤](docs/deployment/local-spark-db.md) 处理，然后运行：
 
 ```bash
-# 在 spark-db 原有工作目录
-docker compose up -d postgres
-# 可在任意目录检查
-docker network inspect spark-iot-net
-docker exec spark-postgres psql -U root -d postgres -Atc 'SHOW server_version;'
-```
-
-**步骤 2：** 只在新的、尚不存在 `merchivra` 角色及数据库的受控 PostgreSQL 18 集群上，手工执行**一次性纯 SQL 初始化**。已存在其中任一对象时停止并人工检查，不允许重跑覆盖：
-
-```bash
-# 在仓库根目录执行。先确认 PostgreSQL 管理员连接的是正确的 postgres 维护库：
-docker exec spark-postgres psql -X -U root -d postgres \
-  -c "SELECT current_database(),current_user,current_setting('server_version');"
-docker exec spark-postgres psql -X -U root -d postgres \
-  -c "SELECT rolname,rolcanlogin FROM pg_roles WHERE rolname='merchivra';"
-docker exec spark-postgres psql -X -U root -d postgres \
-  -c "SELECT datname FROM pg_database WHERE datname='merchivra';"
-
-# 只有角色与库都不存在，才由授权管理员显式手动执行；不得添加 -1
-docker exec -i spark-postgres psql -X -v ON_ERROR_STOP=1 \
-  -U root -d postgres < apps/server/scripts/provision-merchivra-database.sql
-```
-
-脚本先创建 `merchivra NOLOGIN`，再创建独立数据库并撤销数据库级 PUBLIC 权限；**不设置密码、不启用 LOGIN、不碰 `iot_farm`，也不会被 Flyway、CI、Docker 或应用自动执行**。
-
-然后管理员单独通过安全 GUI 设置专用 SCRAM 密码；或在互动 `psql` 中检查 `SHOW password_encryption;` 后执行 `\password merchivra`。**`\password` 只能在 psql 交互提示符中执行，不是 SQL 编辑器语句。** 密码已设置后，再单独运行 `ALTER ROLE merchivra LOGIN;`。从宿主机通过 `psql -W` 测试 TCP 连接后，再配置 `.env` 或 IntelliJ。详见 [安全初始化与重试说明](docs/deployment/local-spark-db.md#b2-只在-spark-postgres-内初始化-merchivra-专用角色与数据库一次性)。
-
-> 如果角色或数据库已存在，跳过初始化、先核对现状；密码不得写入 Git、SQL 文件或命令行。**Compose 内置数据库模式不需要也不得运行此脚本。**
-
-**步骤 3：** 在 Merchivra 仓库根目录准备环境并只启动前端、后端：
-
-```bash
-cp .env.example .env
-# 将以下参数写入 .env：
-# MERCHIVRA_DB_NAME=merchivra
-# MERCHIVRA_DB_USER=merchivra
-# MERCHIVRA_DB_PASSWORD=<步骤 2 中单独设置的密码>
-# MERCHIVRA_BOOTSTRAP_USERNAME=<你设置的管理员用户名>
-# MERCHIVRA_BOOTSTRAP_PASSWORD=<至少 16 位的强密码>
-# MERCHIVRA_DEMO_ENABLED=false
-
 docker compose --env-file .env -f deploy/compose.spark-db.yaml config -q
 docker compose --env-file .env -f deploy/compose.spark-db.yaml up -d --build
-docker compose --env-file .env -f deploy/compose.spark-db.yaml ps
 ```
 
-**这一方案只新增两个 Merchivra 容器：`server` 和 `web`。第三层数据库复用 `spark-postgres`。** 不启动新 PostgreSQL，不占用你已有的 5432 端口，不修改其他 spark-db 数据卷；`spark-redis`、InfluxDB 等保持由原项目管理。可选择把 Redis 8 接入共享 Session 与 API 限流（详见[启用指南](docs/deployment/redis-session-spapi-v53.md)），不需要新 Redis 容器。
+不要同时叠加两种基础 Compose 文件，也不要执行 `docker compose down -v` 误删数据。
 
-默认前端仍为 http://127.0.0.1:3000，API 为 http://127.0.0.1:8080。若端口冲突，可在 `.env` 设置 `MERCHIVRA_WEB_PORT` / `MERCHIVRA_API_PORT`。
+## 二、源码开发：只用 pnpm
 
-[查看完整 spark-db 适配说明、备份、故障排查与网络示意](docs/deployment/local-spark-db.md)。
-
-## 四、源码本地开发（React 热更新 + Spring Boot）
-
-前提：**Java 25、Gradle 9.2.1（项目内 Gradle Wrapper）、Node.js 24.11+** 和运行中的 PostgreSQL 18。可复用上述 `spark-postgres`，它已经将 PG 端口映射到本机 `127.0.0.1:5432`。
-
-终端 1：
-
-```bash
-export DB_HOST=127.0.0.1 DB_PORT=5432 DB_NAME=merchivra DB_USER=merchivra
-export DB_PASSWORD='your-dedicated-merchivra-password'
-export MERCHIVRA_BOOTSTRAP_USERNAME=your_admin
-export MERCHIVRA_BOOTSTRAP_PASSWORD='your-unique-16-plus-character-password'
-(cd apps/server && ./gradlew bootRun)
-```
-
-终端 2：
+需要 Java 25、Node 24、pnpm **12.20.0**、可访问的 PostgreSQL 18 与本地 Spring API。先让后端在 **8080** 运行，再启动 Next：
 
 ```bash
 cd apps/web
+corepack enable
 pnpm install --frozen-lockfile
-pnpm run dev
+pnpm dev
 ```
 
-`pnpm run dev` 现在启动 Next.js 16，开发页面为 http://127.0.0.1:3000，`/api` 通过 Next rewrites 转发到 `127.0.0.1:8080`。只有执行 `pnpm run dev:vite` 才使用 Vite 的 5173 端口。**注意**：本机运行 Java 连接 `127.0.0.1:5432`，Docker 内运行 Java 连接 `spark-postgres:5432`。
+- **`pnpm dev` / `pnpm build`**：默认 Next.js 16，开发端口 3000。
+- **`pnpm api:check`、`pnpm typecheck`、`pnpm test`**：合同生成校验、类型检查和单测。
+- **`pnpm dev:vite` / `pnpm build:vite`**：仅在明确回退或测试静态展示时使用；普通本地 Compose 不会自动启动 `vite-web`。
+- 唯一前端锁文件为 `apps/web/pnpm-lock.yaml`，不得恢复第二份依赖锁。
 
-## 五、部署、升级、停止和卸载
+完整环境变量、spark-db 低权限初始化、Redis 可选配置、备份与卸载见 [部署指南](docs/deployment/local-spark-db.md)，OpenAPI/Orval 协议约束见 [API 文档](docs/api/README.md)。
 
-两种 Compose 模式**不要组合使用**：`deploy/compose.yaml` 是自带数据库的三容器部署；`deploy/compose.spark-db.yaml` 是复用数据库的两容器部署。现有 `deploy/compose.production.yaml` 只提供生产环境变量覆盖层，不配置 TLS 或安全合规，不能直接当成公网部署方案。
+## 三、质量门禁与开发方向
 
-### 自带数据库方案 A
+日常修改直接提交 **`main`**，不为常规开发创建分支/PR；每次推送跑快速 CI。资金、库存、权限、Flyway 等高风险变更仍需专项测试，必要时重新运行精确 SHA 的完整 PG18/HTTP/Chromium/Compose A3。详见 [CI 策略](docs/testing/ci-policy.md)。最新优先级是独立费用真实性、全成本/退款 COGS、**真实可审计利润报表**和外仓可信证据；参见 [现行计划](docs/roadmap/current-plan.md)。
 
-```bash
-# 停止，保留数据
-docker compose --env-file .env -f deploy/compose.yaml stop
-# 更新/重建，保留数据库卷
-docker compose --env-file .env -f deploy/compose.yaml up -d --build
-# 卸载容器与项目网络，保留数据库数据
-docker compose --env-file .env -f deploy/compose.yaml down --remove-orphans
-```
+[公开 GitHub Pages](https://kunlong-luo.github.io/merchivra/) **只有虚构的静态演示**：无真实登录、数据库、Seller OAuth、银行或业务写入，不能作为线上 ERP。
 
-只有确认数据不要了且**已有可恢复备份**时，才考虑 `docker compose --env-file .env -f deploy/compose.yaml down -v`；该命令会永久删除本项目的内置 PostgreSQL 数据卷。
-
-### 复用 spark-db 方案 B
-
-```bash
-# 停止前后端，保留 spark-db 所有服务与数据
-docker compose --env-file .env -f deploy/compose.spark-db.yaml stop
-# 卸载 Merchivra 两个容器，完全保留 spark-postgres 和 merchivra 数据库
-docker compose --env-file .env -f deploy/compose.spark-db.yaml down --remove-orphans
-```
-
-**绝不要通过 `spark-db` 执行 `down -v` 来卸载 Merchivra。** 如果以后明确需要彻底删除 `merchivra` 数据，先备份，再由数据库管理员仅删除 **`merchivra` 数据库及不再使用的专用角色**；不要删除 `iot_farm`、`postgres-data` 或 `spark-iot-net`。手工备份和删除 SQL 已写在[完整指南](docs/deployment/local-spark-db.md)。
-
-## 六、前端做好了吗？目前能用什么？
-
-**前端已经做出来并通过构建，不是空项目。** 当前 React 工作台包括：
-
-- 会话登录与管理员初始化、核心商品/Listing/订单/FBA 数据、卖家授权入口、模拟同步。
-- 运营自动化、团队与只读员工权限、采购单/供应商/到货/QC、仓库与批次位置管理。
-- V49–V52 盘点、跨仓收货差异处理、隔离品处置、真实 PDF/PNG/JPEG 凭据上传与 SHA-256 校验、原供应商退货的本地人工核对。
-- 财务来源事件、分类与核对工作台；仍明确区分实际外部数据和手工/模拟来源。
-
-**但尚不能称“全部前端功能和业务 API 都通过真实店铺验收”。** 真实 Amazon Seller OAuth、实时 Orders/FBA/Finances 账号联调、承运商与供应商外部回执、生产权限/文件安全和可靠性需要进一步测试。目前所有真实 Amazon 出站默认关闭，Mock 仅适合本地。
-
-[V108 集中隔离验收 #42448160593](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593) 已在对应提交上通过 Java/Next/Vite、PostgreSQL 18/Flyway、Mock Compose 和浏览器检查。普通 PR 现只跑快速 CI。上述结果**不代表**验证过你的本地 spark-db、真实 Amazon Seller/Ads 授权或生产安全。请从[当前文档中心](docs/README.md)区分实施记录、历史设计和真正发布门槛。
-
-## 七、常用诊断
-
-```bash
-curl -f http://127.0.0.1:8080/api/v1/ping
-curl -f http://127.0.0.1:8080/actuator/health
-
-(cd apps/server && ./gradlew test)
-cd apps/web && pnpm install --frozen-lockfile && pnpm run typecheck && pnpm run test && pnpm run build
-```
-
-遇到启动失败，先看容器日志，并确认 `spark-postgres`、`spark-iot-net`、独立数据库角色和密码；**不要删除数据卷解决连接错误**。
-
-[API 设计](docs/api/README.md) · [开发指南](docs/development.md) · [完整部署、备份、卸载指南](docs/deployment/local-spark-db.md) · [V52 原件与供应商回执安全边界](docs/purchasing/lot-proof-files-supplier-trace-v52.md)
-
-## 许可证
-
-[Apache License 2.0](LICENSE)。欢迎贡献；不要提交真实 Amazon 凭据、`.env`、卖家订单数据或敏感客户信息。
+**License**：见 [LICENSE](LICENSE)。

@@ -1,68 +1,47 @@
-# ARCH-001 · 系统总体架构（C4 思路）
+# ARCH-001 · Merchivra 当前系统架构
 
-**状态：Proposed**｜架构风格：模块化单体 + 异步任务 Worker（逻辑分离、初期可同一进程/部署）
+> **代码事实基线：2026-11-21 / V191。** 已实现的是以 Spring Boot 为中心的**模块化单体**、PostgreSQL 18 和 Next.js 16 本地 App Router；跨进程 Worker、对象存储或真实 Amazon 接入不应因概念图而被宣称已在生产运行。外部 G1/G2/G3 仍未签署，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) NO-GO。参见 [当前状态](../current-status.md) 和 [现行 P0](../roadmap/current-plan.md)。
 
-> **现行里程碑（V108 / 2026-11-08）**：见 [MVP 冻结与集中验收计划](../roadmap/mvp-freeze-release-v108.md)。本文 C4 图是架构概念图而非生产部署证明；正式 Next 切换、真实 Amazon/Ads 与 G1/G2/G3 仍待验收。
-
-## 1. 系统上下文（C4 / L1）
+## 1. 系统边界
 
 ```mermaid
 flowchart LR
-User["卖家 / 运营 / 财务"] --> ERP["Merchivra ERP"]
-Maint["开源贡献者"] --> ERP
-ERP --> Amazon["Amazon SP-API"]
-ERP -.未来独立集成.-> Ads["Amazon Ads API"]
-ERP --> Email["可选邮件/告警服务"]
-ERP --> Store["自有对象存储"]
+  Browser["本地浏览器 / 财务与运营"] --> Web["Next.js 16 · React 19 / Node 24"]
+  Web -->|"同源 /api rewrite"| API["Spring Boot 4.1.2 · Java 25"]
+  API --> PG[("PostgreSQL 18 · Flyway")]
+  API -. "显式启用的 Session / 速率限制" .-> Redis[("Redis 8 可选")]
+  API --> Core["订单 / SKU / 采购 / FBA / 异常 / 财务"]
+  Core --> PG
+  API -. "Gateway 代码已有，真实授权关闭" .-> Amazon["Amazon Seller / Ads 外部系统"]
+  Browser -. "仅人工切换与合成测试" .-> Vite["Vite/Nginx fallback"]
 ```
 
-范围：卖家拥有 Merchivra 的运行环境；Amazon 是第三方数据系统；Ads API 不是 SP-API 自动授权能力。
+默认 `deploy/compose.yaml` 有 `postgres + server + web` 三个容器；复用 spark-db 的 `compose.spark-db.yaml` 只启动 `server + web`，独立数据库角色/库由操作员事先手动建好。二者默认 `web` **都是 Next.js Node**，端口绑定 `127.0.0.1:3000`；后端 API 为本地 8080。Vite/Nginx 通过 opt-in `vite-web` profile（3002）或 `pnpm dev:vite`（5173）保留受控回退。公开 Pages 静态虚构展示与认证业务是两条不同链路。
 
-## 2. 容器图（C4 / L2）
+## 2. 技术选型（按代码而非历史候选图）
 
-```mermaid
-flowchart TB
-Browser["浏览器"] --> Web["Web / React 19 + TypeScript（Next.js 16 候选 / Vite 回退）"]
-Web --> API["API / Spring Boot 4.1"]
-API --> Identity["授权/租户上下文"]
-API --> Domain["领域模块"]
-Scheduler["定时触发"] --> Worker["同步 Worker"]
-Worker --> Domain
-Worker --> Adapter["Marketplace Gateway + Amazon Adapter"]
-Adapter --> SPAPI["Amazon SP-API"]
-Domain --> PG[("PostgreSQL")]
-Domain --> Redis[("Redis 8（可选 Session / 限流）")]
-Domain --> Files[("S3-compatible 对象存储（按需）")]
-Worker --> PG
-```
+| 范围 | 已采用 |
+| --- | --- |
+| JVM/服务 | Java 25、Gradle Wrapper、Spring Boot 4.1.2、Spring Security Session/CSRF、Springdoc/OpenAPI |
+| 数据 | PostgreSQL 18、Flyway 只前进迁移、租户/Marketplace 约束、不变审计；Redis 8 可选 |
+| Web | Next.js 16.4.5 App Router、React 19、TypeScript 6、Node 24、**pnpm 12.20.0** |
+| 表格/客户端 | TanStack Query/Table、Orval、Zod、Base UI；原币和 UNKNOWN/Mock 状态不混淆 |
+| 部署/验收 | 本地 Docker Compose、Next Node standalone、PG18/HTTP/Chromium/A3；无自动公网发布 |
+| 不再采用 | Vue、Maven、PostgreSQL 17、以 Vite 为默认 ERP 的方案 |
 
-将同步 Worker 视为单独的逻辑运行单元；MVP 可与 API 共享同一 Spring Boot 工程与数据库，不预设 Kubernetes 或 RabbitMQ。
+`apps/web/pnpm-lock.yaml` 是唯一 JS 锁文件；GitHub Actions 使用 pnpm 冻结安装。Amazon SP-API SDK/Mock Gateway 代码存在**不代表**真实卖家已授权，Ads 与 Seller 各自有独立权限边界。
 
-## 3. 约束与边界
+## 3. 领域与安全不变量
 
-- **当前工程实际技术基线（V108）**：Java 25 LTS、Spring Boot 4.1.2（Spring Security 7 / Jackson 3）、**Gradle Wrapper 9.2.1（Maven 已淘汰）**、**PostgreSQL 18**、Flyway、React 19 / TypeScript 6 / Node 24、Vite 8 回退构建及 Next.js 16.4.5 App Router 正式切换候选、TanStack Query/Table、Orval、Zod、Base UI、Docker Compose。**已完全弃用 Vue。** Redis 8 可选且默认关闭。Next.js 当前仍是待完成生产迁移的候选，不把 Preview 当生产切换完成。架构业务选择仍待 G1/G2 正式确认。
-- 领域模型不可直接依赖 Amazon HTTP DTO，必须经过适配器标准化。
-- Controller 只做协议与输入验证；应用服务编排；领域处理规则；存储层落实租户与事务约束。
-- 命令/查询分离是代码组织原则而非必须实现 CQRS 基建。
-- 交易事实与同步 Checkpoint 必须有持久化策略；短期缓存不可作为唯一真相来源。
-- 不接受明文生产凭证或客户敏感数据写入仓库/CI。
+- **租户/Marketplace**：服务器端 Session/CSRF、Owner/工作人员权限及数据库作用域为准，不能依赖隐藏前端按钮。
+- **财务**：按源报告/结算行保存原始身份、SHA-256、原币六位精度；V91/V92/V94/V95/V102 的独立复核和重复来源 hold 不可被同金额/同摘要绕过。
+- **利润**：V64 已知范围贡献 ≠ V162 全成本；V185–V188 原币敏感度与整期阻断不自动生成已核验净利润或 GL 入账。
+- **库存/WMS**：内部签名、密钥挑战和三人 QC 不能自行认证外部运营商身份或物理实收；G1 未批准不得改库存/COGS。
+- **同步**：同步游标、幂等、审计和租约由持久化数据守护；缓存不可作为唯一事实；当前真实 Amazon API 入口默认保持关闭。
+- **代理**：Next `/api/:path*` 转发到私有 Spring，`/actuator/health` 不经公网 Next rewrite；Next 健康检查同时核实 Spring Ping 身份与内部 PG18 Actuator 状态。
 
-## 3.1 领域事实、状态与同步契约
+## 4. 设计与实现参考
 
-订单、退款与财务状态正交，见 [DOM-001](domain-state-model.md)；平台来源与投影对账见 [DATA-002](source-reconciliation.md)；一次任务的运行不能取代持久同步流，见 [SYNC-002](sync-stream-contract.md)。首次管理员与租户边界见 [IAM-001](tenant-bootstrap.md)。
+[领域状态](domain-state-model.md) · [实体关系](data-model.md) · [数据来源对账](source-reconciliation.md) · [一致性与事务](consistency-boundaries.md) · [模块划分](modules.md) · [API 契约](../api/README.md) · [G1/G2 业务/架构准入](../governance/decision-register.md) · [V188 原币利润预览](../finance/v188-period-profit-cost-waterfall-preview.md)。
 
-## 3.2 G2 约束级架构候选
-
-概念模型与实际数据库约束之间的差距详见 [DATA-003](physical-data-design.md)。事务、重试与租约 fencing 详见 [ARCH-003](consistency-boundaries.md)。服务器端账户/租户授权执行见 [SEC-002](../security/tenant-enforcement.md)；完整可机读接口初稿见 [API-002](../api/README.md)。这些文件为候选方案，业务和技术签署后才可作为正式实现契约。
-
-## 4. API 边界
-
-前端 API 默认 `/api/v1`（规划约定）；UI 不直接调用 Amazon；后台任务不得绕过授权和租户过滤。具体资源/错误契约见 [模块边界](modules.md)。
-
-## 5. 关键架构决策
-
-- [ADR-0001 模块化单体](adrs/0001-modular-monolith.md)
-- [ADR-0002 多租户模型](adrs/0002-tenancy.md)
-- [ADR-0003 事件与财务账本](adrs/0003-finance-ledger.md)
-
-详细数据关系见 [ER 图](data-model.md)，同步机制见 [同步引擎](sync-engine.md)，网络部署见 [部署图](deployment.md)。
+上游 ADR 与 G1/G2 的早期提案可作为设计来源，但只有在当前代码与正式独立签署一致时才成为发布条件，不以合成 CI 自动替代签署。
