@@ -34,16 +34,16 @@ c = "00000000-0000-4000-8000-000000000196"
 for value in ("'USD'", f"'{tenant}'::uuid", f"'{job}'::uuid"):
     query = query.replace("?", value, 1)
 
-# PG18 LIKE copies actual V62 CHECK and NOT NULL constraints, but deliberately
+# PG18 LIKE copies actual V62 CHECK, NOT NULL and DEFAULT constraints, but deliberately
 # NOT production FK links. pg_temp-first shadowing executes the exact Java SQL.
 setup = f"""
 BEGIN;
 SET LOCAL search_path = pg_temp, public;
 SET LOCAL client_min_messages = WARNING;
 CREATE TEMP TABLE finance_profit_report_order
-  (LIKE public.finance_profit_report_order INCLUDING CONSTRAINTS);
+  (LIKE public.finance_profit_report_order INCLUDING DEFAULTS INCLUDING CONSTRAINTS);
 CREATE TEMP TABLE finance_profit_report_sku
-  (LIKE public.finance_profit_report_sku INCLUDING CONSTRAINTS);
+  (LIKE public.finance_profit_report_sku INCLUDING DEFAULTS INCLUDING CONSTRAINTS);
 INSERT INTO finance_profit_report_order
   (tenant_id,job_id,order_id,cohort_position,state,readiness,
    currency_code,signed_sales,signed_amazon_fees,signed_fba_fees,
