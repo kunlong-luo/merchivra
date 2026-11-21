@@ -1,8 +1,8 @@
 # Merchivra ERP
 
-> **V108 active release plan (Nov 8, 2026):** finish remaining P0 workflows, freeze MVP, run one-click consolidated PostgreSQL/Chromium/Compose regression, then maintainer-local real Seller/Ads read-only integration before Beta/security release approval. Ordinary PRs run fast checks; high-risk authorization, money and stock mutations retain focused immediate tests. See [V108 plan](docs/roadmap/mvp-freeze-release-v108.md) and [current CI policy](docs/testing/ci-policy.md). Public Pages remains synthetic-only; the ERP is not approved for production.
+> **2026-11-21 Next.js-first local runtime:** The default `npm run dev` and `npm run build` now use Next.js 16; both bundled PostgreSQL and external spark-db Compose launch the standalone Node `web` on loopback port 3000. Vite/Nginx is an explicit rollback (`npm run dev:vite`, `npm run build:vite` or `--profile vite-fallback` on port 3002), and GitHub Pages remains a synthetic-only static showcase. Daily changes go directly to `main` with CI; full PG18/Chromium acceptance remains mandatory when risk requires it. Real Seller/Ads access remains OFF and production #104 NO-GO.
 
-> **Next.js 16 preview (V99):** A real App Router bridge is being validated against the existing authenticated ERP modules without replacing the current Vite/Nginx production deployment. In `apps/web`, use `npm ci`, `npm run build:next`, and `npm run dev:next` (port 3001; requires the Spring Boot backend running on 8080). [Migration gates](docs/architecture/next16-ab-migration-v99.md). GitHub Pages remains a separate synthetic-only static site.
+> **Next.js 16 App Router:** For host development, run Spring Boot on `127.0.0.1:8080`, then `cd apps/web && npm ci && npm run dev`; visit `http://127.0.0.1:3000`. The historical secondary Next canary is `npm run dev:next` on 3001. For the default Compose runtime use `docker compose --env-file .env -f deploy/compose.yaml up -d --build`; `web` is Next, not Vite. A local runtime change does **not** constitute production TLS or financial approval.
 
 > **Public static GitHub Pages showcase:** [view read-only synthetic UI](https://kunlong-luo.github.io/merchivra/) (available only once Pages is enabled). This is **not** a hosted ERP: no login, database, Amazon OAuth, bank integration or writes. [Deployment and activation guide](docs/deployment/github-pages-public-demo-v98.md).
 
@@ -18,7 +18,7 @@ The **default deployment uses exactly three services**:
 
 | Service | Runtime | Purpose | Local endpoint |
 | --- | --- | --- | --- |
-| `web` | React 19, Vite-built SPA served by Nginx | ERP UI and same-origin `/api` reverse proxy | http://127.0.0.1:3000 |
+| `web` | React 19 / Next.js 16 standalone Node | Authenticated ERP UI, same-origin `/api` rewrite to Spring | http://127.0.0.1:3000 |
 | `server` | Java 25, Spring Boot 4.1.2 | Session/CSRF, ERP APIs, Flyway migrations | http://127.0.0.1:8080 |
 | `postgres` **or existing `spark-postgres`** | PostgreSQL **18** | All business data, audit trails, uploaded evidence | Internal DB or existing PostgreSQL host |
 
@@ -107,7 +107,7 @@ npm ci
 npm run dev
 ```
 
-Vite usually serves http://127.0.0.1:5173 and proxies `/api` to the backend at `127.0.0.1:8080`. For a locally executed backend the DB host is **127.0.0.1**; for a containerized backend sharing the Docker network it is **spark-postgres**.
+Next.js 16 now serves http://127.0.0.1:3000 from `npm run dev` and rewrites `/api` to Spring at `127.0.0.1:8080`. For the optional Vite fallback only, use `npm run dev:vite` (port 5173). For a locally executed backend the DB host is **127.0.0.1**; for a containerized backend sharing the Docker network it is **spark-postgres**.
 
 ## Deploy, upgrade, stop, uninstall
 
