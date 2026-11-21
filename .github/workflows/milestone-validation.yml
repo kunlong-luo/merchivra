@@ -1,3 +1,6 @@
+# V181B: exact-merged-main SHA automatic full A3 for V102 derived-on-read
+# canonical identity SHA-256; never Amazon signature / real fee verification.
+# Keep Seller/Ads OAuth OFF and production #104 NO-GO.
 # Next16 multi-workspace polish: pagination-aware counts, no invented stock or profit,
 # browser scoped order/FBA views and purchasing flow links; production remains NO-GO.
 # Next16 visual elevation: keep Vite controlled fallback, prove source-aware
@@ -148,7 +151,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V181-A3-immutable-settlement-report-line-identity' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V181B-A3-derived-settlement-line-fingerprint' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main

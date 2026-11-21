@@ -37,8 +37,23 @@ public class CostSettlementLineEvidenceService {
         String transactionType,String amountType,String amountDescription,
         String externalOrderId,String lineSignedAmount,String currency,
         String recordedBy,String capturedAt,
+        // SHA-256 is reproducibly DERIVED from immutable V102 metadata on read,
+        // not stored as a capture-time signature or third-party attestation.
+        String fingerprintVersion,String fingerprintSha256,String fingerprintOrigin,
         boolean externalChargeVerified,boolean duplicateDebitVerified,
-        boolean bankVerified,boolean netProfitEligible) {}
+        boolean bankVerified,boolean netProfitEligible) {
+        CompositeIdentity withReadTimeFingerprint(UUID tenant,UUID marketplace,
+            UUID source) {
+            return new CompositeIdentity(linkId,captureStatus,reportId,lineNumber,
+                amazonReportId,reportDocumentId,reportDocumentSha256,
+                transactionType,amountType,amountDescription,externalOrderId,
+                lineSignedAmount,currency,recordedBy,capturedAt,
+                SettlementIdentityFingerprintV181.VERSION,
+                SettlementIdentityFingerprintV181.digest(tenant,marketplace,source,this),
+                "DERIVED_ON_READ_FROM_FROZEN_V102",
+                false,false,false,false);
+        }
+    }
     private record Source(UUID maker,String key,BigDecimal amount,String currency) {}
     private record Line(String externalOrderId,BigDecimal signedAmount,String currency,
         String amazonReportId,String reportDocumentId,String reportSha256,
@@ -194,13 +209,15 @@ public class CostSettlementLineEvidenceService {
                 r.getString(9),r.getBigDecimal(10).toPlainString(),
                 r.getString(11).trim(),r.getObject(12,UUID.class).toString(),
                 r.getObject(13,OffsetDateTime.class).toInstant().toString(),
-                false,false,false,false),
+                null,null,null,false,false,false,false)
+                .withReadTimeFingerprint(tenant,marketplace,sourceId),
             tenant,marketplace,sourceId,linkId);
         if(snapshots.isEmpty())
             return new CompositeIdentity(linkId.toString(),
                 "CAPTURE_NOT_AVAILABLE",link.report().toString(),
                 link.lineNumber(),null,null,null,null,null,null,null,
-                null,null,null,null,false,false,false,false);
+                null,null,null,null,null,null,null,
+                false,false,false,false);
         return snapshots.getFirst();
     }
 
