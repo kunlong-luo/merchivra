@@ -1,29 +1,21 @@
 version: 2
+# Routine version-update PRs disabled: user requested direct-to-main development.
+# Dependabot vulnerability alerts / security update configuration is controlled separately in repository settings.
 updates:
   - package-ecosystem: npm
     directory: /apps/web
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      frontend-minor-patch:
-        update-types:
-          - minor
-          - patch
+    open-pull-requests-limit: 0
 
-  - package-ecosystem: maven
+  - package-ecosystem: gradle
     directory: /apps/server
     schedule:
       interval: weekly
-    open-pull-requests-limit: 5
-    groups:
-      backend-minor-patch:
-        update-types:
-          - minor
-          - patch
+    open-pull-requests-limit: 0
 
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
-    open-pull-requests-limit: 3
+    open-pull-requests-limit: 0
