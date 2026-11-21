@@ -1,3 +1,5 @@
+# V183B: fix Chromium 157 local DevTools port discovery under runner DBus
+# noise, retaining all V183 visual/PG18 assertions; new exact-main A3 needed.
 # V183: full-period V162/V64 profit proof barriers + V182 per-source verdicts,
 # PG18 synthetic HTTP/Next/Chromium at exact merged main SHA.
 # These are unverified local evidence diagnostics; no bank/Amazon authorization.
@@ -157,7 +159,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V183-A3-full-period-profit-evidence-gates' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V183B-A3-chromium-cdp-port-fallback' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -228,6 +230,7 @@ on:
           - V181-A3-immutable-settlement-report-line-identity
           - V182-A3-cost-attribution-evidence-classification
           - V183-A3-full-period-profit-evidence-gates
+          - V183B-A3-chromium-cdp-port-fallback
 
 permissions:
   contents: read

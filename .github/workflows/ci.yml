@@ -80,7 +80,9 @@ jobs:
         run: npm run test
       # V123: no extra Chromium on every PR, just reject malformed fixture JS.
       - name: Check synthetic browser fixture syntax (full Chromium on milestone)
-        run: node --check ../../scripts/smoke_browser_layout.mjs
+        run: |
+          node --check ../../scripts/smoke_browser_layout.mjs
+          node --test ../../scripts/chrome_devtools_port.test.mjs
       - name: Build
         run: npm run build
       - name: Next 16 App Router TS gate

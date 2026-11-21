@@ -8,6 +8,7 @@ import { mkdtemp, readFile, mkdir, writeFile, rm } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve, extname } from 'node:path'
+import { portFromChromeStderr } from './chrome_devtools_port.mjs'
 
 const dist = resolve(process.argv[2] ?? 'apps/web/dist')
 // When set, run the same synthetic API + Chrome assertions against the real
@@ -732,14 +733,27 @@ async function main() {
   ], { stdio:['ignore','ignore','pipe'] })
   let log=''
   chrome.stderr.on('data',x => { log+=(String(x)).slice(0,2000) })
+  // Chrome 157 on disposable Linux runners can announce DevTools on
+  // stderr before (or without) writing DevToolsActivePort. Do not treat
+  // DBus warnings or that missing file alone as a browser/layout failure:
+  // the browser's own announced loopback CDP endpoint is equivalent.
+  // We still exercise every existing Chromium assertion after connecting.
   let port
-  for(let i=0;i<140;i++){
-    try { port=Number((await readFile(join(profile,'DevToolsActivePort'),'utf8')).split('\n')[0]) }
-    catch { /* startup */ }
+  for(let i=0;i<200;i++){
+    try {
+      const fromFile=Number((await readFile(join(profile,'DevToolsActivePort'),'utf8')).split('\n')[0])
+      if(Number.isInteger(fromFile)&&fromFile>0&&fromFile<=65535)port=fromFile
+    }
+    catch { /* Chrome may not materialize the active-port file yet. */ }
+    if(!port){
+      port=portFromChromeStderr(log)
+    }
     if(port)break
+    if(chrome.exitCode!==null)
+      throw new Error('Chrome exited before announcing a CDP port: '+log.slice(-600))
     await sleep(100)
   }
-  assert.ok(port,'Chrome startup failed: '+log.slice(-600))
+  assert.ok(port,'Chrome startup failed without CDP endpoint: '+log.slice(-600))
   const conn=await connect(port)
   socket=conn.ws
   const send=conn.send
