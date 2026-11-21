@@ -2,6 +2,7 @@ version: 2
 # Routine version-update PRs disabled: user requested direct-to-main development.
 # Dependabot vulnerability alerts / security update configuration is controlled separately in repository settings.
 updates:
+  # GitHub Dependabot ecosystem key for JavaScript packages, including pnpm.
   - package-ecosystem: npm
     directory: /apps/web
     schedule:

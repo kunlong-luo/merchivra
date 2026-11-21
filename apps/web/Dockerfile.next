@@ -2,8 +2,9 @@
 # Dockerfile remains the safe, separately selectable rollback path.
 FROM node:24-alpine AS deps
 WORKDIR /workspace/apps/web
-COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+RUN corepack enable
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
 
 FROM deps AS build
 WORKDIR /workspace/apps/web
@@ -12,7 +13,7 @@ COPY . .
 # service address, never a public URL or anything client-exposed.
 ARG MERCHIVRA_API_INTERNAL_URL=http://server:8080
 ENV MERCHIVRA_API_INTERNAL_URL=${MERCHIVRA_API_INTERNAL_URL}
-RUN npm run build:next
+RUN pnpm run build:next
 
 FROM node:24-alpine AS runtime
 # V160: build metadata only; target operator must check immutable image IDs.

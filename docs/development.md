@@ -1,9 +1,9 @@
 # Development guide
 
-> **Current local runtime (2026-11-21):** Next.js 16 App Router is now the default for `npm run dev` (127.0.0.1:3000), `npm run build`, and both Docker Compose `web` services. The Vite/Nginx fallback must be requested explicitly as `npm run dev:vite`, `npm run build:vite`, or `--profile vite-fallback` (port 3002). This is a local developer cutover only, NOT target HTTPS/production approval; #104 remains NO-GO and Seller/Ads OAuth stays OFF. Java 25/Gradle, Spring Boot 4.1.2, PostgreSQL 18 and Node 24 remain the stack.
+> **Current local runtime (2026-11-21):** Next.js 16 App Router is now the default for `pnpm run dev` (127.0.0.1:3000), `pnpm run build`, and both Docker Compose `web` services. The Vite/Nginx fallback must be requested explicitly as `pnpm run dev:vite`, `pnpm run build:vite`, or `--profile vite-fallback` (port 3002). This is a local developer cutover only, NOT target HTTPS/production approval; #104 remains NO-GO and Seller/Ads OAuth stays OFF. Java 25/Gradle, Spring Boot 4.1.2, PostgreSQL 18 and Node 24 remain the stack.
 
 ## Prerequisites
-**Java 25 LTS**, Gradle 9.2.1（项目内 Gradle Wrapper）, **Node.js 24.11+ (24.x)**, npm, Docker Compose. Frontend local Node selection: `cd apps/web && nvm use`. The same major versions are used in GitHub Actions and the Docker multi-stage builds.
+**Java 25 LTS**, Gradle 9.2.1（项目内 Gradle Wrapper）, **Node.js 24.11+ (24.x)**, pnpm 12.20.0, Docker Compose. Frontend local Node selection: `cd apps/web && nvm use`. The same major versions are used in GitHub Actions and the Docker multi-stage builds.
 
 ## One-command local stack
 ```bash
@@ -32,8 +32,8 @@ export MERCHIVRA_BOOTSTRAP_PASSWORD='your-unique-16-plus-character-password'
 
 # Shell 2 — Next.js 16 is the default; do not launch the old Vite process.
 cd apps/web
-npm ci
-npm run dev
+pnpm install --frozen-lockfile
+pnpm run dev
 ```
 
 Vite proxies `/api` to the local Spring Boot API. The API reads `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD` from environment (the Compose server receives the appropriate values).
@@ -45,10 +45,10 @@ The current `ci.yml` automatically runs Gradle tests, Orval contract drift detec
 ## Tests
 ```bash
 (cd apps/server && ./gradlew test)
-cd apps/web && npm ci && npm run typecheck && npm run test && npm run build
+cd apps/web && pnpm install --frozen-lockfile && pnpm run typecheck && pnpm run test && pnpm run build
 ```
 
-The real npm-registry-resolved `apps/web/package-lock.json` is checked in (lockfile v3). CI and the Node 24 Docker build both use **`npm ci`** rather than resolving dependencies afresh. This improves dependency repeatability but does not guarantee production readiness; Gradle's managed Spring Boot dependency BOM remains pinned by Spring Boot 4.1.2. Existing Chromium/CDP, PG18/restore and Compose suites are **milestone/manual**, not automatically required on every PR. See [current CI policy](testing/ci-policy.md) and [historical toolchain upgrade](architecture/stack-upgrade-2026-10-30.md).
+The real registry-resolved `apps/web/pnpm-lock.yaml` is checked in (pnpm lockfile). CI and the Node 24 Docker build both use **`pnpm install --frozen-lockfile`** rather than resolving dependencies afresh. This improves dependency repeatability but does not guarantee production readiness; Gradle's managed Spring Boot dependency BOM remains pinned by Spring Boot 4.1.2. Existing Chromium/CDP, PG18/restore and Compose suites are **milestone/manual**, not automatically required on every PR. See [current CI policy](testing/ci-policy.md) and [historical toolchain upgrade](architecture/stack-upgrade-2026-10-30.md).
 
 ## Warnings
 The application now has multiple local business workbenches, tenant-/Marketplace-scoped Session/CSRF APIs, staff/read roles and audited local purchasing/finance operations in addition to an opt-in synthetic demo. Demo is OFF by default; only explicitly disposable local Compose fixtures may enable it. Production IAM, real Seller OAuth/Ads permissions and live data have **not** been approved. Use localhost/disposable infrastructure only; do not publicly expose an authenticated instance or provide live Amazon credentials.
@@ -153,9 +153,9 @@ The role/database creation process is **not a Flyway migration**, `bootRun` life
 
 默认 MERCHIVRA_CONTRACT_EXPORT_ENABLED=false，生产环境不要启用。仅本地隔离 PG18 环境显式启用时，环回地址可以访问 /v3/api-docs/finance-profits。
 
-从仓库根目录将 curl 的 JSON 输出保存到 /tmp/finance-live.json，执行 node scripts/normalize-finance-openapi.mjs /tmp/finance-live.json apps/web/openapi/finance-profits.json。之后 cd apps/web && npm ci && npm run api:generate && npm run api:check && npm run typecheck && npm test && npm run build。提交正确锁文件、已核对契约与生成产物；CI 与真实 PG18 输出再次对比。旧 docs/api/openapi.json 为 G2 草案，不能用于代码生成。
+从仓库根目录将 curl 的 JSON 输出保存到 /tmp/finance-live.json，执行 node scripts/normalize-finance-openapi.mjs /tmp/finance-live.json apps/web/openapi/finance-profits.json。之后 cd apps/web && pnpm install --frozen-lockfile && pnpm run api:generate && pnpm run api:check && pnpm run typecheck && pnpm test && pnpm run build。提交正确锁文件、已核对契约与生成产物；CI 与真实 PG18 输出再次对比。旧 docs/api/openapi.json 为 G2 草案，不能用于代码生成。
 
 
 ### V145 · FBA 采购来源合同
 
-现有 FBA PO/ASN 关联五项 API 现与本地货件共同由 `fba-inbound.json` / Orval 生成（共 15 项），前端保留 UUID、Zod 和 Session/CSRF/no-store 校验。真实 PG18 导出仍由 full_suite 逐字节比对。仅核对 MVC 合同可运行 `./apps/server/gradlew -p apps/server test --tests '*FbaPurchaseLinkOpenApiV145Test'`（Java 25；模拟 bootstrap、关闭 Flyway，不访问数据库），再将 `apps/server/build/fba-openapi-v145.json` 交给 `node scripts/normalize-fba-openapi.mjs`。生成与漂移检查使用既有 `npm run api:generate` / `npm run api:check`，不得手改产物。[业务边界与未完成的历史分页](inventory/fba-purchase-link-v75.md)。
+现有 FBA PO/ASN 关联五项 API 现与本地货件共同由 `fba-inbound.json` / Orval 生成（共 15 项），前端保留 UUID、Zod 和 Session/CSRF/no-store 校验。真实 PG18 导出仍由 full_suite 逐字节比对。仅核对 MVC 合同可运行 `./apps/server/gradlew -p apps/server test --tests '*FbaPurchaseLinkOpenApiV145Test'`（Java 25；模拟 bootstrap、关闭 Flyway，不访问数据库），再将 `apps/server/build/fba-openapi-v145.json` 交给 `node scripts/normalize-fba-openapi.mjs`。生成与漂移检查使用既有 `pnpm run api:generate` / `pnpm run api:check`，不得手改产物。[业务边界与未完成的历史分页](inventory/fba-purchase-link-v75.md)。

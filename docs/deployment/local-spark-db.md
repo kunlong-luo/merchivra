@@ -153,11 +153,11 @@ export MERCHIVRA_DEMO_ENABLED=false
 
 ```bash
 cd apps/web
-npm ci
-npm run dev
+pnpm install --frozen-lockfile
+pnpm run dev
 ```
 
-Next.js 开发模式使用 `http://127.0.0.1:3000`，默认 `npm run dev` 的 `/api` 同源代理指向 `127.0.0.1:8080`。只有显式执行 `npm run dev:vite` 才启动 5173 端口的旧 Vite。后端在宿主机运行时访问本地 `spark-db` 映射的 `127.0.0.1:5432`；**与容器方式不同**，不使用 `spark-postgres` 主机名。
+Next.js 开发模式使用 `http://127.0.0.1:3000`，默认 `pnpm run dev` 的 `/api` 同源代理指向 `127.0.0.1:8080`。只有显式执行 `pnpm run dev:vite` 才启动 5173 端口的旧 Vite。后端在宿主机运行时访问本地 `spark-db` 映射的 `127.0.0.1:5432`；**与容器方式不同**，不使用 `spark-postgres` 主机名。
 
 ### B5. 仅用于隔离测试的非 Demo 覆盖层
 
@@ -239,7 +239,7 @@ curl -f http://127.0.0.1:8080/api/v1/ping
 curl -f http://127.0.0.1:8080/actuator/health
 # 业务操作需要先在 http://127.0.0.1:3000 登录
 (cd apps/server && ./gradlew test)
-cd apps/web && npm ci && npm run typecheck && npm run test && npm run build
+cd apps/web && pnpm install --frozen-lockfile && pnpm run typecheck && pnpm run test && pnpm run build
 ```
 
 React 19 前端**已经实现并构建成功**，有实际登录/会话、核心数据、卖家授权代码入口、运营自动化、团队权限、采购与仓储（含 V49–V52 库位、盘点、退货与凭据）、财务来源与对账页面、Mock 演示，以及宽度响应式验证。它不是空白脚手架，也不是 Vue；但目前仍是 pre-alpha，尚未完成真实 Amazon 授权后的全业务联调、外部承运商回执核验或面向公网的安全认证，因此不能承诺“前端和整套 ERP 已达到生产可用”。

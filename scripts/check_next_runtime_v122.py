@@ -23,8 +23,8 @@ vite = (ROOT / "apps/web/Dockerfile").read_text()
 for exact in (
     "FROM node:24-alpine AS deps",
     "FROM node:24-alpine AS runtime",
-    "npm ci --no-audit --no-fund",
-    "npm run build:next",
+    "pnpm install --frozen-lockfile",
+    "pnpm run build:next",
     ".next/standalone",
     ".next/static",
     "USER nextjs",

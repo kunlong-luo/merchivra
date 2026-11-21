@@ -12,14 +12,14 @@ GitHub Pages 只运行静态资源，**不能**运行 Java 25 / Spring Boot 4 / 
 
 之后打开 https://github.com/kunlong-luo/merchivra/actions/workflows/github-pages.yml，在 main 分支执行 Run workflow；或在 main 更新前端/部署工作流会自动触发。PR 仅构建校验，不发布公网。
 
-官方 Actions 流程执行锁定依赖 npm ci、VITE_PUBLIC_DEMO=true npm run build、public bundle 断言，然后使用 actions/upload-pages-artifact@v4 与 actions/deploy-pages@v4，无需 PAT、部署密钥或第三方推送库。
+官方 Actions 流程执行锁定依赖 pnpm install --frozen-lockfile、VITE_PUBLIC_DEMO=true pnpm run build、public bundle 断言，然后使用 actions/upload-pages-artifact@v4 与 actions/deploy-pages@v4，无需 PAT、部署密钥或第三方推送库。
 
 只有当部署 Job 实际成功并返回 page_url 时，https://kunlong-luo.github.io/merchivra/ 才能称为已上线。如果出现 Pages not enabled、404 或 Resource not accessible by integration，请先完成上述 GitHub Pages 源配置；**构建成功不代表网站已发布**。
 
 ## 本地检查
 
-1. 切换目录 apps/web，运行 npm ci。
-2. 设置 VITE_PUBLIC_DEMO=true 并运行 npm run build。
+1. 切换目录 apps/web，运行 pnpm install --frozen-lockfile。
+2. 设置 VITE_PUBLIC_DEMO=true 并运行 pnpm run build。
 3. 回到仓库根目录运行 node scripts/check_pages_dist.mjs apps/web/dist。
 4. 仅从真实 GitHub Actions 的 Deploy job 获取网站部署状态与链接。
 

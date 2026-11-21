@@ -2,7 +2,7 @@
 
 > **2026-11-13 历史已验收代码 main V150：** [完整 A3 #43361557152](https://github.com/kunlong-luo/merchivra/actions/runs/43361557152) 基于精确提交 `2e96bf421d1b8e0c2a2999ab63a236d80ea3a9d9` **第 1 次尝试 7/7 SUCCESS**；[PR #118](https://github.com/kunlong-luo/merchivra/pull/118) 在合成本地 HTTPS Next→Vite→Next 切流前增加独立匿名 401、CSRF 和 Secure/HttpOnly/SameSite 会话就绪验证，只对连接错误/502–504 进行有限重试。此前 V148 首轮偶发 TLS AssertionError 的根因未确证，[#115](https://github.com/kunlong-luo/merchivra/issues/115) 仍追踪。[现行计划](docs/roadmap/mvp-freeze-release-v108.md) 和 [RTM-002 逐条需求追踪](docs/requirements/implementation-acceptance-rtm-v148.md) 区分代码/隔离 PG18 技术验证与真实数据、人工签署；采购/仓储 [#62](https://github.com/kunlong-luo/merchivra/issues/62) 和 FBA 来源 [#108](https://github.com/kunlong-luo/merchivra/issues/108) 仅按技术范围已关闭。**Next 目标环境切流 [#63](https://github.com/kunlong-luo/merchivra/issues/63)、生产 G1/G2/G3 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 和用户本地真实 Seller/Ads 只读授权仍未批准**；不得把 GitHub Pages 的虚构只读演示称为真实 ERP，真实 Amazon 远程写入继续关闭。
 
-> **2026-11-21：Next.js 16 已成为本地默认 Web 运行时。** `cd apps/web && npm ci && npm run dev` 启动 Next App Router（`127.0.0.1:3000`，需 Spring Boot `8080`）；`npm run build` 也构建 Next。默认 `deploy/compose.yaml` 和 `deploy/compose.spark-db.yaml` 的 `web` 为 Next Node，不再是 Vite/Nginx。Vite 仅通过 `npm run dev:vite` 或 Compose `--profile vite-fallback` 显式启动，回退端口默认 3002；GitHub Pages 继续构建纯静态模拟页面。此变更只面向本地，**生产 #104 仍 NO-GO，真实 Amazon OAuth 仍关闭**。
+> **2026-11-21：Next.js 16 已成为本地默认 Web 运行时。** `cd apps/web && pnpm install --frozen-lockfile && pnpm run dev` 启动 Next App Router（`127.0.0.1:3000`，需 Spring Boot `8080`）；`pnpm run build` 也构建 Next。默认 `deploy/compose.yaml` 和 `deploy/compose.spark-db.yaml` 的 `web` 为 Next Node，不再是 Vite/Nginx。Vite 仅通过 `pnpm run dev:vite` 或 Compose `--profile vite-fallback` 显式启动，回退端口默认 3002；GitHub Pages 继续构建纯静态模拟页面。此变更只面向本地，**生产 #104 仍 NO-GO，真实 Amazon OAuth 仍关闭**。
 
 > **GitHub Pages 公开只读演示：** [查看虚构数据的静态 React 界面](https://kunlong-luo.github.io/merchivra/)（需要仓库先启用 GitHub Pages）。**它不是可登录的 ERP 服务**：没有数据库、真实 Amazon 授权或采购/财务写入。[部署与首次启用说明](docs/deployment/github-pages-public-demo-v98.md)。
 
@@ -135,11 +135,11 @@ export MERCHIVRA_BOOTSTRAP_PASSWORD='your-unique-16-plus-character-password'
 
 ```bash
 cd apps/web
-npm ci
-npm run dev
+pnpm install --frozen-lockfile
+pnpm run dev
 ```
 
-`npm run dev` 现在启动 Next.js 16，开发页面为 http://127.0.0.1:3000，`/api` 通过 Next rewrites 转发到 `127.0.0.1:8080`。只有执行 `npm run dev:vite` 才使用 Vite 的 5173 端口。**注意**：本机运行 Java 连接 `127.0.0.1:5432`，Docker 内运行 Java 连接 `spark-postgres:5432`。
+`pnpm run dev` 现在启动 Next.js 16，开发页面为 http://127.0.0.1:3000，`/api` 通过 Next rewrites 转发到 `127.0.0.1:8080`。只有执行 `pnpm run dev:vite` 才使用 Vite 的 5173 端口。**注意**：本机运行 Java 连接 `127.0.0.1:5432`，Docker 内运行 Java 连接 `spark-postgres:5432`。
 
 ## 五、部署、升级、停止和卸载
 
@@ -189,7 +189,7 @@ curl -f http://127.0.0.1:8080/api/v1/ping
 curl -f http://127.0.0.1:8080/actuator/health
 
 (cd apps/server && ./gradlew test)
-cd apps/web && npm ci && npm run typecheck && npm run test && npm run build
+cd apps/web && pnpm install --frozen-lockfile && pnpm run typecheck && pnpm run test && pnpm run build
 ```
 
 遇到启动失败，先看容器日志，并确认 `spark-postgres`、`spark-iot-net`、独立数据库角色和密码；**不要删除数据卷解决连接错误**。

@@ -1,9 +1,10 @@
 FROM node:24-alpine AS build
 WORKDIR /app
-COPY package.json package-lock.json ./
-RUN npm ci --no-audit --no-fund
+RUN corepack enable
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
 COPY . .
-RUN npm run build:vite
+RUN pnpm run build:vite
 
 FROM nginx:alpine
 # Explicit Vite/Nginx fallback image. The default Compose web runs Dockerfile.next.

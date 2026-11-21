@@ -1,0 +1,7 @@
+# Standalone front-end project; only explicitly reviewed build hooks run.
+packages:
+  - '.'
+allowBuilds:
+  esbuild: true
+  sharp: true
+  '@swc/core': true
