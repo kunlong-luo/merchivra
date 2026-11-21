@@ -1,6 +1,8 @@
 # V181 补强：V102 结算身份快照的可复算 SHA-256 指纹
 
-状态：**实现分支待 PR CI 验证**。原 V181 业务合并与完整 A3 验收见 [V181 文档](v181-immutable-settlement-line-identity.md)；这里不重新宣称既有 SHA 的验收涵盖新代码。
+状态：**V181B 已合并并完成精确业务 main SHA 的 A3 7/7（2026-11-21）**。**V181B 结算指纹补强已验收（2026-11-21）**：业务 [PR #178](https://github.com/kunlong-luo/merchivra/pull/178) 已合并，精确业务 main SHA `202f5fdf73ccea8e0a44a0bbc725672ae6170432`；合并前 [CI #44859006834](https://github.com/kunlong-luo/merchivra/actions/runs/44859006834) **SUCCESS**（Java25/Gradle、React19/Next16/Vite、Compose）；该 SHA 上 [完整 A3 #44859153160](https://github.com/kunlong-luo/merchivra/actions/runs/44859153160) **run_attempt=1，7/7 核心任务 SUCCESS**（PG18/Flyway、Java、React/Next、Chromium、Compose HTTP/安全与恢复；独立 Next 设计专项按策略跳过）。V102 不可变快照可规范化按租户/站点/费用来源复算本地 SHA-256，`fingerprintOrigin=DERIVED_ON_READ_FROM_FROZEN_V102`，**不是创建时保存的指纹或 Amazon 签章**。旧 V94 缺证返回 null；V94 独立复核、V95 共用行 hold 均不变；Seller/Ads OAuth OFF、#104 NO-GO、真实净利润未知。
+
+原 V181 业务合并与 V102 基础验收见 [V181 文档](v181-immutable-settlement-line-identity.md)。本补强的验收独立于原 V181 SHA。
 
 ## 范围与信任边界
 
