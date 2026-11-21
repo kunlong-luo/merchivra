@@ -65,7 +65,7 @@ class CostProfitReadinessServiceTest {
             "GROUP BY category,currency_code","sum(amount) AS claimed",
             "s.business_date>=? AND s.business_date<?",
             "(s.business_date,s.id)<(?,?)","LIMIT 51",
-            "attribution.assess(tenant,marketplace,r.id())",
+            "attribution.assessBatch(tenant,marketplace,",
             "barriers(tenant,marketplace,start,end)",
             "finance_cost_settlement_line_identity_v102 i",
             "finance_cost_settlement_line_audit_v94 a",

@@ -64,11 +64,21 @@ public class CostIdentityReconciliationService {
             linkedLines,sharedLines,false);
     }
 
-    public Preview preview(UUID tenant,UUID marketplace,UUID sourceId) {
-        // Explicit same-tenant and same-Marketplace comparisons. These are
-        // potential source-identity overlaps, never verified fee equivalence.
-        // In particular a report-level digest != proof of a fee-level charge.
-        var found=jdbc.query("""
+    /**
+     * V184: one V165 cross-namespace snapshot scan for a bounded page of
+     * source IDs. Every predicate retains original tenant and Marketplace
+     * scope, and every requested ID must exist in that scope (fail closed).
+     * No shortcut to the eight independent overlap checks.
+     */
+    java.util.Map<UUID,Preview> previewBatch(UUID tenant,UUID marketplace,
+        List<UUID> sourceIds) {
+        if(sourceIds==null || sourceIds.isEmpty() || sourceIds.size()>50
+            ||sourceIds.stream().anyMatch(x->x==null)
+            ||new java.util.HashSet<>(sourceIds).size()!=sourceIds.size())
+            throw new IllegalArgumentException("Require 1..50 unique cost source IDs");
+        String placeholders=String.join(",",
+            java.util.Collections.nCopies(sourceIds.size(),"?"));
+        String sql="""
             SELECT s.id,s.review_state,
               EXISTS(SELECT 1 FROM finance_cost_source_v91 c
                 WHERE c.tenant_id=s.tenant_id
@@ -128,15 +138,34 @@ public class CostIdentityReconciliationService {
             JOIN tenant t ON t.id=s.tenant_id AND t.status='ACTIVE'
             JOIN seller_marketplace m ON m.tenant_id=s.tenant_id
                 AND m.id=s.seller_marketplace_id
-            WHERE s.tenant_id=? AND s.seller_marketplace_id=? AND s.id=?
-            """,(r,i)->summarize(r.getObject(1,UUID.class),r.getString(2),
+            WHERE s.tenant_id=? AND s.seller_marketplace_id=? AND s.id IN (
+            """ + placeholders + ")";
+        var args=new ArrayList<Object>();
+        args.add(tenant);args.add(marketplace);args.addAll(sourceIds);
+        var found=jdbc.query(sql,(r,i)->java.util.Map.entry(
+            r.getObject(1,UUID.class),
+            summarize(r.getObject(1,UUID.class),r.getString(2),
                 List.of(r.getBoolean(3),r.getBoolean(4),r.getBoolean(5),
                     r.getBoolean(6),r.getBoolean(7),r.getBoolean(8),
                     r.getBoolean(9),r.getBoolean(10)),
-                r.getLong(11),r.getLong(12)),
-            tenant,marketplace,sourceId);
-        if(found.size()!=1)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        return found.getFirst();
+                r.getLong(11),r.getLong(12))),
+            args.toArray());
+        if(found.size()!=sourceIds.size())
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        var result=new java.util.HashMap<UUID,Preview>();
+        for(var item:found) {
+            if(result.putIfAbsent(item.getKey(),item.getValue())!=null)
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Duplicated cost evidence scope");
+        }
+        if(result.size()!=sourceIds.size()||!result.keySet().containsAll(sourceIds))
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        return java.util.Map.copyOf(result);
+    }
+
+    public Preview preview(UUID tenant,UUID marketplace,UUID sourceId) {
+        if(sourceId==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        return previewBatch(tenant,marketplace,List.of(sourceId)).get(sourceId);
     }
 
     /** Reverse lineage for the latest shared-line examples, without leaking

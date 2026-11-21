@@ -277,11 +277,17 @@ public class CostProfitReadinessService {
         boolean more=entries.size()>PAGE_SIZE;
         List<Row> visible=entries.subList(0,Math.min(entries.size(),PAGE_SIZE));
         var rows=new ArrayList<Source>();
+        // V184: two bounded set queries for all visible sources rather than
+        // up to 100 independent V165/V182 reads. Empty pages issue no scan.
+        // All facts still share this report's REPEATABLE_READ snapshot.
+        var assessments=visible.isEmpty()
+            ?java.util.Map.<UUID,CostAttributionEvidenceService.Assessment>of()
+            :attribution.assessBatch(tenant,marketplace,
+                visible.stream().map(Row::id).toList());
         for(Row r:visible) {
-            // V182 reuses the eight V165 signals and V94/V95/V102 evidence
-            // under this SAME REPEATABLE_READ transaction. No second preview
-            // call and no page-only inference about full-period coverage.
-            var scan=attribution.assess(tenant,marketplace,r.id());
+            var scan=assessments.get(r.id());
+            if(scan==null)throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Missing scoped cost attribution evidence");
             rows.add(new Source(r.id().toString(),r.businessDate().toString(),
                 r.category(),r.currency(),money(r.amount()),r.reviewState(),
                 r.allocationState(),approved(r.approvedAmount(),r.allocationState()),
