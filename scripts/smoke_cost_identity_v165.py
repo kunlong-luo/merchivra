@@ -765,6 +765,54 @@ assert sql(f"""SELECT count(*) FROM finance_wms_return_observation_v99
  WHERE tenant_id='{tenant}'""")=="0"
 
 
+# V182: a NEW isolated synthetic imported settlement report demonstrates
+# limited local support after (and only after) V94 independent audited review.
+# This does not establish real Amazon charge or bank ownership.
+d_key="V182-MATCH-"+uuid4().hex[:16]
+d=create(d_key,uuid4().hex+uuid4().hex,"OTHER_OPERATING")
+d_url=root+"/"+d["id"]
+call(checker,d_url+"/review","POST",{
+    "accept":True,"reason":"Independent V182 synthetic source metadata check"})
+d_report=str(uuid4())
+sql(f"""INSERT INTO spapi_settlement_report (
+ id,tenant_id,seller_marketplace_id,amazon_report_id,report_document_id,
+ report_type,state,source_origin,document_sha256,settlement_reference,
+ statement_currency,declared_net,line_count)
+ VALUES ('{d_report}','{tenant}','{mp}','V182-REPORT-{uuid4().hex[:12]}',
+ 'V182-DOC-{uuid4().hex[:12]}',
+ 'GET_V2_SETTLEMENT_REPORT_DATA_FLAT_FILE_V2','IMPORTED','LIVE',
+ '{uuid4().hex+uuid4().hex}','V182-SETTLEMENT-{uuid4().hex[:12]}',
+ '{currency}',-10,1)""")
+sql(f"""INSERT INTO spapi_settlement_report_line (
+ tenant_id,report_id,line_number,transaction_type,amount_type,
+ amount_description,external_order_id,signed_amount,currency_code)
+ VALUES ('{tenant}','{d_report}',1,'Other Transaction','Fee',
+ 'Synthetic unverified fee','{d_key}',-10.000000,'{currency}')""")
+d_link=call(owner,d_url+"/settlement-line-links","POST",
+    {"reportId":d_report,"lineNumber":1})
+assert d_link["state"]=="OPEN" and d_link["similarity"]=="SIMILAR_REFERENCE_AND_AMOUNT"
+d_assessment=d_url+"/settlement-attribution"
+initial_d=call(owner,d_assessment)
+assert initial_d["status"]=="UNPROVEN"
+assert initial_d["frozenIdentityCount"]==1 and initial_d["linkedLineCount"]==1
+assert "INDEPENDENT_V94_REVIEW_PENDING" in initial_d["reasonCodes"]
+call(checker,d_url+"/settlement-line-links/"+d_link["id"]+"/review","POST",{
+    "disposition":"POTENTIAL_DUPLICATE_UNVERIFIED",
+    "reason":"Local matching line only; original Amazon charge not authenticated"})
+supported_d=call(owner,d_assessment)
+assert supported_d["status"]=="SUPPORTING_LOCAL_METADATA_UNVERIFIED"
+assert supported_d["independentReviewAuditComplete"]
+assert supported_d["auditBackedReviewCount"]==1
+assert supported_d["frozenIdentityCount"]==1
+assert not supported_d["localCollisionApprovalHeld"]
+assert not any(supported_d[k] for k in (
+    "externalChargeVerified","duplicateDebitVerified",
+    "financialHoldCleared","netProfitEligible"))
+# The existing one-shot audit cannot be edited into a verified approval.
+call(checker,d_url+"/settlement-line-links/"+d_link["id"]+"/review","POST",{
+    "disposition":"ESCALATED_NEEDS_PROOF",
+    "reason":"Cannot rewrite a reviewed attribution"},expected=409)
+
 after=[sql("SELECT count(*) FROM "+t) for t in
     ("finance_profit_report_job","bank_payout_observation","ads_report_reviewed_cost")]
 assert before==after,"Manual identity scan may not post finance/bank/Ads"
