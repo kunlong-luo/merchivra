@@ -26,9 +26,9 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Ensure React-only frontend
         run: node scripts/check_frontend_stack.mjs
-      - name: Build frontend and check TypeScript
+      - name: Build Vite fallback for synthetic browser regression
         working-directory: apps/web
-        run: npm run build
+        run: npm run build:vite
       - name: Install CJK fonts in disposable runner for faithful Chinese screenshots
         run: |
           sudo apt-get update -qq
