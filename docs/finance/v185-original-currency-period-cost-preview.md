@@ -1,6 +1,9 @@
 # V185：基于 V92 原币期间分摊的跨月算术预览（非会计入账）
 
-状态：**业务实现待 CI/精确 main SHA A3 验收**。真实 Amazon Seller/Ads OAuth OFF；生产 #104 NO-GO。
+状态：**业务实现已合并，精确业务 main SHA 完整合成 A3 7/7 通过**。真实 Amazon Seller/Ads OAuth OFF；生产 #104 NO-GO。
+
+**V185 原币跨月期间分摊技术验收（2026-11-21）**：业务 [PR #188](https://github.com/kunlong-luo/merchivra/pull/188) 已合并，精确业务 main SHA `c344aec2b9d4911f60b53912f5aaf60ba329d120`；合并前 [快速 CI #44864483406](https://github.com/kunlong-luo/merchivra/actions/runs/44864483406) Java25/Gradle、React19/Next16/Vite 和 Compose **SUCCESS**；精确业务 SHA [完整 A3 #44864616569](https://github.com/kunlong-luo/merchivra/actions/runs/44864616569) `run_attempt=1`、**7/7 核心任务 SUCCESS**（PG18/Flyway 合成 V92 双 Owner HTTP、新跨月 10.000001 = 5.000001 + 5.000000 原币守恒、Session/CSRF、Java、Next/Vite Chromium、Compose 恢复；独立设计专项策略 SKIPPED）。V185 只从原 V92 不可变 PERIOD 明细生成自然日微币跨月金额敏感度预览，Next.js 原来源抽屉可查看；**不批准真实会计摊销，不改变 V162/V64、不汇率转换、不冲回退款 COGS、不入账、不清除 V95 hold、不认证第三方 Amazon/银行费用真实性**。财务 G1/DEC-06/07/08 仍待批准；真实 Seller/Ads OAuth OFF，生产 #104 NO-GO。
+
 
 ## 事实边界
 
