@@ -1,6 +1,8 @@
 # V188：统一期间利润原币算术瀑布（V64 × V186 × V187）
 
-状态：业务 PR 快速 CI、合并后精确 main SHA 完整 PostgreSQL 18 A3 尚待验收。**本功能不是已核验净利润、GL 凭证、第三方费用认证或新财务授权。**
+状态：**业务和路由合同修复已合并；新精确 main SHA 的完整 PG18 A3 7/7 通过**。本功能不是已核验净利润、GL 凭证、第三方费用认证或新财务授权。
+
+V188/V188B 统一期间利润原币瀑布验收归档（2026-11-21）：业务 [PR #194](https://github.com/kunlong-luo/merchivra/pull/194) 合并 SHA `7d6214aa294f4ea859008a0b3d4ca3c4fd40d5aa`，合并前 [快速 CI #44870721053](https://github.com/kunlong-luo/merchivra/actions/runs/44870721053) Java25/Gradle、React19/Next16/Vite、Compose SUCCESS；**该业务 SHA 第一次 [完整 A3 #44870830613](https://github.com/kunlong-luo/merchivra/actions/runs/44870830613) 未通过**，真实 Springdoc 生成的 V188 `/profit-reports` 新端点触发严格 V64 九操作 Orval 合同脚本 `scripts/normalize-finance-openapi.mjs` 拒绝，不能宣称当时验收通过。 [修复 PR #195](https://github.com/kunlong-luo/merchivra/pull/195) 合并 SHA `6352344738cb660257077c3294706223b4f59646`，保留固定 V64 九路由/Orval 不变，把 V188 Owner/no-store 的只读 GET 移到 `/api/v1/finance/marketplaces/{marketplaceId}/cost-waterfall-preview/{jobId}`；[快速 CI #44871058792](https://github.com/kunlong-luo/merchivra/actions/runs/44871058792) SUCCESS。仅修改里程碑工作流触发标签的 [PR #196](https://github.com/kunlong-luo/merchivra/pull/196) 合并新精确 main SHA `a480ec14204155b69382605ebb144dff90fdc988`，此 SHA [完整 A3 #44871461466](https://github.com/kunlong-luo/merchivra/actions/runs/44871461466) **run_attempt=1、7/7 核心 SUCCESS**：真实 PostgreSQL18/Flyway、严格 V64 九路由合同与 V188 合成 V64/V91/V92 Owner HTTP 原币阻断、Java25、React19/Next16/Vite Chromium、Compose/Session/CSRF/恢复，额外设计专项按策略 SKIPPED。V188 只计算 V64 已冻结订单局部贡献扣减 V92 `APPROVED_UNVERIFIED` **人工来源费用的原币算术敏感度**；不是 V162 `REVIEWED_COST`、实际平台费用、认可跨期会计利润、退款 COGS 回转、FX 或银行结算。所有 `realizedNetProfit=null`，无真实利润解锁；G1/DEC-06/07/08、Amazon Seller/Ads OAuth OFF、生产 #104 NO-GO 保持不变。
 
 ## 产品目标
 
