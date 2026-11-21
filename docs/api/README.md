@@ -1,3 +1,5 @@
+> **V191 当前入口（2026-11-21）**：API 的现行事实以 Spring Boot MVC Controller/实际 Springdoc 生成合同及 Orval 代码为准。React19/Next16、pnpm12.20.0，前端校验使用 `cd apps/web && pnpm install --frozen-lockfile && pnpm api:check`；不要使用本文历史 G2 OpenAPI 草案代替真实接口。真实 Seller/Ads OAuth 关闭，生产 #104 NO-GO。[当前架构](../architecture/overview.md) · [开发指南](../development.md)。
+
 # API-002 · G2 OpenAPI 设计草案与真实后端契约（2026-11-08）
 
 **本页的 [候选 OpenAPI JSON](openapi.json) 只用于早期 G2 设计评审**（10 条路径、11 个 HTTP operation、19 个 Schema），不是现行所有后端接口的实时目录。其中历史 Bearer/JWT 方案未部署为当前业务认证，不应据此实现新客户端。
