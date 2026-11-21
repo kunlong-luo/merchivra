@@ -1,26 +1,26 @@
-# V98 — GitHub Pages 公开静态 React 展示站
+# GitHub Pages · 公开虚构静态展示（V191 当前构建规范）
 
-## 安全边界
+> **2026-11-21 当前状态**：公开页面由 Vite 的 `VITE_PUBLIC_DEMO=true` 模式单独编译。真实自托管 ERP 的默认 `web` 已是 Next.js 16 Node；**`pnpm build` 是 Next 构建，不能用来发布 GitHub Pages**。本页与 [当前事实基线](../current-status.md) 一致，生产 #104 NO-GO，Seller/Ads 真实授权继续关闭。
 
-GitHub Pages 只运行静态资源，**不能**运行 Java 25 / Spring Boot 4 / PostgreSQL 18 / Redis / Session / Amazon OAuth / SP-API。本站所有采购单、FBA 库存、金额、站点、供应商、异常工单等都是源代码中手工编写的**虚构示例**。只支持本地选项卡切换，不能登录或写入实际业务数据，也不会发送任何 /api 请求。
+## 和真正 ERP 的隔离
 
-公开构建使用环境变量 VITE_PUBLIC_DEMO=true，Vite 资源根路径为 /merchivra/，只加载 PagesDemo.tsx 与静态样例。普通 Compose/Nginx 构建仍使用 / 根路径、真实 Root/Session 和服务端 /api 路由，不受展示模式影响。公开构建校验 scripts/check_pages_dist.mjs 会拒绝错误路径、真实登录/OAuth 客户端进入公开 bundle。
+GitHub Pages 只有虚构的商品、采购单、库存、金额及异常卡片，不提供真实登录、数据库、Spring Session/CSRF、Amazon Seller/Ads OAuth、银行对账或业务写入，不会访问 `/api`。合成展示单独使用 `apps/web/src/PagesDemo.tsx`，资源基路径 `/merchivra/`。默认 Next ERP 使用 `app/` 的真实会话保护业务模块、同源 `/api` Spring 代理；这两条链路不可混淆。
 
-## 首次启用及发布
+## 真实发布流程
 
-管理员必须先访问 https://github.com/kunlong-luo/merchivra/settings/pages，在 **Build and deployment → Source** 选择 **GitHub Actions**。默认工作流令牌不能为未启用 Pages 的仓库修改这一管理员配置。
+GitHub Pages 由 [`.github/workflows/github-pages.yml`](../../.github/workflows/github-pages.yml) 在相应 `main` 前端变更或人工运行时构建，使用 Node 24 + pnpm 12.20.0 冻结安装、`VITE_PUBLIC_DEMO=true pnpm build:vite`、`scripts/check_pages_dist.mjs` 静态安全检查，再上传/部署 Pages artifact。它不会启动 Next Node、Spring 或 PostgreSQL。
 
-之后打开 https://github.com/kunlong-luo/merchivra/actions/workflows/github-pages.yml，在 main 分支执行 Run workflow；或在 main 更新前端/部署工作流会自动触发。PR 仅构建校验，不发布公网。
+如需首次启用 Pages，管理员在仓库 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**，再检查 [Pages workflow](https://github.com/kunlong-luo/merchivra/actions/workflows/github-pages.yml)。以**实际 Deploy job 的状态及 page_url**为准；构建绿灯不能保证仓库 Pages 管理员配置已启用。
 
-官方 Actions 流程执行锁定依赖 pnpm install --frozen-lockfile、VITE_PUBLIC_DEMO=true pnpm run build、public bundle 断言，然后使用 actions/upload-pages-artifact@v4 与 actions/deploy-pages@v4，无需 PAT、部署密钥或第三方推送库。
+## 本地离线构建检查
 
-只有当部署 Job 实际成功并返回 page_url 时，https://kunlong-luo.github.io/merchivra/ 才能称为已上线。如果出现 Pages not enabled、404 或 Resource not accessible by integration，请先完成上述 GitHub Pages 源配置；**构建成功不代表网站已发布**。
+```bash
+cd apps/web
+corepack enable
+pnpm install --frozen-lockfile
+VITE_PUBLIC_DEMO=true pnpm build:vite
+cd ../..
+node scripts/check_pages_dist.mjs apps/web/dist
+```
 
-## 本地检查
-
-1. 切换目录 apps/web，运行 pnpm install --frozen-lockfile。
-2. 设置 VITE_PUBLIC_DEMO=true 并运行 pnpm run build。
-3. 回到仓库根目录运行 node scripts/check_pages_dist.mjs apps/web/dist。
-4. 仅从真实 GitHub Actions 的 Deploy job 获取网站部署状态与链接。
-
-真实可操作 ERP 仍需自建 Spring Boot、PostgreSQL 18 与 Nginx（见 README.zh-CN.md）；真实 Amazon 授权与出站写入默认关闭，待核心功能完成后由维护者本地联调。**公开页面绝不作为真实 Seller 或银行核对服务。**
+此检查明确拒绝未经隔离的登录/授权请求、错用 `/merchivra/` 资源路径或缺少虚构数据警告。公开地址为 [Merchivra 合成展示](https://kunlong-luo.github.io/merchivra/)，不是可登录的生产 ERP。参阅 [本地真正的 Next ERP 部署指南](local-spark-db.md)。
