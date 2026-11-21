@@ -61,7 +61,7 @@ public class PeriodProfitWaterfallServiceV188 {
                 AS contribution
             FROM finance_profit_report_order
             WHERE tenant_id=? AND job_id=?
-            """.replace("signed_fba_fes","signed_fba_fees"),
+            """,
             (r,i)->new PeriodProfitWaterfallV188.FrozenAmounts(
                 r.getLong("eligible_count"),r.getLong("blocked_count"),
                 r.getLong("pending_count"),r.getLong("wrong_currency_count"),
