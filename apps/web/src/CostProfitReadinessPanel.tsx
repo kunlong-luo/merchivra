@@ -4,6 +4,7 @@ import SourceEvidenceDrawer from './components/SourceEvidenceDrawer'
 import CostLineIdentityPanel from './CostLineIdentityPanel'
 import PeriodCostPreviewPanelV185 from './PeriodCostPreviewPanelV185'
 import CostOwnershipBridgePanelV186 from './CostOwnershipBridgePanelV186'
+import CostCrossSourceRiskPanelV187 from './CostCrossSourceRiskPanelV187'
 import {fetchCostProfitReadiness,type CostReadinessCursor}
  from './lib/cost-profit-readiness'
 
@@ -65,6 +66,8 @@ export default function CostProfitReadinessPanel({tenantId,marketplaceId}:{
     }}/>
   </div>
   <CostOwnershipBridgePanelV186 tenantId={tenantId}
+   marketplaceId={marketplaceId} start={start} end={end}/>
+  <CostCrossSourceRiskPanelV187 tenantId={tenantId}
    marketplaceId={marketplaceId} start={start} end={end}/>
   {readiness.isError?<p role="alert" className="setup-error">
    {readiness.error instanceof Error?readiness.error.message:'费用准备度读取失败'}
