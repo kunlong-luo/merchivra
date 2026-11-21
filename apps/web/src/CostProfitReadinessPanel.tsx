@@ -5,6 +5,11 @@ import CostLineIdentityPanel from './CostLineIdentityPanel'
 import {fetchCostProfitReadiness,type CostReadinessCursor}
  from './lib/cost-profit-readiness'
 
+const attributionLabels:Record<string,string>={
+ CONFLICT_EVIDENCE:'本地归属冲突 · 待证明',
+ SUPPORTING_LOCAL_METADATA_UNVERIFIED:'本地证据支持 · 未认证',
+ UNPROVEN:'归属尚未证明'
+}
 const labels:Record<string,string>={
  ADS_SPEND:'广告',INBOUND_FREIGHT:'头程运输',
  FBA_STORAGE:'FBA 仓储',FBM_SHIPPING:'FBM 配送',
@@ -66,6 +71,19 @@ export default function CostProfitReadinessPanel({tenantId,marketplaceId}:{
     完整净利润：<strong>不可计算</strong>；外部来源认证：未完成；
     平台到账核对：未完成。以下所有金额都是人工主张，不能计入已核验利润。
    </p>
+   <p className="setup-hint" role="status">
+    全期间来源 {data.evidenceBarriers.sourceCount} 条（不受当前 50 条分页影响）；
+    元数据待复核 {data.evidenceBarriers.metadataReviewPendingSourceCount} 条，
+    未关联结算行 {data.evidenceBarriers.noSettlementAssociationSourceCount} 条，
+    历史原始快照缺失 {data.evidenceBarriers.missingFrozenCaptureSourceCount} 条，
+    共用结算行 {data.evidenceBarriers.sharedSettlementLineSourceCount} 条，
+    结算行审核待完成 {data.evidenceBarriers.pendingLineReviewSourceCount} 条，
+    审核审计缺失 {data.evidenceBarriers.missingLineAuditSourceCount} 条，
+    一笔费用关联多行 {data.evidenceBarriers.multipleLineClaimsSourceCount} 条。
+    <strong> 未获外部费用真实性认证 {data.evidenceBarriers.externallyUnverifiedSourceCount} 条；
+    V162/V64 真实利润核算仍被阻断。</strong>
+    未关联 Amazon 结算行只代表本地关联缺口，不等于非 Amazon 费用不合法。
+   </p>
    {data.buckets.length===0?
     <p className="empty-state">本期间暂无人工费用来源。八类成本仍为未知，不代表金额为零。</p>:
     <div className="table-scroll" role="region" tabIndex={0}
@@ -98,7 +116,7 @@ export default function CostProfitReadinessPanel({tenantId,marketplaceId}:{
      aria-label="人工费用来源准备度">
      <table><thead><tr>{['来源 ID','业务日期','类别','申报原币金额',
       '元数据复核','分摊','已批准未核验分配','未分配',
-      '结算行关联 / 共用','风险','审计详情'].map(h=>
+      '结算行关联 / 共用','归属证据判定','审计详情'].map(h=>
        <th key={h} scope="col">{h}</th>)}
      </tr></thead><tbody>{data.sources.map(s=>
       <tr key={s.sourceId}>
@@ -111,8 +129,10 @@ export default function CostProfitReadinessPanel({tenantId,marketplaceId}:{
        <td>{s.approvedUnverifiedAllocationAmount??'尚未批准'}</td>
        <td>{s.approvedUnverifiedUnallocatedAmount??'未知'}</td>
        <td>{s.linkedSettlementLineCount} / {s.sharedSettlementLineCount}</td>
-       <td>{s.approvalHeld?'待核对 · 阻断':s.localIdentityStatus+
-        '（仅本地线索，未验证）'}</td>
+       <td title={s.localAttributionReasonCodes.join('、')}>
+        <strong>{attributionLabels[s.localAttributionStatus]}</strong>
+        {s.approvalHeld?' · 审批阻断':''}
+       </td>
        <td><button className="text-button" type="button"
         onClick={()=>setInspectedSourceId(s.sourceId)}
         aria-label={'查看费用来源审计 '+s.sourceId}>查看关联</button></td>
@@ -135,6 +155,13 @@ export default function CostProfitReadinessPanel({tenantId,marketplaceId}:{
       <div><dt>已批准但未核验分配</dt><dd>{inspected.approvedUnverifiedAllocationAmount??'尚未批准'}</dd></div>
       <div><dt>未分配金额</dt><dd>{inspected.approvedUnverifiedUnallocatedAmount??'未确认'}</dd></div>
       <div><dt>本地身份线索</dt><dd>{inspected.localIdentityStatus}（非外部身份认证）</dd></div>
+      <div><dt>V183 归属证据判定</dt>
+       <dd>{attributionLabels[inspected.localAttributionStatus]}（不得推导真实利润）</dd></div>
+      <div><dt>证据原因代码</dt><dd>{inspected.localAttributionReasonCodes.join('、')}</dd></div>
+      <div><dt>创建时冻结 / 历史缺证数量</dt>
+       <dd>{inspected.frozenIdentityCount} / {inspected.missingCaptureCount}</dd></div>
+      <div><dt>独立审核与审计是否齐备</dt>
+       <dd>{inspected.independentReviewAuditComplete?'齐备（仅本地）':'不齐备或不适用'}</dd></div>
       <div><dt>关联参考账单行数量</dt><dd>{inspected.linkedSettlementLineCount}</dd></div>
       <div><dt>其中与其他来源共用的账单行数量</dt><dd>{inspected.sharedSettlementLineCount}</dd></div>
       <div><dt>外部来源认证</dt><dd>尚未完成</dd></div>
