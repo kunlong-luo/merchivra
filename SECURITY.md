@@ -1,6 +1,6 @@
 # Security Policy · Merchivra ERP
 
-## 当前安全状态 / Current security status (2026-11-08)
+## 当前安全状态 / Current security status (2026-11-21, V191)
 
 **Pre-alpha. The authenticated ERP is not suitable for production or public exposure and must not be used with production Seller/Ads/bank data yet.** The [public GitHub Pages showcase](https://kunlong-luo.github.io/merchivra/) is separate, synthetic-only and not an ERP instance.
 
@@ -8,7 +8,7 @@ Security controls that **already have implementation and isolated Mock/CI covera
 
 **Unverified or blocked for production**: real Amazon Seller/Ads OAuth role grants and revocation, live SP-API/Ads rate-limit behavior, secure external KMS/vault ownership and rotation, operator MFA/SSO and final RBAC sign-off, cross-instance identity/session invalidation, true Internet TLS ingress and forwarded-header review, penetration testing/least-privilege IAM, production backups/PITR/RPO/RTO, capacity/abuse tests, privacy/retention compliance, and business G1/G2/G3 approval. Do not interpret an existing vault table or Mock 403 test as an externally reviewed production security system. See the [release-readiness blockers](docs/testing/release-readiness-v68.md) and [active V108 release plan](docs/roadmap/mvp-freeze-release-v108.md).
 
-The latest consolidated [V108 synthetic integration baseline](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593) runs only on disposable data and proves nothing about a real seller's authorization.
+The [V191 code baseline](https://github.com/kunlong-luo/merchivra/commit/8dab97147010fdc440ee81abcfa67cd1d1d57261) passed [full synthetic A3 #44882890834](https://github.com/kunlong-luo/merchivra/actions/runs/44882890834) (7/7 PG18, Java/Next/Chromium/Compose); Next.js 16 is the local default and pnpm 12.20.0 is the only frontend package manager. Isolated checks do not authorize real Seller/Ads, bank ingestion, external WMS verification, production TLS/KMS/PITR or independent G1/G2/G3 approval. [#104](https://github.com/kunlong-luo/merchivra/issues/104) remains NO-GO.
 
 ## Reporting a vulnerability
 
