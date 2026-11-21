@@ -2,6 +2,12 @@
 
 状态：**V181 业务代码已合并，真实 PostgreSQL 18/Flyway 与精确 main SHA A3 首次 7/7 成功（2026-11-20）**。本版是可审计证据加强，**不是真实平台/银行收费认证，也不放行真实利润**。
 
+## V181B 补充指纹验收（2026-11-21）
+
+**V181B 结算指纹补强已验收（2026-11-21）**：业务 [PR #178](https://github.com/kunlong-luo/merchivra/pull/178) 已合并，精确业务 main SHA `202f5fdf73ccea8e0a44a0bbc725672ae6170432`；合并前 [CI #44859006834](https://github.com/kunlong-luo/merchivra/actions/runs/44859006834) **SUCCESS**（Java25/Gradle、React19/Next16/Vite、Compose）；该 SHA 上 [完整 A3 #44859153160](https://github.com/kunlong-luo/merchivra/actions/runs/44859153160) **run_attempt=1，7/7 核心任务 SUCCESS**（PG18/Flyway、Java、React/Next、Chromium、Compose HTTP/安全与恢复；独立 Next 设计专项按策略跳过）。V102 不可变快照可规范化按租户/站点/费用来源复算本地 SHA-256，`fingerprintOrigin=DERIVED_ON_READ_FROM_FROZEN_V102`，**不是创建时保存的指纹或 Amazon 签章**。旧 V94 缺证返回 null；V94 独立复核、V95 共用行 hold 均不变；Seller/Ads OAuth OFF、#104 NO-GO、真实净利润未知。
+
+完整规范参见 [V102 结算身份快照本地 SHA-256 指纹 V1](v181-settlement-identity-fingerprint-v1.md)。此补充不修改已验收的 V102 Flyway、现有财务入账门禁和外部身份认证边界。
+
 ## V181 精确 SHA 技术验收
 
 业务 [PR #176](https://github.com/kunlong-luo/merchivra/pull/176) 已合并，精确 main SHA `51ced3db16e08ab70963ae22989f8ae7dc0efc98`；合并前 [CI #44729550558](https://github.com/kunlong-luo/merchivra/actions/runs/44729550558) **run_attempt=1 SUCCESS**（Java25/Gradle、React19/Vite/Next16、Compose、Chromium Next/Vite 新/旧行身份查询；PG18 在快 PR CI 按策略跳过）；合并后精确 SHA [完整 A3 #44729829959](https://github.com/kunlong-luo/merchivra/actions/runs/44729829959) **run_attempt=1、7 项核心任务 SUCCESS**（PG18/Flyway V102、Java、安全与恢复、React/Next16、Chromium、Compose HTTP；额外 PR 专属 Chromium job 在 main 按策略跳过）。[主线 CI #44729830152](https://github.com/kunlong-luo/merchivra/actions/runs/44729830152) SUCCESS；[GitHub Pages #44729829967](https://github.com/kunlong-luo/merchivra/actions/runs/44729829967) SUCCESS（只读虚构数据）。
