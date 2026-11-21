@@ -1,6 +1,9 @@
 # V184：财务费用证据列表批量读取与保守原币利润门禁
 
-状态：**业务 PR 待 CI 与 PostgreSQL18 精确 SHA A3**。
+状态：**业务 PR 已合并，精确 main SHA 完整 A3 7/7 通过**。
+
+V184 批量费用证据查询验收（2026-11-21）：业务 [PR #186](https://github.com/kunlong-luo/merchivra/pull/186) 合并 SHA `c4a5033319e68c1c59b186928bebf93125d5fa7c`；合并前第二次 [CI #44863451425](https://github.com/kunlong-luo/merchivra/actions/runs/44863451425) **SUCCESS**（Java25/Gradle、React/Next16/Vite、Compose；首次 CI 旧 V183 静态测试预期失败后已修复）；精确业务 main SHA [完整 A3 #44863540279](https://github.com/kunlong-luo/merchivra/actions/runs/44863540279) **run_attempt=1，7/7 核心任务 SUCCESS**（PG18/Flyway 合成 HTTP、Java、React/Next16、Chromium、Compose 全 HTTP/安全/恢复；独立设计专项按策略 SKIPPED）。V184 将当页最多 50 条 V165/V182 逐条证据扫描从约 100 次降为两次批量范围 SQL；V183 全期间统计、租户隔离、V94 审计/V95 冲突/V102 缺证、原币金额和不可过账门禁均保留。**没有外部 Amazon/银行真实性认证，不允许 V162/V64 真实净利润或生产放行；Seller/Ads OAuth OFF、生产 #104 NO-GO。**
+
 
 ## 已核查问题
 
