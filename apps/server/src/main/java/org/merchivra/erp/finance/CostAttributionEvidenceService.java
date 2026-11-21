@@ -115,30 +115,37 @@ public class CostAttributionEvidenceService {
      * collision signals, V94 reviewed links/audit and V102 captured identities.
      * There is intentionally no V182 write, backfill or auto-release.
      */
-    @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
-    public Assessment assess(UUID tenant,UUID marketplace,UUID sourceId) {
-        // Performs the existing tenant/marketplace/active-tenant scope check.
-        var collision=reconciliation.preview(tenant,marketplace,sourceId);
-        var rows=jdbc.query("""
-            SELECT count(*) AS links,
-              count(*) FILTER(WHERE i.link_id IS NOT NULL) AS frozen,
-              count(*) FILTER(WHERE i.link_id IS NULL) AS missing_capture,
-              count(*) FILTER(WHERE l.state<>'OPEN') AS reviewed,
-              count(*) FILTER(WHERE l.state<>'OPEN' AND EXISTS(
+    /**
+     * V184: bounded (1..50) page assessment, exactly two evidence SELECTs:
+     * one complete eight-signal V165 scope read and one V94/V102 grouped
+     * aggregation. The caller's REPEATABLE_READ period report owns the
+     * transaction; no per-source database lookups or financial writes.
+     */
+    java.util.Map<UUID,Assessment> assessBatch(UUID tenant,UUID marketplace,
+        List<UUID> sourceIds) {
+        var previews=reconciliation.previewBatch(tenant,marketplace,sourceIds);
+        String placeholders=String.join(",",
+            java.util.Collections.nCopies(sourceIds.size(),"?"));
+        String sql="""
+            SELECT s.id AS source_id,count(l.id) AS links,
+              count(l.id) FILTER(WHERE i.link_id IS NOT NULL) AS frozen,
+              count(l.id) FILTER(WHERE i.link_id IS NULL) AS missing_capture,
+              count(l.id) FILTER(WHERE l.state<>'OPEN') AS reviewed,
+              count(l.id) FILTER(WHERE l.state<>'OPEN' AND EXISTS(
                 SELECT 1 FROM finance_cost_settlement_line_audit_v94 a
                 WHERE a.tenant_id=l.tenant_id AND a.link_id=l.id
                   AND a.action=l.state AND a.actor_id=l.reviewed_by
               )) AS audited,
-              count(*) FILTER(WHERE l.state='POTENTIAL_DUPLICATE_UNVERIFIED'
+              count(l.id) FILTER(WHERE l.state='POTENTIAL_DUPLICATE_UNVERIFIED'
                 AND EXISTS(SELECT 1 FROM finance_cost_settlement_line_audit_v94 a
                   WHERE a.tenant_id=l.tenant_id AND a.link_id=l.id
                     AND a.action=l.state AND a.actor_id=l.reviewed_by
               )) AS audited_potential,
-              count(*) FILTER(WHERE
+              count(l.id) FILTER(WHERE
                 l.similarity='SIMILAR_REFERENCE_AND_AMOUNT') AS exact_match,
-              count(*) FILTER(WHERE l.similarity IN
+              count(l.id) FILTER(WHERE l.similarity IN
                 ('CURRENCY_MISMATCH','CREDIT_OR_ZERO_NOT_DEBIT')) AS incompatible,
-              count(*) FILTER(WHERE EXISTS(
+              count(l.id) FILTER(WHERE EXISTS(
                 SELECT 1 FROM finance_cost_settlement_line_link_v94 other
                 WHERE other.tenant_id=l.tenant_id
                   AND other.seller_marketplace_id=l.seller_marketplace_id
@@ -146,19 +153,48 @@ public class CostAttributionEvidenceService {
                   AND other.line_number=l.line_number
                   AND other.source_id<>l.source_id
               )) AS shared
-            FROM finance_cost_settlement_line_link_v94 l
+            FROM finance_cost_source_v91 s
+            LEFT JOIN finance_cost_settlement_line_link_v94 l
+              ON l.tenant_id=s.tenant_id
+                AND l.seller_marketplace_id=s.seller_marketplace_id
+                AND l.source_id=s.id
             LEFT JOIN finance_cost_settlement_line_identity_v102 i
-              ON i.tenant_id=l.tenant_id AND i.link_id=l.id
-            WHERE l.tenant_id=? AND l.seller_marketplace_id=?
-              AND l.source_id=?
-            """,(r,i)->new Counts(r.getLong("links"),r.getLong("frozen"),
+              ON i.tenant_id=l.tenant_id
+                AND i.seller_marketplace_id=l.seller_marketplace_id
+                AND i.link_id=l.id
+            WHERE s.tenant_id=? AND s.seller_marketplace_id=?
+              AND s.id IN (
+            """ + placeholders + ") GROUP BY s.id";
+        var args=new ArrayList<Object>();
+        args.add(tenant);args.add(marketplace);args.addAll(sourceIds);
+        var rows=jdbc.query(sql,(r,i)->java.util.Map.entry(
+            r.getObject("source_id",UUID.class),
+            new Counts(r.getLong("links"),r.getLong("frozen"),
                 r.getLong("missing_capture"),r.getLong("reviewed"),
                 r.getLong("audited"),r.getLong("audited_potential"),
                 r.getLong("exact_match"),r.getLong("incompatible"),
-                r.getLong("shared")),tenant,marketplace,sourceId);
-        if(rows.size()!=1)
+                r.getLong("shared"))),args.toArray());
+        if(rows.size()!=sourceIds.size())
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                "Cost attribution evidence is unavailable");
-        return classify(sourceId,collision,rows.getFirst());
+                "Cost attribution scope changed during read");
+        var found=new java.util.HashMap<UUID,Assessment>();
+        for(var row:rows) {
+            var preview=previews.get(row.getKey());
+            if(preview==null||found.putIfAbsent(row.getKey(),
+                classify(row.getKey(),preview,row.getValue()))!=null)
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Cost attribution evidence scope inconsistent");
+        }
+        if(found.size()!=sourceIds.size()||!found.keySet().containsAll(sourceIds))
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Cost attribution evidence scope incomplete");
+        return java.util.Map.copyOf(found);
     }
+
+    @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
+    public Assessment assess(UUID tenant,UUID marketplace,UUID sourceId) {
+        if(sourceId==null)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        return assessBatch(tenant,marketplace,List.of(sourceId)).get(sourceId);
+    }
+
 }
