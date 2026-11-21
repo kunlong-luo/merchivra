@@ -40,7 +40,7 @@ jobs:
         working-directory: apps/web
         env:
           VITE_PUBLIC_DEMO: 'true'
-        run: npm run build
+        run: npm run build:vite
       - name: Verify public mode has no live login or OAuth clients
         run: node scripts/check_pages_dist.mjs apps/web/dist
       - name: Add GitHub Pages no-Jekyll marker
