@@ -1,3 +1,5 @@
+> **历史技术记录 / V191 更新（2026-11-21）**：本文的 V122 Next **候选**与旧默认 Vite 部署均属当时记录。当前本地默认 Web 已是 Next.js 16、前端仅 pnpm 12.20.0；Next Node 构建仍使用这份文件里的独立健康检查与同源代理原则，但 `pnpm build` 和默认 Compose `web` 已切到 Next。请以 [当前状态](../current-status.md)、[本地部署](../deployment/local-spark-db.md) 与 [完整 V191 A3](https://github.com/kunlong-luo/merchivra/actions/runs/44882890834) 为准；生产 #104 NO-GO。
+
 # V122 — Next.js 16 Node 生产候选、保留 Vite 回退与 A3 主线验收
 
 2026-11-09 · A2/A3 · [Issue #63](https://github.com/kunlong-luo/merchivra/issues/63) · [Issue #62](https://github.com/kunlong-luo/merchivra/issues/62)
