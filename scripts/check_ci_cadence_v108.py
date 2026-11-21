@@ -32,6 +32,11 @@ assert "github.head_ref" not in ci
 assert "visual-refresh-browser:" not in ci
 assert "if: inputs.full_suite == true" in ci
 assert "Next 16 App Router TS gate" in ci
+assert "Build primary Next.js 16" in ci
+assert "Build explicit Vite rollback" in ci
+assert "run: npm run build:vite" in ci
+assert "run: npm run build:vite" in pages
+assert "run: npm run build:vite" in browser
 assert "npm run api:check" in ci and "npm run test" in ci
 assert "compose-deployment-config:" in ci
 assert "pg18-migrations:" in ci
