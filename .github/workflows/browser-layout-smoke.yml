@@ -15,20 +15,21 @@ jobs:
     timeout-minutes: 18
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: pnpm/setup@v3
         with:
-          node-version: '24'
-          cache: npm
-          cache-dependency-path: apps/web/package-lock.json
-          package-manager-cache: false
+          working-directory: apps/web
+          runtime: node@24
+          cache: true
+          require-lockfile: true
+          install: false
       - name: Install locked frontend dependencies
         working-directory: apps/web
-        run: npm ci --no-audit --no-fund
+        run: pnpm install --frozen-lockfile
       - name: Ensure React-only frontend
         run: node scripts/check_frontend_stack.mjs
       - name: Build Vite fallback for synthetic browser regression
         working-directory: apps/web
-        run: npm run build:vite
+        run: pnpm run build:vite
       - name: Install CJK fonts in disposable runner for faithful Chinese screenshots
         run: |
           sudo apt-get update -qq
@@ -44,7 +45,7 @@ jobs:
           node scripts/smoke_browser_layout.mjs apps/web/dist browser-smoke-artifacts
       - name: Build Next.js 16 App Router production preview
         working-directory: apps/web
-        run: npm run build:next
+        run: pnpm run build:next
       - name: Next App Router Chromium layout and real-workspace fixture smoke
         shell: bash
         run: |
