@@ -1,6 +1,6 @@
 # Merchivra · UI Design System
 
-> **Current design baseline (V109 / 2026-11-08):** A+B is the approved design direction. Actual workbenches use React 19, Base UI and TanStack Table; Next.js 16.4.5 App Router is implemented but has not replaced Vite/Nginx as the default runtime. Refer to the [active MVP plan](docs/roadmap/mvp-freeze-release-v108.md), [document hub](docs/README.md) and [V108 isolated Chromium evidence](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593). The 2026-10-30/31 iteration notes below are **historical**; Vue wording is not a current build gate. Manual WCAG/assistive technology and real-seller visual acceptance remain outstanding.
+> **当前设计系统（V191 / 2026-11-21）**：A+B 已应用于 React 19 / **Next.js 16.4.5 默认本地工作台**，组件采用 Base UI、TanStack Table、Orval。前端唯一包管理器为 pnpm 12.20.0，Vite 只用于受控回退/Pages 虚构展示。下文 V99/V100/V109 迭代内容保留历史时态；可对照 [当前事实基线](docs/current-status.md)、[现行 P0](docs/roadmap/current-plan.md) 与 [V191 合成 A3](https://github.com/kunlong-luo/merchivra/actions/runs/44882890834)。真实财务核销与生产 #104 仍 NO-GO。
 
 Status: 2026-10-31 manual implementation of public design-review methods (Impeccable-inspired). **Impeccable is not installed or executed.** Reference: https://impeccable.style/docs/audit/ and https://impeccable.style/docs/polish/.
 
@@ -42,7 +42,7 @@ Code-only design review, **not** a browser screenshot inspection or automated Im
 
 ## Acceptance checks
 
-Run `npm ci`, `npm run build` and the existing Vitest/typecheck workflow. At M3/M4, manually check at 360/390/768/1280px, keyboard traversal, screen-reader descriptions, zoom to 200%, dark-mode expectations and browser screenshots; **these manual checks have not been completed in this pass**. Do not claim real Lighthouse or WCAG AA verification based solely on code changes.
+Run `pnpm install --frozen-lockfile`, `pnpm run build` and the existing Vitest/typecheck workflow. At M3/M4, manually check at 360/390/768/1280px, keyboard traversal, screen-reader descriptions, zoom to 200%, dark-mode expectations and browser screenshots; **these manual checks have not been completed in this pass**. Do not claim real Lighthouse or WCAG AA verification based solely on code changes.
 
 ## Working without an Impeccable plugin
 
