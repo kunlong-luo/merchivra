@@ -1,3 +1,5 @@
+> **历史归档 · V191 文档整理（2026-11-21）**：本文属于PLAN-001 长路线图的历史迭代快照。 下文所有“最新”“当前”“下一 P0”仅表示**写作当时**的状态，不再用于驱动新开发；实际请以 [当前事实基线](current-status.md) 与 [唯一现行 P0 计划](roadmap/current-plan.md) 为准。原始 PR、失败/复测及精确 SHA 证据保留供审计，不等于真实 Amazon/银行核验、财务 G1 或生产 #104 GO。
+
 # PLAN-001 · 文档先行与分阶段交付路线
 
 > **2026-11-13 / 当前主线 V146 纠偏：** [唯一现行执行计划及顶部 V146 状态补丁](roadmap/mvp-freeze-release-v108.md) 已据 `main` [`945ffb299f`](https://github.com/kunlong-luo/merchivra/commit/945ffb299f8dccfe321c6792960cb461d5c4bf30) 修订。[完整 A3 #43284799417](https://github.com/kunlong-luo/merchivra/actions/runs/43284799417) **7/7 SUCCESS（合成隔离验证）**；原 [采购/供应商/仓储分页 #62](https://github.com/kunlong-luo/merchivra/issues/62) **已于 V144 关闭**，不再是当前 A1 缺口。当前尚待处理 [FBA 来源历史/候选分页 #108](https://github.com/kunlong-luo/merchivra/issues/108)、[目标环境 Next 正式切流 #63](https://github.com/kunlong-luo/merchivra/issues/63)、[真实 G1/G2/G3 及目标生产验收 #104](https://github.com/kunlong-luo/merchivra/issues/104) 与维护者本地真实 Seller/Ads 联调。下文 V108/V92 及更早“当前”表述保留**当时历史状态**，不能覆盖这一新的执行基线；不得据合成 CI 宣称生产上线。
