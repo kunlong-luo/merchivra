@@ -65,7 +65,20 @@ class CostProfitReadinessServiceTest {
             "GROUP BY category,currency_code","sum(amount) AS claimed",
             "s.business_date>=? AND s.business_date<?",
             "(s.business_date,s.id)<(?,?)","LIMIT 51",
-            "identity.preview(tenant,marketplace,r.id())",
+            "attribution.assess(tenant,marketplace,r.id())",
+            "barriers(tenant,marketplace,start,end)",
+            "finance_cost_settlement_line_identity_v102 i",
+            "finance_cost_settlement_line_audit_v94 a",
+            "other.source_id<>l.source_id",
+            "l.source_id=s.id",
+            "LEFT JOIN finance_cost_settlement_line_identity_v102",
+            "CROSS JOIN LATERAL",
+            "count(*) FILTER(WHERE e.links=0) AS missing_link",
+            "count(*) FILTER(WHERE e.capture_missing>0) AS missing_capture",
+            "count(*) FILTER(WHERE e.shared>0) AS shared_source",
+            "count(*) FILTER(WHERE e.links>1) AS multiple_claims",
+            "c[0],List.copyOf(blockers),false",
+            "localAttributionReasonCodes",
             "List.copyOf(missing),false,false,false,null",
             "isolation=Isolation.REPEATABLE_READ",
             "amount.subtract(approved)"})
@@ -73,5 +86,29 @@ class CostProfitReadinessServiceTest {
         assertFalse(sql.contains("UPDATE finance_profit_report"));
         assertFalse(sql.contains("INSERT INTO finance_source_event"));
         assertFalse(sql.contains("MERCHIVRA_SPAPI_ENABLED=true"));
+    }
+
+    @Test void v183PeriodGateIsUnpagedAndNeverPromotesLocalEvidenceToProfit()
+        throws Exception {
+        var code=Files.readString(Path.of(
+            "src/main/java/org/merchivra/erp/finance/CostProfitReadinessService.java"));
+        String global=code.substring(code.indexOf("private EvidenceBarriers barriers("),
+            code.indexOf("@Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)"));
+        assertTrue(global.contains("s.business_date>=? AND s.business_date<?"));
+        assertTrue(global.contains("s.tenant_id=? AND s.seller_marketplace_id=?"));
+        assertTrue(global.contains("i.seller_marketplace_id=l.seller_marketplace_id"));
+        assertTrue(global.contains("e.audit_missing"));
+        assertFalse(global.contains("beforeDate"));
+        assertFalse(global.contains("beforeId"));
+        assertFalse(global.contains("LIMIT 51"));
+        assertFalse(global.contains("INSERT INTO"));
+        assertFalse(global.contains("UPDATE finance_"));
+        assertTrue(global.contains("EIGHT_COST_CATEGORIES_NOT_EXTERNALLY_ATTESTED"));
+        assertTrue(global.contains("BANK_SETTLEMENT_NOT_RECONCILED"));
+        assertTrue(global.contains("List.copyOf(blockers),false"));
+        var assessor=Files.readString(Path.of(
+            "src/main/java/org/merchivra/erp/finance/CostAttributionEvidenceService.java"));
+        assertTrue(assessor.contains("localIdentityStatus"));
+        assertTrue(assessor.contains("preview.status()"));
     }
 }
