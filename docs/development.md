@@ -1,6 +1,6 @@
 # Development guide
 
-> **Current developer guide (V109, 2026-11-08).** Default private web runtime remains React/Vite/Nginx; Next.js 16.4.5 App Router is implemented but not yet production cut over. See the [current MVP plan](roadmap/mvp-freeze-release-v108.md), [current CI policy](testing/ci-policy.md) and [documentation hub](README.md). Java 25 / Spring Boot 4.1.2 / **Gradle**, PostgreSQL **18**, Node 24 and React 19 are the authoritative versions. Do not use the 2026-10-30 PostgreSQL 17 or Vue-era test notes below as current requirements. Seller/Ads live authorization and writes remain disabled.
+> **Current local runtime (2026-11-21):** Next.js 16 App Router is now the default for `npm run dev` (127.0.0.1:3000), `npm run build`, and both Docker Compose `web` services. The Vite/Nginx fallback must be requested explicitly as `npm run dev:vite`, `npm run build:vite`, or `--profile vite-fallback` (port 3002). This is a local developer cutover only, NOT target HTTPS/production approval; #104 remains NO-GO and Seller/Ads OAuth stays OFF. Java 25/Gradle, Spring Boot 4.1.2, PostgreSQL 18 and Node 24 remain the stack.
 
 ## Prerequisites
 **Java 25 LTS**, Gradle 9.2.1（项目内 Gradle Wrapper）, **Node.js 24.11+ (24.x)**, npm, Docker Compose. Frontend local Node selection: `cd apps/web && nvm use`. The same major versions are used in GitHub Actions and the Docker multi-stage builds.
@@ -30,7 +30,7 @@ export MERCHIVRA_BOOTSTRAP_USERNAME=your_admin
 export MERCHIVRA_BOOTSTRAP_PASSWORD='your-unique-16-plus-character-password'
 (cd apps/server && ./gradlew bootRun)
 
-# Shell 2
+# Shell 2 — Next.js 16 is the default; do not launch the old Vite process.
 cd apps/web
 npm ci
 npm run dev
