@@ -1,3 +1,6 @@
+# V186: verify exact merged main SHA full PG18/HTTP/Next/Chromium
+# for one V91 source across SKU/ORDER/PERIOD without duplicate expenses.
+# G1 policy unapproved, no refund COGS, Amazon OAuth OFF, prod #104 NO-GO.
 # V185: exact merged main SHA A3 for original-currency V92 cross-month
 # projection; Owner HTTP, PG18, React Next16 and zero profit posting.
 # G1/DEC-08 policy unapproved. Amazon/Ads OAuth OFF; production #104 NO-GO.
@@ -166,7 +169,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V185-A3-original-currency-periodization' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V186-A3-single-cost-ownership-bridge' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -241,6 +244,7 @@ on:
           - V183C-A3-profit-evidence-next-fixture
           - V184-A3-batch-finance-attribution
           - V185-A3-original-currency-periodization
+          - V186-A3-single-cost-ownership-bridge
 
 permissions:
   contents: read
