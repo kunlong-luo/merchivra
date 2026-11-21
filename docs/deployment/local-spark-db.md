@@ -118,7 +118,7 @@ docker compose --env-file .env -f deploy/compose.spark-db.yaml ps
 
 - 只新建 **`merchivra-server-1`、`merchivra-web-1`** 两个容器，数据库继续使用已有 `spark-postgres`。这就是 **三层服务，两个新增容器** 的结构。
 - `server` 同时接入项目自己的默认内部网络（供 `web` 的 Nginx 使用）及 `spark-iot-net`（仅供连接共享 PostgreSQL）；`web` 不直接连接共享数据库网络。
-- 首次启动时 Spring Boot 对 **`merchivra` 数据库** 自动执行 现有 Flyway 迁移（截至当前代码为 V1–V59；以后继续增加）。启动完成后访问 `http://127.0.0.1:3000`，登录后查看业务模块。
+- 首次启动时 Spring Boot 对 **`merchivra` 数据库** 自动执行 现有 Flyway 迁移（实际迁移版本以 `apps/server/src/main/resources/db/migration/` 和运行时 `flyway_schema_history` 为准，旧 V59 不是版本上限）。启动完成后访问 `http://127.0.0.1:3000`，登录后查看业务模块。
 - 当前 Compose 仍只在 `127.0.0.1` 公开 Web/API 调试端口，不具备公网 TLS 入口。你可以在 `.env` 使用 `MERCHIVRA_WEB_PORT` / `MERCHIVRA_API_PORT` 调整端口，避免占用其他项目的 3000/8080。
 
 排错：
@@ -134,7 +134,7 @@ docker exec spark-postgres psql -U root -d merchivra -Atc \
 
 ### B4. 使用独立前后端进程进行开发（共享同一数据库）
 
-需要 Java **25**、Gradle Wrapper **9.2.1**、Node.js **24.11+**、npm（以及正在运行的 spark-db PostgreSQL 18）：
+需要 Java **25**、Gradle Wrapper **9.2.1**、Node.js **24.11+**、**pnpm 12.20.0**（以及正在运行的 spark-db PostgreSQL 18）：
 
 在终端 A 配置后端环境（变量仅供示例，密码请在本地安全注入）：
 
@@ -244,7 +244,7 @@ cd apps/web && pnpm install --frozen-lockfile && pnpm run typecheck && pnpm run 
 
 React 19 前端**已经实现并构建成功**，有实际登录/会话、核心数据、卖家授权代码入口、运营自动化、团队权限、采购与仓储（含 V49–V52 库位、盘点、退货与凭据）、财务来源与对账页面、Mock 演示，以及宽度响应式验证。它不是空白脚手架，也不是 Vue；但目前仍是 pre-alpha，尚未完成真实 Amazon 授权后的全业务联调、外部承运商回执核验或面向公网的安全认证，因此不能承诺“前端和整套 ERP 已达到生产可用”。
 
-近期实际独立 PG18 / Flyway、Spring 启动、Java 与 React 构建成功：[2026-11-01 CI](https://github.com/kunlong-luo/merchivra/actions/runs/41270021997)。这验证的是**空库迁移与构建**，并不表示当前用户的 spark-db 实例已被直接连接或修改。
+最新代码技术基线：[V191 精确 main SHA 完整 A3 7/7 成功](https://github.com/kunlong-luo/merchivra/actions/runs/44882890834)（Java25/PG18、Next/Chromium、pnpm 冻结构建、Compose）。只验证隔离合成环境，不表示已连接当前用户的 spark-db、认证真实 Amazon/银行收费或获得生产批准；早期运行记录仅供追溯。
 
 ## 可选 Redis 8 接入（V54）
 
