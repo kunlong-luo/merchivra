@@ -1,6 +1,6 @@
 # V187 · 全期间跨来源费用冲突风险与利润阻断（非重复扣费裁决）
 
-**交付范围：** 在现有 V165 八种本地身份线索、V168 多来源共用导入结算行以及 V186 单来源费用归属基础上，增加一个完整期间的只读风险汇总，Next.js 16 利润工作台显示真实来源数、相互重叠风险与最近不超过 20 个示例。**没有任何新财务写入、费用重复确认、虚构外部原始单据或利润解锁。**
+**验收状态：业务代码已合并，精确 main SHA 完整 A3 7/7 通过。**\n\nV187 整期跨来源费用疑似重复风险技术验收（2026-11-21）：业务 [PR #192](https://github.com/kunlong-luo/merchivra/pull/192) 已合并，精确业务 main SHA `b2e5cb24f6faedf7db8eb05ca708099926dae422`；合并前 [快速 CI #44868562885](https://github.com/kunlong-luo/merchivra/actions/runs/44868562885) **SUCCESS**（Java 25/Gradle、React19/Next16/Vite、Compose）；精确 SHA [完整 A3 #44868689550](https://github.com/kunlong-luo/merchivra/actions/runs/44868689550) **run_attempt=1、7/7 核心任务 SUCCESS**（真实 PG18/Flyway、V165/V187 合成 Owner HTTP 八类来源重叠及 V168 共用结算行统计、401/400/404、无匹配仍阻断、Java、Next/Vite Chromium、Compose Session/CSRF/恢复；独立设计专项策略 SKIPPED）。V187 **仅提供本地疑似跨来源冲突整期计数及最多 20 个脱敏样例**，20 个示例的上限不影响整期来源风险统计；本地身份编号或文档摘要相同不构成真实重复扣费或费用真实性证明，未匹配不代表成本为零或来源已核验。**V162/V64 已认证净利润、真实 Amazon/Ads、外部银行、G1/DEC-06/07/08 会计口径及退款 COGS 回转仍不解锁；Seller/Ads OAuth OFF，生产 #104 NO-GO。**\n\n**交付范围：** 在现有 V165 八种本地身份线索、V168 多来源共用导入结算行以及 V186 单来源费用归属基础上，增加一个完整期间的只读风险汇总，Next.js 16 利润工作台显示真实来源数、相互重叠风险与最近不超过 20 个示例。**没有任何新财务写入、费用重复确认、虚构外部原始单据或利润解锁。**
 
 ## 复用而非重新造轮子
 
