@@ -141,7 +141,7 @@ jobs:
           set +a
           python3 scripts/smoke_team.py
       # V122: run the actual compiled standalone Node artifact side-by-side
-      # with the Vite rollback, against the SAME disposable PG18 + Spring.
+      # alongside Next primary, against the SAME disposable PG18 + Spring.
       - name: V122 Next Node container with real Spring Session and CSRF
         shell: bash
         run: |
@@ -213,6 +213,22 @@ jobs:
       # disposable Spring server with Secure cookies enabled. This allows a
       # real CA-verified HTTPS Nginx canary to test the same-session Vite
       # rollback under TLS rather than pretending local HTTP is production.
+      - name: Boot explicit Vite rollback on port 3002 for isolated TLS test
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker compose --profile vite-fallback --env-file .env \
+            -f deploy/compose.yaml -f deploy/compose.next.yaml \
+            -f deploy/compose.v146-synthetic-https.yaml \
+            up -d --build vite-web
+          ready=0
+          for i in $(seq 1 90); do
+            if curl -fsS --max-time 3 http://127.0.0.1:3002/api/v1/ping >/dev/null 2>&1; then
+              ready=1; break
+            fi
+            sleep 2
+          done
+          test "$ready" = 1
       - name: V146 synthetic TLS validated Next-to-Vite-to-Next cutover
         shell: bash
         run: |
