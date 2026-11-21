@@ -46,7 +46,7 @@ describe('V185 original-currency period preview strict trust boundary',()=>{
    currency:'USD',projectedAmount:'10.000001'}]})).toThrow()
  })
  it('only requests the owner-session scoped read-only allocation list',async()=>{
-  const request=vi.fn(async()=>new Response(JSON.stringify([
+  const request=vi.fn(async (_url:RequestInfo|URL,_opts?:RequestInit)=>new Response(JSON.stringify([
    {id:plan,targetKind:'PERIOD',state:'APPROVED_UNVERIFIED'}
   ]),{status:200}))
   vi.stubGlobal('fetch',request)
@@ -58,7 +58,7 @@ describe('V185 original-currency period preview strict trust boundary',()=>{
   expect(opts).toMatchObject({method:'GET',credentials:'same-origin',cache:'no-store'})
  })
  it('only requests scoped V92 plan ID and validates external authenticity flags',async()=>{
-  const request=vi.fn(async()=>new Response(JSON.stringify(result),{status:200}))
+  const request=vi.fn(async (_url:RequestInfo|URL,_opts?:RequestInit)=>new Response(JSON.stringify(result),{status:200}))
   vi.stubGlobal('fetch',request)
   const x=await fetchPeriodProjection(mp,source,plan)
   expect(x.projectedAmount).toBe('10.000001')
