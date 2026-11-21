@@ -1,6 +1,6 @@
 # 部署与卸载指南：内置 PostgreSQL 18 或复用 spark-db
 
-> **文档基线核对：2026-11-08（V109）。** 下述 `deploy/compose.yaml` 与 `deploy/compose.spark-db.yaml` 目前部署的是 **React/Vite 静态构建 + Nginx**、Spring Boot 和 PostgreSQL 18；已实现的 Next.js 16 App Router 尚未正式替换 Web 容器（[Next 正式切换 P0 #63](https://github.com/kunlong-luo/merchivra/issues/63)）。仓库仍为 **pre-alpha**，只在本机或隔离测试环境使用。Amazon Seller/Ads 真实 OAuth、SP-API 出站与写入默认关闭。**`compose.production.yaml` 只是配置 overlay，不提供 TLS、外部凭据管理、自动备份或公网发布批准。** [现行 MVP 计划](../roadmap/mvp-freeze-release-v108.md) · [生产安全阻塞项](../testing/release-readiness-v68.md)。
+> **本地默认 Next.js 16（2026-11-21）**：`deploy/compose.yaml` 与 `deploy/compose.spark-db.yaml` 的 `web` 已切到 React 19 / Next.js 16 独立 Node（本地 `127.0.0.1:3000`）。原有 Vite/Nginx 仅为明确启用的回退服务 `vite-web`（`--profile vite-fallback`，本机默认 3002），不会被普通 `up` 启动。切换**仅限本地与隔离测试**，尚未代表真实目标环境 HTTPS、审计、人工 G1/G2/G3 签署或生产放行；#104 NO-GO，Amazon Seller/Ads OAuth/真实写入仍关闭。`compose.production.yaml` 只是配置覆盖层，不能直接公网部署。
 
 ## 一、架构与运行服务数
 
@@ -8,7 +8,7 @@ Merchivra 目前是 **三层服务**，而不是三个必须独立采购的数�
 
 | 层 | 容器/进程 | 用途 | 本地端口 |
 | --- | --- | --- | --- |
-| 前端 | `web`（React 19 编译产物 + Nginx） | SPA、同源代理 `/api/` | `127.0.0.1:3000` |
+| 前端 | `web`（React 19 + Next.js 16 Node standalone） | App Router、同源 `/api` 转发 | `127.0.0.1:3000` |
 | 后端 | `server`（Java 25 / Spring Boot 4.1.2） | 登录、业务 API、Flyway、模拟工作流 | `127.0.0.1:8080` |
 | 数据库 | `postgres` **或**现有 `spark-postgres` | PostgreSQL **18**，库存、订单、审计和证明文件 | 内置不发布端口；spark-db 原有 `127.0.0.1:5432` |
 
@@ -157,7 +157,7 @@ npm ci
 npm run dev
 ```
 
-Vite 开发模式通常使用 `http://127.0.0.1:5173`，`apps/web/vite.config.ts` 自动把 `/api` 转发到 `127.0.0.1:8080`。后端在宿主机运行时访问本地 `spark-db` 已映射的 `127.0.0.1:5432`；**与容器方式不同**，不使用 `spark-postgres` 主机名。
+Next.js 开发模式使用 `http://127.0.0.1:3000`，默认 `npm run dev` 的 `/api` 同源代理指向 `127.0.0.1:8080`。只有显式执行 `npm run dev:vite` 才启动 5173 端口的旧 Vite。后端在宿主机运行时访问本地 `spark-db` 映射的 `127.0.0.1:5432`；**与容器方式不同**，不使用 `spark-postgres` 主机名。
 
 ### B5. 仅用于隔离测试的非 Demo 覆盖层
 
