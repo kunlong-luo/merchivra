@@ -1,3 +1,6 @@
+# V191: Node 24 + pinned pnpm 12.20.0, pnpm-lock.yaml frozen installs,
+# two Docker images, Orval/Next/Vite, PG18 real HTTP, Chromium and mock Compose.
+# No alternate package manager, live Amazon credentials or production approval.
 # V190: exact-main full A3 checks default Next.js web, separate Vite fallback,
 # trusted same-origin /api Session/CSRF, PG18 Actuator readiness, and V146 TLS cutover.
 # Local runtime migration is NOT production deployment or Amazon authorization.
@@ -182,7 +185,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V190-A3-Next-default-web-Vite-opt-in-rollback' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V191-A3-pnpm-only-locked-web-build' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -262,6 +265,7 @@ on:
           - V188-A3-source-aware-period-profit-waterfall
           - V188B-A3-bounded-V64-openapi-waterfall
           - V190-A3-Next-default-web-Vite-opt-in-rollback
+          - V191-A3-pnpm-only-locked-web-build
 
 permissions:
   contents: read
