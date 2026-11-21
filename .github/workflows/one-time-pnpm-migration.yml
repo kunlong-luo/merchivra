@@ -42,6 +42,7 @@ jobs:
           pnpm test
           pnpm build
           pnpm build:vite
+          VITE_PUBLIC_DEMO=true pnpm build:vite
       - name: Enforce package-manager, docs, and fail-closed runtime rules
         shell: bash
         run: |
