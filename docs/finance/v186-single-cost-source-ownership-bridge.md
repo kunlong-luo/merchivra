@@ -1,6 +1,9 @@
 # V186：全期间人工费用单一来源归属桥接（防跨维度重复扣费）
 
-状态：**业务实现待 PR 快速 CI 与精确 main SHA 全面 A3**。本阶段只有原币人工费用的只读归属审计，不是自动财务费用计提、V162/V64 真实利润或 G1 准入。
+状态：**业务 PR 已合并；精确业务 main SHA 完整 A3 7/7 通过**。本阶段只有原币人工费用的只读归属审计，不是自动财务费用计提、V162/V64 真实利润或 G1 准入。
+
+V186 单一成本来源跨维度归属桥接验收（2026-11-21）：业务 [PR #190](https://github.com/kunlong-luo/merchivra/pull/190) 已合并，精确业务 main SHA `bc318851dee13df1857f7d1eb090a0d68b0a7532`；合并前 [快速 CI #44867190967](https://github.com/kunlong-luo/merchivra/actions/runs/44867190967) **SUCCESS**（Java25/Gradle、React19/Next16/Vite、Compose）；精确业务 SHA [完整 A3 #44867326080](https://github.com/kunlong-luo/merchivra/actions/runs/44867326080) **run_attempt=1，7/7 核心任务 SUCCESS**（PG18/Flyway、双 Owner V164/V185/V186 合成 HTTP、独立 V91 原币来源单表 SUM 与按 SKU/ORDER/PERIOD/UNASSIGNED 分组总额守恒、Java、React/Next16 Chromium、Compose HTTP/安全/恢复；额外专项设计检查按策略 SKIPPED）。V186 只把单个 V91 原币人工来源归入最多一个有效 V92 主分摊维度，不生成第二笔费用，不把缺来源视为零，不修改批准、历史审计或真实利润。**跨两个不同 V91 来源的真实重复扣费仍未认证；退货 COGS 回转、G1/DEC-06/07/08 会计政策、FX、外部 Amazon/Ads/银行证据均未完成，V162/V64 真实净利润继续禁止；Seller/Ads OAuth OFF，生产 #104 NO-GO。**
+
 
 ## 解决的真实问题
 
