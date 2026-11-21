@@ -49,6 +49,20 @@ public class PeriodProfitWaterfallServiceV188 {
                 AND (signed_sales IS NULL OR signed_amazon_fees IS NULL
                   OR signed_fba_fees IS NULL OR provisional_cogs IS NULL
                   OR estimated_contribution IS NULL)) AS missing_amount_count,
+              -- V192: V62 checks each SKU and order's own arithmetic, but
+              -- cannot constrain the SUM of SKU rows to its parent order.
+              -- A missing SKU, an extra SKU on BLOCKED/PENDING, or opposite
+              -- per-order errors must not cancel in the period aggregate.
+              count(*) FILTER(WHERE
+                (o.state='ELIGIBLE' AND
+                  (sk.sku_count=0
+                    OR sk.signed_sales IS DISTINCT FROM o.signed_sales
+                    OR sk.signed_amazon_fees IS DISTINCT FROM o.signed_amazon_fees
+                    OR sk.signed_fba_fees IS DISTINCT FROM o.signed_fba_fees
+                    OR sk.provisional_cogs IS DISTINCT FROM o.provisional_cogs
+                    OR sk.estimated_contribution IS DISTINCT FROM o.estimated_contribution))
+                OR (o.state<>'ELIGIBLE' AND sk.sku_count<>0)
+              ) AS sku_mismatch_count,
               coalesce(sum(signed_sales) FILTER(WHERE state='ELIGIBLE'),0::numeric)
                 AS signed_sales,
               coalesce(sum(signed_amazon_fees) FILTER(WHERE state='ELIGIBLE'),0::numeric)
@@ -59,13 +73,24 @@ public class PeriodProfitWaterfallServiceV188 {
                 AS provisional_cogs,
               coalesce(sum(estimated_contribution) FILTER(WHERE state='ELIGIBLE'),0::numeric)
                 AS contribution
-            FROM finance_profit_report_order
-            WHERE tenant_id=? AND job_id=?
+            FROM finance_profit_report_order o
+            LEFT JOIN LATERAL (
+              SELECT count(*) AS sku_count,
+                sum(signed_sales) AS signed_sales,
+                sum(signed_amazon_fees) AS signed_amazon_fees,
+                sum(signed_fba_fees) AS signed_fba_fees,
+                sum(provisional_cogs) AS provisional_cogs,
+                sum(estimated_contribution) AS estimated_contribution
+              FROM finance_profit_report_sku s
+              WHERE s.tenant_id=o.tenant_id
+                AND s.job_id=o.job_id AND s.order_id=o.order_id
+            ) sk ON true
+            WHERE o.tenant_id=? AND o.job_id=?
             """,
             (r,i)->new PeriodProfitWaterfallV188.FrozenAmounts(
                 r.getLong("eligible_count"),r.getLong("blocked_count"),
                 r.getLong("pending_count"),r.getLong("wrong_currency_count"),
-                r.getLong("missing_amount_count"),
+                r.getLong("missing_amount_count"),r.getLong("sku_mismatch_count"),
                 r.getBigDecimal("signed_sales").toPlainString(),
                 r.getBigDecimal("signed_amazon_fees").toPlainString(),
                 r.getBigDecimal("signed_fba_fees").toPlainString(),
