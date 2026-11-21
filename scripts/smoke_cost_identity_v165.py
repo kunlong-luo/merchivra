@@ -236,6 +236,13 @@ sql(f"""INSERT INTO spapi_settlement_report_line(
 link_url=url_a+"/settlement-line-links"
 call(sess(),link_url,expected=401)
 assert call(owner,link_url)==[]  # no link is UNKNOWN, not a zero charge
+# V182 uses the existing authenticated Owner scope and never invents a
+# financial identity out of a missing V94/V102 association.
+attribution_a=url_a+"/settlement-attribution"
+call(sess(),attribution_a,expected=401)
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}"
+     f"/cost-sources/{a['id']}/settlement-attribution",expected=404)
+call(owner,root+"/"+str(uuid4())+"/settlement-attribution",expected=404)
 # Regular call helper includes owner CSRF; explicitly invoke without it to test.
 saved_csrf=owner["csrf"]
 owner["csrf"]=None
@@ -271,6 +278,21 @@ call(checker,review_url,"POST",{
     "reason":"The disposition must be single-use"},expected=409)
 assert [x["action"] for x in call(owner,link_url+"/"+first["id"]+"/audit")]==[
     "POTENTIAL_DUPLICATE_UNVERIFIED","OPEN"]
+# V182 cannot turn a legitimate third-person V94 review into independent
+# platform proof. The previously detected V165 identity overlap wins.
+verdict_a=call(owner,attribution_a)
+assert verdict_a["status"]=="CONFLICT_EVIDENCE"
+assert verdict_a["linkedLineCount"]==1
+assert verdict_a["frozenIdentityCount"]==1
+assert verdict_a["missingCaptureCount"]==0
+assert verdict_a["independentlyReviewedCount"]==1
+assert verdict_a["auditBackedReviewCount"]==1
+assert verdict_a["independentReviewAuditComplete"]
+assert verdict_a["localCollisionApprovalHeld"]
+assert "POTENTIAL_CROSS_SOURCE_IDENTITY_OVERLAP" in verdict_a["reasonCodes"]
+assert not any(verdict_a[k] for k in (
+    "externalChargeVerified","duplicateDebitVerified",
+    "financialHoldCleared","netProfitEligible"))
 assert call(owner,url_a+"/identity-check")["approvalHeld"], "V165 409 must remain"
 b_link=url_b+"/settlement-line-links"
 ref_only=call(owner,b_link,"POST",{"reportId":report_id,"lineNumber":2})
@@ -301,6 +323,13 @@ call(checker,c_url+"/review","POST",{
     "accept":True,"reason":"Independent synthetic manual source metadata review"})
 before_c=call(owner,c_url+"/identity-check")
 assert not before_c["approvalHeld"] and before_c["sharedSettlementLineCount"]==0
+# A reviewed cost without any settlement-line association is UNKNOWN,
+# not a zero-valued expense or a supported financial charge.
+attribution_c=c_url+"/settlement-attribution"
+unknown_c=call(owner,attribution_c)
+assert unknown_c["status"]=="UNPROVEN" and unknown_c["linkedLineCount"]==0
+assert "NO_SETTLEMENT_LINE_ASSOCIATION" in unknown_c["reasonCodes"]
+assert not unknown_c["independentReviewAuditComplete"]
 c_path,c_batch=allocate(c)
 c_link=call(owner,c_url+"/settlement-line-links","POST",{
     "reportId":report_id,"lineNumber":2})  # line 2 already belongs to b
@@ -310,6 +339,16 @@ shared=call(owner,c_url+"/identity-check")
 assert shared["status"]=="POTENTIAL_SETTLEMENT_LINE_COLLISION_HOLD"
 assert shared["approvalHeld"] and shared["linkedSettlementLineCount"]==1
 assert shared["sharedSettlementLineCount"]==1
+# V182 must reevaluate under the current PG18 read snapshot. The same V94
+# link becomes CONFLICT as soon as V95 sees another source claiming its line.
+verdict_c=call(owner,attribution_c)
+assert verdict_c["status"]=="CONFLICT_EVIDENCE"
+assert verdict_c["linkedLineCount"]==1
+assert verdict_c["sharedLineCount"]==1
+assert verdict_c["frozenIdentityCount"]==1
+assert "SHARED_SETTLEMENT_LINE_CLAIM" in verdict_c["reasonCodes"]
+assert verdict_c["localCollisionApprovalHeld"]
+assert not verdict_c["financialHoldCleared"] and not verdict_c["netProfitEligible"]
 assert not shared["lineChargeOwnershipVerified"]
 assert len(shared["signals"])==8 and not any(signals(shared).values())
 drill=call(owner,c_url+"/identity-check/shared-settlement-lines")
@@ -725,6 +764,54 @@ assert sql(f"""SELECT count(*) FROM finance_wms_receipt_identity_v99
 assert sql(f"""SELECT count(*) FROM finance_wms_return_observation_v99
  WHERE tenant_id='{tenant}'""")=="0"
 
+
+# V182: a NEW isolated synthetic imported settlement report demonstrates
+# limited local support after (and only after) V94 independent audited review.
+# This does not establish real Amazon charge or bank ownership.
+d_key="V182-MATCH-"+uuid4().hex[:16]
+d=create(d_key,uuid4().hex+uuid4().hex,"OTHER_OPERATING")
+d_url=root+"/"+d["id"]
+call(checker,d_url+"/review","POST",{
+    "accept":True,"reason":"Independent V182 synthetic source metadata check"})
+d_report=str(uuid4())
+sql(f"""INSERT INTO spapi_settlement_report (
+ id,tenant_id,seller_marketplace_id,amazon_report_id,report_document_id,
+ report_type,state,source_origin,document_sha256,settlement_reference,
+ statement_currency,declared_net,line_count)
+ VALUES ('{d_report}','{tenant}','{mp}','V182-REPORT-{uuid4().hex[:12]}',
+ 'V182-DOC-{uuid4().hex[:12]}',
+ 'GET_V2_SETTLEMENT_REPORT_DATA_FLAT_FILE_V2','IMPORTED','LIVE',
+ '{uuid4().hex+uuid4().hex}','V182-SETTLEMENT-{uuid4().hex[:12]}',
+ '{currency}',-10,1)""")
+sql(f"""INSERT INTO spapi_settlement_report_line (
+ tenant_id,report_id,line_number,transaction_type,amount_type,
+ amount_description,external_order_id,signed_amount,currency_code)
+ VALUES ('{tenant}','{d_report}',1,'Other Transaction','Fee',
+ 'Synthetic unverified fee','{d_key}',-10.000000,'{currency}')""")
+d_link=call(owner,d_url+"/settlement-line-links","POST",
+    {"reportId":d_report,"lineNumber":1})
+assert d_link["state"]=="OPEN" and d_link["similarity"]=="SIMILAR_REFERENCE_AND_AMOUNT"
+d_assessment=d_url+"/settlement-attribution"
+initial_d=call(owner,d_assessment)
+assert initial_d["status"]=="UNPROVEN"
+assert initial_d["frozenIdentityCount"]==1 and initial_d["linkedLineCount"]==1
+assert "INDEPENDENT_V94_REVIEW_PENDING" in initial_d["reasonCodes"]
+call(checker,d_url+"/settlement-line-links/"+d_link["id"]+"/review","POST",{
+    "disposition":"POTENTIAL_DUPLICATE_UNVERIFIED",
+    "reason":"Local matching line only; original Amazon charge not authenticated"})
+supported_d=call(owner,d_assessment)
+assert supported_d["status"]=="SUPPORTING_LOCAL_METADATA_UNVERIFIED"
+assert supported_d["independentReviewAuditComplete"]
+assert supported_d["auditBackedReviewCount"]==1
+assert supported_d["frozenIdentityCount"]==1
+assert not supported_d["localCollisionApprovalHeld"]
+assert not any(supported_d[k] for k in (
+    "externalChargeVerified","duplicateDebitVerified",
+    "financialHoldCleared","netProfitEligible"))
+# The existing one-shot audit cannot be edited into a verified approval.
+call(checker,d_url+"/settlement-line-links/"+d_link["id"]+"/review","POST",{
+    "disposition":"ESCALATED_NEEDS_PROOF",
+    "reason":"Cannot rewrite a reviewed attribution"},expected=409)
 
 after=[sql("SELECT count(*) FROM "+t) for t in
     ("finance_profit_report_job","bank_payout_observation","ads_report_reviewed_cost")]
