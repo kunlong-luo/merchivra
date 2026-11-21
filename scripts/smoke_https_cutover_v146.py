@@ -26,7 +26,7 @@ from urllib.request import (
 BASE="https://127.0.0.1:3443"
 ROUTES=("/", "/core", "/orders", "/catalog", "/inventory", "/purchasing",
         "/ops", "/finance", "/connections", "/team", "/sync")
-PORTS={"next":3001,"vite":3000}
+PORTS={"next":3001,"vite":3002}
 # V149: only fixed non-sensitive diagnostic stages may appear in CI stderr.
 # Never print exception text, URLs, response bodies, session or credential data.
 SAFE_STAGES=frozenset((
