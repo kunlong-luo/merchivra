@@ -145,6 +145,23 @@ assert batch["summary"]["unallocatedAmount"]=="2.750000"
 assert batch["summary"]["state"]=="PARTIAL_WITH_REMAINDER"
 assert batch["summary"]["externalCostVerified"] is False
 assert batch["recognizedProfitAllowed"] is False
+# V185: an existing unreviewed V92 PERIOD distribution can be shown as a
+# bounded original-currency daily projection, never booked to net profit.
+preview_path=path+"/"+bid+"/periodization-preview"
+call(anonymous,preview_path,expected=401)
+pending_preview=call(owner,preview_path)
+assert pending_preview["ruleVersion"]=="ILLUSTRATIVE_DAILY_STRAIGHT_LINE_MICRO_UNITS_V1"
+assert pending_preview["allocationState"]=="PENDING_REVIEW"
+assert pending_preview["sourceAmount"]=="10.000000"
+assert pending_preview["projectedAmount"]=="7.250000"
+assert pending_preview["unallocatedAmount"]=="2.750000"
+assert [(m["period"],m["projectedAmount"]) for m in pending_preview["months"]]==[
+    ("2026-11","7.250000")]
+assert "INDEPENDENT_V92_ALLOCATION_APPROVAL_NOT_COMPLETE" in pending_preview["blockerCodes"]
+assert not any(pending_preview[k] for k in (
+    "externalSourceVerified","accountingPolicyApproved","currencyConverted",
+    "refundCogsReversalVerified","ledgerPosted","netProfitEligible"))
+assert pending_preview["realizedNetProfit"] is None
 # Stable canonicalization: swapped lines and equivalent decimal formatting
 # replay the exact same proposal without inserting another batch.
 assert call(owner,path,"POST",{**proposal,"lines":list(reversed(lines))})["id"]==bid
@@ -160,6 +177,13 @@ approved=call(other,decision,"POST",{"accept":True,
 assert approved["state"]=="APPROVED_UNVERIFIED"
 assert approved["summary"]["unallocatedAmount"]=="2.750000"
 assert not approved["recognizedProfitAllowed"]
+approved_preview=call(owner,preview_path)
+assert approved_preview["allocationState"]=="APPROVED_UNVERIFIED"
+assert approved_preview["months"]==pending_preview["months"]
+assert approved_preview["projectedAmount"]==pending_preview["projectedAmount"]
+assert "G1_DAILY_PERIODIZATION_POLICY_NOT_APPROVED" in approved_preview["blockerCodes"]
+assert "INDEPENDENT_V92_ALLOCATION_APPROVAL_NOT_COMPLETE" not in approved_preview["blockerCodes"]
+assert not approved_preview["netProfitEligible"] and not approved_preview["ledgerPosted"]
 call(other,decision,"POST",{"accept":True,
     "reason":"Duplicate approval must not change final review"},expected=409)
 assert [x["action"] for x in call(owner,path+"/"+bid+"/audit")]==[
@@ -167,6 +191,9 @@ assert [x["action"] for x in call(owner,path+"/"+bid+"/audit")]==[
 call(owner,f"/api/v1/finance/marketplaces/{uuid4()}/cost-sources/{sid}/allocations",
     expected=404)
 call(other,root+"/"+str(uuid4())+"/allocations",expected=404)
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}/cost-sources/{sid}"
+    f"/allocations/{bid}/periodization-preview",expected=404)
+call(owner,path+"/"+str(uuid4())+"/periodization-preview",expected=404)
 
 # Direct SQL must also fail closed: neither manual approval source facts nor
 # allocation amounts / verified review nor audit history may be silently edited.
@@ -182,6 +209,46 @@ sql(f"DELETE FROM finance_cost_source_audit_v91 "
     f"WHERE tenant_id='{tenant}' AND source_id='{sid}'",False)
 assert sql(f"""SELECT COALESCE(sum(expense_amount),0) FROM
  finance_cost_allocation_line_v92 WHERE tenant_id='{tenant}' AND batch_id='{bid}'""")=="7.250000"
+# V185: independently reviewed synthetic 4-day, cross-month manual cost
+# schedule. Exact six-decimal conservation survives Nov/Dec boundary and
+# cannot be interpreted as actual GAAP accrual, COGS reversal or bank FX.
+second=call(owner,root,"POST",{
+    "category":"FBA_STORAGE","sourceKind":"MANUAL_INVOICE",
+    "sourceKey":"V185-PERIOD-"+uuid4().hex[:14],
+    "documentSha256":uuid4().hex+uuid4().hex,
+    "businessDate":"2026-11-15","amount":"12.000001","currency":currency})
+second_id=second["id"]
+call(other,root+"/"+second_id+"/review","POST",{
+    "accept":True,
+    "reason":"Independent reviewer checks synthetic local four-day service period"})
+p2=root+"/"+second_id+"/allocations"
+proposal2=call(owner,p2,"POST",{
+    "requestKey":str(uuid4()),"targetKind":"PERIOD","currency":currency,
+    "lines":[{"periodAfter":"2026-11-29","periodBefore":"2026-12-03",
+              "amount":"10.000001"}]})
+preview2=p2+"/"+proposal2["id"]+"/periodization-preview"
+stage=call(owner,preview2)
+assert stage["allocationState"]=="PENDING_REVIEW"
+assert stage["allocatedAmount"]=="10.000001"
+assert stage["unallocatedAmount"]=="2.000000"
+assert stage["projectedAmount"]=="10.000001"
+assert [(m["period"],m["projectedAmount"]) for m in stage["months"]]==[
+    ("2026-11","5.000001"),("2026-12","5.000000")]
+assert "ORIGINAL_COST_REMAINDER_UNALLOCATED" in stage["blockerCodes"]
+assert not stage["overlappingServiceDays"]
+call(other,p2+"/"+proposal2["id"]+"/decision","POST",{
+    "accept":True,
+    "reason":"Approve synthetic allocation math only, not actual accrual policy"})
+after_review=call(owner,preview2)
+assert after_review["allocationState"]=="APPROVED_UNVERIFIED"
+assert after_review["months"]==stage["months"]
+assert not after_review["externalSourceVerified"]
+assert not after_review["accountingPolicyApproved"]
+assert not after_review["netProfitEligible"]
+assert after_review["realizedNetProfit"] is None
+# A plan ID belonging to another V91 source cannot be read through this path.
+call(owner,path+"/"+proposal2["id"]+"/periodization-preview",expected=404)
+
 after=[sql(f"SELECT count(*) FROM {t}") for t in (
     "finance_source_event","finance_profit_report_job",
     "ads_report_reviewed_cost","bank_payout_observation")]
