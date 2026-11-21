@@ -27,7 +27,7 @@ export default function CostOwnershipBridgePanelV186({tenantId,marketplaceId,sta
  return <section className="v181-line-identity"
   aria-label="成本来源单一归属维度与防重复扣减">
   <h3 className="v179-evidence-section">单一成本来源 · SKU / 订单 / 期间归属桥接</h3>
-  <p className="setup-hint">按照来源业务日期统计**全期间**人工费用；每笔 V91 来源
+  <p className="setup-hint">按照来源业务日期统计全期间人工费用；每笔 V91 来源
    仅归入一个有效 V92 分摊维度，已驳回历史不构成新费用。若从 SKU、订单、
    期间再生成其他报表，只能引用此来源，不能再扣同一笔费用。
    以下金额仍是人工主张，不是账务确认日的费用，也不是可扣真实利润。</p>
