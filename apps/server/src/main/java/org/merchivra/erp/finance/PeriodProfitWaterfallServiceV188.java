@@ -46,9 +46,9 @@ public class PeriodProfitWaterfallServiceV188 {
                 AND (currency_code IS NULL
                   OR btrim(currency_code)<>?)) AS wrong_currency_count,
               count(*) FILTER(WHERE state='ELIGIBLE'
-                AND (signed_sales IS NULL OR signed_amazon_fees IS NULL
-                  OR signed_fba_fees IS NULL OR provisional_cogs IS NULL
-                  OR estimated_contribution IS NULL)) AS missing_amount_count,
+                AND (o.signed_sales IS NULL OR o.signed_amazon_fees IS NULL
+                  OR o.signed_fba_fees IS NULL OR o.provisional_cogs IS NULL
+                  OR o.estimated_contribution IS NULL)) AS missing_amount_count,
               -- V192: V62 checks each SKU and order's own arithmetic, but
               -- cannot constrain the SUM of SKU rows to its parent order.
               -- A missing SKU, an extra SKU on BLOCKED/PENDING, or opposite
