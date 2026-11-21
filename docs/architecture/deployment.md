@@ -1,49 +1,48 @@
 # DEP-001 · 部署架构与信任边界
 
-## 开发/本地部署拓扑
+> **当前部署技术基线：2026-11-21 / V191**。默认 `web` 为 React 19 / Next.js 16 standalone Node，Node 24 + pnpm 12.20.0 构建。Vite/Nginx 仅显式回退或 GitHub Pages 虚构展示；旧“Web UI / Nginx”默认拓扑不再适用。生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 仍 NO-GO。
+
+## 本地真实代码拓扑
 
 ```mermaid
 flowchart TB
-Browser["开发者浏览器"] -->|localhost| Web["Web UI / Nginx"]
-Web --> API["Spring Boot API"]
-API --> PG[("PostgreSQL volume")]
-API --> Redis[("Redis volume")]
-Worker["同进程/独立逻辑 Worker"] --> PG
-Worker --> Ext["Amazon SP-API (仅真实接入时)"]
-API --- Worker
+  Browser["本地浏览器 127.0.0.1:3000"] --> Web["Next.js 16 standalone / Node"]
+  Web -->|"同源 /api rewrites"| API["Spring Boot 4.1.2 / Java 25"]
+  API --> PG[("PostgreSQL 18 / Flyway")]
+  API -. "按配置启用" .-> Redis[("Redis 8 Session / 限流，可选")]
+  API --- Domain["租户、SKU、订单、采购/FBA、库存、财务、异常"]
+  Domain --> PG
+  Worker["同进程逻辑同步 Worker"] --> PG
+  Worker -. "真实 Amazon 授权关闭" .-> Amazon["Seller / Ads API"]
+  Browser -. "受控回退才打开" .-> Vite["Vite/Nginx vite-web"]
 ```
 
-开发端口默认绑定 `127.0.0.1`，本地没有账户授权模块完成前不对公网开放。
+本地 `deploy/compose.yaml` 默认启动 `postgres + server + web`，仅回环绑定；已有 spark-db PostgreSQL 18 时只启动 `server + web`。Next 私有 `/api` 反向代理转发至 Spring；后端私有 `/actuator/health` 不得通过公开 Web 暴露。Next 健康检测不仅验证代理 Ping 的 Spring 身份，还需验证私有 PG18 Actuator UP。Vite 回退服务 `vite-web` 只有明确启用 `vite-fallback` profile 才启动。
 
-## 生产参考拓扑（非可立即部署配置）
+## 生产参考拓扑：方案，不是已部署
 
 ```mermaid
 flowchart TB
-Internet["授权浏览器"] --> TLS["TLS 反向代理 / WAF"]
-TLS --> WEB["静态 Web"]
-TLS --> API["受认证 API"]
-API --> PG[("私网 PostgreSQL")]
-API --> Redis[("私网 Redis")]
-API --> KEY["密钥管理服务"]
-WORKER["异步 Worker"] --> PG
-WORKER --> KEY
-WORKER --> SP["Amazon SP-API"]
-PG --> BACKUP["加密备份 + 恢复演练"]
-API --> OBS["日志/指标（脱敏）"]
-WORKER --> OBS
+  Browser["已授权的真实浏览器"] --> TLS["待批准的受信任 TLS 入口/WAF"]
+  TLS --> WEB["Next.js Node / App Router"]
+  WEB --> API["Spring Session + CSRF / Owner / Marketplace"]
+  API --> PG[("独立生产 PostgreSQL 18")]
+  API -. "如经批准" .-> Redis[("私网 Session / 限流存储")]
+  API --> KMS["独立密钥与凭证管理"]
+  PG --> Backup["离站备份 + WAL/PITR + 恢复证明"]
+  API --> Alerts["脱敏日志/指标/外部告警 ACK"]
+  API -. "合法角色与真授权后方可用" .-> Amazon["Amazon Seller / Ads"]
 ```
 
-**硬性边界**：数据库不应公网可达；应用必须受 TLS、会话认证及租户授权保护；生产密钥不放仓库；监控不得采集 PII/Refresh Token。
+这是**目标安全架构候选**：真实 TLS/转发头、KMS/密钥、恶意文件扫描、RPO/RTO/PITR、外部 Alertmanager ACK、恢复/回滚、合法 Amazon 角色和 G1/G2/G3 业务签署均须提供独立目标证据；**不接受合成 A3/Pages/Mock 充当生产准入**。
 
-## 配置矩阵
+## 环境与责任
 
-| 环境 | 数据 | Amazon 凭证 | 是否开放公网 |
-|---|---|---|---|
-| Local Mock | 全虚构 | 不需要 | 否 |
-| Integration | 脱敏/官方 Sandbox | 单独保管 | 否 |
-| Staging | 最小授权测试数据 | 密钥管理器 | 受控访问 |
-| Production | 真实卖家数据 | 专用密钥管理器 | 完成认证/安全审查后才可 |
+| 环境 | 数据与网络 | 结果含义 |
+| --- | --- | --- |
+| Local / synthetic | PostgreSQL 18 + 本地 Node/Spring；Mock/人工未核验来源 | 可回归的工程行为，非真实平台事实 |
+| Isolated A3 | Disposable PG18/Flyway、HTTP、Chromium、受控 HTTPS 切流 | 精确 SHA 的技术验收，不是真实 Amazon 或 G1/会计净利润核证 |
+| Target candidate | 操作员单独配置 TLS/数据库/密钥/备份/告警与审批 | 待独立签署，不能依赖 `compose.production.yaml` 就开放公网 |
+| Production | 只有 G1/G2/G3 和外部证据全部完成才可考虑 | 当前明确 **NO-GO** |
 
-## 运维要求
-
-镜像版本不可变、数据库迁移经过审查、备份恢复每次发版前演练、限制数据导出、支持凭证吊销/轮换、健康检查和任务积压告警。详见 [运维方案](../ops/operations.md)。
+[当前状态](../current-status.md) · [实际 Compose 部署与卸载](../deployment/local-spark-db.md) · [发布门禁](../testing/release-readiness-v68.md) · [运维原则](../ops/operations.md)。
