@@ -1,3 +1,5 @@
+> **历史归档 · V191 文档整理（2026-11-21）**：本文属于V148 的需求/代码验收矩阵，缺少后续 V163–V191 新增范围。 下文所有“最新”“当前”“下一 P0”仅表示**写作当时**的状态，不再用于驱动新开发；实际请以 [当前事实基线](../current-status.md) 与 [唯一现行 P0 计划](../roadmap/current-plan.md) 为准。原始 PR、失败/复测及精确 SHA 证据保留供审计，不等于真实 Amazon/银行核验、财务 G1 或生产 #104 GO。
+
 # RTM-002 · V148 P0 代码与验收证据追踪（待正式签署）
 
 > **当前新增 V158 基线**：完整 A3 最近验收对应 [V157 main 5ac412dab7e71a0703c4887614bfba17fbe2eb25](https://github.com/kunlong-luo/merchivra/commit/5ac412dab7e71a0703c4887614bfba17fbe2eb25)，[A3 #43422914368](https://github.com/kunlong-luo/merchivra/actions/runs/43422914368) **首次 7/7 SUCCESS**；本 RTM 仍是 V148 时建立的**需求与代码入口追踪**，下方 V148/V149/V150 是历史技术基线，**不能据此把任一真实来源验收或 G1/G2/G3 签署改为通过**。技术跟踪 #63 已由维护者关闭，但真实目标 TLS/Next 切流与正式生产准入仍由 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 阻塞；详见 [V158 只读证据工作清单](../operations/v158-production-evidence-worklist.md)。
