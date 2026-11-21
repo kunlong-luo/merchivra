@@ -360,11 +360,11 @@ assert waterfall["ruleVersion"]==(
     "V188_V64_ELIGIBLE_CONTRIBUTION_MINUS_V92_APPROVED_UNVERIFIED_ORIGINAL_CURRENCY_V1")
 assert waterfall["sourceSnapshotBasis"]==(
     "V64_IMMUTABLE_ORDER_EXTRACTS_V91_V92_V165_V168_LIVE_READ")
-assert waterfall["reviewedCostSourceCount"]==int(sql(f"""
+assert waterfall["manualCostSourceCount"]==int(sql(f"""
  SELECT count(*) FROM finance_cost_source_v91
  WHERE tenant_id='{tenant}' AND seller_marketplace_id='{market}'
    AND business_date>='2026-11-01' AND business_date<'2026-11-20'"""))
-assert waterfall["reviewedCostSourceCount"]==sum(
+assert waterfall["manualCostSourceCount"]==sum(
     x["sourceCount"] for x in waterfall["costLines"])
 assert any(c["category"]=="INBOUND_FREIGHT" and
            c["approvedUnverifiedAllocatedAmount"]=="7.250000"
