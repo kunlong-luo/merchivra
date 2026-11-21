@@ -79,6 +79,15 @@ const v180Cost={
  approvedUnverifiedUnallocatedAmount:'8.25',
  localIdentityStatus:'SHARED_REFERENCE_UNVERIFIED',approvalHeld:true,
  linkedSettlementLineCount:2,sharedSettlementLineCount:1,
+ // V183 synthetic fixture must satisfy the real strict Zod contract.
+ // Local conflict status is NOT a verified duplicate or profit eligibility.
+ localAttributionStatus:'CONFLICT_EVIDENCE',
+ localAttributionReasonCodes:[
+  'SHARED_SETTLEMENT_LINE_CLAIM',
+  'INDEPENDENT_EXTERNAL_CHARGE_PROOF_NOT_AVAILABLE'
+ ],
+ frozenIdentityCount:1,missingCaptureCount:1,
+ independentReviewAuditComplete:false,
  externallyVerified:false,allowedToDeductFromProfit:false
 }
 let mode = 'guest'
@@ -203,7 +212,31 @@ const server = createServer(async (req, res) => {
       approvedUnverifiedUnallocatedAmount:'8.25',sharedLineSourceCount:1,
       externallyVerified:false,allowedToDeductFromProfit:false}],
      sources:[v180Cost],hasMore:false,nextBeforeDate:null,nextBeforeId:null,
-     categoriesWithoutVerifiedExternalCoverage:['ADS_SPEND'],
+     // One synthetic source with two V94 links (new V102 capture + legacy
+     // missing snapshot); global blockers must include all sources, not just
+     // the 50-row local page. No actual bank/Amazon expenses are certified.
+     evidenceBarriers:{
+      sourceCount:1,metadataReviewPendingSourceCount:1,
+      noSettlementAssociationSourceCount:0,
+      missingFrozenCaptureSourceCount:1,
+      sharedSettlementLineSourceCount:1,
+      pendingLineReviewSourceCount:1,
+      missingLineAuditSourceCount:0,
+      multipleLineClaimsSourceCount:1,
+      externallyUnverifiedSourceCount:1,
+      blockerCodes:[
+       'EIGHT_COST_CATEGORIES_NOT_EXTERNALLY_ATTESTED',
+       'BANK_SETTLEMENT_NOT_RECONCILED',
+       'REALIZED_PROFIT_PROVENANCE_INCOMPLETE',
+       'CREATION_TIME_V102_CAPTURE_GAPS',
+       'SHARED_SETTLEMENT_LINE_CLAIMS'
+      ],
+      eligibleForV162OrV64Profit:false
+     },
+     categoriesWithoutVerifiedExternalCoverage:[
+      'ADS_SPEND','INBOUND_FREIGHT','FBA_STORAGE','FBM_SHIPPING',
+      'RETURN_HANDLING','IMPORT_DUTY','PAYMENT_AND_FX','OTHER_OPERATING'
+     ],
      fullCostCovered:false,bankReconciled:false,
      realizedNetProfitVerified:false,realizedNetProfit:null
     })
@@ -1317,6 +1350,18 @@ async function main() {
           "document.querySelector('[aria-label=\\\"同原币同期间报表快照差额\\\"]')?.textContent?.includes('+1.1')",
           'V180 version comparison computes precise original-currency difference')
         await screenshot(send,'v180-profit-version-360.png')
+        // V183: strict Zod must accept only the current fully specified
+        // whole-period evidence contract. Keep all existing V180/V181
+        // drawer and composite-identity assertions after this check.
+        await waitFor(send,
+          "document.querySelector('section[aria-label=\\\"八类成本核算准备度\\\"]')?.textContent?.includes('全期间来源 1 条')",
+          'V183 full-period proof blockers from live-shaped synthetic API')
+        assert.equal(await evaluate(send,
+          "document.querySelector('section[aria-label=\\\"八类成本核算准备度\\\"]')?.textContent?.includes('未获外部费用真实性认证 1 条')"),
+          true,'V183 unverified full-period costs must remain blocked')
+        assert.equal(await evaluate(send,
+          "document.querySelector('section[aria-label=\\\"八类成本核算准备度\\\"]')?.textContent?.includes('本地归属冲突')"),
+          true,'V183 source-level collision must remain visible')
         await waitFor(send,
           "document.querySelector('button[aria-label^=\\\"查看费用来源审计\\\"]')!==null",
           'V180 synthetic manual fee reconciliation link exists')
