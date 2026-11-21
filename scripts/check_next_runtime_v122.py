@@ -32,6 +32,11 @@ for exact in (
 ):
     assert exact in node, f"Unsafe/invalid Next runtime: missing {exact}"
 assert "FROM nginx:alpine" in vite, "Vite rollback path was deleted"
+manifest=json.loads((ROOT / "apps/web/package.json").read_text())
+assert manifest["scripts"]["dev"].startswith("next dev ")
+assert manifest["scripts"]["build"] == "next build"
+assert manifest["scripts"]["dev:vite"].startswith("vite ")
+assert "vite build" in manifest["scripts"]["build:vite"]
 assert "MERCHIVRA_API_INTERNAL_URL=http://server:8080" in node
 assert "MERCHIVRA_API_INTERNAL_URL" in next_config
 assert "output:'standalone'" in next_config
@@ -100,7 +105,16 @@ if args.compose:
     ):
         assert expected in probe[3], f"Next health must fail closed: missing {expected}"
     assert int(health.get("retries", 0)) >= 3
-    assert services["web"]["build"]["context"], "Lost Vite rollback"
+    assert services["web"]["build"]["dockerfile"] == "Dockerfile.next", "Default web must run Next"
+    assert services["web"]["build"]["args"]["MERCHIVRA_API_INTERNAL_URL"] == "http://server:8080"
+    assert services["web"]["ports"][0]["host_ip"] == "127.0.0.1"
+    assert str(services["web"]["ports"][0]["target"]) == "3000"
+    assert services["web"].get("healthcheck",{}).get("test") == probe, "Default Next lost private DB-aware health"
+    assert "vite-web:" in (ROOT / "deploy/compose.yaml").read_text()
+    assert "profiles: ['vite-fallback']" in (ROOT / "deploy/compose.yaml").read_text()
+    if "vite-web" in services:
+        assert services["vite-web"]["build"]["dockerfile"] == "Dockerfile", "Vite rollback must stay optional"
+        assert "vite-fallback" in services["vite-web"].get("profiles",[])
     assert services["postgres"]["image"].startswith("postgres:18-")
     if args.production:
         env = services["server"]["environment"]
