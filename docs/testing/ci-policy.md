@@ -1,13 +1,13 @@
 # TEST-003 · 分层 CI 与集中里程碑测试（V108 / 2026-11-08）
 
-**这是现行策略（V108 已实际落地，V109 文档核对）**；首次 [集中合成基线 #42448160593](https://github.com/kunlong-luo/merchivra/actions/runs/42448160593) 已通过；常规 PR 快速 CI 不自动代表新的业务代码通过 PG18/Chromium。详细阶段与验收边界以 [V108 MVP 冻结计划](../roadmap/mvp-freeze-release-v108.md) 为准。文档后半部分仅作历史参考。用户决定先完成剩余 P0，再集中执行完整 Mock 集成与上线测试；不是不测试，也不是正式 Amazon 生产验收已通过。
+**现行策略更新（2026-11-21）**：常规开发直接提交 `main`，`ci.yml` 在 `main` 推送执行 Gradle、OpenAPI/Orval、React/Vitest、默认 Next.js 构建、Vite 回退构建和 Compose 静态检查。PG18 全链路、真实 Next/Chromium、TLS/CSRF 回归仍由明确的里程碑 A3 触发，不能用快 CI 替代财务或上线验收。下面的 V108 PR 历史仅用于追溯。生产 #104 NO-GO，真实 Amazon OAuth/写入保持关闭。
 
 ## 实际 GitHub Actions 触发
 
 | 场景 | 自动运行 | 有意不自动运行 |
 | --- | --- | --- |
-| 每个 PR / main push | `ci.yml`：Gradle test、React/Orval/typecheck/Vitest/Vite build/Next TS、Compose 静态部署检查 | PG18 完整 Mock HTTP/备份恢复、Next 生产 build/HTTP、Chromium 双前端和真 Compose 容器链 |
-| 普通 PR | **不**再额外运行 public Pages build（除主 CI） | 公开展示部署与截图套餐 |
+| 每次 `main` push | `ci.yml`：Gradle、React/Orval/TypeScript/Vitest、Next 16 默认构建、Vite 回退构建、Compose 配置 | PG18 全量真实 HTTP/备份恢复、Chromium 双前端、完整 Compose 运行链 |
+| 手动完整 A3 | `milestone-validation.yml` 调用 PG18/Next/Chromium/Compose 全链路 | 真实 Amazon OAuth、外部数据真实性核销、生产 G1/G2/G3 授权 |
 | main 更新前端 | GitHub Pages 合成只读展示构建/发布（非 ERP 部署） | 不因此触发浏览器/真 Compose |
 | A3 MVP 冻结或 Beta/Release 候选、重要安全/数据库变更 | 在 main 上人工启动 `milestone-validation.yml`，一次调度完整 CI + 双前端 Chromium + 真 Compose；首次新增该工作流时触发一次隔离基线验证 | 无真实 Amazon Token、无生产 PG/银行数据 |
 | 单项故障定位 | 独立手工启动 `ci.yml` 的 `full_suite`，或独立 Chromium/Compose；必要时只重跑失败 job | 不强制对与改动无关的模块再跑所有回归 |
