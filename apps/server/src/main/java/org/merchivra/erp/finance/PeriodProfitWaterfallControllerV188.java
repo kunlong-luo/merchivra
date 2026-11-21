@@ -12,7 +12,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 
 /** V188 Owner-only cost waterfall for an existing V64 frozen job. Read-only. */
 @RestController
-@RequestMapping("/api/v1/finance/marketplaces/{marketplaceId}/profit-reports/{jobId}/cost-waterfall-preview")
+@RequestMapping("/api/v1/finance/marketplaces/{marketplaceId}/cost-waterfall-preview/{jobId}")
 public class PeriodProfitWaterfallControllerV188 {
     private final TenantAccessService access;
     private final PeriodProfitWaterfallServiceV188 service;
