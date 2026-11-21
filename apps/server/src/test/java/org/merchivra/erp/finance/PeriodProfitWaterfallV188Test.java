@@ -29,7 +29,7 @@ class PeriodProfitWaterfallV188Test {
     private static PeriodProfitWaterfallV188.FrozenAmounts frozen(
         long eligible,long blocked,long pending) {
         return new PeriodProfitWaterfallV188.FrozenAmounts(
-            eligible,blocked,pending,0,0,
+            eligible,blocked,pending,0,0,0,
             eligible>0?"100.000000":"0",
             eligible>0?"-10.000000":"0",
             eligible>0?"-5.000000":"0",
@@ -166,15 +166,38 @@ class PeriodProfitWaterfallV188Test {
         neverRecognize(fx);
     }
 
+
+    @Test void missingOrExtraSkuSnapshotsAndOppositePerOrderErrorsFailClosed() {
+        var source=cost("USD","PERIOD",1,0,0,"12","12","0");
+        var base=job("SUCCEEDED",2,2,2,0);
+        // Even when the entire V64 order aggregate adds to a perfectly valid
+        // monetary total, two opposite SKU/order differences must not cancel.
+        for(long mismatches:List.of(1L,2L)) {
+            var frozenMismatch=new PeriodProfitWaterfallV188.FrozenAmounts(
+                2,0,0,0,0,mismatches,
+                "100.000000","-10.000000","-5.000000",
+                "40.000000","45.000000");
+            var ex=assertThrows(ResponseStatusException.class,()->calc(
+                base,frozenMismatch,List.of(source),0));
+            assertEquals(HttpStatus.CONFLICT,ex.getStatusCode());
+        }
+        // A negative count is also a malformed read, never "no problem".
+        var negative=new PeriodProfitWaterfallV188.FrozenAmounts(
+            1,0,0,0,0,-1,"100","-10","-5","40","45");
+        assertEquals(HttpStatus.CONFLICT,assertThrows(ResponseStatusException.class,
+            ()->calc(job("SUCCEEDED",1,1,1,0),negative,List.of(source),0))
+            .getStatusCode());
+    }
+
     @Test void tamperedV64FeeArithmeticAndSourceCountsFailClosed() {
         var source=cost("USD","SKU",1,0,0,"5","5","0");
         var amounts=new PeriodProfitWaterfallV188.FrozenAmounts(
-            1,0,0,0,0,"100","-10","-5","40","50");
+            1,0,0,0,0,0,"100","-10","-5","40","50");
         assertEquals(HttpStatus.CONFLICT,assertThrows(ResponseStatusException.class,
             ()->calc(job("SUCCEEDED",1,1,1,0),amounts,List.of(source),0))
             .getStatusCode());
         var wrongCurrency=new PeriodProfitWaterfallV188.FrozenAmounts(
-            1,0,0,1,0,"100","-10","-5","40","45");
+            1,0,0,1,0,0,"100","-10","-5","40","45");
         assertThrows(ResponseStatusException.class,()->
             calc(job("SUCCEEDED",1,1,1,0),wrongCurrency,List.of(source),0));
         var invalidCost=cost("USD","SKU",1,0,0,"5","6","0");
@@ -226,7 +249,16 @@ class PeriodProfitWaterfallV188Test {
             "src/main/java/org/merchivra/erp/finance/PeriodProfitWaterfallServiceV188.java"));
         for(String expected:List.of(
             "Isolation.REPEATABLE_READ","reports.status(tenant,marketplace,reportJobId)",
-            "finance_profit_report_order","tenant_id=? AND job_id=?",
+            "finance_profit_report_order","o.tenant_id=? AND o.job_id=?",
+            "LEFT JOIN LATERAL","finance_profit_report_sku",
+            "s.order_id=o.order_id","sk.sku_count=0",
+            "o.state<>'ELIGIBLE' AND sk.sku_count<>0",
+            "sk.signed_sales IS DISTINCT FROM o.signed_sales",
+            "sk.signed_amazon_fees IS DISTINCT FROM o.signed_amazon_fees",
+            "sk.signed_fba_fees IS DISTINCT FROM o.signed_fba_fees",
+            "sk.provisional_cogs IS DISTINCT FROM o.provisional_cogs",
+            "sk.estimated_contribution IS DISTINCT FROM o.estimated_contribution",
+            "sku_mismatch_count",
             "FILTER(WHERE state='ELIGIBLE')",
             "wrong_currency_count","missing_amount_count",
             "owners.report(tenant,marketplace,start,end)",
