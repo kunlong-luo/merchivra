@@ -133,7 +133,10 @@ public class SettlementReportComparisonService {
         if(sharedReports>0)
             return "SETTLEMENT_REFERENCE_SHARED_REPORTS";
         if(detail==null)return "REPORT_DETAIL_INCOMPLETE";
-        if(declared!=null && declared.compareTo(detail)!=0)
+        // V54 deliberately permits null declared_net. An absent statement
+        // total is UNKNOWN, not an affirmative three-way source agreement.
+        if(declared==null)return "REPORT_DECLARED_NET_UNAVAILABLE";
+        if(declared.compareTo(detail)!=0)
             return "REPORT_INTERNAL_DIFFERENCE";
         if(otherCurrency>0)return "CURRENCY_CONFLICT";
         if(count==0 || finances==null)return "NO_FINANCES_SETTLEMENT_REFERENCE";

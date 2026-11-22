@@ -155,6 +155,17 @@ UPDATE spapi_settlement_report_line SET currency_code='EUR'
 """)
 check("mixed report line currency despite equal total",
       "foreign_line_count=1 AND line_net=17.50 AND finance_net=17.50")
+# V199: V54 permits a NULL report statement total. Show that the exact
+# Java SQL preserves NULL instead of converting it to a numeric zero; Java
+# decision tests must block such a source even with equal line/Finances sums.
+commands.append(f"""
+UPDATE spapi_settlement_report SET declared_net=NULL WHERE id='{report}';
+UPDATE spapi_settlement_report_line SET currency_code='USD'
+ WHERE report_id='{report}' AND line_number=2;
+""")
+check("absent declared net is still null with matching sums",
+      "declared_net IS NULL AND line_net=17.50 AND finance_net=17.50 "
+      "AND actual_line_count=2 AND foreign_line_count=0")
 commands.append("ROLLBACK;\n")
 result = subprocess.run(
     ["psql", "-X", "-h", "127.0.0.1", "-U", "merchivra", "-d", "merchivra",

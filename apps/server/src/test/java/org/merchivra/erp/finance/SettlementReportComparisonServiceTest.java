@@ -20,15 +20,29 @@ class SettlementReportComparisonServiceTest {
         assertEquals("SOURCE_AMOUNTS_AGREE_UNVERIFIED",
             decision("17.50","17.5000","17.50",2,0));
         assertEquals("NO_FINANCES_SETTLEMENT_REFERENCE",
-            decision(null,"17.50",null,0,0));
+            decision("17.50","17.50",null,0,0));
         assertEquals("SOURCE_TOTAL_DIFFERENCE",
-            decision(null,"17.50","17.00",2,0));
+            decision("17.50","17.50","17.00",2,0));
         assertEquals("CURRENCY_CONFLICT",
-            decision(null,"17.50","17.50",1,1));
+            decision("17.50","17.50","17.50",1,1));
         assertEquals("REPORT_INTERNAL_DIFFERENCE",
             decision("20.00","17.50","17.50",2,0));
         assertEquals("REPORT_DETAIL_INCOMPLETE",
-            decision(null,null,"17.50",2,0));
+            decision("17.50",null,"17.50",2,0));
+    }
+
+    @Test
+    void missingDeclaredNetCannotBeMistakenForThreeWayAgreement() {
+        assertEquals("REPORT_DECLARED_NET_UNAVAILABLE",
+            decision(null,"17.50","17.50",2,0));
+        assertEquals("REPORT_DECLARED_NET_UNAVAILABLE",
+            decision(null,"0.000000","0.000000",2,0));
+        assertEquals("REPORT_LINE_COUNT_MISMATCH",
+            SettlementReportComparisonService.decision(null,
+                amount("17.50"),amount("17.50"),2,0,2,1,0,0,0));
+        // An explicit zero statement is distinguishable from missing.
+        assertEquals("SOURCE_AMOUNTS_AGREE_UNVERIFIED",
+            decision("0.000000","0.00","0",2,0));
     }
 
     private static String evidenceStatus(long expected,long actual,

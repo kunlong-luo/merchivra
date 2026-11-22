@@ -11,7 +11,7 @@ export const settlementComparison=z.object({
   foreignCurrencyReportLineCount:z.number().int().nonnegative(),
   multiplyReferencedFinancesEventCount:z.number().int().nonnegative(),
   otherReportSameSettlementCount:z.number().int().nonnegative(),
-  state:z.enum(['REPORT_DETAIL_INCOMPLETE','REPORT_INTERNAL_DIFFERENCE',
+  state:z.enum(['REPORT_DECLARED_NET_UNAVAILABLE','REPORT_DETAIL_INCOMPLETE','REPORT_INTERNAL_DIFFERENCE',
     'REPORT_LINE_COUNT_MISMATCH','REPORT_LINE_CURRENCY_CONFLICT',
     'FINANCES_EVENT_MULTI_SETTLEMENT_CLAIM','SETTLEMENT_REFERENCE_SHARED_REPORTS',
     'CURRENCY_CONFLICT','NO_FINANCES_SETTLEMENT_REFERENCE',

@@ -38,6 +38,11 @@ describe('V198 settlement evidence conflicts cannot pass as reconciled',()=>{
    state:'SETTLEMENT_REFERENCE_SHARED_REPORTS',
    otherReportSameSettlementCount:1}).otherReportSameSettlementCount).toBe(1)
  })
+ it('missing declared statement amount is a blocker, not zero',()=>{
+  expect(settlementComparison.parse({...sample,
+   reportedNet:null,state:'REPORT_DECLARED_NET_UNAVAILABLE'}).state)
+   .toBe('REPORT_DECLARED_NET_UNAVAILABLE')
+ })
  it('rejects missing, invalid or fabricated source checks',()=>{
   const {expectedReportLineCount:omitted,...incomplete}=sample
   expect(()=>settlementComparison.parse(incomplete)).toThrow()

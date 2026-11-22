@@ -1,3 +1,5 @@
+# V199: exact-main A3 for nullable missing settlement statement total.
+# Synthetic-only; Seller/Ads OAuth, bank verification and prod #104 remain off.
 # V198B: after V198 adds mandatory 5 comparison counters, update the
 # historical Java/Vitest fixtures without weakening the fail-closed contract.
 # Rerun full A3 for the new exact main SHA.
@@ -216,7 +218,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V198B-A3-settlement-claim-fixture-regression' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V199-A3-missing-declared-net-fail-closed' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -307,6 +309,7 @@ on:
           - V197-A3-refund-source-parity-and-cogs-barriers
           - V198-A3-settlement-identity-and-duplicate-source-claims
           - V198B-A3-settlement-claim-fixture-regression
+          - V199-A3-missing-declared-net-fail-closed
 
 permissions:
   contents: read

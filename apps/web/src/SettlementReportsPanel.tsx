@@ -63,6 +63,7 @@ export default function SettlementReportsPanel({tenantId,marketplaceId,connected
        不同币种的来源交易 {compare.data.otherCurrencyTransactionCount} 笔。
        状态：<strong>{({
         REPORT_DETAIL_INCOMPLETE:'报表明细不完整',
+ REPORT_DECLARED_NET_UNAVAILABLE:'报告声明净额缺失，不能确认三方一致',
         REPORT_LINE_COUNT_MISMATCH:'实际结算行数与导入快照不一致，禁止信任合计',
         REPORT_LINE_CURRENCY_CONFLICT:'报告明细有跨币种记录，禁止合并',
         FINANCES_EVENT_MULTI_SETTLEMENT_CLAIM:'同一 Finances 交易关联多个结算编号，归属冲突',
