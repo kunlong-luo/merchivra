@@ -1,6 +1,6 @@
 # Merchivra V198 · 结算编号唯一归属与来源完整性冲突拦截
 
-**状态：2026-11-22 · 代码实施并待对应精确 main SHA 验证。** 这次只改已有 V58 报告 / V31 Finances 引用的只读比较判定、Next.js 展示与合成回归。不发起 Amazon/Ads 调用、不增会计账本、不得解除外部验真或生产门禁。功能验证的精确提交、快 CI 与完整 A3 应在完成后另行记录。
+**状态：2026-11-22 · V198 代码及隔离合成 A3 已完成。** 这次只改已有 V58 报告 / V31 Finances 引用的只读比较判定、Next.js 展示与合成回归。不发起 Amazon/Ads 调用、不增会计账本、不得解除外部验真或生产门禁。验收：[精确代码 `11864a7`](https://github.com/kunlong-luo/merchivra/commit/11864a739451f0e91c0bd9639b2c4bfe441b518e) 的 [完整 A3 #45021678686（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45021678686)，及 [同 SHA 快 CI #45021678580](https://github.com/kunlong-luo/merchivra/actions/runs/45021678580) SUCCESS。最初 `f5bc560` 的 [快 CI #45021496206](https://github.com/kunlong-luo/merchivra/actions/runs/45021496206) 和 [A3 #45021496225](https://github.com/kunlong-luo/merchivra/actions/runs/45021496225) 曾因旧 Java 构造测试与旧 Vitest 响应夹具缺五项计数而失败；修复的是测试数据，不是删除冲突守护。旧失败结果保留作为回归证据。
 
 ## 为什么要修复，不重复造一个财务流程
 

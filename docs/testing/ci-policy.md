@@ -21,7 +21,7 @@
 
 ## 最新已确认工程技术证据
 
-- **V198（代码待精确 SHA 验收）**：旧 V58/V31 只读比较补齐重复结算归属/重复报告/缺失行与混币检测，Java/Vitest 合同负例及原 SQL 的 PG18 TEMP 表 `ROLLBACK` 验证。修改 `ci.yml` full_suite 跑真实 PG18；完整 A3 将以本次最终 SHA 单独记录，**不可借用 V197 绿灯**。
+- **V198 / `11864a739451f0e91c0bd9639b2c4bfe441b518e`**：[精确代码 `11864a7`](https://github.com/kunlong-luo/merchivra/commit/11864a739451f0e91c0bd9639b2c4bfe441b518e) 的 [完整 A3 #45021678686（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45021678686)，及 [同 SHA 快 CI #45021678580](https://github.com/kunlong-luo/merchivra/actions/runs/45021678580) SUCCESS。首次 `f5bc560` 的 [完整 A3 #45021496225](https://github.com/kunlong-luo/merchivra/actions/runs/45021496225) **FAILED**，原因是老版 `SettlementSourceReviewServiceTest` 构造参数以及旧 Vitest 比较夹具缺少五个新字段；并非放宽判定后通过，现已修正。实际 PostgreSQL 18 阶段先前已通过并有 `PASS V198 real PG18 exact Java SQL` 日志证据。旧 V58/V31 只读比较补齐重复结算归属/重复报告/缺失行与混币检测，Java/Vitest 合同负例及原 SQL 的 PG18 TEMP 表 `ROLLBACK` 验证。修改 `ci.yml` full_suite 跑真实 PG18；V198 修复后的同 SHA 完整 A3 7/7 验证独立成立，与 V197 的历史绿灯互不借用。
 
 
 - **V197 / `db9d88be81ec326194242f75596661cb950cbea7`**：[V197 完整 A3 #45020338812（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45020338812)、[同 SHA 快 CI #45020338752](https://github.com/kunlong-luo/merchivra/actions/runs/45020338752)，两者 **SUCCESS**。在退款 V170/V63 只读 API 增加带符号金额/币种/事件/订单跨事务一致性核对及结构化 COGS 阻断码；配套 Java 单测、Next Zod 合同负例与已有页面展开明细。无新迁移，不启用真实 Amazon/Ads，不能仅因测试通过就允许退款库存/COGS 过账。

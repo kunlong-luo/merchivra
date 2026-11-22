@@ -35,4 +35,4 @@
 
 **V197 新的工程证据（不追溯修改评分）**：[精确代码 `db9d88b`](https://github.com/kunlong-luo/merchivra/commit/db9d88be81ec326194242f75596661cb950cbea7) 的 [同 SHA 快 CI #45020338752](https://github.com/kunlong-luo/merchivra/actions/runs/45020338752) 与 [V197 完整 A3 #45020338812（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45020338812) 均成功。退款 COGS 只读来源核对和结构化阻断补充了真实工程覆盖，但独立外部费用验真、退款实收/过账与 G1/生产批准仍未完成，基线总分仍为 **68/100**。
 
-**V198 执行状态**：继续补强结算报告与 Finances 来源多重归属的只读证据阻断，检验同一 Settlement ID/交易归属冲突时不能把金额相等当作对账事实。成果仍是本地合成技术控制，不改变 2026-11-22 **68/100** 的外部费用真实性、退款 COGS 和生产签署扣分。
+**V198 技术完成**：[精确代码 `11864a7`](https://github.com/kunlong-luo/merchivra/commit/11864a739451f0e91c0bd9639b2c4bfe441b518e) 的 [完整 A3 #45021678686（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45021678686)，及 [同 SHA 快 CI #45021678580](https://github.com/kunlong-luo/merchivra/actions/runs/45021678580) SUCCESS。继续补强结算报告与 Finances 来源多重归属的只读证据阻断，检验同一 Settlement ID/交易归属冲突时不能把金额相等当作对账事实。成果仍是本地合成技术控制，不改变 2026-11-22 **68/100** 的外部费用真实性、退款 COGS 和生产签署扣分。
