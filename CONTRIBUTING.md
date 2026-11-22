@@ -2,7 +2,7 @@
 
 > **现行维护策略（2026-11-21）**：Merchivra 仍为 **pre-alpha / production NO-GO**。项目维护者已决定**直接在 `main` 开发与提交**，不为日常功能、修复和文档工作创建临时开发分支或例行 PR。贡献者请先通过 Issue 讨论范围；此处不承诺外部直接 push 权限，也不要求维护者再建立重复分支。生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104)、真实 Seller/Ads 授权均保持关闭。
 
-先读：[当前事实基线](docs/current-status.md) · [现行执行计划](docs/roadmap/current-plan.md) · [文档导航](docs/README.md) · [分层测试](docs/testing/ci-policy.md) · [安全政策](SECURITY.md) · [Agent 约束](AGENTS.md)。
+先读：[当前事实基线](docs/current-status.md) · [现行执行计划](docs/roadmap/current-plan.md) · [文档导航](docs/README.md) · [分层测试](docs/testing/ci-policy.md) · [安全政策](SECURITY.md) · [Agent 约束](AGENTS.md) · [工程实施规范](docs/governance/engineering-standards.md) · [文档管理](docs/governance/document-control.md)。
 
 ## 已采用的工具（不要重新引入旧栈）
 

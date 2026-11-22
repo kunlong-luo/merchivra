@@ -1,45 +1,42 @@
-# GOV-001 · 文档版本与评审管理
+# GOV-001 · 当前文档控制与决策管理
 
-> **V109 文档治理补充**：参见 [当前文档中心](../README.md) 与 [最新入口文档审计](docs-audit-v109.md)。旧版本设计仍保留为 Superseded/Proposed 历史快照，不能用其中的“未实现”覆盖已验证的代码，也不能用已实现的 Mock 代码声称获得正式业务/安全/生产签署。当前运行时/API/测试策略必须引用 V108 权威计划和对应 GitHub Actions SHA。
+**状态：CURRENT · 2026-11-22 / DOC-196。** 文档分类、优先级、审阅与证据格式在此统一。历史 [V109 文档审计](docs-audit-v109.md) 和 [V191 收敛记录](docs-audit-v191.md) 仅为当时事实；本轮核查见 [DOC-196](docs-audit-2026-11-22.md)。
 
-## 状态标准
+## 唯一入口与优先级
 
-- **Draft**：编写中，未获确认；可在 PR 中修改。
-- **Proposed**：完整候选方案，等待业务/技术评审。
-- **Accepted**：评审同意，并记录决策与变更范围。
-- **Superseded**：已被新版本或 ADR 替代；必须指向替代文档。
-- **Implemented**：有代码、测试和发布证据；不能仅凭设计文档标记。
+| 类别 | 权威入口 | 用途 | 何时更新 |
+| --- | --- | --- | --- |
+| **Current facts / 当前事实** | [current-status.md](../current-status.md) | 实际代码、已通过验证、真实未知和 NO-GO；事实须引用精确 SHA/运行 | 每次实现/验证改变 |
+| **Current plan / 唯一计划** | [current-plan.md](../roadmap/current-plan.md) | 未来 P0 顺序、阻塞原因、下一验收 | 任务完成/优先级改变 |
+| **Execution policy / 工程规范** | [AGENTS.md](../../AGENTS.md) · [ENG-001](engineering-standards.md) | 技术栈、工作流、安全与测试规则 | 维护者改变规范或升级技术 |
+| **Operating guides / 操作指引** | [开发](../development.md) · [CI](../testing/ci-policy.md) · [部署](../deployment/local-spark-db.md) · [API](../api/README.md) | 可执行命令/状态码、配置、运行验证 | 代码或配置接口改变 |
+| **Proposed / 待批准** | [决策登记](decision-register.md) · G1/G2/ADR | 候选产品、财务和安全政策 | 正式审查/签署 |
+| **Evidence / 历史证据** | 各领域 Vxxx、历史 A3/PR/SHA、[文档审计](docs-audit-v191.md) | 证明**那次**实现和验证，不作当前指令 | 仅追加勘误、记录被替代 |
 
-## 文档拥有者（角色）
+出现冲突：先核实实现/真实配置和用户已批准的现行决策；当前事实纠正客观内容，现行规范修订可执行要求，开放决策在 G1/G2/ADR 登记；不得让历史记录覆盖现行指令，也不得用成功的 CI 冒充正式签署。
 
-- Product owner：产品范围、指标、PRD 和验收标准。
-- Business SME（卖家/运营/财务）：业务流程、成本/税费与实际使用模式。
-- Tech lead：架构、数据模型、接口与 ADR。
-- Security lead：权限、数据保留、秘密管理及 Amazon 安全要求。
-- Maintainer：开源规范、文档索引、Issue/PR 追踪。
+## 状态词（文档和 CI 不得混用）
 
-同一人可承担多个角色，但需要明确每一项决策的批准状态。
+- **DRAFT**：未完成提案；**PROPOSED**：可评审方案，尚未批准；**ACCEPTED**：明确记录批准人、日期、范围与依据的决定。
+- **IMPLEMENTED**：实际代码与对应的回归测试路径存在；不是外部真实性或上线证明。
+- **VERIFIED (synthetic)**：精确 SHA、GitHub Actions run、run_attempt、完成/失败/跳过的 job 范围都已记录；只能证明隔离合成场景。
+- **EXTERNAL VERIFIED**：独立、授权取得的第三方来源和批准证据；不能因内部签名或人工复核自动获得。
+- **SUPERSEDED / ARCHIVE**：保留旧文本用于审计，开头醒目标记替代的当前入口，不允许再作为执行计划。
+- **NO-GO**：生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 仍禁止；G1/G2/G3 没有真实签署或外部核验不能写成 GO。
 
-## 变更流程
+## 必须记录的验证证据
 
-1. Issue 描述问题及影响文档。
-2. PR 更新文档和相关图纸，附影响的 FR/AC/ADR。
-3. 产品与技术审查；牵涉敏感数据时必须加入安全审查。
-4. 记录决策、日期、理由与剩余风险。
-5. 接受后更新追踪矩阵与 Roadmap，再开放开发 Issue。
+每个新版本记录应说明：需求/变更边界、变更过的真实代码文件/迁移、精确 `main` SHA、CI/PG18/HTTP/Chromium/Compose 的各项验证 URL 与 run_attempt、**失败和跳过项**、测试是否合成、原币与租户边界、残余风险、外部未证事项。不允许只写“测试已通过”而没有精确目标；新提交不能继承旧 SHA 的验证。
 
-## 优先评审会议
+## 直接 main 的文档维护流程
 
-- 业务评审：PRD、用户画像、五条业务流程、财务指标、未决问题。
-- 技术评审：系统/模块图、ER 图、同步时序、授权模式、部署与安全。
-- 发布评审：测试验收、数据保护、运维恢复、贡献文档与许可证。
+1. 核对 [文档索引](../README.md)、真实 `main` HEAD、相关实现文件和现有版本资料；先定位旧信息，不复制第二个“当前计划”。
+2. 编辑受影响的权威入口和版本证据文档，保持链接可追踪；遵守 [工程规范](engineering-standards.md)。日常直接提交 `main`，**不再以 PR 为必须步骤**，但并发更新必须校验 HEAD，不能 force push。
+3. 对纯文档先跑 `python3 scripts/check_docs_consistency_v109.py`、`python3 scripts/check_ci_cadence_v108.py`；提交后检查该 SHA 的快速 CI。变更影响资金/权限/DB 的代码，按 [分层 CI](../testing/ci-policy.md) 另加对应 A3。
+4. 涉及未签署经营范围、税费、成本/利润、角色或真实接入时，保留 **PROPOSED** 并记录待审批人；不得擅自将其标记 **ACCEPTED**。
 
-**保留过去版本**：架构决策采用不可随意重写的 ADR 记录；变更用后续 ADR 标记替代。
+## 责任与正式签署
 
-## G1 / G2 / G3 评审的证据要求
+产品/财务 Owner 负责 G1 和 DEC-06/07/08，Tech lead 负责架构/ADR，Security lead 负责 IAM/凭据/发布风险，Maintainer 负责代码/文档索引与 CI；同一人可有多个角色，**不意味着自己提交代码就自动签署财务/生产决定**。决策在 [DEC 登记](decision-register.md) 记录所选方案、反例/替代、审批人、日期、影响文件与关闭证据。
 
-- **G1 产品冻结**：负责人对 [DEC-001](decision-register.md) 中核心经营范围、目标站点、FBA/FBM 与成本/利润口径逐项确认；相关 PRD、FR、UI、流程同版。
-- **G2 架构冻结**：ADR 改为 Accepted，概念 ERD/租户/令牌/同步故障处理与真实 API 操作矩阵经过技术/安全评审；未完成的权限仍明确阻塞对应功能。
-- **G3 开发准入**：正式 OpenAPI 和物理 ERD、最小 Mock fixtures、关键 AC/E2E/安全用例有可执行规格，P0 FR 追踪无缺口。
-- 任一关口 **未通过时不得写为已批准**。发布/生产验收属于更晚阶段，不能与设计冻结混淆。
-- 每个评审结论记入 [REVIEW-002](review-report-2026-10-30.md)，需包含反对意见、残余风险和明确责任角色。
+本轮只定工程和文档规则，不完成真实 Seller/Ads OAuth、银行证明、退款 COGS 回转、G1/G2/G3 或生产 GO。

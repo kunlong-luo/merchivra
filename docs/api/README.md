@@ -10,7 +10,7 @@
 - **真实 Controller/OpenAPI/Orval 契约已经部分落地**：`apps/web/openapi/finance-profits.json`、`fba-inbound.json`、`ads-reports.json`、`operations-v67.json`；与 `apps/web/orval*.config.ts`、`apps/web/src/generated/` 配套。详见 [Springdoc / Orval 渐进接入方案](../architecture/mature-tool-first-api-client-2026-11-01.md)。这些 JSON 只覆盖对应模块，不能误称“所有 REST API 都已迁移至 Orval”。
 - 实际运行时为 **Spring Security Session + HttpOnly Cookie + CSRF**，不是历史候选 JSON 的 JWT `bearerAuth`；所有请求的服务端权限和原币/来源数据校验仍不可仅依靠 TypeScript 类型。
 - **真实 Amazon Seller/Ads 生产出站与写入依旧默认关闭**；`/api/v1/demo/*` 是单独的合成 Mock 命名空间，见 [Mock 演示指南](../demo.md)。已有 OAuth/Worker 代码不代表真实 Amazon 授权完成。
-- 功能冻结前应按 [V108 MVP 计划](../roadmap/mvp-freeze-release-v108.md) 与 [P0 采购容量审计](../testing/p0-purchasing-read-cap-audit-v108.md) 检查每个实际 Controller/Orval 约束；G1/G2/G3 仍需审批。
+- 功能冻结前应按 [当前 P0 计划](../roadmap/current-plan.md)、[工程实施规范](../governance/engineering-standards.md) 与 [P0 采购容量历史审计](../testing/p0-purchasing-read-cap-audit-v108.md) 检查每个实际 Controller/Orval 约束；G1/G2/G3 仍需审批。
 
 **V145 来源合同补齐（2026-11-12）**：FBA 货件/采购 PO/ASN 的五条现有本地关联读写接口已纳入 `fba-inbound.json`，该模块共 15 个 operationId；[合同、测试与仍存在的 100/200 条容量限制](../inventory/fba-purchase-link-v75.md)。这不表示整个 FBA API 或全库分页已经完成。
 

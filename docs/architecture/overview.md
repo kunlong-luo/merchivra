@@ -1,6 +1,6 @@
 # ARCH-001 · Merchivra 当前系统架构
 
-> **代码事实基线：2026-11-21 / V191。** 已实现的是以 Spring Boot 为中心的**模块化单体**、PostgreSQL 18 和 Next.js 16 本地 App Router；跨进程 Worker、对象存储或真实 Amazon 接入不应因概念图而被宣称已在生产运行。外部 G1/G2/G3 仍未签署，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) NO-GO。参见 [当前状态](../current-status.md) 和 [现行 P0](../roadmap/current-plan.md)。
+> **代码事实基线：2026-11-22 / V195。** 已实现的是以 Spring Boot 为中心的**模块化单体**、PostgreSQL 18 和 Next.js 16 本地 App Router；跨进程 Worker、对象存储或真实 Amazon 接入不应因概念图而被宣称已在生产运行。外部 G1/G2/G3 仍未签署，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) NO-GO。参见 [当前状态](../current-status.md) 和 [现行 P0](../roadmap/current-plan.md)。
 
 ## 1. 系统边界
 
@@ -35,7 +35,7 @@ flowchart LR
 
 - **租户/Marketplace**：服务器端 Session/CSRF、Owner/工作人员权限及数据库作用域为准，不能依赖隐藏前端按钮。
 - **财务**：按源报告/结算行保存原始身份、SHA-256、原币六位精度；V91/V92/V94/V95/V102 的独立复核和重复来源 hold 不可被同金额/同摘要绕过。
-- **利润**：V64 已知范围贡献 ≠ V162 全成本；V185–V188 原币敏感度与整期阻断不自动生成已核验净利润或 GL 入账。
+- **利润**：V64 已知范围贡献 ≠ V162 全成本；V185–V188 原币敏感度与整期阻断不自动生成已核验净利润或 GL 入账。V193 冻结表增加数据库级 DML 保护，V194 仅对新订单/SKU 快照保存可重算 V1 指纹并读时阻断异常；旧 `extract_sha256` 不是可重算指纹或外部验签。
 - **库存/WMS**：内部签名、密钥挑战和三人 QC 不能自行认证外部运营商身份或物理实收；G1 未批准不得改库存/COGS。
 - **同步**：同步游标、幂等、审计和租约由持久化数据守护；缓存不可作为唯一事实；当前真实 Amazon API 入口默认保持关闭。
 - **代理**：Next `/api/:path*` 转发到私有 Spring，`/actuator/health` 不经公网 Next rewrite；Next 健康检查同时核实 Spring Ping 身份与内部 PG18 Actuator 状态。

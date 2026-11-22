@@ -2,15 +2,15 @@
 
 **面向 Amazon Seller 的开源、自托管 ERP，以可追溯的全成本与利润核算为核心目标。**
 
-> **当前版本基线：2026-11-21 / V191。** 项目仍为 **pre-alpha**，只供本地/隔离环境开发测试。Java 25 / Spring Boot 4.1.2 / Gradle / PostgreSQL 18、React 19 / **Next.js 16.4.5** / Node 24、**pnpm 12.20.0（唯一前端包管理器）**。默认 Web 已是 Next.js；Vite 只用于受控回退与 GitHub Pages 虚构静态展示。
+> **当前版本基线：2026-11-22 / V195 会话体验、V194 财务证据。** 项目仍为 **pre-alpha**，只供本地/隔离环境开发测试。Java 25 / Spring Boot 4.1.2 / Gradle / PostgreSQL 18、React 19 / **Next.js 16.4.5** / Node 24、**pnpm 12.20.0（唯一前端包管理器）**。默认 Web 已是 Next.js；Vite 只用于受控回退与 GitHub Pages 虚构静态展示。
 >
-> **技术验收 ≠ 生产批准。** [V191 主线完整 A3](https://github.com/kunlong-luo/merchivra/actions/runs/44882890834) 在精确 [代码 SHA `8dab971`](https://github.com/kunlong-luo/merchivra/commit/8dab97147010fdc440ee81abcfa67cd1d1d57261) **7/7 SUCCESS**（PG18、Next/Vite Chromium、Compose、Session/CSRF 等合成范围）。真实 Seller/Ads OAuth、真实平台与银行核验均未授权；[生产门禁 #104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
+> **技术验收 ≠ 生产批准。** 最近一次独立 [V193 完整 A3 #45012495202](https://github.com/kunlong-luo/merchivra/actions/runs/45012495202) 针对精确 [`6008832`](https://github.com/kunlong-luo/merchivra/commit/600883236a3669f51b6703229447d93499b271cd) 成功；更新的 V195 [快速 CI #45016097852](https://github.com/kunlong-luo/merchivra/actions/runs/45016097852) 已通过，但**V194 仍需在含新代码的精确 SHA 上完整运行 PG18/A3**。真实 Seller/Ads OAuth、真实平台与银行核验均未授权；[生产门禁 #104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
 
-[English](README.md) · [当前状态](docs/current-status.md) · [现行开发计划](docs/roadmap/current-plan.md) · [文档中心](docs/README.md) · [部署指南](docs/deployment/local-spark-db.md) · [开发指南](docs/development.md) · [安全说明](SECURITY.md)
+[English](README.md) · [当前状态](docs/current-status.md) · [现行开发计划](docs/roadmap/current-plan.md) · [文档中心](docs/README.md) · [工程规范](docs/governance/engineering-standards.md) · [部署指南](docs/deployment/local-spark-db.md) · [开发指南](docs/development.md) · [安全说明](SECURITY.md)
 
 ## 当前真正能做什么
 
-已实现本地店铺/租户、SKU/订单、采购/FBA、库存批次/异常、会话及审计等业务链路，提供 Next.js 多工作台、Spring API、PostgreSQL 持久化与模拟接口。财务已实现 V64 冻结的**已知范围贡献**和 V91–V102、V162–V188 的人工成本存证、分摊守恒、结算身份、整期阻断、唯一归属与原币瀑布**只读预览**。
+已实现本地店铺/租户、SKU/订单、采购/FBA、库存批次/异常、会话及审计等业务链路，提供 Next.js 多工作台、Spring API、PostgreSQL 持久化与模拟接口。财务已实现 V64 冻结的**已知范围贡献**和 V91–V104、V162–V194 的人工成本存证、分摊守恒、结算身份、整期阻断、唯一归属与原币瀑布**只读预览**。
 
 **尚未实现可信的全成本净利润结论**：独立外部 Amazon/Ads/银行真实性核验、退货 COGS 回转、跨币种 FX/税费政策、外仓实体签收/库存入账和财务 G1/DEC-06/07/08 审批仍不完整。人工 `APPROVED_UNVERIFIED` 不是已证实成本，`realizedNetProfit=null` 不能伪装为零或已确认利润。见 [事实基线](docs/current-status.md) 和 [V188 利润瀑布](docs/finance/v188-period-profit-cost-waterfall-preview.md)。
 

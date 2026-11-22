@@ -1,45 +1,40 @@
-# Merchivra 文档中心
+# Merchivra · 当前文档中心
 
-> **现行入口 · 2026-11-22 / V193。** 这里只索引**当前执行规范**和有证据的业务说明。V1–V190 的版本文档、早期设计草案和当时的测试结论保留历史原貌，**不能因为标题含“当前/最新”就优先于本页**。当前正式本地前端为 Next.js 16、唯一前端包管理器 pnpm 12.20.0；生产 #104 仍 NO-GO。
+> **CURRENT / 2026-11-22 · DOC-196。** 从这里进入现行规范；不要因为旧 Vxxx 文件包含“当前/最新”就按它启动工作。实际工程为 Java25/Spring Boot4.1.2/Gradle/PG18、React19/**Next.js 16.4.5 默认**、Node24/**pnpm 12.20.0 唯一包管理**；项目 pre-alpha，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
 
-## 先读这四份
+## 先看哪份文档
 
-| 目的 | 文档 |
+| 你的问题 | **唯一现行入口** |
 | --- | --- |
-| **到底实现了什么、哪些仍未证实** | [当前技术与业务事实基线](current-status.md) |
-| **现在应该开发什么** | [现行 P0 执行计划：利润与财务证据链优先](roadmap/current-plan.md) |
-| **本地如何启动及开发** | [开发指南](development.md) · [两种 Compose 部署/卸载](deployment/local-spark-db.md) |
-| **何时测试、什么不能上线** | [分层 CI / 完整 A3](testing/ci-policy.md) · [安全与发布门禁](testing/release-readiness-v68.md) |
+| 这套系统到底已经有什么、什么仍未知？ | [当前事实与验证范围](current-status.md) |
+| 接下来先做哪些业务和证据？ | [唯一 P0 开发计划](roadmap/current-plan.md) |
+| 必须遵守哪些开发/安全规范？ | [AGENTS.md](../AGENTS.md) · [ENG-001 工程实施规范](governance/engineering-standards.md) |
+| 文档怎么更新、什么时候才叫 Accepted/Verified？ | [GOV-001 文档控制](governance/document-control.md) · [DOC-196 查漏补缺](governance/docs-audit-2026-11-22.md) |
+| 如何在本地启动和处理会话 500？ | [开发及本地排错](development.md) · [Compose/数据安全部署](deployment/local-spark-db.md) |
+| 应跑哪些测试、A3 需要什么证据？ | [CI/PG18/Chromium/A3 规则](testing/ci-policy.md) |
+| 登录、权限、安全和生产阻塞？ | [安全政策](../SECURITY.md) · [上线门禁](testing/release-readiness-v68.md) |
+| 如何贡献、UI 如何设计？ | [贡献规则](../CONTRIBUTING.md) · [设计约束](../DESIGN.md) |
 
-## 按业务领域阅读
+## 业务及架构参考
 
-| 领域 | 入口 | 状态解释 |
+| 主题 | 现行/版本参考 | 必须保留的边界 |
 | --- | --- | --- |
-| 架构/技术选择 | [系统架构](architecture/overview.md) · [ADR](architecture/adrs/0001-modular-monolith.md) · [OpenAPI/Orval](api/README.md) | Java25 / Spring Boot4.1.2 / Gradle / PG18 / React19 / Next16 / pnpm；不使用 Vue/Maven |
-| 产品与财务口径 | [利润优先方向 V161](product/profit-first-next-primary-v161.md) · [G1 财务规则](product/finance-rulebook.md) | 产品方向成立；G1/DEC-06/07/08 不是已签署 |
-| 全成本与人工来源 | [V162 成本覆盖](finance/full-cost-coverage-v162.md) · [V163 手工来源](finance/cost-source-review-v163.md) · [V164 金额守恒](finance/cost-allocation-v164.md) | 技术能力/人工元数据核查，不等于真实可入账费用 |
-| 结算与真实性隔离 | [V181 原始身份快照](finance/v181-immutable-settlement-line-identity.md) · [V182 来源归属判定](finance/v182-settlement-attribution-evidence.md) · [V183 整期阻断](finance/v183-full-period-profit-evidence-gates.md) | 外部报告独立来源真实性仍待核查 |
-| 期间利润与防重 | [V185 跨月预览](finance/v185-original-currency-period-cost-preview.md) · [V186 单一来源归属](finance/v186-single-cost-source-ownership-bridge.md) · [V187 跨来源风险](finance/v187-full-period-cross-source-risk.md) · [V188 原币瀑布](finance/v188-period-profit-cost-waterfall-preview.md) · [V193 冻结证据不可变性](finance/v193-frozen-profit-snapshot-database-guards.md) | **敏感度计算 ≠ 已认证真实净利润** |
-| 退货与外仓 WMS | [退货成本准备度](finance/refund-cost-readiness-v170.md) · [外仓运营主体信任合同](finance/wms-operator-trust-contract-v175-b.md) | B1 技术基础已有，B2/B3 真实外部验证和库存/COGS 过账未完成 |
-| 采购与库存 | [采购入口](purchasing/local-purchase-workflow.md) · [库存与批次审计](inventory/fba-purchase-link-v75.md) | 本地持久业务与合成测试，不意味着真实 Amazon FBA 签收 |
-| 安全/集成 | [安全政策](../SECURITY.md) · [Seller OAuth 代码边界](security/seller-oauth.md) · [Amazon Gateway](integrations/amazon-sp-api.md) | 真实 Seller/Ads OAuth 与外部 API 均关闭 |
-| UI 与设计 | [设计系统](../DESIGN.md) · [Next.js 迁移技术记录](architecture/next-node-cutover-v122.md) | Next 已是**本地**默认；真实生产 TLS/切流仍 NO-GO |
+| 技术架构与 API | [整体架构](architecture/overview.md) · [真实 Springdoc/Orval 与早期设计区分](api/README.md) | 不从历史 G2 草案生成线上客户端；Next 默认，Vite 只回退 |
+| 经营利润的核心目标 | [财务规则（G1 待批准）](product/finance-rulebook.md) · [全成本覆盖 V162](finance/full-cost-coverage-v162.md) | 已知范围贡献、预览≠经审净利润 |
+| 费用来源与结算证据 | [结算身份 V181](finance/v181-immutable-settlement-line-identity.md) · [归属 V182](finance/v182-settlement-attribution-evidence.md) · [整期阻断 V183](finance/v183-full-period-profit-evidence-gates.md) | 人工审核和本地 SHA 不认证第三方费用 |
+| 成本防重与利润展示 | [跨月 V185](finance/v185-original-currency-period-cost-preview.md) · [唯一归属 V186](finance/v186-single-cost-source-ownership-bridge.md) · [跨源风险 V187](finance/v187-full-period-cross-source-risk.md) · [瀑布 V188](finance/v188-period-profit-cost-waterfall-preview.md) | `APPROVED_UNVERIFIED` 不入账 |
+| **冻结订单/SKU 利润证据** | [数据库不变性 V193](finance/v193-frozen-profit-snapshot-database-guards.md) · [独立重算 V194](finance/v194-versioned-profit-capture-fingerprints.md) | 历史旧摘要不能冒充 V1；V194 仍待自己的完整 PG18 A3 |
+| 退货/WMS | [退款成本就绪 V170](finance/refund-cost-readiness-v170.md) · [外部主体信任边界](finance/wms-operator-trust-contract-v175-b.md) | B2/B3 外部身份、物理实收、COGS 回转尚不完整 |
+| 采购、库存及运营 | [采购主流程](purchasing/local-purchase-workflow.md) · [FBA 采购关联](inventory/fba-purchase-link-v75.md) | 本地模拟/审批不等于 Amazon FBA 已签收 |
+| 集成与安全 | [SP-API 接入](integrations/amazon-sp-api.md) · [同源 Session/CSRF](security/next-session-csrf-v101.md) | Seller/Ads 真实授权关闭、生产 NO-GO |
 
-## 如何判断文档的有效性
+## 文档分类与冲突裁决
 
-1. **Current / 现行**：本页、[current-status.md](current-status.md)、[current-plan.md](roadmap/current-plan.md)、开发/部署/CI/安全文档。更新当前版本时同步修改，不新增相互冲突的“最新 Vxxx”首页。
-2. **Specification / 待批准**：G1/G2、需求与财务规则中的候选方案。代码存在、CI 通过或草案归档**不会**使其自动签署。
-3. **Evidence / 历史验收**：每篇 Vxxx 业务记录只说明其注明的 SHA/Actions/合成数据。注意失败与复测，不能推断今天的 HEAD 已跑过相同回归。
-4. **Archive / 历史计划**：[V108 MVP 计划](roadmap/mvp-freeze-release-v108.md)、[PLAN-001 长路线图](roadmap.md)、[V148 RTM 入口快照](requirements/implementation-acceptance-rtm-v148.md)、[V109 文档审计](governance/docs-audit-v109.md)。保留可追溯性，不再作为当前待办清单。
+- **CURRENT：** 本页、当前事实、唯一计划、AGENTS/ENG、GOV、开发/部署/CI/安全指引；修改运行时或业务边界时同步这些入口。
+- **PROPOSED：** 财务规则、G1/G2/ADR、正式 OpenAPI 候选；未签署前不得写成 Accepted。
+- **IMPLEMENTATION/EVIDENCE：** Vxxx 功能记录只对其注明的代码、日期、精确 SHA 和合成测试范围有效；旧 A3 不能让新代码自动“绿灯”。
+- **ARCHIVE：** [V108 MVP](roadmap/mvp-freeze-release-v108.md)、[PLAN-001 历史路线](roadmap.md)、[V148 RTM](requirements/implementation-acceptance-rtm-v148.md)、[V109 审计](governance/docs-audit-v109.md)、[V191 审计](governance/docs-audit-v191.md)；保留历史真相但不再直接驱动任务。
 
-## 文档修改规则
+文档修改**直接在 `main`**，完成后至少运行 `python3 scripts/check_docs_consistency_v109.py`、`python3 scripts/check_ci_cadence_v108.py`，核对新 SHA 的快 CI。完整范围与审阅步骤在 [GOV-001](governance/document-control.md)。
 
-日常改动直接在 `main`，不为例行功能/文档创建分支或 PR。真实事实须指向代码路径、精确提交、CI 运行或尚未签署的 G1/G2/G3 记录。财务来源、币种、证据状态和 `realizedNetProfit=null` 不可被文案“升级”。本地检查：
-
-```bash
-python3 scripts/check_docs_consistency_v109.py
-python3 scripts/check_ci_cadence_v108.py
-(cd apps/web && pnpm install --frozen-lockfile && pnpm api:check && pnpm typecheck && pnpm test && pnpm build)
-```
-
-文档治理记录见 [V191 文档清理说明](governance/docs-audit-v191.md)。**静态 GitHub Pages 只显示虚构数据，不是带登录的线上 ERP。**
+**事实提示：** V195 改善了本地 Session 500 的页面与重试，但未找到用户本机 Spring 故障根因；V194 完整 PG18/A3 尚未有本次代码的独立运行。**`realizedNetProfit=null`，公开 GitHub Pages 只是全虚构静态演示。**

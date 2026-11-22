@@ -1,6 +1,6 @@
-# TEST-003 · 当前 CI / 完整 A3 验收策略（V193）
+# TEST-003 · 当前 CI / 完整 A3 验收策略（V195 / DOC-196）
 
-> **2026-11-21 · 当前维护约定**：日常开发与文档修改直接提交 `main`，不为每个 Vxxx 开发重复创建分支/PR。快速 CI 保证构建与高价值单测；PG18 全链路、Chromium/Next、真实 Docker Compose 是有条件执行的**隔离合成**里程碑验收；两者均**不是**真实 Amazon/银行核证或生产许可。见 [事实基线](../current-status.md)、[发布阻断](release-readiness-v68.md)。
+> **2026-11-22 · 当前维护约定**：日常开发与文档修改直接提交 `main`，不为每个 Vxxx 开发重复创建分支/PR。快速 CI 保证构建与高价值单测；PG18 全链路、Chromium/Next、真实 Docker Compose 是有条件执行的**隔离合成**里程碑验收；两者均**不是**真实 Amazon/银行核证或生产许可。见 [事实基线](../current-status.md)、[发布阻断](release-readiness-v68.md)。
 
 ## 实际 GitHub Actions 入口
 
@@ -21,11 +21,13 @@
 
 ## 最新已确认工程技术证据
 
-- **V193**：Flyway V103 新增 V64 冻结报表/订单/SKU/审计 DML 守护，真实 PG18 测试复用 V62 TEMP 表，覆盖正常批处理与晚追加/重复修改拒绝。请以**该阶段精确 main SHA** 的 [A3](https://github.com/kunlong-luo/merchivra/actions/workflows/milestone-validation.yml) 运行结果为准，不预先宣称成功。
+- **V195 / `2136375590abaae2373c565a1de930aa4ce45483`**：[快速 CI #45016097852（run_attempt=1）](https://github.com/kunlong-luo/merchivra/actions/runs/45016097852) **SUCCESS**：Java25、Next16/React19/pnpm/Orval、Vitest、Next 与 Vite 构建、Compose；**PG18 完整 job 在快速 CI 中按策略 SKIPPED**。V195 仅改善会话故障 UI，用户本机 HTTP 500 根因未定位。
+- **V194 / `9d4ebadb7abe45369ea55a7bb6c33b09e920d985`**：[快速 CI #45014853040](https://github.com/kunlong-luo/merchivra/actions/runs/45014853040) **SUCCESS**；V104 指纹仍待自己的完整 PG18/Flyway/Owner HTTP/A3，不能借用 V193 成果。
+- **V193 / `600883236a3669f51b6703229447d93499b271cd`**：[完整 A3 #45012495202（run_attempt=2，SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45012495202) 验证其精确 SHA 的 V103 冻结数据库 DML 守护及合成 PG18；**不覆盖**后续 V194/V195。
 - **V192 / `189932197ddeaadf1470f8692aa6be88d5e015c1`**：[完整 A3 #44896004578（run_attempt 2，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/44896004578) 验证真实 PG18 V188 逐订单 SKU 金额守恒，失败的首次验证与修复记录保留；仍无真实费用核验。
 - **V191 / `8dab97147010fdc440ee81abcfa67cd1d1d57261`**：[快速 CI #44882890791](https://github.com/kunlong-luo/merchivra/actions/runs/44882890791) 与 [完整 A3 #44882890834](https://github.com/kunlong-luo/merchivra/actions/runs/44882890834) SUCCESS，完整 A3 **7/7 核心任务成功**；真实 Seller/Ads/银行**未启用**。
 - [GitHub Pages #44882736480](https://github.com/kunlong-luo/merchivra/actions/runs/44882736480) 只验证虚构静态展示构建与隔离，不表示公开 ERP 已上线。
-- **文档提交后的新 HEAD** 必须查最新 CI，不能自动继承 V191 业务 SHA 的 A3 结果。
+- **文档提交后的新 HEAD** 必须查该 SHA 的 CI，不能自动继承 V191/V193 业务 SHA 的 A3 结果。文档规则见 [ENG-001](../governance/engineering-standards.md)、[GOV-001](../governance/document-control.md)。
 
 ## 本地快速命令
 

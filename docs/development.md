@@ -1,4 +1,4 @@
-# Merchivra 开发指南（当前 · V191）
+# Merchivra 开发指南（CURRENT · 2026-11-22 / V195）
 
 > **2026-11-21 的当前规范**：Java 25 / Spring Boot 4.1.2 / Gradle Wrapper / PostgreSQL 18；React 19 + **Next.js 16.4.5 App Router**；Node 24 + **pnpm 12.20.0（只用这一种前端包管理器）**。默认本地 `web` 为 Next Node，不是 Vite SPA。项目处于 pre-alpha、生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) NO-GO，Seller/Ads OAuth 和真实写入禁止启用。完整状态见 [当前事实基线](current-status.md)。
 
@@ -89,4 +89,4 @@ curl -i http://127.0.0.1:3000/api/v1/auth/me
 - **完全禁止**：真实 Seller/Ads 授权、写入、真实银行/买家凭据进入源码/CI/Pages；把 `UNKNOWN` 当 0、将合成费用写成已核验净利润、声称 WMS 签名等于物理实收。
 - **故障排查**：确认 3000 是 `pnpm dev` 或 Compose `web` 的 Next 进程，8080 是 Spring；旧 Vite 5173 进程和旧容器可造成“仍在用 Vite”的错觉。任何数据初始化/回滚操作先看 [部署卸载安全说明](deployment/local-spark-db.md)。
 
-产品/财务现行任务见 [P0 计划](roadmap/current-plan.md)，技术架构见 [ARCH-001](architecture/overview.md)，合成浏览器/PG18/恢复覆盖见 [CI 策略](testing/ci-policy.md)。历史 V6–V145 同步、采购、OpenAPI 试验说明继续保存在各自版本文档，但**不再是当前开发入口**。
+工程规范见 [AGENTS](../AGENTS.md) · [ENG-001](governance/engineering-standards.md) · [文档控制](governance/document-control.md)。产品/财务现行任务见 [P0 计划](roadmap/current-plan.md)，技术架构见 [ARCH-001](architecture/overview.md)，合成浏览器/PG18/恢复覆盖见 [CI 策略](testing/ci-policy.md)。历史 V6–V145 同步、采购、OpenAPI 试验说明继续保存在各自版本文档，但**不再是当前开发入口**。

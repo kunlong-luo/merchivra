@@ -1,6 +1,6 @@
 # Merchivra V194 · 版本化订单/SKU 冻结捕获指纹与独立重算
 
-**状态（2026-11-22）**：实现及验证待以本次 main SHA 的 CI/A3 结果为准；本说明不是外部数据、生产发布或财务 G1 批准。
+**状态（2026-11-22）**：V194 实现提交 [`61c8678`](https://github.com/kunlong-luo/merchivra/commit/61c8678288697d20476c44478fafae8bd7739349)，Next 展示 fail-closed 修补 [`9d4ebad`](https://github.com/kunlong-luo/merchivra/commit/9d4ebadb7abe45369ea55a7bb6c33b09e920d985)；后者 [快速 CI #45014853040](https://github.com/kunlong-luo/merchivra/actions/runs/45014853040) **SUCCESS**，但仍**待独立完整 PG18/Flyway/Owner HTTP/A3**；本说明不是外部数据、生产发布或财务 G1 批准。
 
 ## 既有基础与实际缺口
 

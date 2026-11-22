@@ -1,3 +1,5 @@
+> **历史归档 / 2026-11-22**：V191 的这次审计仅对其当时的代码与文档成立；现行规范已由 [DOC-196](docs-audit-2026-11-22.md)、[GOV-001](document-control.md) 与 [ENG-001](engineering-standards.md) 收敛。请勿将本页提及的“最新 V191”作为现在的开发结论。
+
 # DOC-191 · 当前文档收敛与历史归档判定（2026-11-21）
 
 状态：**文档信息架构整理**。核查版本基线为 [V191 已通过的完整 A3 SHA](https://github.com/kunlong-luo/merchivra/commit/8dab97147010fdc440ee81abcfa67cd1d1d57261)；本次修改自身仍须以新提交的文档一致性和 CI 结果判断。**文档更新不等于新业务功能、真实来源核证、G1/G2/G3 签署或生产 GO**。

@@ -1,15 +1,12 @@
 # Merchivra · 当前状态与验收边界
 
-> **V194 新增待验收（2026-11-22）**：Flyway V104 对 V64 冻结订单及 SKU 增加可空版本化 V1 SHA-256，服务写入时在同一事务捕获，读时只用冻结表独立重算；历史 `extract_sha256` 严格标为旧摘要。V64 报表与 CSV、V188 原币瀑布接入缺证/篡改/不完整阻断；局部指纹有效也**不代表外部费用真实或净利润可计算**。此代码尚须在精确本次 SHA 跑快速 CI 与完整 PG18/A3，不能继承 V193 结果。详见 [V194 说明](finance/v194-versioned-profit-capture-fingerprints.md)。`realizedNetProfit=null`、Seller/Ads/银行真实性未核、生产 #104 NO-GO 保持不变。
-
-
-> **更新：2026-11-22 · 技术阶段 V193（V64 冻结财务证据数据库不可变性）**
+> **CURRENT · 2026-11-22 / V195 UI + V194 财务。** `main` 已在 [`2136375`](https://github.com/kunlong-luo/merchivra/commit/2136375590abaae2373c565a1de930aa4ce45483) 完成 V195 本地登录服务不可用的错误分类、友好界面及回归测试；该 SHA 的 [快速 CI #45016097852](https://github.com/kunlong-luo/merchivra/actions/runs/45016097852) **SUCCESS**（Java25、React/Next16、pnpm/Orval/Vitest、Compose）。**用户本机 HTTP 500 根因尚未定位**；界面修复不等于 Spring/PG18 服务故障修复。参见 [排错指南](development.md#本地启动时显示服务暂时未就绪)。
 >
-> **事实依据**：V191 代码基线 [main `8dab97147010fdc440ee81abcfa67cd1d1d57261`](https://github.com/kunlong-luo/merchivra/commit/8dab97147010fdc440ee81abcfa67cd1d1d57261)，[完整 A3 #44882890834](https://github.com/kunlong-luo/merchivra/actions/runs/44882890834) **7/7 SUCCESS**，[快速 CI #44882890791](https://github.com/kunlong-luo/merchivra/actions/runs/44882890791) **SUCCESS**，最近一次 [公开静态展示构建 #44882736480](https://github.com/kunlong-luo/merchivra/actions/runs/44882736480) **SUCCESS**。这些结果仅证明**该代码 SHA** 在隔离环境的对应测试通过；文档更新不会自动扩展为新的业务验证。
+> **V194 / Flyway V104**：版本化 V1 订单/SKU 捕获 SHA-256、独立读时从冻结证据复算，以及 V64 汇总/CSV、V188 瀑布 fail-closed 已在 [`61c8678`](https://github.com/kunlong-luo/merchivra/commit/61c8678288697d20476c44478fafae8bd7739349) 及 [`9d4ebad`](https://github.com/kunlong-luo/merchivra/commit/9d4ebadb7abe45369ea55a7bb6c33b09e920d985) 交付；[快速 CI #45014853040](https://github.com/kunlong-luo/merchivra/actions/runs/45014853040) **SUCCESS**，但**此代码还没有独立完成完整 PG18/Flyway/Owner HTTP/A3**。旧 `extract_sha256` 不能当 V1 指纹，更不能当外部 Amazon 签章。见 [V194 证据边界](finance/v194-versioned-profit-capture-fingerprints.md)。
 >
-> **V192 已验证**：原币逐订单/SKU 五项守恒与对冲差异阻断在 [V192 精确 SHA `1899321` 完整 A3 #44896004578（run_attempt 2，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/44896004578) 通过。**V193** 新增 Flyway V103 订单/明细/批次/审计冻结 DML 守护和独立 PG18 负例，测试结果须查看其自己的精确 SHA，不能继承 V192 的 7/7。
+> **最近独立完成的完整 A3 是 V193**：精确 [`600883236a3669f51b6703229447d93499b271cd`](https://github.com/kunlong-luo/merchivra/commit/600883236a3669f51b6703229447d93499b271cd) 的 [A3 #45012495202（run_attempt=2，SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45012495202)。这**不覆盖**之后 V194/V195 和文档修改的完整回归。
 >
-> **上线结论：pre-alpha / production NO-GO**。[#104](https://github.com/kunlong-luo/merchivra/issues/104) 尚开放，真实 Amazon Seller/Ads OAuth、远程 API 读取/写入、外部银行事实均未获准启用；不能把合成证据或静态 GitHub Pages 说成真实利润或生产验收。
+> **全局安全结论**：pre-alpha，真实 Seller/Ads OAuth、真实平台/银行来源核验、退款 COGS 与 G1/DEC-06/07/08 仍关闭或未批准；`realizedNetProfit=null`，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。文档规范以 [ENG-001](governance/engineering-standards.md) 和 [GOV-001](governance/document-control.md) 为准，不能从合成 CI 推出真实上线。
 
 ## 1. 技术栈与启动事实
 
@@ -32,14 +29,14 @@
 | 业务链路 | 已实现的技术能力 | 仍然不能声称 |
 | --- | --- | --- |
 | 店铺、SKU、订单、采购、FBA、库存、异常 | 租户/Marketplace 边界、部分完整历史游标分页、本地持久数据与模拟同步、人工审批及运营工作台 | 真实 Seller API 已授权、真实 FBA 到货/可售数量自动核证 |
-| 基础财务 | V33/V61/V64 已知范围贡献、冻结的期间查询、订单来源与版本对照；**V193 / Flyway V103 对报表、订单、SKU 和审计加数据库不可变 DML 守护** | 旧 V64 `extract_sha256` 等于外部验真；V103 自动证明迁移前历史没被改过；广告、税、运费、退货和银行全成本净利润 |
+| 基础财务 | V33/V61/V64 已知范围贡献、冻结的期间查询、订单来源与版本对照；**V193 / Flyway V103 冻结表 DML 守护 + V194 / V104 新订单/SKU 版本化指纹与独立重算** | 旧 V64 `extract_sha256` 等于外部验真；V103 自动证明迁移前历史没被改过；广告、税、运费、退货和银行全成本净利润 |
 | 成本来源与分摊 | V91/V92、V163–V168：人工来源、独立 Owner 元数据复核、单一主维度分摊、局部身份冲突/共用结算行阻断 | 人工复核即平台真实性认证；本地同 ID/同摘要即真实重复收费 |
 | 结算证据链 | V181/V181B（V102）：报告原始标识、文档 SHA-256、行身份与不可变快照；V182/V183：逐来源与整期间阻断；V184：批量读取优化 | 历史无指纹行可事后伪装完整；本地行关联即独立外部证据 |
-| 期间成本与利润预览 | V185 原币跨月算术、V186 来源唯一归属、V187 整期跨来源风险、**V188/V188B 只读原币瀑布**；V192 增加订单/SKU 五项金额读时守恒与 409 阻断 | `APPROVED_UNVERIFIED` 已入账；`realizedNetProfit` 不再为 `null`；跨币种 FX/会计政策已批准 |
+| 期间成本与利润预览 | V185 原币跨月算术、V186 来源唯一归属、V187 整期跨来源风险、**V188/V188B 只读原币瀑布**；V192 增加五项金额守恒阻断；V194 增加完整订单/SKU 指纹一致性阻断 | `APPROVED_UNVERIFIED` 已入账；`realizedNetProfit` 不再为 `null`；跨币种 FX/会计政策已批准 |
 | 退货与 WMS | V170–V175 的本地退款风险、证据、Ed25519 回执、数量/处置差异、独立 QC 与密钥持有权基础 | 可信外部运营商身份/物理实收、正式库存/COGS 回转已经实现；WMS B2/B3 仍欠缺 |
 | 浏览器与发布 | 合成 Chromium、PG18 HTTP、受控 Next→Vite→Next TLS 回退及 CI 技术验证 | 目标真实 TLS/KMS/AV/PITR/Alertmanager/人工审批/上线许可证 |
 
-财务详细证据：[V162 八类全成本边界](finance/full-cost-coverage-v162.md) → [V181 结算行身份](finance/v181-immutable-settlement-line-identity.md) → [V183 整期阻断](finance/v183-full-period-profit-evidence-gates.md) → [V186 单一归属](finance/v186-single-cost-source-ownership-bridge.md) → [V187 跨来源风险](finance/v187-full-period-cross-source-risk.md) → [V188 原币瀑布](finance/v188-period-profit-cost-waterfall-preview.md) → [V193 V64 冻结证据不可变性](finance/v193-frozen-profit-snapshot-database-guards.md)。详见 [当前路线](roadmap/current-plan.md)。
+财务详细证据：[V162 八类全成本边界](finance/full-cost-coverage-v162.md) → [V181 结算行身份](finance/v181-immutable-settlement-line-identity.md) → [V183 整期阻断](finance/v183-full-period-profit-evidence-gates.md) → [V186 单一归属](finance/v186-single-cost-source-ownership-bridge.md) → [V187 跨来源风险](finance/v187-full-period-cross-source-risk.md) → [V188 原币瀑布](finance/v188-period-profit-cost-waterfall-preview.md) → [V193 V64 冻结证据不可变性](finance/v193-frozen-profit-snapshot-database-guards.md) → [V194 版本化指纹与独立重算](finance/v194-versioned-profit-capture-fingerprints.md)。详见 [当前路线](roadmap/current-plan.md)。
 
 ## 3. 可复核的状态词
 

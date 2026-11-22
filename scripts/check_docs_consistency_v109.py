@@ -15,6 +15,8 @@ from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
 ACTIVE_FILES = (
+    "AGENTS.md",
+    "Agent.md",
     "README.md",
     "README.zh-CN.md",
     "CONTRIBUTING.md",
@@ -24,6 +26,9 @@ ACTIVE_FILES = (
     "docs/current-status.md",
     "docs/roadmap/current-plan.md",
     "docs/governance/docs-audit-v191.md",
+    "docs/governance/docs-audit-2026-11-22.md",
+    "docs/governance/document-control.md",
+    "docs/governance/engineering-standards.md",
     "docs/development.md",
     "docs/architecture/overview.md",
     "docs/architecture/open-source-erp-benchmark-2026-11-08.md",
@@ -128,16 +133,20 @@ if frontend["scripts"].get("build") != "next build":
 if not frontend["scripts"].get("dev:vite", "").startswith("vite "):
     errors.append("Explicit Vite fallback must remain available")
 for filepath in (
-    "README.md", "README.zh-CN.md", "CONTRIBUTING.md", "DESIGN.md",
-    "docs/README.md", "docs/current-status.md", "docs/roadmap/current-plan.md",
+    "AGENTS.md", "Agent.md", "README.md", "README.zh-CN.md",
+    "CONTRIBUTING.md", "DESIGN.md", "docs/README.md", "docs/current-status.md", "docs/roadmap/current-plan.md",
     "docs/development.md", "docs/architecture/overview.md",
+    "docs/governance/engineering-standards.md", "docs/governance/document-control.md",
     "docs/deployment/local-spark-db.md", "docs/testing/ci-policy.md",
 ):
     content = load(filepath)
     if re.search(r"\bnpm\s+(?:ci|install|run|test|dev|build)\b", content):
         errors.append(f"{filepath}: retired npm CLI in current documentation")
 for heading in ("current-status.md", "roadmap/current-plan.md", "development.md",
-                "testing/ci-policy.md", "governance/docs-audit-v191.md"):
+                "testing/ci-policy.md", "governance/docs-audit-v191.md",
+                "governance/docs-audit-2026-11-22.md",
+                "governance/engineering-standards.md",
+                "governance/document-control.md"):
     if heading not in hub:
         errors.append(f"Docs hub does not link the canonical document: {heading}")
 for context, content in (("runtime", runtime), ("plan", active_plan),
@@ -149,6 +158,34 @@ for context, content in (("runtime", runtime), ("plan", active_plan),
                          ("architecture", architecture), ("CI", ci_policy)):
     if "#104" not in content or "NO-GO" not in content:
         errors.append(f"V191 safety gate missing: {context}")
+# DOC-196: prevent a second contradictory Agent instruction stack.
+agents = load("AGENTS.md")
+agent_alias = load("Agent.md")
+engineering = load("docs/governance/engineering-standards.md")
+governance = load("docs/governance/document-control.md")
+audit_196 = load("docs/governance/docs-audit-2026-11-22.md")
+if len(agents) > 15000 or "唯一生效的 Agent 指令入口" not in agents:
+    errors.append("AGENTS.md must be a concise, single canonical Agent policy")
+if len(agent_alias) > 2000 or "[AGENTS.md](AGENTS.md)" not in agent_alias:
+    errors.append("Agent.md must remain a short compatibility pointer, not another policy")
+for path, content in (
+    ("AGENTS.md", agents), ("engineering", engineering),
+    ("governance", governance), ("docs hub", hub),
+):
+    if "main" not in content or "NO-GO" not in content:
+        errors.append(f"DOC-196 policy context missing: {path}")
+for path, content in (("AGENTS.md", agents), ("engineering", engineering)):
+    if "pnpm 12.20.0" not in content or "Next.js 16.4.5" not in content:
+        errors.append(f"DOC-196 runtime policy missing: {path}")
+if "直接提交" not in governance or "文档控制" not in governance:
+    errors.append("Document control must specify direct main and canonical authority")
+if "V194" not in runtime or "V195" not in runtime or "#45016097852" not in runtime:
+    errors.append("Current status has not recorded the V194/V195 exact quick-CI evidence")
+if "V194" not in active_plan or "V195" not in active_plan or "A3" not in audit_196:
+    errors.append("Active plan and docs audit must retain outstanding validation gaps")
+if "realizedNetProfit=null" not in agents or "realizedNetProfit=null" not in engineering:
+    errors.append("Canonical Agent and engineering rules must preserve unknown net-profit semantics")
+
 if "realizedNetProfit" not in runtime or "realizedNetProfit" not in active_plan:
     errors.append("Financial unknown / net-profit evidence gate missing")
 if "Node 24" not in runtime or "PostgreSQL 18" not in runtime:
@@ -176,5 +213,5 @@ if errors:
     for error in errors:
         print("FAIL DOCS:", error)
     raise SystemExit(f"{len(errors)} authoritative documentation error(s)")
-print(f"PASS V109 documentation: {len(ACTIVE_FILES)} entry docs; "
+print(f"PASS DOC-196 documentation: {len(ACTIVE_FILES)} entry docs; "
       f"{tested} relative local links; current runtime/release boundaries")
