@@ -35,6 +35,12 @@ Flyway **V104** 对 `finance_profit_report_order` 和 `finance_profit_report_sku
 
 V194C 将缺哈希负例改为正常 `PENDING → ELIGIBLE` 捕获转移，只让版本/摘要配对检查失败；PENDING 禁止提前指纹另设独立负例。不能因为曾发生两个失败就写成 V194 完整验收通过，新精确 SHA 的 PG18/A3 仍须查看实际运行结论。
 
+### 第三轮真实 PG18 发现 V104 NULL/UNKNOWN 漏洞与 V105 修复
+
+[`6cc2747`](https://github.com/kunlong-luo/merchivra/commit/6cc2747a9636c72fff33e4f66e8887de18cc76a6) 的 [完整 A3 #45018224081](https://github.com/kunlong-luo/merchivra/actions/runs/45018224081) 执行 V104 数据库负例时发现：**ELIGIBLE 行 `capture_version_v194=1`、`capture_sha256_v194=NULL` 被 PostgreSQL 18 放行**。原因是原 V104 `CHECK` 的布尔表达式结果为 `UNKNOWN`，而 PostgreSQL 对 CHECK UNKNOWN 视为合格。因此这是**真实 Schema 缺口**，不是可以删掉的误判测试。
+
+新增**仅前进的 Flyway V105**，不改 V104 原文件，不补写任何历史摘要。V105 为订单/SKU 都增加明确 `version IS NOT NULL AND sha IS NOT NULL` 的严格 `CHECK`，只允许成对 NULL（旧快照）或成对有效 V1/SHA-256；已有异常数据导致迁移失败而非静默修复。新 PG18 测试覆盖两个方向的半指纹，PENDING 拦截、正常 V1 捕获及 V103 不变性。外部真实性、退款 COGS 与 `realizedNetProfit=null` 仍保持不变。**V105 是否验收需以包含该迁移的精确新 SHA 的 A3 结果为准。**
+
 ## 测试与限制
 
 `ProfitCaptureFingerprintV194Test` 覆盖指纹输入顺序、非英文和特殊 SKU、固定六位金额、不可舍入、跨租户/批次、旧数据不可升级、SKU 缺失/篡改、未完成与 BLOCKED 场景，另验证 V104 及服务门禁代码。不应以静态或 Mockito 单测代替 PostgreSQL 18 Flyway + 合成 Owner HTTP 的专项回归；后续完整 A3 必须记录精确 main SHA、run attempt、结果和失败修复情况。

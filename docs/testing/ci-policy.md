@@ -22,6 +22,7 @@
 ## 最新已确认工程技术证据
 
 - **V195 / `2136375590abaae2373c565a1de930aa4ce45483`**：[快速 CI #45016097852（run_attempt=1）](https://github.com/kunlong-luo/merchivra/actions/runs/45016097852) **SUCCESS**：Java25、Next16/React19/pnpm/Orval、Vitest、Next 与 Vite 构建、Compose；**PG18 完整 job 在快速 CI 中按策略 SKIPPED**。V195 仅改善会话故障 UI，用户本机 HTTP 500 根因未定位。
+- **V194/V105 严格配对修补待验收**：首次 [A3 #45017612506](https://github.com/kunlong-luo/merchivra/actions/runs/45017612506) 发现旧 V188 对不完整报告期望 200；第二次 [A3 #45017957824](https://github.com/kunlong-luo/merchivra/actions/runs/45017957824) 发现重叠 CHECK 的报错顺序断言；第三次 [A3 #45018224081](https://github.com/kunlong-luo/merchivra/actions/runs/45018224081) **真实证明 V104 CHECK 因 SQL NULL/UNKNOWN 可放行单边指纹**。V105 前进迁移补明确 IS NOT NULL 与双向半指纹负例，尚须精确 SHA 的完整 A3。
 - **V194 / `9d4ebadb7abe45369ea55a7bb6c33b09e920d985`**：[快速 CI #45014853040](https://github.com/kunlong-luo/merchivra/actions/runs/45014853040) **SUCCESS**；V104 指纹仍待自己的完整 PG18/Flyway/Owner HTTP/A3，不能借用 V193 成果。
 - **V193 / `600883236a3669f51b6703229447d93499b271cd`**：[完整 A3 #45012495202（run_attempt=2，SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45012495202) 验证其精确 SHA 的 V103 冻结数据库 DML 守护及合成 PG18；**不覆盖**后续 V194/V195。
 - **V192 / `189932197ddeaadf1470f8692aa6be88d5e015c1`**：[完整 A3 #44896004578（run_attempt 2，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/44896004578) 验证真实 PG18 V188 逐订单 SKU 金额守恒，失败的首次验证与修复记录保留；仍无真实费用核验。

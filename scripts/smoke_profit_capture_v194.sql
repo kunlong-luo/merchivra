@@ -1,4 +1,4 @@
--- V194 / PG18 real Flyway V104 constraint proof, disposable fixtures only.
+-- V194/V105 / PG18 real Flyway strict fingerprint-pair proof, disposable fixtures only.
 -- Requires the isolated CI PostgreSQL 18 and completed real Spring Flyway startup.
 -- All writes are to temporary V62-shaped tables in a rolled-back transaction.
 -- V1 hashes are local consistency evidence, never Amazon/Ads/bank proof.
@@ -12,6 +12,10 @@ BEGIN
     SELECT 1 FROM public.flyway_schema_history
     WHERE version='104' AND success
   ) THEN RAISE EXCEPTION 'V104 Flyway not installed'; END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.flyway_schema_history
+      WHERE version='105' AND success) THEN
+    RAISE EXCEPTION 'V105 strict pair Flyway not installed';
+  END IF;
   SELECT count(*) INTO actual
     FROM information_schema.columns
     WHERE table_schema='public'
@@ -37,6 +41,15 @@ BEGIN
       );
   IF actual<>3 THEN
     RAISE EXCEPTION 'V104 installed capture constraints missing';
+  END IF;
+  SELECT count(*) INTO actual FROM pg_catalog.pg_constraint co
+    JOIN pg_catalog.pg_class cl ON cl.oid=co.conrelid
+    JOIN pg_catalog.pg_namespace ns ON ns.oid=cl.relnamespace
+    WHERE ns.nspname='public' AND co.conname IN (
+      'finance_profit_report_order_capture_pair_strict_v105',
+      'finance_profit_report_sku_capture_pair_strict_v105');
+  IF actual<>2 THEN
+    RAISE EXCEPTION 'V105 installed strict NULL-safe capture checks missing';
   END IF;
 END;
 $proof$;
@@ -136,7 +149,17 @@ SELECT pg_temp.expect_blocked($stmt$
    extract_sha256=repeat('a',64),captured_at=now(),
    capture_version_v194=1,capture_sha256_v194=NULL
  WHERE cohort_position=0
-$stmt$,'finance_profit_report_order_capture_pair_v104');
+$stmt$,'finance_profit_report_order_capture_pair_strict_v105');
+-- The opposite half-pair was also erroneously admitted by V104 UNKNOWN.
+SELECT pg_temp.expect_blocked($stmt$
+ UPDATE finance_profit_report_order
+ SET state='ELIGIBLE',readiness='ELIGIBLE_PREVIEW',currency_code='USD',
+   reviewed_events=1,signed_sales=100,signed_amazon_fees=-10,
+   signed_fba_fees=-5,provisional_cogs=40,estimated_contribution=45,
+   extract_sha256=repeat('a',64),captured_at=now(),
+   capture_version_v194=NULL,capture_sha256_v194=repeat('b',64)
+ WHERE cohort_position=0
+$stmt$,'finance_profit_report_order_capture_pair_strict_v105');
 SELECT pg_temp.expect_blocked($stmt$
  UPDATE finance_profit_report_order
  SET state='ELIGIBLE',readiness='ELIGIBLE_PREVIEW',currency_code='USD',
@@ -145,7 +168,7 @@ SELECT pg_temp.expect_blocked($stmt$
    extract_sha256=repeat('a',64),captured_at=now(),
    capture_version_v194=2,capture_sha256_v194=repeat('b',64)
  WHERE cohort_position=0
-$stmt$,'finance_profit_report_order_capture_pair_v104');
+$stmt$,'capture_pair_');
 SELECT pg_temp.expect_blocked($stmt$
  UPDATE finance_profit_report_order
  SET state='ELIGIBLE',readiness='ELIGIBLE_PREVIEW',currency_code='USD',
@@ -154,7 +177,7 @@ SELECT pg_temp.expect_blocked($stmt$
    extract_sha256=repeat('a',64),captured_at=now(),
    capture_version_v194=1,capture_sha256_v194=repeat('X',64)
  WHERE cohort_position=0
-$stmt$,'finance_profit_report_order_capture_pair_v104');
+$stmt$,'capture_pair_');
 
 -- A valid versioned capture and SKU insert still succeed; V103 locks them.
 UPDATE finance_profit_report_order
@@ -185,7 +208,19 @@ SELECT pg_temp.expect_blocked($stmt$
   '00000000-0000-4000-8000-000000000206',
   'SKU-MISSING-HASH',1,10,0,0,4,6,1,NULL
  )
-$stmt$,'finance_profit_report_sku_capture_pair_v104');
+$stmt$,'finance_profit_report_sku_capture_pair_strict_v105');
+SELECT pg_temp.expect_blocked($stmt$
+ INSERT INTO finance_profit_report_sku(
+  tenant_id,job_id,order_id,internal_sku,units,signed_sales,
+  signed_amazon_fees,signed_fba_fees,provisional_cogs,estimated_contribution,
+  capture_version_v194,capture_sha256_v194
+ ) VALUES (
+  '00000000-0000-4000-8000-000000000203',
+  '00000000-0000-4000-8000-000000000202',
+  '00000000-0000-4000-8000-000000000206',
+  'SKU-MISSING-VERSION',1,10,0,0,4,6,NULL,repeat('d',64)
+ )
+$stmt$,'finance_profit_report_sku_capture_pair_strict_v105');
 SELECT pg_temp.expect_blocked($stmt$
  INSERT INTO finance_profit_report_sku(
   tenant_id,job_id,order_id,internal_sku,units,signed_sales,
@@ -197,7 +232,7 @@ SELECT pg_temp.expect_blocked($stmt$
   '00000000-0000-4000-8000-000000000206',
   'SKU-FUTURE-VERSION',1,10,0,0,4,6,2,repeat('d',64)
  )
-$stmt$,'finance_profit_report_sku_capture_pair_v104');
+$stmt$,'capture_pair_');
 SELECT pg_temp.expect_blocked($stmt$
  UPDATE finance_profit_report_order
  SET capture_sha256_v194=repeat('d',64) WHERE cohort_position=0
@@ -229,4 +264,4 @@ SELECT pg_temp.expect_blocked($stmt$
  WHERE cohort_position=0
 $stmt$,'unprocessed active cohort');
 ROLLBACK;
-\echo PASS V194: real PG18/Flyway V104 nullable legacy, V1 pairs, versions, pending guard and V103 immutability; no public table writes
+\echo PASS V194/V105: real PG18 strict NULL-safe order/SKU V1 pairs, legacy nulls, PENDING guard and V103 immutability; no public table writes

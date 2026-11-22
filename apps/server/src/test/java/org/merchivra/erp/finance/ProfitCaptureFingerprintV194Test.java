@@ -148,6 +148,16 @@ class ProfitCaptureFingerprintV194Test {
         assertTrue(migration.contains("capture_version_v194 IS NULL"));
         assertFalse(migration.contains("UPDATE finance_profit_report_order"));
         assertFalse(migration.contains("CREATE EXTENSION"));
+        // V104's nullable CHECK may evaluate to UNKNOWN when a single
+        // capture field is NULL, which PostgreSQL treats as passing.
+        // V105 adds explicit IS NOT NULL clauses without rewriting V104.
+        String strict=Files.readString(Path.of(
+            "src/main/resources/db/migration/V105__strict_profit_capture_fingerprint_pairs.sql"));
+        assertTrue(strict.contains("capture_pair_strict_v105"));
+        assertTrue(strict.contains("capture_version_v194 IS NOT NULL"));
+        assertTrue(strict.contains("capture_sha256_v194 IS NOT NULL"));
+        assertFalse(strict.contains("UPDATE finance_profit_report_order"));
+        assertFalse(strict.contains("UPDATE finance_profit_report_sku"));
         var source=Files.readString(Path.of(
             "src/main/java/org/merchivra/erp/finance/ProfitReportJobService.java"));
         assertTrue(source.contains("capture_version_v194=1,capture_sha256_v194=?"));
