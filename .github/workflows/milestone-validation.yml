@@ -1,3 +1,6 @@
+# V198B: after V198 adds mandatory 5 comparison counters, update the
+# historical Java/Vitest fixtures without weakening the fail-closed contract.
+# Rerun full A3 for the new exact main SHA.
 # V198: full exact-main A3 checks multi-settlement source claims,
 # repeated settlement report identities, and PG18 source completeness.
 # No real Amazon/Ads/Bank access or financial posting.
@@ -213,7 +216,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V198-A3-settlement-identity-and-duplicate-source-claims' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V198B-A3-settlement-claim-fixture-regression' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -303,6 +306,7 @@ on:
           - V194E-A3-strict-fingerprint-and-browser-route-recheck
           - V197-A3-refund-source-parity-and-cogs-barriers
           - V198-A3-settlement-identity-and-duplicate-source-claims
+          - V198B-A3-settlement-claim-fixture-regression
 
 permissions:
   contents: read

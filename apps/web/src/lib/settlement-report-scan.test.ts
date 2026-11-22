@@ -42,6 +42,9 @@ describe('Reports task and independent Finances reconciliation',()=>{
    reportId:'RPT-12345678',settlementId:'SETTLE-12345678',currency:'USD',
    reportedNet:'17.50',reportLinesNet:'17.50',financesNet:'17.50',
    financeTransactionCount:2,otherCurrencyTransactionCount:0,
+   expectedReportLineCount:2,actualReportLineCount:2,
+   foreignCurrencyReportLineCount:0,multiplyReferencedFinancesEventCount:0,
+   otherReportSameSettlementCount:0,
    state:'SOURCE_AMOUNTS_AGREE_UNVERIFIED',reconciled:false,bankVerified:false
   }
   expect(settlementComparison.parse(comparison).bankVerified).toBe(false)

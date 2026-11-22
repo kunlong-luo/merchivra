@@ -57,7 +57,7 @@ class SettlementSourceReviewServiceTest {
         when(comparisons.compare(tenant,mp,report)).thenReturn(
             new SettlementReportComparisonService.Comparison(
                 "AMAZON-REPORT","SETTLEMENT-REF","USD","12.00","12.00","12.00",
-                1,0,"SOURCE_AMOUNTS_AGREE_UNVERIFIED",false,false));
+                1,0,2,2,0,0,0,"SOURCE_AMOUNTS_AGREE_UNVERIFIED",false,false));
         doReturn(List.of("a".repeat(64))).when(jdbc).query(
             eq(SettlementSourceReviewService.EVIDENCE_SQL),
             any(org.springframework.jdbc.core.RowMapper.class),
