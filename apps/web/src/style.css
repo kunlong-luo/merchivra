@@ -811,3 +811,58 @@ tbody tr:hover { background: #f8fbff; }
  .v107-supplier-directory .setup-hint{padding-inline:15px}
  .v107-data-table table{min-width:725px}
 }
+
+/* V195: non-blocking presentation for a still-mandatory session gate.
+   Startup proxy/DB failures are not "wrong password" dialogs. */
+.auth-connect-shell {
+  background:radial-gradient(ellipse at 18% 0%,#e7f0fd 0%,transparent 53%),
+    radial-gradient(ellipse at 92% 94%,#eef7fa 0%,transparent 45%),#f7f9fc;
+}
+.auth-connect-card {
+  width:min(100%,620px);padding:clamp(26px,5vw,48px);
+  background:#fff;border:1px solid #e1e8f1;border-radius:22px;
+  box-shadow:0 22px 75px #233b5c0c;
+  text-align:left;
+}
+.auth-connect-brand {display:flex;align-items:center;gap:12px;
+  color:#2c486a;font-size:14px;font-weight:850;letter-spacing:.075em;}
+.auth-connect-brand .auth-symbol {height:42px;width:42px;border-radius:12px;font-size:22px;}
+.auth-connect-brand > span:last-child {display:flex;flex-direction:column;gap:3px;}
+.auth-connect-brand small {font-size:9px;letter-spacing:.15em;color:#8fa0b3;font-weight:700;}
+.auth-connect-illustration {height:72px;display:flex;align-items:center;gap:0;padding:8px 0;}
+.auth-connect-pulse,.auth-connect-node {width:28px;height:28px;border-radius:50%;
+  border:6px solid #e5effb;background:#7fa9df;flex:0 0 auto;}
+.auth-connect-node {width:19px;height:19px;border-width:4px;background:#91bdb5;
+  border-color:#e6f5f1;}
+.auth-connect-line {width:110px;max-width:35%;height:2px;background:linear-gradient(90deg,#b7d0ed,#cde7dd);}
+.auth-connect-kicker {font-size:11px;color:#5e83aa;font-weight:750;letter-spacing:.07em;}
+.auth-connect-card h1 {margin:10px 0 12px;color:#213852;
+  font-size:clamp(23px,4vw,30px);line-height:1.3;letter-spacing:-.03em;}
+.auth-connect-card p {font-size:14px;line-height:1.75;color:#5d6f84;margin:0 0 9px;}
+.auth-connect-suggestion {font-size:13px!important;color:#66829f!important;}
+.auth-connect-actions {display:flex;align-items:center;gap:19px;
+  flex-wrap:wrap;margin:24px 0 0;}
+.auth-connect-actions .auth-submit {margin:0;min-width:132px;padding:12px 18px;}
+.auth-connect-actions a {font-size:13px;color:#366fae;font-weight:700;text-decoration:none;}
+.auth-connect-actions a:hover {text-decoration:underline;}
+.auth-connect-details {border-top:1px solid #e9eef5;margin-top:28px;
+  padding-top:15px;color:#708399;font-size:12px;}
+.auth-connect-details summary {cursor:pointer;color:#577594;font-weight:700;
+  padding:4px 0;}
+.auth-connect-details[open] summary {margin-bottom:14px;}
+.auth-connect-details p {font-size:12px;line-height:1.75;margin:0 0 9px;
+  overflow-wrap:anywhere;}
+.auth-connect-details code {font-family:ui-monospace,SFMono-Regular,Consolas,monospace;
+  background:#f3f6fa;color:#45617d;padding:2px 5px;border-radius:4px;
+  overflow-wrap:anywhere;}
+.auth-connect-diagnostic {color:#8494a6!important;}
+.auth-connect-loading {display:flex;flex-direction:column;align-items:flex-start;
+  gap:8px;}
+.auth-connect-loading .loading-ring {margin:24px 0 4px;}
+@media(max-width:540px) {
+  .auth-connect-shell {padding:16px;}
+  .auth-connect-card {border-radius:17px;padding:25px 22px;}
+  .auth-connect-actions {align-items:stretch;gap:12px;}
+  .auth-connect-actions .auth-submit {width:100%;}
+  .auth-connect-actions a {padding:7px 0;}
+}

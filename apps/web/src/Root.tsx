@@ -1,9 +1,47 @@
 import {useState} from 'react'
 import {useQuery,useQueryClient} from '@tanstack/react-query'
 import App,{type View} from './App'
-import {fetchViewer,loginSession,logoutSession} from './lib/auth'
+import {fetchViewer,loginSession,logoutSession,
+ retryableSessionFailure,sessionFailureDetails} from './lib/auth'
 import {acceptTeamInvitation} from './lib/team'
 import {purgeBusinessSessionCache} from './lib/session-query-cache'
+
+/**
+ * A failed startup session probe must not be presented as a bad password.
+ * Render a calm, actionable connection state rather than a technical alert.
+ * Never render the authenticated ERP until /auth/me actually succeeds.
+ */
+function SessionConnectionState({error,onRetry}:{
+ error:unknown;onRetry:()=>void
+}){
+ const detail=sessionFailureDetails(error)
+ return <div className="auth-shell auth-connect-shell">
+  <main className="auth-connect-card" aria-labelledby="auth-connect-title">
+   <div className="auth-connect-brand"><span className="auth-symbol" aria-hidden="true">M</span>
+    <span>MERCHIVRA <small>LOCAL WORKSPACE</small></span></div>
+   <div className="auth-connect-illustration" aria-hidden="true">
+    <span className="auth-connect-pulse"/><span className="auth-connect-line"/><span className="auth-connect-node"/>
+   </div>
+   <div className="auth-connect-kicker">本地连接状态 · 工作空间已保护</div>
+   <h1 id="auth-connect-title">{detail.heading}</h1>
+   <p className="auth-connect-description">{detail.description}</p>
+   <p className="auth-connect-suggestion">{detail.suggestion}</p>
+   <div className="auth-connect-actions">
+    <button type="button" className="auth-submit" onClick={onRetry}>重新连接</button>
+    <a href="https://github.com/kunlong-luo/merchivra/blob/main/docs/development.md#3-分别启动开发进程"
+     target="_blank" rel="noopener noreferrer">查看启动说明</a>
+   </div>
+   <details className="auth-connect-details">
+    <summary>查看连接检查方法和技术信息</summary>
+    <p>如果只运行了 <code>pnpm dev</code>，还需要启动 Spring Boot 和 PostgreSQL 18。</p>
+    <p>检查后端：<code>curl -i http://127.0.0.1:8080/api/v1/ping</code></p>
+    <p>检查前端代理：<code>curl -i http://127.0.0.1:3000/api/v1/auth/me</code></p>
+    <p>没有登录时，第二条命令返回 HTTP 401 是正常的；持续返回 5xx 时请检查服务端日志。</p>
+    <p className="auth-connect-diagnostic">诊断信息：{detail.diagnostic}</p>
+   </details>
+  </main>
+ </div>
+}
 
 export default function Root({initialView='core',routeNavigation=false,onNavigate}:{
  initialView?:View;routeNavigation?:boolean;
@@ -15,7 +53,13 @@ export default function Root({initialView='core',routeNavigation=false,onNavigat
  const [invitePassword,setInvitePassword]=useState(''),[activationMessage,setActivationMessage]=useState('')
  const [errorMessage,setErrorMessage]=useState(''),[authenticating,setAuthenticating]=useState(false)
  const [activating,setActivating]=useState(false),[signingOut,setSigningOut]=useState(false)
- const {data:viewer,isPending,isError,error,refetch}=useQuery({queryKey:['auth','me'],queryFn:fetchViewer,retry:false,staleTime:0})
+ const {data:viewer,isPending,isError,error,refetch}=useQuery({
+  queryKey:['auth','me'],queryFn:fetchViewer,staleTime:0,
+  // Startup races are common in local dev. Retry only connectivity/5xx,
+  // never 401 (guest), 403 (permission) or malformed authenticated data.
+  retry:(attempt,failure)=>attempt<2&&retryableSessionFailure(failure),
+  retryDelay:attempt=>Math.min(1000*(attempt+1),2000)
+ })
  // V144: refuse partial cache prefix allowlists: purchase, catalog and new
  // future module queries must all be purged on identity changes.
  const clearCaches=()=>purgeBusinessSessionCache(client)
@@ -37,7 +81,16 @@ export default function Root({initialView='core',routeNavigation=false,onNavigat
    catch(e){setErrorMessage(e instanceof Error?e.message:'退出失败')}
    finally{setSigningOut(false)}
  }
- if(isPending||isError) return <div className="auth-shell"><section className="auth-card" role={isError?'alert':undefined}><div className="auth-symbol">M</div><h1>{isError?'无法验证身份':'Merchivra'}</h1><p>{isError?(error instanceof Error?error.message:'请检查数据库与 API 服务。'):'正在校验登录会话…'}</p>{isError&&<button className="auth-submit" onClick={()=>void refetch()}>重试</button>}</section></div>
+ if(isPending)return <div className="auth-shell auth-connect-shell" role="status">
+  <section className="auth-connect-card auth-connect-loading">
+   <div className="auth-connect-brand"><span className="auth-symbol" aria-hidden="true">M</span>
+    <span>MERCHIVRA <small>LOCAL WORKSPACE</small></span></div>
+   <div className="loading-ring" aria-hidden="true"/>
+   <h1>正在连接工作空间</h1>
+   <p>正在确认本地登录服务，业务数据将在会话验证成功后加载。</p>
+  </section>
+ </div>
+ if(isError)return <SessionConnectionState error={error} onRetry={()=>void refetch()}/>
  if(viewer)return <App viewer={viewer} signingOut={signingOut} onLogout={()=>void signOut()} initialView={initialView} routeNavigation={routeNavigation} onNavigate={onNavigate}/>
  return <div className="auth-shell">
  {!inviteMode?<form className="auth-card" onSubmit={signIn}>
