@@ -1,3 +1,5 @@
+# V193B: re-run exact-main full A3 after restoring the V89 synthetic V64
+# fixture's valid PENDING -> ELIGIBLE -> SKU -> SUCCEEDED lifecycle.
 # V193: immutable V64 report/row/SKU/audit semantics enforced by Flyway V103,
 # then tested against real PG18 trigger functions on disposable TEMP V62 tables.
 # This still cannot verify any external Amazon/Ads/bank charges or net profit.
