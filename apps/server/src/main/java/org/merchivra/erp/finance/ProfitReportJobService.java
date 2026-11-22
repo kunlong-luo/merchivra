@@ -39,6 +39,7 @@ public class ProfitReportJobService {
     private final OrderContributionService contributions;
     private final MultiSkuContributionService multiSku;
     private final Clock clock;
+    private final ProfitCaptureVerifierV194 captures;
     private final TransactionTemplate batchTx;
 
     @Autowired
@@ -52,6 +53,7 @@ public class ProfitReportJobService {
         MultiSkuContributionService multiSku,PlatformTransactionManager manager,Clock clock) {
         this.jdbc=jdbc;this.costs=costs;this.contributions=contributions;
         this.multiSku=multiSku;this.clock=clock;
+        this.captures=new ProfitCaptureVerifierV194(jdbc);
         this.batchTx=new TransactionTemplate(manager);
         this.batchTx.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
         this.batchTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
@@ -255,12 +257,38 @@ public class ProfitReportJobService {
                 .append(':').append(s.units()).append(':').append(s.sales())
                 .append(':').append(s.amazonFees()).append(':').append(s.fbaFees())
                 .append(':').append(s.cogs()).append(':').append(s.contribution());
+            String legacyHash=hash(payload.toString());
+            // Capture V194 proofs before any write, in the SAME bounded batch
+            // transaction. Read-time verification reconstructs them from DB.
+            var proofs=new ArrayList<ProfitCaptureFingerprintV194.SkuProof>();
+            var skuHashes=new java.util.HashMap<String,String>();
+            for(var s:perSku) {
+                var frozen=new ProfitCaptureFingerprintV194.Sku(s.sku(),s.units(),
+                    new BigDecimal(s.sales()),new BigDecimal(s.amazonFees()),
+                    new BigDecimal(s.fbaFees()),new BigDecimal(s.cogs()),
+                    new BigDecimal(s.contribution()));
+                String proof=ProfitCaptureFingerprintV194.sku(
+                    tenant,jobId,orderId,frozen);
+                if(skuHashes.putIfAbsent(s.sku(),proof)!=null)
+                    throw new IllegalArgumentException("Duplicate frozen SKU");
+                proofs.add(new ProfitCaptureFingerprintV194.SkuProof(s.sku(),proof));
+            }
+            String capture=ProfitCaptureFingerprintV194.order(
+                tenant,mp,jobId,orderId,
+                new ProfitCaptureFingerprintV194.Order(
+                    ready?"ELIGIBLE":"BLOCKED",row.readiness(),job.currency(),
+                    row.reviewedEventCount(),ready?new BigDecimal(row.sales()):null,
+                    ready?new BigDecimal(row.amazonFees()):null,
+                    ready?new BigDecimal(row.fbaFees()):null,
+                    ready?new BigDecimal(row.cogs()):null,
+                    ready?new BigDecimal(row.contribution()):null,legacyHash),
+                proofs);
             int updated=jdbc.update("""
                 UPDATE finance_profit_report_order
                 SET state=?,readiness=?,currency_code=?,reviewed_events=?,
                  signed_sales=?,signed_amazon_fees=?,signed_fba_fees=?,
                  provisional_cogs=?,estimated_contribution=?,extract_sha256=?,
-                 captured_at=now()
+                 capture_version_v194=1,capture_sha256_v194=?,captured_at=now()
                 WHERE tenant_id=? AND job_id=? AND order_id=? AND state='PENDING'
                 """,ready?"ELIGIBLE":"BLOCKED",row.readiness(),job.currency(),
                 row.reviewedEventCount(),ready?new BigDecimal(row.sales()):null,
@@ -268,19 +296,20 @@ public class ProfitReportJobService {
                 ready?new BigDecimal(row.fbaFees()):null,
                 ready?new BigDecimal(row.cogs()):null,
                 ready?new BigDecimal(row.contribution()):null,
-                hash(payload.toString()),tenant,jobId,orderId);
+                legacyHash,capture,tenant,jobId,orderId);
             if(updated!=1)throw new IllegalStateException("ORDER_ALREADY_CAPTURED");
             for(var s:perSku) {
                 jdbc.update("""
                     INSERT INTO finance_profit_report_sku
                      (tenant_id,job_id,order_id,internal_sku,units,
                       signed_sales,signed_amazon_fees,signed_fba_fees,
-                      provisional_cogs,estimated_contribution)
-                    VALUES (?,?,?,?,?,?,?,?,?,?)
+                      provisional_cogs,estimated_contribution,
+                      capture_version_v194,capture_sha256_v194)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
                     """,tenant,jobId,orderId,s.sku(),s.units(),
                     new BigDecimal(s.sales()),new BigDecimal(s.amazonFees()),
                     new BigDecimal(s.fbaFees()),new BigDecimal(s.cogs()),
-                    new BigDecimal(s.contribution()));
+                    new BigDecimal(s.contribution()),1,skuHashes.get(s.sku()));
             }
             processed++;
         }
@@ -375,13 +404,24 @@ public class ProfitReportJobService {
             """,(r,n)->r.getObject(1,UUID.class),tenant,mp);
         return ids.stream().map(id->status(tenant,mp,id)).toList();
     }
+    /** Read-only, independently reconstructed local V194 evidence status. */
+    @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
+    public ProfitCaptureVerifierV194.Summary captureVerification(
+        UUID tenant,UUID mp,UUID id) {
+        Job job=status(tenant,mp,id);
+        return captures.verify(tenant,mp,id,job);
+    }
     @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public Report report(UUID tenant,UUID mp,UUID id,int offset) {
         if(offset<0||offset>5000||offset%100!=0)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "Report orders page must be 100-row aligned and <=5000");
         Job job=status(tenant,mp,id);
-        var summary=jdbc.query("""
+        var capture=captures.verify(tenant,mp,id,job);
+        boolean allowNumbers=capture.profitBaselineAllowed();
+        // Any legacy, mismatched, pending or blocked capture suppresses
+        // period/SKU monetary rollups. Never turn unknown evidence into zero.
+        var summary=allowNumbers?jdbc.query("""
             SELECT COALESCE(SUM(signed_sales),0) AS sales,
               COALESCE(SUM(signed_amazon_fees),0) AS amazon,
               COALESCE(SUM(signed_fba_fees),0) AS fba,
@@ -394,8 +434,10 @@ public class ProfitReportJobService {
                 job.blockedOrders(),r.getInt("events"),
                 str(r.getBigDecimal("sales")),str(r.getBigDecimal("amazon")),
                 str(r.getBigDecimal("fba")),str(r.getBigDecimal("cogs")),
-                str(r.getBigDecimal("contribution"))),tenant,id).getFirst();
-        var skus=jdbc.query("""
+                str(r.getBigDecimal("contribution"))),tenant,id).getFirst():
+            new Totals(job.currency(),job.eligibleOrders(),job.blockedOrders(),
+                0,null,null,null,null,null);
+        var skus=allowNumbers?jdbc.query("""
             SELECT internal_sku,COUNT(*) AS orders,SUM(units) AS units,
               SUM(signed_sales) AS sales,SUM(signed_amazon_fees) AS amazon,
               SUM(signed_fba_fees) AS fba,SUM(provisional_cogs) AS cogs,
@@ -407,7 +449,7 @@ public class ProfitReportJobService {
                 r.getInt("units"),job.currency(),str(r.getBigDecimal("sales")),
                 str(r.getBigDecimal("amazon")),str(r.getBigDecimal("fba")),
                 str(r.getBigDecimal("cogs")),str(r.getBigDecimal("contribution"))),
-            tenant,id);
+            tenant,id):List.<Sku>of();
         if(skus.size()>1000)throw new ResponseStatusException(
             HttpStatus.UNPROCESSABLE_ENTITY,"More than 1000 SKUs; split period");
         var orders=jdbc.query("""

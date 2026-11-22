@@ -35,6 +35,11 @@ public class PeriodProfitWaterfallServiceV188 {
         // V64's existing scoped lookup is the ONLY way to discover this job.
         // Do not look up a report ID in another Marketplace or tenant.
         var job=reports.status(tenant,marketplace,reportJobId);
+        // V194 fail closed: arithmetic alone cannot authenticate old hashes.
+        if(!reports.captureVerification(tenant,marketplace,reportJobId)
+            .profitBaselineAllowed())
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "V194 frozen order/SKU capture is legacy, incomplete or mismatched");
         LocalDate start=LocalDate.parse(job.after());
         LocalDate end=LocalDate.parse(job.before());
         CostOwnershipBridgeServiceV186.validate(start,end);

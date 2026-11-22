@@ -1,5 +1,8 @@
 # Merchivra · 当前状态与验收边界
 
+> **V194 新增待验收（2026-11-22）**：Flyway V104 对 V64 冻结订单及 SKU 增加可空版本化 V1 SHA-256，服务写入时在同一事务捕获，读时只用冻结表独立重算；历史 `extract_sha256` 严格标为旧摘要。V64 报表与 CSV、V188 原币瀑布接入缺证/篡改/不完整阻断；局部指纹有效也**不代表外部费用真实或净利润可计算**。此代码尚须在精确本次 SHA 跑快速 CI 与完整 PG18/A3，不能继承 V193 结果。详见 [V194 说明](finance/v194-versioned-profit-capture-fingerprints.md)。`realizedNetProfit=null`、Seller/Ads/银行真实性未核、生产 #104 NO-GO 保持不变。
+
+
 > **更新：2026-11-22 · 技术阶段 V193（V64 冻结财务证据数据库不可变性）**
 >
 > **事实依据**：V191 代码基线 [main `8dab97147010fdc440ee81abcfa67cd1d1d57261`](https://github.com/kunlong-luo/merchivra/commit/8dab97147010fdc440ee81abcfa67cd1d1d57261)，[完整 A3 #44882890834](https://github.com/kunlong-luo/merchivra/actions/runs/44882890834) **7/7 SUCCESS**，[快速 CI #44882890791](https://github.com/kunlong-luo/merchivra/actions/runs/44882890791) **SUCCESS**，最近一次 [公开静态展示构建 #44882736480](https://github.com/kunlong-luo/merchivra/actions/runs/44882736480) **SUCCESS**。这些结果仅证明**该代码 SHA** 在隔离环境的对应测试通过；文档更新不会自动扩展为新的业务验证。

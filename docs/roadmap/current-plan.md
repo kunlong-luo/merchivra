@@ -21,6 +21,8 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 ## 最近已交付工程基线
 
+- **V194（待本次提交的精确 CI/A3 验收）**：版本化 V1 冻结订单/SKU 证据捕获和独立重算，显式隔离历史 V62 摘要与新指纹；金额汇总、CSV、V188 瀑布发现旧证据或错误时 fail closed。仍不能解锁真实净利润。[设计与测试边界](../finance/v194-versioned-profit-capture-fingerprints.md)。
+
 - **V188B**：只读原币期间成本瀑布，修复固定 V64 OpenAPI 九路由边界；仍不是已核验利润。参见 [V188 交付说明](../finance/v188-period-profit-cost-waterfall-preview.md)。
 - **V189**：移除不可达 PR-only CI 分支判断，并按用户要求维护 **main 直接开发**。
 - **V190**：`pnpm` 以外包管理迁移前，默认本地 Next.js 16 Web 和受控 Vite fallback 已以 7/7 A3 验证。

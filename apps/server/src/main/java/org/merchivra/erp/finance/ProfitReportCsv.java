@@ -22,6 +22,9 @@ public class ProfitReportCsv {
         if(!"SUCCEEDED".equals(first.job().state()))
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "Only completed immutable extracts may be exported");
+        if(!reports.captureVerification(tenant,mp,id).profitBaselineAllowed())
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "V194 local capture verification blocks unverified CSV export");
         StringBuilder out=new StringBuilder("\uFEFF");
         out.append(encode(List.of("kind","sku","source_order_uuid","readiness",
             "original_currency","units","signed_sales","signed_amazon_fees",

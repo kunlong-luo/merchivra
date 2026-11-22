@@ -106,6 +106,9 @@ class ProfitReportJobServiceTest {
                 null,null,null,null,null,"2026-11-01T00:00:00Z","b".repeat(64)));
         when(service.report(tenant,mp,id,0)).thenReturn(
             new ProfitReportJobService.Report(job,totals,skus,orders,0,false));
+        when(service.captureVerification(tenant,mp,id)).thenReturn(
+            new ProfitCaptureVerifierV194.Summary(2,2,0,0,0,true,true,
+                List.of("EXTERNAL_FINANCES_ADS_BANK_AND_REFUND_COGS_UNVERIFIED")));
         String output=new ProfitReportCsv(service).export(tenant,mp,id);
         assertTrue(output.startsWith("\uFEFF\"kind\""));
         assertTrue(output.contains("\"'=HYPERLINK(1)\""));
