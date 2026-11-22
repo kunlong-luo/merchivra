@@ -81,7 +81,7 @@ DECLARE
   job_state text;
   already_processed integer;
   order_state text;
-  cohort_position integer;
+  order_position integer;
 BEGIN
   IF TG_OP<>'INSERT' THEN
     RAISE EXCEPTION 'Frozen V64 SKU evidence is append-only';
@@ -96,13 +96,13 @@ BEGIN
   IF NOT FOUND OR job_state NOT IN ('READY','RETRY') THEN
     RAISE EXCEPTION 'Late SKU append after V64 job completion prohibited';
   END IF;
-  SELECT state,cohort_position INTO order_state,cohort_position
-  FROM finance_profit_report_order
+  SELECT o.state,o.cohort_position INTO order_state,order_position
+  FROM finance_profit_report_order o
   WHERE tenant_id=NEW.tenant_id AND job_id=NEW.job_id
     AND order_id=NEW.order_id
   FOR UPDATE;
   IF NOT FOUND OR order_state<>'ELIGIBLE'
-     OR cohort_position<already_processed THEN
+     OR order_position<already_processed THEN
     RAISE EXCEPTION 'V64 SKU must belong to the currently captured eligible order';
   END IF;
   RETURN NEW;
