@@ -351,52 +351,31 @@ call(owner,f"/api/v1/finance/marketplaces/{uuid4()}/cost-waterfall-preview/"
 prior_cost_event_rows=sql(f"""SELECT count(*) FROM finance_source_event
  WHERE tenant_id='{tenant}'""")
 prior_bank_rows=sql("SELECT count(*) FROM bank_payout_observation")
-waterfall=call(owner,waterfall_url)
-assert waterfall["reportJobId"]==job_id
-assert waterfall["marketplaceId"]==market
-assert waterfall["periodStart"]=="2026-11-01"
-assert waterfall["periodEndExclusive"]=="2026-11-20"
-assert waterfall["currency"]==currency
-assert waterfall["ruleVersion"]==(
-    "V188_V64_ELIGIBLE_CONTRIBUTION_MINUS_V92_APPROVED_UNVERIFIED_ORIGINAL_CURRENCY_V1")
-assert waterfall["sourceSnapshotBasis"]==(
-    "V64_IMMUTABLE_ORDER_EXTRACTS_V91_V92_V165_V168_LIVE_READ")
-assert waterfall["manualCostSourceCount"]==int(sql(f"""
- SELECT count(*) FROM finance_cost_source_v91
- WHERE tenant_id='{tenant}' AND seller_marketplace_id='{market}'
-   AND business_date>='2026-11-01' AND business_date<'2026-11-20'"""))
-assert waterfall["manualCostSourceCount"]==sum(
-    x["sourceCount"] for x in waterfall["costLines"])
-assert any(c["category"]=="INBOUND_FREIGHT" and
-           c["approvedUnverifiedAllocatedAmount"]=="7.250000"
-           and c["approvedUnverifiedRemainderAmount"]=="2.750000"
-           for c in waterfall["costLines"])
-assert any(c["category"]=="FBA_STORAGE" and
-           c["approvedUnverifiedAllocatedAmount"]=="10.000001"
-           and c["approvedUnverifiedRemainderAmount"]=="2.000000"
-           for c in waterfall["costLines"])
-assert any(c["category"]=="OTHER_OPERATING" and
-           c["primaryDimension"]=="UNASSIGNED" and
-           c["approvedUnverifiedAllocatedAmount"] is None
-           for c in waterfall["costLines"])
-assert waterfall["approvedUnverifiedLocalCostExposure"] is None
-assert waterfall["unverifiedCostSensitivityContribution"] is None
-assert waterfall["sensitivityState"] in (
-    "ORDER_FINANCIAL_BASELINE_INCOMPLETE",
-    "V92_UNVERIFIED_COST_DISTRIBUTION_INCOMPLETE")
-assert waterfall["financeFeesExcludedFromAdditionalCosts"] is True
-assert not any(waterfall[k] for k in (
-    "additionalCostExternallyVerified","accountingPolicyApproved",
-    "refundCogsReversalVerified","fxConversionApproved",
-    "bankSettlementVerified","ledgerPosted","realizedNetProfitVerified"))
-assert waterfall["realizedNetProfit"] is None
-assert "V64_ORDER_UTC_V91_SOURCE_BUSINESS_DATE_AXES_DIFFER" in waterfall["blockerCodes"]
-assert "REFUND_COGS_REVERSAL_NOT_VERIFIED" in waterfall["blockerCodes"]
-assert call(other,waterfall_url)["reportJobId"]==job_id
+# V194: this new V64 cohort has not been fully captured with independently
+# validated V1 order/SKU evidence. Its V188 waterfall MUST fail closed; an
+# unaudited 200 and null-looking money is no longer a valid test expectation.
+capture_url=f"/api/v1/finance/marketplaces/{market}/capture-verification/"+job_id
+call(anonymous,capture_url,expected=401)
+call(owner,f"/api/v1/finance/marketplaces/{uuid4()}/capture-verification/"+job_id,
+     expected=404)
+call(owner,f"/api/v1/finance/marketplaces/{market}/capture-verification/"
+     +str(uuid4()),expected=404)
+capture=call(owner,capture_url)
+assert capture["profitBaselineAllowed"] is False
+assert capture["fingerprintMismatchOrders"]==0,(
+    "V194: newly created, not-yet-captured V64 cohort must not be corrupt")
+assert capture["historicalLegacyOrders"]==0,(
+    "V194: new cohort must not silently inherit unversioned old evidence")
+assert "V194_PROFIT_ARITHMETIC_BLOCKED" in capture["blockerCodes"]
+assert "EXTERNAL_FINANCES_ADS_BANK_AND_REFUND_COGS_UNVERIFIED" in capture["blockerCodes"]
+assert call(other,capture_url)==capture  # independent Owner, same tenant
+call(owner,waterfall_url,expected=409)
+call(other,waterfall_url,expected=409)
 assert sql(f"""SELECT count(*) FROM finance_source_event
  WHERE tenant_id='{tenant}'""")==prior_cost_event_rows
 assert sql("SELECT count(*) FROM bank_payout_observation")==prior_bank_rows
-assert call(owner,waterfall_url)==waterfall  # stable evidence with no new writes
+assert call(owner,capture_url)==capture  # stable, read-only evidence
+call(owner,waterfall_url,expected=409)  # stable denial; never synthetic net profit
 print("PASS V164: real PG18 V91/V92 + Owner/CSRF maker-checker, immutable "
       "manual cost, exact 7.25/2.75 allocation, idempotency, 400/403/404/409, "
       "SQL immutable source/lines/audit, and zero GL/Ads/Finances/bank postings")

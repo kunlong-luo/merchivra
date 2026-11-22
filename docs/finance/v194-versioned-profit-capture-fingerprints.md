@@ -23,6 +23,12 @@ Flyway **V104** 对 `finance_profit_report_order` 和 `finance_profit_report_sku
 
 新的 Owner Session 只读 GET `/api/v1/finance/marketplaces/{marketplaceId}/capture-verification/{jobId}` 显示完整批次的版本化/历史/异常/等待计数和阻断码；这个路由**不侵入**既有 V64 九操作 OpenAPI/Orval 契约。旧 V64 `extractSha256` 字段不改名，新增的 V1 指纹仅存后端冻结表，不伪称旧摘要的含义。非完整局部证据时，V64 期间金额汇总设为 **null**、SKU 汇总为空（订单原始冻结记录仍可用于取证）；已完成报表的 CSV 拒绝将未核证捕获导出为计算结果。V188 成本瀑布在读取原币金额前调用同一独立校验，发现缺证直接 HTTP 409，V192 金额守恒检查仍保持。
 
+### 2026-11-22 首轮完整 A3 的真实失败与兼容修复
+
+在精确 [`2ef7fc0`](https://github.com/kunlong-luo/merchivra/commit/2ef7fc0d1a7d5d4ae089c090d782a06cb72ff01c) 触发的 [完整 A3 #45017612506](https://github.com/kunlong-luo/merchivra/actions/runs/45017612506) 中，PG18 作业 **FAILED**，其余 6 个核心作业 SUCCESS。失败发生在旧 V164/V188 合成 HTTP 测试：创建尚未完成冻结捕获的 V64 报表后，测试仍要求瀑布 GET 返回 200，V194 后端实际正确地 fail-closed 返回 409。该旧测试在新财务规则下已过时，**不能通过关闭校验或返回伪造金额来修复**。
+
+修复更新 `scripts/smoke_cost_allocation_v164.py`：读取 Owner/no-store 的 V194 独立证据分类，断言无伪历史与无指纹损坏、缺完整基线保持拒绝，并验证匿名/错误站点/错误任务拒绝和 V188 的 HTTP 409 稳定性。另将 `scripts/smoke_profit_capture_v194.sql` 接到完整 PG18 作业，使用回滚的 TEMP V62 表检查真实 Flyway V104 四列、三个检查约束、旧行不自动升级、版本/摘要双字段配对、PENDING 禁指纹、V103 冻结后不可修改。首次 A3 在旧 V164 断言处中止，**尚未执行新 V194 专项 SQL**，必须在新精确 SHA 完整重跑才可评价其是否通过。
+
 ## 测试与限制
 
 `ProfitCaptureFingerprintV194Test` 覆盖指纹输入顺序、非英文和特殊 SKU、固定六位金额、不可舍入、跨租户/批次、旧数据不可升级、SKU 缺失/篡改、未完成与 BLOCKED 场景，另验证 V104 及服务门禁代码。不应以静态或 Mockito 单测代替 PostgreSQL 18 Flyway + 合成 Owner HTTP 的专项回归；后续完整 A3 必须记录精确 main SHA、run attempt、结果和失败修复情况。

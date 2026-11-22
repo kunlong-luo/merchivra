@@ -1,3 +1,6 @@
+# V194B: exact-main rerun after updating the legacy V164/V188 synthetic
+# waterfall test: an incomplete newly created V64 cohort must return 409
+# under the new independent V194 fingerprint gate, never an unverified 200.
 # V194: exact-main complete A3 for Flyway V104 versioned V64 order/SKU hashes,
 # strict nullable legacy semantics, PG18 check constraints and immutable captures.
 # This runs only synthetic disposable data; local SHA is not external fee proof.
@@ -197,7 +200,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V194-A3-PG18-versioned-frozen-profit-capture' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V194B-A3-failclosed-waterfall-and-PG18-capture' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -281,6 +284,7 @@ on:
           - V192-A3-V64-order-SKU-profit-evidence-conservation
           - V193-A3-V64-frozen-profit-evidence-immutable-guards
           - V194-A3-PG18-versioned-frozen-profit-capture
+          - V194B-A3-failclosed-waterfall-and-PG18-capture
 
 permissions:
   contents: read
