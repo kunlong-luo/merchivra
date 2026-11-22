@@ -1,4 +1,4 @@
-# TEST-003 · 当前 CI / 完整 A3 验收策略（V191）
+# TEST-003 · 当前 CI / 完整 A3 验收策略（V193）
 
 > **2026-11-21 · 当前维护约定**：日常开发与文档修改直接提交 `main`，不为每个 Vxxx 开发重复创建分支/PR。快速 CI 保证构建与高价值单测；PG18 全链路、Chromium/Next、真实 Docker Compose 是有条件执行的**隔离合成**里程碑验收；两者均**不是**真实 Amazon/银行核证或生产许可。见 [事实基线](../current-status.md)、[发布阻断](release-readiness-v68.md)。
 
@@ -21,6 +21,8 @@
 
 ## 最新已确认工程技术证据
 
+- **V193**：Flyway V103 新增 V64 冻结报表/订单/SKU/审计 DML 守护，真实 PG18 测试复用 V62 TEMP 表，覆盖正常批处理与晚追加/重复修改拒绝。请以**该阶段精确 main SHA** 的 [A3](https://github.com/kunlong-luo/merchivra/actions/workflows/milestone-validation.yml) 运行结果为准，不预先宣称成功。
+- **V192 / `189932197ddeaadf1470f8692aa6be88d5e015c1`**：[完整 A3 #44896004578（run_attempt 2，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/44896004578) 验证真实 PG18 V188 逐订单 SKU 金额守恒，失败的首次验证与修复记录保留；仍无真实费用核验。
 - **V191 / `8dab97147010fdc440ee81abcfa67cd1d1d57261`**：[快速 CI #44882890791](https://github.com/kunlong-luo/merchivra/actions/runs/44882890791) 与 [完整 A3 #44882890834](https://github.com/kunlong-luo/merchivra/actions/runs/44882890834) SUCCESS，完整 A3 **7/7 核心任务成功**；真实 Seller/Ads/银行**未启用**。
 - [GitHub Pages #44882736480](https://github.com/kunlong-luo/merchivra/actions/runs/44882736480) 只验证虚构静态展示构建与隔离，不表示公开 ERP 已上线。
 - **文档提交后的新 HEAD** 必须查最新 CI，不能自动继承 V191 业务 SHA 的 A3 结果。

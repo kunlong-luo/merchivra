@@ -1,6 +1,6 @@
 # Merchivra 文档中心
 
-> **现行入口 · 2026-11-21 / V191。** 这里只索引**当前执行规范**和有证据的业务说明。V1–V190 的版本文档、早期设计草案和当时的测试结论保留历史原貌，**不能因为标题含“当前/最新”就优先于本页**。当前正式本地前端为 Next.js 16、唯一前端包管理器 pnpm 12.20.0；生产 #104 仍 NO-GO。
+> **现行入口 · 2026-11-22 / V193。** 这里只索引**当前执行规范**和有证据的业务说明。V1–V190 的版本文档、早期设计草案和当时的测试结论保留历史原貌，**不能因为标题含“当前/最新”就优先于本页**。当前正式本地前端为 Next.js 16、唯一前端包管理器 pnpm 12.20.0；生产 #104 仍 NO-GO。
 
 ## 先读这四份
 
@@ -19,7 +19,7 @@
 | 产品与财务口径 | [利润优先方向 V161](product/profit-first-next-primary-v161.md) · [G1 财务规则](product/finance-rulebook.md) | 产品方向成立；G1/DEC-06/07/08 不是已签署 |
 | 全成本与人工来源 | [V162 成本覆盖](finance/full-cost-coverage-v162.md) · [V163 手工来源](finance/cost-source-review-v163.md) · [V164 金额守恒](finance/cost-allocation-v164.md) | 技术能力/人工元数据核查，不等于真实可入账费用 |
 | 结算与真实性隔离 | [V181 原始身份快照](finance/v181-immutable-settlement-line-identity.md) · [V182 来源归属判定](finance/v182-settlement-attribution-evidence.md) · [V183 整期阻断](finance/v183-full-period-profit-evidence-gates.md) | 外部报告独立来源真实性仍待核查 |
-| 期间利润与防重 | [V185 跨月预览](finance/v185-original-currency-period-cost-preview.md) · [V186 单一来源归属](finance/v186-single-cost-source-ownership-bridge.md) · [V187 跨来源风险](finance/v187-full-period-cross-source-risk.md) · [V188 原币瀑布](finance/v188-period-profit-cost-waterfall-preview.md) | **敏感度计算 ≠ 已认证真实净利润** |
+| 期间利润与防重 | [V185 跨月预览](finance/v185-original-currency-period-cost-preview.md) · [V186 单一来源归属](finance/v186-single-cost-source-ownership-bridge.md) · [V187 跨来源风险](finance/v187-full-period-cross-source-risk.md) · [V188 原币瀑布](finance/v188-period-profit-cost-waterfall-preview.md) · [V193 冻结证据不可变性](finance/v193-frozen-profit-snapshot-database-guards.md) | **敏感度计算 ≠ 已认证真实净利润** |
 | 退货与外仓 WMS | [退货成本准备度](finance/refund-cost-readiness-v170.md) · [外仓运营主体信任合同](finance/wms-operator-trust-contract-v175-b.md) | B1 技术基础已有，B2/B3 真实外部验证和库存/COGS 过账未完成 |
 | 采购与库存 | [采购入口](purchasing/local-purchase-workflow.md) · [库存与批次审计](inventory/fba-purchase-link-v75.md) | 本地持久业务与合成测试，不意味着真实 Amazon FBA 签收 |
 | 安全/集成 | [安全政策](../SECURITY.md) · [Seller OAuth 代码边界](security/seller-oauth.md) · [Amazon Gateway](integrations/amazon-sp-api.md) | 真实 Seller/Ads OAuth 与外部 API 均关闭 |

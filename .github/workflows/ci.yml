@@ -310,6 +310,11 @@ jobs:
           # V192: execute exact V188 frozen-order SQL on PG18 TEMP V62 tables.
           # Two opposite SKU errors must not cancel in a period aggregate.
           MERCHIVRA_V192_DISPOSABLE_ONLY=true python3 scripts/smoke_v192_profit_sku_conservation.py
+          # V193: the REAL V103 triggers installed by Flyway, exercised against
+          # V62-shaped pg_temp fixtures in a transaction. No public table writes.
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='103' AND success")" = "1"
+          psql -h 127.0.0.1 -U merchivra -d merchivra -v ON_ERROR_STOP=1 \
+            -f scripts/smoke_profit_snapshot_guards_v193.sql
           # V165: exact current local identity collisions across 8 source
           # families hold unverified allocation approvals, not monetary equality.
           MERCHIVRA_V165_DISPOSABLE_ONLY=true python3 scripts/smoke_cost_identity_v165.py
