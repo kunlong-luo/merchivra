@@ -28,3 +28,7 @@
 每次重大阶段按同样六维权重更新**新一份评估记录**，显式说明基线 SHA、测试 URL、已通过/失败/跳过和新增证据。评分变化不自动更改 [当前事实](../current-status.md)、[P0 计划](../roadmap/current-plan.md) 或 [文档控制](document-control.md)；未签署外部政策仍是 Proposed。
 
 **发布结论独立于分数**：项目仍为 pre-alpha，Amazon Seller/Ads 真实 OAuth 与写入关闭，`realizedNetProfit=null`；生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。即便评分升高也不能绕过 G1/G2/G3 与真实运营证据。
+
+## 评分基线之后的工程证据更新（2026-11-22）
+
+原始评分 **68/100** 不回写、不自动上调：[`9cdb926`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 已经取得 [完整 A3 #45018945885](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885) **7/7 核心 SUCCESS**、[同 SHA 快 CI #45018945926](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) SUCCESS。真实 PG18 发现 V104 可放行半指纹，Flyway V105 修复并通过双向负例；成功验证增加了工程可信度，但不等于有真实 Amazon/Ads/银行费用或退款 COGS、G1/G2/G3、生产许可。下一次正式复评分按同一六维量表审议，不能因为本次测试成功就将财务真实性 10/25 自动提分。

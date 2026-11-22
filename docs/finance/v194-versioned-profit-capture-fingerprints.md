@@ -1,6 +1,6 @@
 # Merchivra V194 · 版本化订单/SKU 冻结捕获指纹与独立重算
 
-**状态（2026-11-22）**：V194 实现提交 [`61c8678`](https://github.com/kunlong-luo/merchivra/commit/61c8678288697d20476c44478fafae8bd7739349)，Next 展示 fail-closed 修补 [`9d4ebad`](https://github.com/kunlong-luo/merchivra/commit/9d4ebadb7abe45369ea55a7bb6c33b09e920d985)；后者 [快速 CI #45014853040](https://github.com/kunlong-luo/merchivra/actions/runs/45014853040) **SUCCESS**，但仍**待独立完整 PG18/Flyway/Owner HTTP/A3**；本说明不是外部数据、生产发布或财务 G1 批准。
+**状态（2026-11-22）**：V194 实现提交 [`61c8678`](https://github.com/kunlong-luo/merchivra/commit/61c8678288697d20476c44478fafae8bd7739349)，Next 展示 fail-closed 修补 [`9d4ebad`](https://github.com/kunlong-luo/merchivra/commit/9d4ebadb7abe45369ea55a7bb6c33b09e920d985)；后者 [快速 CI #45014853040](https://github.com/kunlong-luo/merchivra/actions/runs/45014853040) **SUCCESS**，并在 [最终完整 A3 #45018945885](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)（SHA `9cdb926`, attempt=1）实现**7/7 核心 SUCCESS**，同 SHA [快速 CI #45018945926](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) SUCCESS；本说明不是外部数据、生产发布或财务 G1 批准。
 
 ## 既有基础与实际缺口
 
@@ -46,6 +46,12 @@ V194C 将缺哈希负例改为正常 `PENDING → ELIGIBLE` 捕获转移，只�
 在 [`f687e0e`](https://github.com/kunlong-luo/merchivra/commit/f687e0e642ea5c81ae008fe3f19bbc475827338d) 的 [完整 A3 #45018665789](https://github.com/kunlong-luo/merchivra/actions/runs/45018665789) 中，V105 的真实 PG18 约束成功拒绝了缺 SHA/缺版本、错误版本和非法摘要的负例，**未发生 V104 原先的半指纹放行**；但脚本末尾误用无 WHERE 的合成 `finance_profit_report_job` 完成 UPDATE，连同用于校验 PENDING 约束的第二个一次性任务也被更新为 processed=2，触发已有 `processed<=total` CHECK，故 **PG18 job 仍 FAILED**。新修订限定 `WHERE id=<测试主任务>`，只结束主测试批次、不放松生产约束。
 
 同一 A3 的 Next Chromium 专项在路由短暂切换时直接 `evaluate` 查找 Core 子页标签，未等组件挂载就抛 `Uncaught`；调整为最多有限次等待目标真实 tab 出现并点击，原有订单/FBA/来源/布局断言全部保留。**首次/二次/三次/四次失败历史不能删改，更不能把某条 PG18 约束通过说成整套 A3 成功。**修复后必须对新的精确 `main` SHA 重新执行并检查所有作业。
+
+### V194E · 最终 PG18/Chromium/Compose 复测结论
+
+在 [精确 `main` SHA `9cdb926`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)，**run_attempt=1，7/7 核心任务 SUCCESS**：真实 PostgreSQL18/Flyway V104/V105、历史 null/null 的保守兼容、ORDER 与 SKU 半指纹两个方向的拒绝、非法版本/SHA、PENDING 状态、V103 不可变证据、V188 不完整利润基线 fail-closed 409、Owner/匿名作用域、Next/Vite Chromium、Compose HTTP/Session/CSRF/恢复及 Java25。此前四轮失败已保留在上文，不允许重写为“首次即通过”。[同精确 SHA 快 CI #45018945926](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) SUCCESS。若后续仅改文档，不能自动将这个 A3 的代码范围扩展到新 HEAD。
+
+**剩余覆盖边界**：本轮专项充分证明版本/摘要数据库完整性和不完整基线的安全阻断，但它不等同于使用真实外部费用的正例核证，也未独立证明每种完整已捕获订单/SKU 的端到端实际利润可入账；外部来源、退款 COGS、财务 G1、生产授权继续未完成。
 
 ## 测试与限制
 
