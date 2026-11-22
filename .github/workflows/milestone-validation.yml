@@ -1,3 +1,6 @@
+# V197: exact-main A3 for read-only V170/V63 refund source snapshot parity,
+# COGS reversal hard blockers, PG18 HTTP/Next and no accounting release.
+# Only synthetic data; real Seller/Ads OAuth and production #104 remain OFF.
 # V194E: isolate synthetic V194/V105 disposable job completion by ID,
 # and wait for Next Core tabs during Chromium route transitions.
 # Evidence gates stay strict; run full A3 on this exact main SHA.
@@ -207,7 +210,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V194E-A3-strict-fingerprint-and-browser-route-recheck' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V197-A3-refund-source-parity-and-cogs-barriers' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -295,6 +298,7 @@ on:
           - V194C-A3-distinct-V104-checks-and-immutable-V64
           - V194D-A3-V105-strict-null-safe-fingerprint-pairs
           - V194E-A3-strict-fingerprint-and-browser-route-recheck
+          - V197-A3-refund-source-parity-and-cogs-barriers
 
 permissions:
   contents: read

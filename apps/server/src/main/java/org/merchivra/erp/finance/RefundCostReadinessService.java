@@ -55,7 +55,7 @@ public class RefundCostReadinessService {
         boolean allFinancesRefundsCovered,boolean bankReconciled,
         boolean actualCogsReversalsVerified,boolean realizedNetProfitVerified) {}
 
-    private record Source(UUID id,OffsetDateTime postedAt,String currency,
+    record Source(UUID id,OffsetDateTime postedAt,String currency,
         BigDecimal signedAmount,UUID order) {}
     private record Snapshot(List<CurrencyBucket> buckets,List<Source> visible,
         boolean hasMore) {}
@@ -82,7 +82,8 @@ public class RefundCostReadinessService {
             r.getLong("event_count"),amount(r.getBigDecimal("signed_refunds")),
             false,false);
     }
-    private Event describe(UUID tenant,UUID mp,Source src) {
+    // Package-visible for V197 regression: independently test post-snapshot review.
+    Event describe(UUID tenant,UUID mp,Source src) {
         String state="INCOMPLETE_EVIDENCE",gap="V34_V35_OR_HISTORICAL_COST_NOT_READY";
         String exposure=null,sensitivity=null;
         boolean current=false;

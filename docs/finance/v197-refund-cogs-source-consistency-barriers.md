@@ -1,6 +1,6 @@
 # V197 · 退款 COGS 冲回的逐笔证据阻断与跨事务来源一致性
 
-**状态：2026-11-22 实施说明；需要以最终 main SHA 的 CI/A3 结果确认测试。** 本次只完善 V170/V63 的只读风险判定，不批准 G1 冲回政策、不新增审批表、不产生库存/COGS/GL 写入。真实 Seller/Ads OAuth 和银行独立核证仍关闭；生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**，`realizedNetProfit=null`。
+**状态：2026-11-22 实施说明。** V197 初始实现 [\`02828d0\`](https://github.com/kunlong-luo/merchivra/commit/02828d0f8f4f23611ddba247ef97abacb2d610d2) 对应 [快速 CI #45020050129](https://github.com/kunlong-luo/merchivra/actions/runs/45020050129) **SUCCESS**；服务级回归及后续完整 A3 应以各自最新精确 main SHA 和实际结果为准。 本次只完善 V170/V63 的只读风险判定，不批准 G1 冲回政策、不新增审批表、不产生库存/COGS/GL 写入。真实 Seller/Ads OAuth 和银行独立核证仍关闭；生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**，`realizedNetProfit=null`。
 
 ## 先检查现有链路而不是再造一套
 
@@ -22,5 +22,5 @@
 ## 测试与未完成事项
 
 - `RefundCogsReversalGateV197Test`：无复核、来源快照订单不符、相同订单但币种/有符号金额不符、数值等价的小数精度、过期/驳回/未知处置、同人审批、人工审核已通过但外部/实收/G1 仍不可放行，以及乱报的物理/会计状态不能覆盖硬阻断。
-- `RefundCostReadinessServiceTest`：保持服务端 LIVE/UTC/Owner/no-store/金额 null、双事务边界，并断言引入来源核对。前端 `refund-cost-readiness.test.ts` 验证同源 GET、来源有符号原币、硬阻断保留及无阻断或假造冲回时 Zod 拒绝。
+- `RefundCostReadinessServiceTest`：保持服务端 LIVE/UTC/Owner/no-store/金额 null、双事务边界，并断言引入来源核对；`RefundCostReadinessServiceV197Test` 直接模拟 V63 在两次读取之间出现事件/订单/币种/金额漂移，验证真实 `describe` 接线会使 `evidenceState=STALE` 且金额敏感度为 null；正常 409 是明确缺证，不导致整个来源列表 500。前端 `refund-cost-readiness.test.ts` 验证同源 GET、来源有符号原币、硬阻断保留及无阻断或假造冲回时 Zod 拒绝。
 - **仍未实现**：真实外部第三方退款/实物收货核证、退款与结算行独立防重匹配、G1 批准的货物批次/历史成本回转规则、跨期会计以及真正的双人认可库存与会计过账。**这些缺口不是再补一份本地 SHA 或 UI 提示即可关闭**。当前评估分数仍以 [68/100 基线](../governance/project-scorecard-2026-11-22.md) 为准，不能将本轮只读判定视为正式利润功能完成。
