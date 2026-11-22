@@ -41,6 +41,12 @@ V194C 将缺哈希负例改为正常 `PENDING → ELIGIBLE` 捕获转移，只�
 
 新增**仅前进的 Flyway V105**，不改 V104 原文件，不补写任何历史摘要。V105 为订单/SKU 都增加明确 `version IS NOT NULL AND sha IS NOT NULL` 的严格 `CHECK`，只允许成对 NULL（旧快照）或成对有效 V1/SHA-256；已有异常数据导致迁移失败而非静默修复。新 PG18 测试覆盖两个方向的半指纹，PENDING 拦截、正常 V1 捕获及 V103 不变性。外部真实性、退款 COGS 与 `realizedNetProfit=null` 仍保持不变。**V105 是否验收需以包含该迁移的精确新 SHA 的 A3 结果为准。**
 
+### V194D A3 第四轮：V105 双向约束通过，夹具作用域与浏览器时序待修
+
+在 [`f687e0e`](https://github.com/kunlong-luo/merchivra/commit/f687e0e642ea5c81ae008fe3f19bbc475827338d) 的 [完整 A3 #45018665789](https://github.com/kunlong-luo/merchivra/actions/runs/45018665789) 中，V105 的真实 PG18 约束成功拒绝了缺 SHA/缺版本、错误版本和非法摘要的负例，**未发生 V104 原先的半指纹放行**；但脚本末尾误用无 WHERE 的合成 `finance_profit_report_job` 完成 UPDATE，连同用于校验 PENDING 约束的第二个一次性任务也被更新为 processed=2，触发已有 `processed<=total` CHECK，故 **PG18 job 仍 FAILED**。新修订限定 `WHERE id=<测试主任务>`，只结束主测试批次、不放松生产约束。
+
+同一 A3 的 Next Chromium 专项在路由短暂切换时直接 `evaluate` 查找 Core 子页标签，未等组件挂载就抛 `Uncaught`；调整为最多有限次等待目标真实 tab 出现并点击，原有订单/FBA/来源/布局断言全部保留。**首次/二次/三次/四次失败历史不能删改，更不能把某条 PG18 约束通过说成整套 A3 成功。**修复后必须对新的精确 `main` SHA 重新执行并检查所有作业。
+
 ## 测试与限制
 
 `ProfitCaptureFingerprintV194Test` 覆盖指纹输入顺序、非英文和特殊 SKU、固定六位金额、不可舍入、跨租户/批次、旧数据不可升级、SKU 缺失/篡改、未完成与 BLOCKED 场景，另验证 V104 及服务门禁代码。不应以静态或 Mockito 单测代替 PostgreSQL 18 Flyway + 合成 Owner HTTP 的专项回归；后续完整 A3 必须记录精确 main SHA、run attempt、结果和失败修复情况。

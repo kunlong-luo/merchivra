@@ -257,8 +257,11 @@ BEGIN
   THEN RAISE EXCEPTION 'Legacy/V1 identity segregation failed'; END IF;
 END;
 $verify$;
+-- Scope the completion to the primary disposable cohort only. The
+-- extra single-order job above is an independent constraint-test fixture.
 UPDATE finance_profit_report_job
- SET processed_orders=2,state='SUCCEEDED',completed_at=now(),updated_at=now();
+ SET processed_orders=2,state='SUCCEEDED',completed_at=now(),updated_at=now()
+ WHERE id='00000000-0000-4000-8000-000000000202';
 SELECT pg_temp.expect_blocked($stmt$
  UPDATE finance_profit_report_order SET capture_sha256_v194=repeat('f',64)
  WHERE cohort_position=0

@@ -741,9 +741,13 @@ async function layout(send, width, label, hasTable=false) {
   console.log(label+': '+JSON.stringify(data))
 }
 async function select(send, name) {
-  await evaluate(send, "(() => {const b=[...document.querySelectorAll('.core-subtab')]" +
+  // Next App Router may briefly unmount the Core tabs while switching routes.
+  // Wait for the requested real tab before clicking; do not weaken the
+  // selected panel/fixture/source assertions that follow.
+  await waitFor(send, "(() => {const b=[...document.querySelectorAll('.core-subtab')]" +
     ".find(x=>x.textContent.trim()==="+JSON.stringify(name)+");" +
-    "if(!b)throw Error('Missing tab');b.click();})()")
+    "if(!b||b.disabled)return false;b.click();return true;})()",
+    name+' Core tab mounted and clickable')
   const panel = name === '订单' ? 'core-panel-orders' : 'core-panel-inventory'
   await waitFor(send,
     "document.querySelectorAll('#"+panel+" .core-data-scroll tbody tr').length===1",

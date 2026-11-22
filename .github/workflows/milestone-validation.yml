@@ -1,3 +1,6 @@
+# V194E: isolate synthetic V194/V105 disposable job completion by ID,
+# and wait for Next Core tabs during Chromium route transitions.
+# Evidence gates stay strict; run full A3 on this exact main SHA.
 # V194D: forward-only V105 fixes SQL CHECK's NULL/UNKNOWN loophole.
 # Re-run exact-main PG18/Flyway for both incomplete fingerprint directions.
 # V194C: V104 PG18 regression check now isolates the missing-hash pair
@@ -204,7 +207,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V194D-A3-V105-strict-null-safe-fingerprint-pairs' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V194E-A3-strict-fingerprint-and-browser-route-recheck' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -291,6 +294,7 @@ on:
           - V194B-A3-failclosed-waterfall-and-PG18-capture
           - V194C-A3-distinct-V104-checks-and-immutable-V64
           - V194D-A3-V105-strict-null-safe-fingerprint-pairs
+          - V194E-A3-strict-fingerprint-and-browser-route-recheck
 
 permissions:
   contents: read
