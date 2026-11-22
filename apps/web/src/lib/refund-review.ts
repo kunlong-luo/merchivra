@@ -13,7 +13,8 @@ const item=z.object({
 const snapshot=z.object({
  eventId:z.string().uuid(),orderId:z.string().uuid(),
  externalOrderId:z.string(),refundSourceAmount:z.string(),currency:z.string(),
- status:z.enum(['MANUAL_REFUND_ITEM_REVIEW','REFUND_CLASSIFICATION_INCOMPLETE']),
+ status:z.enum(['MANUAL_REFUND_ITEM_REVIEW','REFUND_CLASSIFICATION_INCOMPLETE',
+   'REFUND_QUANTITY_ACROSS_EVENTS_CONFLICT']),
  costReadiness:z.string(),inventoryReceiptVerified:z.literal(false),
  items:z.array(item)
 })

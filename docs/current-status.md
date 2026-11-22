@@ -16,6 +16,8 @@
 
 > **V200（[精确 V200 代码 `2715529`](https://github.com/kunlong-luo/merchivra/commit/271552911b55a451e66662cdf3aab94c2db21341) · [快速 CI #45023721155 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45023721155) · [完整 A3 #45023721170（7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45023721170)）**：对历史订单 SKU 映射与按订单当地日期适用的 SKU 成本版本，在原 LATERAL 查询上增加**全候选计数**。多条有效映射或重叠成本区间不能再靠 `ORDER BY … LIMIT 1` 随意选择，应显示明确冲突、隐藏行成本并阻断订单 `COGS_READY_PREVIEW`；仍是成本准备度，不是实物采购批次成本或财务过账。详见 [V200 财务证据](finance/v200-historical-sku-cost-ambiguity.md)。正式独立复评为 [70/100](governance/project-scorecard-v200-2026-11-22.md)，不是 G1/生产发布批准。
 
+> **V201（代码已实现，待本 SHA CI/A3 验收）**：原 V34 在写入时检查跨事件退款数量，但旧订单有效数量后续变更可能使多个已审退款事件合计超过现存 LIVE 订单数量。V201 在原 V34 读取时按**整单所有退款事件**再核对累计数量；缺当前 LIVE 订单项或超额返回 `REFUND_QUANTITY_ACROSS_EVENTS_CONFLICT`，隐藏声称入库的 COGS 敏感度，阻断 V35/V63 后续独立金额/退货成本证据。见 [V201](finance/v201-refund-cross-event-quantity-read-gate.md)。不宣称批次实收或真实净利润，复评分仍为 [70/100](governance/project-scorecard-v200-2026-11-22.md)。
+
 ## 1. 技术栈与启动事实
 
 | 维度 | 当前代码与入口 | 不应误读 |

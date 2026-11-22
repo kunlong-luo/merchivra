@@ -28,6 +28,13 @@ V199 拒绝 V54 结算 `declared_net=NULL` 被视为三方来源金额一致：J
 后端 `OrderCostEngineTest` 负例检测多映射、重叠成本区间、候选数未知，且任何歧义不能进入 `provisionalCost`；真实 PG18 合成测试 `scripts/smoke_order_cost_ambiguity_v200.py` 在 TEMP/ROLLBACK 中运行同一 Java SQL 并检查正常、重叠、缺失情形。Next 原有订单成本面板显示清晰阻断原因。精确 V200 源码的完整 A3 已通过 7/7；上述负例是隔离合成数据库技术验证，不代表外部 Amazon 单据、批次实收或实际会计放行。
 
 
+## V201 跨事件退货数量读时阻断（待验收）
+
+- Java `RefundItemReviewServiceV201Test` 检查多事件汇总 SQL 作用域、当前 LIVE 订单项约束和冲突优先序；Next `refund-review-v201.test.ts` 检查明确冲突状态和不可信实收标志的拒绝。
+- PG18 `MERCHIVRA_V201_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_cross_event_quantity_v201.py` 在 TEMP 表 + ROLLBACK 执行**Java 生产源 SQL 原文**，包含已审 2+1 件、订单后改数量、异租户/订单隔离、非 LIVE/旧项与另一商品项的反例。
+- 仅当本次代码精确 SHA 快 CI/完整 A3 明确成功后才将这些验证标为通过；真实物理退货、成本总账与银行仍完全不在 CI 范围内。
+
+
 ## 最新已确认工程技术证据
 
 - **V198 / `11864a739451f0e91c0bd9639b2c4bfe441b518e`**：[精确代码 `11864a7`](https://github.com/kunlong-luo/merchivra/commit/11864a739451f0e91c0bd9639b2c4bfe441b518e) 的 [完整 A3 #45021678686（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45021678686)，及 [同 SHA 快 CI #45021678580](https://github.com/kunlong-luo/merchivra/actions/runs/45021678580) SUCCESS。首次 `f5bc560` 的 [完整 A3 #45021496225](https://github.com/kunlong-luo/merchivra/actions/runs/45021496225) **FAILED**，原因是老版 `SettlementSourceReviewServiceTest` 构造参数以及旧 Vitest 比较夹具缺少五个新字段；并非放宽判定后通过，现已修正。实际 PostgreSQL 18 阶段先前已通过并有 `PASS V198 real PG18 exact Java SQL` 日志证据。旧 V58/V31 只读比较补齐重复结算归属/重复报告/缺失行与混币检测，Java/Vitest 合同负例及原 SQL 的 PG18 TEMP 表 `ROLLBACK` 验证。修改 `ci.yml` full_suite 跑真实 PG18；V198 修复后的同 SHA 完整 A3 7/7 验证独立成立，与 V197 的历史绿灯互不借用。

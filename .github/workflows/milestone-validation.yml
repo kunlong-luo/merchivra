@@ -1,3 +1,5 @@
+# V201: source-exact PG18 refund cross-event quantity read barrier A3.
+# Synthetic-only: no bank verification, actual refund COGS or release GO.
 # V200: A3 tests exact order-cost historical candidate counts in PG18.
 # A green synthetic A3 does not verify physical SKU batch COGS or production.
 # V199: exact-main A3 for nullable missing settlement statement total.
@@ -220,7 +222,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V200-A3-historical-sku-and-cost-overlap-blockers' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V201-A3-refund-cross-event-quantity-read-gate' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -313,6 +315,7 @@ on:
           - V198B-A3-settlement-claim-fixture-regression
           - V199-A3-missing-declared-net-fail-closed
           - V200-A3-historical-sku-and-cost-overlap-blockers
+          - V201-A3-refund-cross-event-quantity-read-gate
 
 permissions:
   contents: read

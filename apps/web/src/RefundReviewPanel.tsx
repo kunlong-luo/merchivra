@@ -58,9 +58,16 @@ export default function RefundReviewPanel({tenantId,marketplaceId,eventId}:{
       交易有符号金额：{info.data.currency} {info.data.refundSourceAmount}</p>
     <p className="setup-hint">来源类别审核：
       {info.data.status==='MANUAL_REFUND_ITEM_REVIEW'?'已核平的退款类别，可人工填写处置':
+       info.data.status==='REFUND_QUANTITY_ACROSS_EVENTS_CONFLICT'?
+       '同一订单项在多个退款事件中的累计审核数量超过当前有效订单数量，须先核对历史记录；禁止确认成本':
        '来源分类尚未完全核平，不能新增退款处置审核'}；
       历史成本覆盖：{info.data.costReadiness}；
       库存收货独立验证：未完成。</p>
+    {info.data.status==='REFUND_QUANTITY_ACROSS_EVENTS_CONFLICT'&&
+     <p className="setup-error" role="alert">
+      跨退款事件的数量守恒校验失败：已隐藏全部退货成本敏感度，
+      请先独立核对订单数量及既有退款审核；旧审批不代表当前有效证据。
+     </p>}
     {!!info.data.items.length&&<div className="table-scroll" role="region"
       tabIndex={0} aria-label="退款订单项审核明细"><table><thead><tr>
        {['来源订单项','Seller SKU','订购数量','审核数量','退货处置','成本参考影响','操作'].map(x=>

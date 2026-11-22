@@ -38,6 +38,33 @@ public class RefundItemReviewService {
         List<Item> items) {}
     public record Audit(String itemId,String action,int quantity,String disposition,
         String evidenceReference,int revision,String actorId,String timestamp) {}
+
+    // V201: a V34 save checked other refund events when it was written, but
+    // later changes to current order quantities can invalidate old reviews.
+    // One cross-event query must guard EVERY future V63/V35 evidence read.
+    // No current LIVE order item (including a revoked/stale row) is UNKNOWN,
+    // not a license to recognize a cost or pretend that quantity is zero.
+    static final String QUANTITY_CONSERVATION_SQL = """
+        SELECT r.external_item_id
+        FROM finance_refund_item_review r
+        LEFT JOIN order_item i ON i.tenant_id=r.tenant_id
+          AND i.sales_order_id=r.sales_order_id
+          AND i.external_item_id=r.external_item_id
+          AND i.is_current=true AND i.data_origin='LIVE'
+        WHERE r.tenant_id=? AND r.sales_order_id=?
+        GROUP BY r.external_item_id,i.quantity
+        HAVING i.quantity IS NULL OR i.quantity<1
+           OR SUM(r.reviewed_quantity)>i.quantity
+        ORDER BY r.external_item_id LIMIT 1
+        """;
+
+    static String refundSnapshotState(boolean classificationReviewed,
+        boolean quantityConflict) {
+        return quantityConflict?"REFUND_QUANTITY_ACROSS_EVENTS_CONFLICT":
+            classificationReviewed?"MANUAL_REFUND_ITEM_REVIEW":
+                "REFUND_CLASSIFICATION_INCOMPLETE";
+    }
+
     private static ResponseStatusException missing() {
         return new ResponseStatusException(HttpStatus.NOT_FOUND);
     }
@@ -129,6 +156,9 @@ public class RefundItemReviewService {
             &&classificationResult.analysis().provisionalTotals().stream()
                .anyMatch(v->"PRODUCT_REFUND".equals(v.category()));
         var cogs=costs.preview(tenant,mp,src.orderId());
+        boolean quantityConflict=!jdbc.query(QUANTITY_CONSERVATION_SQL,
+            (r,i)->r.getString("external_item_id"),tenant,src.orderId())
+            .isEmpty();
         var reviews=jdbc.query("""
             SELECT external_item_id,reviewed_quantity,disposition,evidence_reference,revision
             FROM finance_refund_item_review
@@ -147,7 +177,7 @@ public class RefundItemReviewService {
             String evidence=review==null?null:(String)review[3];
             Integer version=review==null?null:(Integer)review[4];
             String sensitivity=null;
-            if("COGS_READY_PREVIEW".equals(cogs.readiness())&&
+            if(!quantityConflict&&"COGS_READY_PREVIEW".equals(cogs.readiness())&&
                 "READY".equals(line.issue())&&qty!=null&&
                 "RESTOCKED_CLAIMED".equals(disposition)) {
                 sensitivity=RefundReviewEvidenceEngine.unverifiedRestockSensitivity(
@@ -160,7 +190,7 @@ public class RefundItemReviewService {
         }
         return new Snapshot(event.toString(),src.orderId().toString(),
             src.externalOrderId(),src.amount(),src.currency(),
-            refund?"MANUAL_REFUND_ITEM_REVIEW":"REFUND_CLASSIFICATION_INCOMPLETE",
+            refundSnapshotState(refund,quantityConflict),
             cogs.readiness(),false,List.copyOf(items));
     }
     @Transactional
