@@ -10,7 +10,16 @@ import java.util.Objects;
 public final class OrderCostEngine {
     private OrderCostEngine() {}
     public record Item(String itemId,String sellerSku,Integer quantity,String origin,
-        String internalSku,BigDecimal unitCost,String unitCurrency) {}
+        String internalSku,BigDecimal unitCost,String unitCurrency,
+        Long mappingCandidateCount,Long costVersionCandidateCount) {
+        // Preserve callers of the earlier read model. Database-backed callers
+        // must supply actual whole-window candidate counts.
+        public Item(String itemId,String sellerSku,Integer quantity,String origin,
+            String internalSku,BigDecimal unitCost,String unitCurrency) {
+            this(itemId,sellerSku,quantity,origin,internalSku,unitCost,unitCurrency,
+                internalSku==null?0L:1L,unitCost==null?0L:1L);
+        }
+    }
     public record Line(String itemId,String sellerSku,Integer quantity,String internalSku,
         String unitCost,String currency,String extendedCost,String issue) {}
     public record Preview(String readiness,String currency,String orderCreatedAt,
@@ -33,7 +42,12 @@ public final class OrderCostEngine {
                 !"LIVE".equals(item.origin())?"ITEM_SOURCE_UNVERIFIED":
                 item.quantity()==null||item.quantity()<0?"QUANTITY_UNKNOWN":
                 item.sellerSku()==null||item.sellerSku().isBlank()?"SELLER_SKU_UNKNOWN":
+                item.mappingCandidateCount()==null||item.mappingCandidateCount()<0
+                    ||item.costVersionCandidateCount()==null
+                    ||item.costVersionCandidateCount()<0?"COST_EVIDENCE_COUNT_UNKNOWN":
+                item.mappingCandidateCount()>1?"MAPPING_AMBIGUOUS_AS_OF_DATE":
                 item.internalSku()==null?"MAPPING_MISSING_AS_OF_DATE":
+                item.costVersionCandidateCount()>1?"UNIT_COST_VERSION_OVERLAP_AS_OF_DATE":
                 item.unitCost()==null?"UNIT_COST_MISSING_AS_OF_DATE":
                 !currency.equals(item.unitCurrency())?"CURRENCY_MISMATCH":"READY";
             String extended=null;

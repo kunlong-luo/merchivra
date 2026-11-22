@@ -14,6 +14,9 @@ const issues:Record<string,string>={
  ITEM_SOURCE_UNVERIFIED:'订单项来源未核验',
  QUANTITY_UNKNOWN:'缺少订购数量',SELLER_SKU_UNKNOWN:'Seller SKU 未知',
  MAPPING_MISSING_AS_OF_DATE:'订单时间对应的 SKU 映射缺失',
+ MAPPING_AMBIGUOUS_AS_OF_DATE:'订单时点出现多个 SKU 映射版本，成本已阻断',
+ UNIT_COST_VERSION_OVERLAP_AS_OF_DATE:'订单业务日存在重叠的历史成本版本，成本已阻断',
+ COST_EVIDENCE_COUNT_UNKNOWN:'成本来源候选数量无法确认',
  UNIT_COST_MISSING_AS_OF_DATE:'订单业务日的有效成本缺失',
  CURRENCY_MISMATCH:'单位成本币种和站点不同'
 }

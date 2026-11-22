@@ -61,14 +61,22 @@ public class OrderCostReadinessService {
         // readiness reason; no speculative date-based cost joins are accepted.
         var items=jdbc.query("""
             SELECT i.external_item_id,i.seller_sku_raw,i.quantity,i.data_origin,
-              p.internal_sku,c.unit_cost,c.currency_code
+              CASE WHEN match.mapping_candidates=1 THEN p.internal_sku
+                ELSE NULL END AS internal_sku,
+              CASE WHEN match.mapping_candidates=1 AND c.cost_candidates=1
+                THEN c.unit_cost ELSE NULL END AS unit_cost,
+              CASE WHEN match.mapping_candidates=1 AND c.cost_candidates=1
+                THEN c.currency_code ELSE NULL END AS currency_code,
+              match.mapping_candidates,c.cost_candidates
             FROM order_item i
             JOIN sales_order o ON o.tenant_id=i.tenant_id AND o.id=i.sales_order_id
             LEFT JOIN marketplace_listing l ON l.tenant_id=o.tenant_id
               AND l.seller_marketplace_id=o.seller_marketplace_id
               AND l.seller_sku=i.seller_sku_raw
             LEFT JOIN LATERAL (
-              SELECT m.product_sku_id FROM listing_sku_mapping m
+              SELECT m.product_sku_id,
+                COUNT(*) OVER() AS mapping_candidates
+              FROM listing_sku_mapping m
               WHERE m.tenant_id=o.tenant_id AND m.listing_id=l.id
                 AND m.status IN ('ACTIVE','SUPERSEDED')
                 AND m.valid_from<=o.order_time
@@ -77,7 +85,9 @@ public class OrderCostReadinessService {
             ) match ON TRUE
             LEFT JOIN product_sku p ON p.tenant_id=o.tenant_id AND p.id=match.product_sku_id
             LEFT JOIN LATERAL (
-              SELECT unit_cost,currency_code FROM sku_cost_version v
+              SELECT unit_cost,currency_code,
+                COUNT(*) OVER() AS cost_candidates
+              FROM sku_cost_version v
               WHERE v.tenant_id=o.tenant_id AND v.product_sku_id=p.id
                 AND v.effective_from<=CAST(? AS date)
                 AND (v.effective_to IS NULL OR v.effective_to>CAST(? AS date))
@@ -91,7 +101,11 @@ public class OrderCostReadinessService {
                 rs.getObject("quantity",Integer.class),rs.getString("data_origin"),
                 rs.getString("internal_sku"),rs.getBigDecimal("unit_cost"),
                 rs.getString("currency_code")==null?null:
-                    rs.getString("currency_code").trim()),
+                    rs.getString("currency_code").trim(),
+                rs.getObject("mapping_candidates",Long.class)==null
+                    ?0L:rs.getObject("mapping_candidates",Long.class),
+                rs.getObject("cost_candidates",Long.class)==null
+                    ?0L:rs.getObject("cost_candidates",Long.class)),
             localDate==null?null:Date.valueOf(localDate),
             localDate==null?null:Date.valueOf(localDate),
             tenant,marketplace,order);

@@ -39,3 +39,5 @@
 文档修改**直接在 `main`**，完成后至少运行 `python3 scripts/check_docs_consistency_v109.py`、`python3 scripts/check_ci_cadence_v108.py`，核对新 SHA 的快 CI。完整范围与审阅步骤在 [GOV-001](governance/document-control.md)。
 
 **事实提示：** V195 改善了本地 Session 500 的页面与重试，但未找到用户本机 Spring 故障根因；V194 完整 PG18/A3 尚未有本次代码的独立运行。**`realizedNetProfit=null`，公开 GitHub Pages 只是全虚构静态演示。**
+
+最新财务后端审计：[V200 历史 SKU 映射/成本版本冲突阻断](finance/v200-historical-sku-cost-ambiguity.md)（代码验收待确认）。

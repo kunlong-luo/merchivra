@@ -50,6 +50,39 @@ class OrderCostEngineTest {
             OrderCostEngine.evaluate(false,true,WHEN,"USD",
                 List.of(item("ITEM-1",1,"3","USD"))).readiness());
     }
+    @Test void historicalMappingOverlapFailsClosedEvenWhenCostAmountsMatch() {
+        var ambiguous=new OrderCostEngine.Item("ITEM-AMB","SELLER-SKU-A",2,
+            "LIVE",null,null,null,2L,1L);
+        var preview=OrderCostEngine.evaluate(true,true,WHEN,"USD",
+            List.of(ambiguous));
+        assertEquals("INCOMPLETE",preview.readiness());
+        assertEquals("MAPPING_AMBIGUOUS_AS_OF_DATE",
+            preview.items().getFirst().issue());
+        assertNull(preview.provisionalCost());
+        assertNull(preview.items().getFirst().extendedCost());
+        assertEquals(0,preview.coveredItems());
+    }
+    @Test void historicalCostVersionOverlapCannotSelectAnArbitraryCost() {
+        var ambiguous=new OrderCostEngine.Item("ITEM-AMB","SELLER-SKU-A",3,
+            "LIVE","INTERNAL-A",null,null,1L,2L);
+        var preview=OrderCostEngine.evaluate(true,true,WHEN,"USD",
+            List.of(item("OTHER",1,"2.50","USD"),ambiguous));
+        assertEquals("INCOMPLETE",preview.readiness());
+        assertEquals("UNIT_COST_VERSION_OVERLAP_AS_OF_DATE",
+            preview.items().get(1).issue());
+        assertNull(preview.provisionalCost());
+        assertEquals(1,preview.coveredItems());
+        assertNull(preview.items().get(1).extendedCost());
+    }
+    @Test void unknownCandidateCountsAreNotAssumedUnique() {
+        var incomplete=new OrderCostEngine.Item("ITEM","SELLER-SKU-A",1,
+            "LIVE","INTERNAL-A",new BigDecimal("4"),"USD",null,1L);
+        var p=OrderCostEngine.evaluate(true,true,WHEN,"USD",
+            List.of(incomplete));
+        assertEquals("COST_EVIDENCE_COUNT_UNKNOWN",
+            p.items().getFirst().issue());
+        assertNull(p.provisionalCost());
+    }
     @Test void mappingGapsCannotUseOtherSkuHistory() {
         var i=new OrderCostEngine.Item("ITEM-1","SELLER-SKU-A",1,
             "LIVE",null,new BigDecimal("4.00"),"USD");

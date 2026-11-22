@@ -329,6 +329,10 @@ jobs:
           # detect missing zero-valued lines and mixed-currency report rows.
           # This never mutates public or production finance tables.
           MERCHIVRA_V198_DISPOSABLE_ONLY=true python3 scripts/smoke_settlement_source_identity_v198.py
+          # V200: execute the exact OrderCostReadinessService SQL on isolated
+          # PG18 TEMP tables; ambiguous historical SKU maps/cost overlaps must
+          # hide selected unit cost and never become a ready COGS preview.
+          MERCHIVRA_V200_DISPOSABLE_ONLY=true python3 scripts/smoke_order_cost_ambiguity_v200.py
           # The new Owner-only endpoint must never disclose V194 evidence to a guest.
           capture_anon_code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/capture-verification/00000000-0000-4000-8000-000000000202)
