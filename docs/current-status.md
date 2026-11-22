@@ -8,7 +8,7 @@
 >
 > **全局安全结论**：pre-alpha，真实 Seller/Ads OAuth、真实平台/银行来源核验、退款 COGS 与 G1/DEC-06/07/08 仍关闭或未批准；`realizedNetProfit=null`，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。文档规范以 [ENG-001](governance/engineering-standards.md) 和 [GOV-001](governance/document-control.md) 为准，不能从合成 CI 推出真实上线。
 
-> **V197（本轮代码尚待精确 SHA 测试）**：在现有 V170/V63 退款只读准备度上增加 [逐事件 COGS 冲回阻断原因与跨事务来源一致性核验](finance/v197-refund-cogs-source-consistency-barriers.md)。比对原 Finances 退款事件、人工订单、原币、带符号金额；来源不一致时展示 STALE、隐藏不可信的成本敏感度，不自动回补库存/过账。人工独立审核后仍硬性保留外部真实性、实物收货、G1 会计政策和账务发布 NO-GO。本轮新提交的具体 CI 结果须另行确认。
+> **V197（[精确代码 `db9d88b`](https://github.com/kunlong-luo/merchivra/commit/db9d88be81ec326194242f75596661cb950cbea7) 的 [V197 完整 A3 #45020338812（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45020338812) 与 [同 SHA 快 CI #45020338752](https://github.com/kunlong-luo/merchivra/actions/runs/45020338752) 均已通过）**：在现有 V170/V63 退款只读准备度上增加 [逐事件 COGS 冲回阻断原因与跨事务来源一致性核验](finance/v197-refund-cogs-source-consistency-barriers.md)。比对原 Finances 退款事件、人工订单、原币、带符号金额；来源不一致时展示 STALE、隐藏不可信的成本敏感度，不自动回补库存/过账。人工独立审核后仍硬性保留外部真实性、实物收货、G1 会计政策和账务发布 NO-GO。完整 A3 验证合成 PG18/HTTP/Chromium/Compose 整体回归，跨事务漂移隐藏金额由本轮真实 Service 单元测试断言；仍不代表真实 Amazon 退款签证。
 
 ## 1. 技术栈与启动事实
 

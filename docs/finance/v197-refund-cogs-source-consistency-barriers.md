@@ -1,6 +1,6 @@
 # V197 · 退款 COGS 冲回的逐笔证据阻断与跨事务来源一致性
 
-**状态：2026-11-22 实施说明。** V197 初始实现 [\`02828d0\`](https://github.com/kunlong-luo/merchivra/commit/02828d0f8f4f23611ddba247ef97abacb2d610d2) 对应 [快速 CI #45020050129](https://github.com/kunlong-luo/merchivra/actions/runs/45020050129) **SUCCESS**；服务级回归及后续完整 A3 应以各自最新精确 main SHA 和实际结果为准。 本次只完善 V170/V63 的只读风险判定，不批准 G1 冲回政策、不新增审批表、不产生库存/COGS/GL 写入。真实 Seller/Ads OAuth 和银行独立核证仍关闭；生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**，`realizedNetProfit=null`。
+**状态：2026-11-22 实施说明。** V197 初始实现 [`02828d0`](https://github.com/kunlong-luo/merchivra/commit/02828d0f8f4f23611ddba247ef97abacb2d610d2) 对应 [快速 CI #45020050129](https://github.com/kunlong-luo/merchivra/actions/runs/45020050129) **SUCCESS**；补充服务级测试与触发完整 A3 的最终提交为 [精确代码 `db9d88b`](https://github.com/kunlong-luo/merchivra/commit/db9d88be81ec326194242f75596661cb950cbea7)，[同 SHA 快 CI #45020338752](https://github.com/kunlong-luo/merchivra/actions/runs/45020338752) **SUCCESS**，[V197 完整 A3 #45020338812（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45020338812) **7/7 SUCCESS**，不存在跳过的 A3 核心任务。Java 单测覆盖跨事务来源改变时隐藏敏感度，合成 A3 验证数据库/HTTP/浏览器链路无回退，不是第三方费用真实性证明。 本次只完善 V170/V63 的只读风险判定，不批准 G1 冲回政策、不新增审批表、不产生库存/COGS/GL 写入。真实 Seller/Ads OAuth 和银行独立核证仍关闭；生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**，`realizedNetProfit=null`。
 
 ## 先检查现有链路而不是再造一套
 
