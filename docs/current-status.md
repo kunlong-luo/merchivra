@@ -14,7 +14,7 @@
 
 > **V199（[精确 `30fd25c` 提交](https://github.com/kunlong-luo/merchivra/commit/30fd25c9205c10234fced28626d69e0df2b81889) 的 [完整 A3 #45022799341（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45022799341) 与 [快速 CI #45022799357](https://github.com/kunlong-luo/merchivra/actions/runs/45022799357) SUCCESS）**：V54 结算报告声明净额可空，原 V198 判定可能在 `declared_net=NULL` 且明细/Finances 相等时误判为三方一致；[V199](finance/v199-settlement-declared-net-fail-closed.md) 保留 NULL/0 区别并返回 `REPORT_DECLARED_NET_UNAVAILABLE`，现有 V56 审核不能审批。合成验收不能替代独立 Amazon/银行验真。
 
-> **V200（本次实现，CI/A3 待验证）**：对历史订单 SKU 映射与按订单当地日期适用的 SKU 成本版本，在原 LATERAL 查询上增加**全候选计数**。多条有效映射或重叠成本区间不能再靠 `ORDER BY … LIMIT 1` 随意选择，应显示明确冲突、隐藏行成本并阻断订单 `COGS_READY_PREVIEW`；仍是成本准备度，不是实物采购批次成本或财务过账。详见 [V200 财务证据](finance/v200-historical-sku-cost-ambiguity.md)。
+> **V200（[精确 V200 代码 `2715529`](https://github.com/kunlong-luo/merchivra/commit/271552911b55a451e66662cdf3aab94c2db21341) · [快速 CI #45023721155 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45023721155) · [完整 A3 #45023721170（7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45023721170)）**：对历史订单 SKU 映射与按订单当地日期适用的 SKU 成本版本，在原 LATERAL 查询上增加**全候选计数**。多条有效映射或重叠成本区间不能再靠 `ORDER BY … LIMIT 1` 随意选择，应显示明确冲突、隐藏行成本并阻断订单 `COGS_READY_PREVIEW`；仍是成本准备度，不是实物采购批次成本或财务过账。详见 [V200 财务证据](finance/v200-historical-sku-cost-ambiguity.md)。正式独立复评为 [70/100](governance/project-scorecard-v200-2026-11-22.md)，不是 G1/生产发布批准。
 
 ## 1. 技术栈与启动事实
 

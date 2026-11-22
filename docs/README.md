@@ -7,7 +7,7 @@
 | 你的问题 | **唯一现行入口** |
 | --- | --- |
 | 这套系统到底已经有什么、什么仍未知？ | [当前事实与验证范围](current-status.md) |
-| 现在项目成熟度是多少、为什么这样评分？ | [2026-11-22 六维评分基线：68/100](governance/project-scorecard-2026-11-22.md) |
+| 现在项目成熟度是多少、为什么这样评分？ | [最新 V200 复评分：70/100](governance/project-scorecard-v200-2026-11-22.md) · [原 68/100 基线](governance/project-scorecard-2026-11-22.md) |
 | 接下来先做哪些业务和证据？ | [唯一 P0 开发计划](roadmap/current-plan.md) |
 | 必须遵守哪些开发/安全规范？ | [AGENTS.md](../AGENTS.md) · [ENG-001 工程实施规范](governance/engineering-standards.md) |
 | 文档怎么更新、什么时候才叫 Accepted/Verified？ | [GOV-001 文档控制](governance/document-control.md) · [DOC-196 查漏补缺](governance/docs-audit-2026-11-22.md) |
@@ -38,6 +38,6 @@
 
 文档修改**直接在 `main`**，完成后至少运行 `python3 scripts/check_docs_consistency_v109.py`、`python3 scripts/check_ci_cadence_v108.py`，核对新 SHA 的快 CI。完整范围与审阅步骤在 [GOV-001](governance/document-control.md)。
 
-**事实提示：** V195 改善了本地 Session 500 的页面与重试，但未找到用户本机 Spring 故障根因；V194 完整 PG18/A3 尚未有本次代码的独立运行。**`realizedNetProfit=null`，公开 GitHub Pages 只是全虚构静态演示。**
+**事实提示：** V195 改善了本地 Session 500 的页面与重试，但未找到用户本机 Spring 故障根因；V194/V105 及 V197–V200 的各自精确 SHA 完整合成 A3 均已通过；不能外推至真实 Amazon/银行或本机登录服务的根因。**`realizedNetProfit=null`，公开 GitHub Pages 只是全虚构静态演示。**
 
-最新财务后端审计：[V200 历史 SKU 映射/成本版本冲突阻断](finance/v200-historical-sku-cost-ambiguity.md)（代码验收待确认）。
+最新财务后端审计：[V200 历史 SKU 映射/成本版本冲突阻断](finance/v200-historical-sku-cost-ambiguity.md)（[精确 V200 代码 `2715529`](https://github.com/kunlong-luo/merchivra/commit/271552911b55a451e66662cdf3aab94c2db21341) · [快速 CI #45023721155 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45023721155) · [完整 A3 #45023721170（7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45023721170)；仍非真实财务核证）。
