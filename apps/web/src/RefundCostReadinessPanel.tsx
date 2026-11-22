@@ -19,6 +19,20 @@ const stateLabel:Record<string,string>={
  STALE:'来源证据缺失/已变更，需重新核对',
  INCOMPLETE_EVIDENCE:'缺少退款项、金额归属或历史成本证据'
 }
+const reversalBarrierLabel:Record<string,string>={
+ REFUND_EVENT_IDENTITY_NOT_IN_SOURCE_SNAPSHOT:'退款事件身份与本次来源快照不一致',
+ REFUND_ORDER_EVIDENCE_NOT_IN_SOURCE_SNAPSHOT:'订单关联与本次来源快照无法确认一致',
+ REFUND_AMOUNT_OR_CURRENCY_CHANGED_SINCE_SNAPSHOT:'证据复核与来源快照金额或币种不一致',
+ REFUND_ITEM_AMOUNT_OR_COST_EVIDENCE_UNAVAILABLE:'退款数量、金额分配或历史成本证据不完整',
+ INDEPENDENT_CURRENT_REFUND_REVIEW_REQUIRED:'缺少当前有效的独立财务复核',
+ REFUND_EVIDENCE_ORIGIN_INCONSISTENT:'来源证据标签不符合当前人工审核链',
+ REFUND_REVIEW_EVIDENCE_NOT_CURRENT:'退款证据已失效或发生变化',
+ RETURN_ITEM_DISPOSITION_UNRESOLVED:'退货商品处置仍为未知',
+ EXTERNAL_REFUND_SOURCE_AUTHENTICITY_UNVERIFIED:'外部退款来源真实性尚未独立认证',
+ PHYSICAL_RETURN_RECEIPT_AND_DISPOSITION_UNVERIFIED:'缺少可信实物签收与处置证明',
+ G1_REFUND_COGS_REVERSAL_POLICY_NOT_APPROVED:'G1 退款成本冲回规则尚未批准',
+ INVENTORY_AND_ACCOUNTING_POSTING_NOT_AUTHORIZED:'库存与会计过账尚未获准'
+}
 /** V170: read-only LIVE source refund risk, not a COGS reversal action. */
 export default function RefundCostReadinessPanel({tenantId,marketplaceId}:{
  tenantId:string;marketplaceId:string
@@ -92,7 +106,10 @@ export default function RefundCostReadinessPanel({tenantId,marketplaceId}:{
         event.currency+' '+event.historicalCostExposure}</td>
        <td>{event.claimedRestockCostSensitivity===null?'不可计算':
         event.currency+' '+event.claimedRestockCostSensitivity}</td>
-       <td>禁止自动冲回（缺实收与独立外部核验）</td>
+       <td><details><summary>禁止自动冲回 · {event.cogsReversalBlockerCodes.length} 项阻断</summary>
+        <ul>{event.cogsReversalBlockerCodes.map(code=>
+         <li key={code}>{reversalBarrierLabel[code]??code}</li>)}</ul>
+       </details></td>
       </tr>)}</tbody></table></div>}
    <div className="sandbox-actions" role="navigation" aria-label="退款成本事件分页">
     <span className="setup-hint">第 {history.length} 页 · 当前页 {data.events.length} 条</span>

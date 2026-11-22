@@ -21,6 +21,9 @@
 
 ## 最新已确认工程技术证据
 
+- **V197（待本轮 SHA 验证）**：在退款 V170/V63 只读 API 增加带符号金额/币种/事件/订单跨事务一致性核对及结构化 COGS 阻断码；配套 Java 单测、Next Zod 合同负例与已有页面展开明细。无新迁移，不启用真实 Amazon/Ads，不能仅因测试通过就允许退款库存/COGS 过账。
+
+
 - **V194/V105 / `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`**：[最终完整 A3 #45018945885（run_attempt=1）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885) **7/7 核心任务 SUCCESS**：真实 PG18/Flyway V105、V103 不可变、V194 NULL-safe 双向配对负例、Session/HTTP、Java/Gradle、Next16/React19/Chromium、Compose 安全与恢复；[同 SHA 快 CI #45018945926](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) **SUCCESS**。全部只含合成数据，不代表外部 Amazon/银行/税/退款 COGS 核证。
 
 - **V195 / `2136375590abaae2373c565a1de930aa4ce45483`**：[快速 CI #45016097852（run_attempt=1）](https://github.com/kunlong-luo/merchivra/actions/runs/45016097852) **SUCCESS**：Java25、Next16/React19/pnpm/Orval、Vitest、Next 与 Vite 构建、Compose；**PG18 完整 job 在快速 CI 中按策略 SKIPPED**。V195 仅改善会话故障 UI，用户本机 HTTP 500 根因未定位。

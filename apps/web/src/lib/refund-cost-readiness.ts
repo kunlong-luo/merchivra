@@ -13,7 +13,8 @@ const source=z.object({
  evidenceGap:z.string(),historicalCostExposure:money.nullable(),
  claimedRestockCostSensitivity:money.nullable(),evidenceCurrent:z.boolean(),
  externalReceiptVerified:z.literal(false),
- actualCogsReversalAllowed:z.literal(false),actualCogsReversal:z.null()
+ actualCogsReversalAllowed:z.literal(false),actualCogsReversal:z.null(),
+ cogsReversalBlockerCodes:z.array(z.string().min(1)).min(1)
 })
 const page=z.object({
  marketplaceId:z.string().uuid(),periodStartUtc:z.string(),

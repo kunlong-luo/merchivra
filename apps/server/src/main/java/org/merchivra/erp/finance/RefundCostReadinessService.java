@@ -47,7 +47,8 @@ public class RefundCostReadinessService {
         String evidenceState,String evidenceGap,
         String historicalCostExposure,String claimedRestockCostSensitivity,
         boolean evidenceCurrent,boolean externalReceiptVerified,
-        boolean actualCogsReversalAllowed,String actualCogsReversal) {}
+        boolean actualCogsReversalAllowed,String actualCogsReversal,
+        List<String> cogsReversalBlockerCodes) {}
     public record Page(String marketplaceId,String periodStartUtc,
         String periodEndExclusiveUtc,List<CurrencyBucket> buckets,
         List<Event> events,boolean hasMore,String nextBeforeAt,String nextBeforeId,
@@ -85,8 +86,10 @@ public class RefundCostReadinessService {
         String state="INCOMPLETE_EVIDENCE",gap="V34_V35_OR_HISTORICAL_COST_NOT_READY";
         String exposure=null,sensitivity=null;
         boolean current=false;
+        RefundRecoveryService.Status review=null;
         try {
             var status=recovery.preview(tenant,mp,src.id());
+            review=status;
             state=status.evidenceCurrent()?status.state():"STALE";
             if("NOT_REQUESTED".equals(status.state()))
                 state="NOT_REQUESTED";
@@ -109,10 +112,24 @@ public class RefundCostReadinessService {
             // An unmatched, uncategorized or historically incomplete LIVE
             // event is a visible risk, not an omitted/zero-cost event.
         }
+        // The source page and V63 probe are intentionally separate reads.
+        // Recheck the frozen source identity before exposing an amount from
+        // another order, currency or changed signed refund. On mismatch
+        // discard the sensitivity and request a fresh independent review.
+        var gate=RefundCogsReversalGateV197.assess(
+            src.id(),review,src.order(),src.currency(),src.signedAmount());
+        if(review!=null && !gate.sourceSnapshotConsistent()) {
+            state="STALE";
+            gap="REFUND_SOURCE_CHANGED_BETWEEN_SNAPSHOT_AND_REVIEW";
+            exposure=null;
+            sensitivity=null;
+            current=false;
+        }
         return new Event(src.id().toString(),
             src.postedAt().toInstant().toString(),src.currency(),
             amount(src.signedAmount()),src.order()==null?null:src.order().toString(),
-            state,gap,exposure,sensitivity,current,false,false,null);
+            state,gap,exposure,sensitivity,current,false,false,null,
+            gate.blockerCodes());
     }
 
     public Page report(UUID tenant,UUID mp,LocalDate from,LocalDate until,
