@@ -12,7 +12,7 @@
 
 > **V198（[精确代码 `11864a7`](https://github.com/kunlong-luo/merchivra/commit/11864a739451f0e91c0bd9639b2c4bfe441b518e) 的 [完整 A3 #45021678686（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45021678686)，及 [同 SHA 快 CI #45021678580](https://github.com/kunlong-luo/merchivra/actions/runs/45021678580) SUCCESS）**：审计 V31 Finances 的 `SETTLEMENT_ID` 存储与 V58 结算报告发现，当同一事件携带多个 Settlement ID、同站点不同报告共用一个结算编号、报告行数缺失或内部混币时，旧比较即使金额相等也可能返回 `SOURCE_AMOUNTS_AGREE_UNVERIFIED`。现已在[原只读比较](finance/v198-settlement-source-claim-integrity.md)补全五个整范围计数及显式阻断状态；V56 双人复核仍复用，不允许人工“金额一致”解除冲突，更不代表真实银行到账。早期实现提交 `f5bc560` 的 [A3 #45021496225](https://github.com/kunlong-luo/merchivra/actions/runs/45021496225) 因旧 Java/Vitest 测试夹具缺新增字段而 FAILED，随后在 `11864a7` 完整修复并 7/7 验收；旧失败保留历史。全部为合成来源，仍不得入账。
 
-> **V199（实施后待精确 SHA 验收）**：V54 结算报告声明净额可空，原 V198 判定可能在 `declared_net=NULL` 且明细/Finances 相等时误判为三方一致；[V199](finance/v199-settlement-declared-net-fail-closed.md) 保留 NULL/0 区别并返回 `REPORT_DECLARED_NET_UNAVAILABLE`，现有 V56 审核不能审批。合成验收不能替代独立 Amazon/银行验真。
+> **V199（[精确 `30fd25c` 提交](https://github.com/kunlong-luo/merchivra/commit/30fd25c9205c10234fced28626d69e0df2b81889) 的 [完整 A3 #45022799341（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45022799341) 与 [快速 CI #45022799357](https://github.com/kunlong-luo/merchivra/actions/runs/45022799357) SUCCESS）**：V54 结算报告声明净额可空，原 V198 判定可能在 `declared_net=NULL` 且明细/Finances 相等时误判为三方一致；[V199](finance/v199-settlement-declared-net-fail-closed.md) 保留 NULL/0 区别并返回 `REPORT_DECLARED_NET_UNAVAILABLE`，现有 V56 审核不能审批。合成验收不能替代独立 Amazon/银行验真。
 
 ## 1. 技术栈与启动事实
 

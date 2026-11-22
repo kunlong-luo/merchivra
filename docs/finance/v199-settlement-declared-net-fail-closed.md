@@ -1,6 +1,6 @@
 # V199 · 结算声明净额缺失不得视为三方一致
 
-**状态：代码实施中，须核对精确 main SHA 的 CI/A3。** V198 已检查结算报告行数、混币、同一 Finances 事件多结算归属及相同编号多报告争议，但 V54 允许原报告 `declared_net` 为 NULL，原 Java 判定仅在有声明金额时比对。这使缺少报告声明净额时，明细和 Finances 金额相等也可能被标成 `SOURCE_AMOUNTS_AGREE_UNVERIFIED`，产生“有三方证据一致”的假阳性。
+**状态：2026-11-22 技术代码与合成 A3 已完成。** [精确 `30fd25c` 提交](https://github.com/kunlong-luo/merchivra/commit/30fd25c9205c10234fced28626d69e0df2b81889) 的 [完整 A3 #45022799341（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45022799341) 与 [快速 CI #45022799357](https://github.com/kunlong-luo/merchivra/actions/runs/45022799357) SUCCESS。 V198 已检查结算报告行数、混币、同一 Finances 事件多结算归属及相同编号多报告争议，但 V54 允许原报告 `declared_net` 为 NULL，原 Java 判定仅在有声明金额时比对。这使缺少报告声明净额时，明细和 Finances 金额相等也可能被标成 `SOURCE_AMOUNTS_AGREE_UNVERIFIED`，产生“有三方证据一致”的假阳性。
 
 ## 修改范围
 

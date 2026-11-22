@@ -21,7 +21,7 @@
 
 ## V199 财务负例验证范围
 
-V199 拒绝 V54 结算 `declared_net=NULL` 被视为三方来源金额一致：Java 的缺值/真零金额负例、Next 状态合同、PG18 TEMP/ROLLBACK 原 SQL 检查、原 V56 独立审批必须继续 fail-closed。最终代码提交需分别核对快速 CI 和完整 A3，未运行前不得宣称通过。
+V199 拒绝 V54 结算 `declared_net=NULL` 被视为三方来源金额一致：Java 的缺值/真零金额负例、Next 状态合同、PG18 TEMP/ROLLBACK 原 SQL 检查、原 V56 独立审批必须继续 fail-closed。本次 [精确 `30fd25c` 提交](https://github.com/kunlong-luo/merchivra/commit/30fd25c9205c10234fced28626d69e0df2b81889) 的 [完整 A3 #45022799341（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45022799341) 与 [快速 CI #45022799357](https://github.com/kunlong-luo/merchivra/actions/runs/45022799357) SUCCESS；合成 PG18 原 SQL 的 NULL 证明与 Java 缺证 fail-closed 负例分开验证，不能冒充真实外部结算认证。
 
 ## 最新已确认工程技术证据
 
