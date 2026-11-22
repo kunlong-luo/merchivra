@@ -125,14 +125,17 @@ SELECT pg_temp.expect_blocked($stmt$
   '00000000-0000-4000-8000-000000000213',0,1,repeat('a',64)
  )
 $stmt$,'finance_profit_report_order_pending_v104');
+-- Test the V1 pair on a legitimate ELIGIBLE transition instead:
+-- a PENDING row with a version also violates the earlier PENDING guard,
+-- so it cannot uniquely prove which CHECK expression rejected it.
 SELECT pg_temp.expect_blocked($stmt$
- INSERT INTO finance_profit_report_order(
-   tenant_id,job_id,order_id,cohort_position,capture_version_v194
- ) VALUES (
-  '00000000-0000-4000-8000-000000000203',
-  '00000000-0000-4000-8000-000000000212',
-  '00000000-0000-4000-8000-000000000214',0,1
- )
+ UPDATE finance_profit_report_order
+ SET state='ELIGIBLE',readiness='ELIGIBLE_PREVIEW',currency_code='USD',
+   reviewed_events=1,signed_sales=100,signed_amazon_fees=-10,
+   signed_fba_fees=-5,provisional_cogs=40,estimated_contribution=45,
+   extract_sha256=repeat('a',64),captured_at=now(),
+   capture_version_v194=1,capture_sha256_v194=NULL
+ WHERE cohort_position=0
 $stmt$,'finance_profit_report_order_capture_pair_v104');
 SELECT pg_temp.expect_blocked($stmt$
  UPDATE finance_profit_report_order

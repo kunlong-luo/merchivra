@@ -29,6 +29,12 @@ Flyway **V104** 对 `finance_profit_report_order` 和 `finance_profit_report_sku
 
 修复更新 `scripts/smoke_cost_allocation_v164.py`：读取 Owner/no-store 的 V194 独立证据分类，断言无伪历史与无指纹损坏、缺完整基线保持拒绝，并验证匿名/错误站点/错误任务拒绝和 V188 的 HTTP 409 稳定性。另将 `scripts/smoke_profit_capture_v194.sql` 接到完整 PG18 作业，使用回滚的 TEMP V62 表检查真实 Flyway V104 四列、三个检查约束、旧行不自动升级、版本/摘要双字段配对、PENDING 禁指纹、V103 冻结后不可修改。首次 A3 在旧 V164 断言处中止，**尚未执行新 V194 专项 SQL**，必须在新精确 SHA 完整重跑才可评价其是否通过。
 
+### V194B A3 第二轮发现的约束断言问题
+
+[`18f3213`](https://github.com/kunlong-luo/merchivra/commit/18f3213ba3374a72378eedd9d4572776174c5380) 的 [完整 A3 #45017957824](https://github.com/kunlong-luo/merchivra/actions/runs/45017957824) 已越过 V164/188 的旧断言，实际运行到新 V104 SQL 脚本，但在第 136 行失败：一个 `PENDING` 行同时违反 `finance_profit_report_order_pending_v104` 和 `capture_pair_v104`，PG18 先报告 PENDING 约束，旧测试却只匹配 pair 错误。**非法记录已被数据库拒绝**，问题是负例没有单独隔离所测试的约束。
+
+V194C 将缺哈希负例改为正常 `PENDING → ELIGIBLE` 捕获转移，只让版本/摘要配对检查失败；PENDING 禁止提前指纹另设独立负例。不能因为曾发生两个失败就写成 V194 完整验收通过，新精确 SHA 的 PG18/A3 仍须查看实际运行结论。
+
 ## 测试与限制
 
 `ProfitCaptureFingerprintV194Test` 覆盖指纹输入顺序、非英文和特殊 SKU、固定六位金额、不可舍入、跨租户/批次、旧数据不可升级、SKU 缺失/篡改、未完成与 BLOCKED 场景，另验证 V104 及服务门禁代码。不应以静态或 Mockito 单测代替 PostgreSQL 18 Flyway + 合成 Owner HTTP 的专项回归；后续完整 A3 必须记录精确 main SHA、run attempt、结果和失败修复情况。

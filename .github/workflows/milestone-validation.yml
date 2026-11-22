@@ -1,3 +1,5 @@
+# V194C: V104 PG18 regression check now isolates the missing-hash pair
+# violation from the PENDING guard; both invalid states must be rejected.
 # V194B: exact-main rerun after updating the legacy V164/V188 synthetic
 # waterfall test: an incomplete newly created V64 cohort must return 409
 # under the new independent V194 fingerprint gate, never an unverified 200.
@@ -200,7 +202,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V194B-A3-failclosed-waterfall-and-PG18-capture' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V194C-A3-distinct-V104-checks-and-immutable-V64' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -285,6 +287,7 @@ on:
           - V193-A3-V64-frozen-profit-evidence-immutable-guards
           - V194-A3-PG18-versioned-frozen-profit-capture
           - V194B-A3-failclosed-waterfall-and-PG18-capture
+          - V194C-A3-distinct-V104-checks-and-immutable-V64
 
 permissions:
   contents: read
