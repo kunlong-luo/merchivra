@@ -115,8 +115,10 @@ export default function PeriodProfitReportPanel({tenantId,marketplaceId}:{
     <div className="mv3-profit-audit-lead">
      <span className="mv3-profit-kicker">V64 · ORIGINAL-CURRENCY CONTRIBUTION</span>
      <h3>本期来源贡献（非最终净利润）</h3>
-     <strong className="mv3-profit-contribution">{j.state==='SUCCEEDED'?
-       j.currency+' '+current.totals.contribution:'候选订单尚未全部完成'}</strong>
+     <strong className="mv3-profit-contribution">{j.state==='SUCCEEDED'&&
+       current.totals.contribution!==null?
+       j.currency+' '+current.totals.contribution:
+       '捕获证据未通过，金额已阻断'}</strong>
      <p>只有候选订单冻结处理完成时才展示本期已核对贡献；
       缺失费用不自动记零，财务来源仍未完整认证、银行到账未核验。</p>
     </div>
@@ -153,7 +155,7 @@ export default function PeriodProfitReportPanel({tenantId,marketplaceId}:{
      ['历史商品成本',current.totals.provisionalCogs],
      ['仅合格订单贡献合计',current.totals.contribution]
     ].map(([label,value])=><div key={label}><span>{label} · {j.currency}</span>
-     <strong>{value}</strong></div>)}
+     <strong>{value??'V194 证据未通过 · 金额未知'}</strong></div>)}
    </div>
    <PeriodProfitWaterfallPanelV188 tenantId={tenantId}
     marketplaceId={marketplaceId} reportId={j.id}/>

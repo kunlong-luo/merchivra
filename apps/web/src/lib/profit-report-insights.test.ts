@@ -10,8 +10,8 @@ const make=(changes:{
  state?:'READY'|'RETRY'|'SUCCEEDED'|'PAUSED',id?:string,
  currency?:string,after?:string,before?:string,
  totalOrders?:number,eligibleOrders?:number,blockedOrders?:number,
- totalsCurrency?:string,sales?:string,fees?:string,cogs?:string,
- contribution?:string
+ totalsCurrency?:string,sales?:string|null,fees?:string|null,
+ cogs?:string|null,contribution?:string|null
 }={})=>({
  job:{id:changes.id??'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   state:changes.state??'SUCCEEDED',
@@ -20,9 +20,11 @@ const make=(changes:{
   totalOrders:changes.totalOrders??4,eligibleOrders:changes.eligibleOrders??3,
   blockedOrders:changes.blockedOrders??1},
  totals:{currency:changes.totalsCurrency??changes.currency??'USD',
-  signedSales:changes.sales??'100.00',signedAmazonFees:changes.fees??'-20.00',
-  signedFbaFees:'-5.00',provisionalCogs:changes.cogs??'-40.00',
-  contribution:changes.contribution??'35.00'}
+  signedSales:changes.sales===undefined?'100.00':changes.sales,
+  signedAmazonFees:changes.fees===undefined?'-20.00':changes.fees,
+  signedFbaFees:'-5.00',
+  provisionalCogs:changes.cogs===undefined?'-40.00':changes.cogs,
+  contribution:changes.contribution===undefined?'35.00':changes.contribution}
 }) as PeriodProfitReport
 
 describe('V180 profit evidence audit comparisons',()=>{
@@ -57,6 +59,13 @@ describe('V180 profit evidence audit comparisons',()=>{
   expect(result.currency).toBe('USD')
   expect(result.rows.find(x=>x.label.includes('贡献'))?.delta).toBe('+1.25')
   expect(result.rows.find(x=>x.label.includes('有符号费用'))?.delta).toBe('0')
+ })
+ it('V194 blocks comparing even completed reports if any captured amount is null',()=>{
+  const a=make({sales:null})
+  const b=make({id:'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'})
+  const result=compareFrozenReports(a,b)
+  expect(result.comparable).toBe(false)
+  expect(result.reason).toContain('V194')
  })
  it('counts only the loaded page, not all 5,000 frozen candidates',()=>{
   const p=summarizeCandidatePage([

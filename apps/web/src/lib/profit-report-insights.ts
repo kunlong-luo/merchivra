@@ -62,7 +62,10 @@ export function compareFrozenReports(current:PeriodProfitReport,baseline:PeriodP
   a.after!==b.after||a.before!==b.before?'不同 UTC 期间：禁止将不同月份当作版本差额':
   a.totalOrders!==b.totalOrders||a.eligibleOrders!==b.eligibleOrders||
    a.blockedOrders!==b.blockedOrders?
-   '候选/合格/阻断订单数量不同：版本覆盖范围不具备可比性':''
+   '候选/合格/阻断订单数量不同：版本覆盖范围不具备可比性':
+  snapshotFields.some(field=>current.totals[field.key]===null||
+   baseline.totals[field.key]===null)?
+   'V194 冻结捕获未经独立校验：金额未知，禁止计算版本差额':''
  if(reason)return {comparable:false as const,reason}
  return {
   comparable:true as const,reason:'',
@@ -72,7 +75,7 @@ export function compareFrozenReports(current:PeriodProfitReport,baseline:PeriodP
   rows:snapshotFields.map(field=>({
    label:field.label,current:current.totals[field.key],
    baseline:baseline.totals[field.key],
-   delta:decimalDifference(current.totals[field.key],baseline.totals[field.key])
+   delta:decimalDifference(current.totals[field.key]!,baseline.totals[field.key]!)
   }))
  }
 }

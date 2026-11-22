@@ -37,8 +37,11 @@ export const periodProfitReport=z.object({
   currency:z.string().length(3),eligibleOrders:z.number().int().nonnegative(),
   blockedOrders:z.number().int().nonnegative(),
   reviewedEvents:z.number().int().nonnegative(),
-  signedSales:money,signedAmazonFees:money,signedFbaFees:money,
-  provisionalCogs:money,contribution:money
+  // V194: an incomplete/legacy/mismatched capture must remain UNKNOWN,
+  // not a fabricated monetary zero. This does not certify net profit.
+  signedSales:money.nullable(),signedAmazonFees:money.nullable(),
+  signedFbaFees:money.nullable(),provisionalCogs:money.nullable(),
+  contribution:money.nullable()
  }),skus:z.array(sku).max(1000),orders:z.array(order).max(100),
  orderOffset:z.number().int().nonnegative(),
  hasMore:z.boolean()

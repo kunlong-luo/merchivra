@@ -37,6 +37,16 @@ describe('V64 durable period contribution API',()=>{
   expect(()=>periodProfitReport.parse({...report,job:{
    ...job,ledgerPosted:true}})).toThrow()
  })
+ it('V194 retains unknown monetary totals as null without substituting zero',()=>{
+  const blocked={...report,totals:{...report.totals,
+    signedSales:null,signedAmazonFees:null,signedFbaFees:null,
+    provisionalCogs:null,contribution:null}}
+  const read=periodProfitReport.parse(blocked)
+  expect(read.totals.contribution).toBeNull()
+  expect(read.totals.signedSales).toBeNull()
+  expect(()=>periodProfitReport.parse({...blocked,totals:{
+    ...blocked.totals,contribution:'NaN'}})).toThrow()
+ })
  it('reads immutable extracted source amounts without browser tenant',async()=>{
   const mock=vi.fn().mockResolvedValue(new Response(JSON.stringify(report),{
    status:200,headers:{'content-type':'application/json'}
