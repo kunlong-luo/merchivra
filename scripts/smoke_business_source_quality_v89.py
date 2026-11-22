@@ -147,21 +147,37 @@ job=str(uuid4())
 request_key=str(uuid4())
 source_order=sql(f"""SELECT id FROM sales_order WHERE tenant_id='{tenant}'
  AND seller_marketplace_id='{mp}' ORDER BY id LIMIT 1""")
+# V193: the synthetic V89 quality fixture must follow V64's real capture
+# lifecycle. A pre-SUCCEEDED job and pre-ELIGIBLE row bypass V103's
+# immutable-cohort checks and are intentionally forbidden.
 sql(f"""INSERT INTO finance_profit_report_job(
  request_key,id,tenant_id,seller_marketplace_id,created_by,
  period_after,period_before,currency_code,state,
- total_orders,processed_orders,created_at,completed_at)
+ total_orders,processed_orders,created_at)
  VALUES('{request_key}','{job}','{tenant}','{mp}','{actor}',
  DATE '2026-11-01',DATE '2026-11-04','{site['currency']}',
- 'SUCCEEDED',1,1,now()+interval '10 minutes',now()+interval '10 minutes')""")
+ 'READY',1,0,now()+interval '10 minutes')""")
 sql(f"""INSERT INTO finance_profit_report_order(
- tenant_id,job_id,order_id,cohort_position,state,readiness,currency_code,
- signed_sales,signed_amazon_fees,signed_fba_fees,provisional_cogs,
- estimated_contribution,extract_sha256,captured_at)
- VALUES('{tenant}','{job}','{source_order}',0,'ELIGIBLE',
- 'REVIEWED_SOURCE_PREVIEW','{site['currency']}',
- 120.000000,-10.000000,-5.000000,70.000000,35.000000,
- repeat('a',64),now())""")
+ tenant_id,job_id,order_id,cohort_position)
+ VALUES('{tenant}','{job}','{source_order}',0)""")
+sql(f"""UPDATE finance_profit_report_order SET
+ state='ELIGIBLE',readiness='REVIEWED_SOURCE_PREVIEW',
+ currency_code='{site['currency']}',signed_sales=120.000000,
+ signed_amazon_fees=-10.000000,signed_fba_fees=-5.000000,
+ provisional_cogs=70.000000,estimated_contribution=35.000000,
+ extract_sha256=repeat('a',64),captured_at=now()
+ WHERE tenant_id='{tenant}' AND job_id='{job}'
+   AND order_id='{source_order}' AND state='PENDING'""")
+sql(f"""INSERT INTO finance_profit_report_sku(
+ tenant_id,job_id,order_id,internal_sku,units,signed_sales,
+ signed_amazon_fees,signed_fba_fees,provisional_cogs,estimated_contribution)
+ VALUES('{tenant}','{job}','{source_order}','V89-QUALITY-SKU',1,
+ 120.000000,-10.000000,-5.000000,70.000000,35.000000)""")
+sql(f"""UPDATE finance_profit_report_job
+ SET state='SUCCEEDED',processed_orders=1,
+     completed_at=now()+interval '10 minutes',updated_at=now()
+ WHERE tenant_id='{tenant}' AND seller_marketplace_id='{mp}'
+   AND id='{job}' AND state='READY'""")
 ready=call("/api/v1/business-overview")
 main=next(x for x in ready["marketplaces"] if x["id"]==mp)
 report=main["latestReport"]
