@@ -1,40 +1,70 @@
 package org.merchivra.erp.finance;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 import org.junit.jupiter.api.Test;
-import org.springframework.jdbc.core.JdbcTemplate;
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
 
 class SettlementReportComparisonServiceTest {
-    private static BigDecimal amount(String s){return s==null?null:new BigDecimal(s);}
-
-    @Test
-    void doesNotTreatExactAmountsAsBankPaymentOrFullReconciliation(){
-        assertEquals("SOURCE_AMOUNTS_AGREE_UNVERIFIED",
-            SettlementReportComparisonService.decision(
-                amount("17.50"),amount("17.5000"),amount("17.50"),2,0));
-        assertEquals("NO_FINANCES_SETTLEMENT_REFERENCE",
-            SettlementReportComparisonService.decision(
-                null,amount("17.50"),null,0,0));
-        assertEquals("SOURCE_TOTAL_DIFFERENCE",
-            SettlementReportComparisonService.decision(
-                null,amount("17.50"),amount("17.00"),2,0));
-        assertEquals("CURRENCY_CONFLICT",
-            SettlementReportComparisonService.decision(
-                null,amount("17.50"),amount("17.50"),1,1));
-        assertEquals("REPORT_INTERNAL_DIFFERENCE",
-            SettlementReportComparisonService.decision(
-                amount("20.00"),amount("17.50"),amount("17.50"),2,0));
-        assertEquals("REPORT_DETAIL_INCOMPLETE",
-            SettlementReportComparisonService.decision(
-                null,null,amount("17.50"),2,0));
+    private static BigDecimal amount(String s) {
+        return s==null?null:new BigDecimal(s);
+    }
+    private static String decision(String declared,String report,String finance,
+        long matching,long otherCurrency) {
+        return SettlementReportComparisonService.decision(amount(declared),
+            amount(report),amount(finance),matching,otherCurrency,
+            2,2,0,0,0);
     }
 
     @Test
-    void exactReferenceComparisonNeverSumsUnrelatedManualOrOtherTenantEvents(){
+    void matchingAmountsAreNotBankReconciliationOrExternalVerification() {
+        assertEquals("SOURCE_AMOUNTS_AGREE_UNVERIFIED",
+            decision("17.50","17.5000","17.50",2,0));
+        assertEquals("NO_FINANCES_SETTLEMENT_REFERENCE",
+            decision(null,"17.50",null,0,0));
+        assertEquals("SOURCE_TOTAL_DIFFERENCE",
+            decision(null,"17.50","17.00",2,0));
+        assertEquals("CURRENCY_CONFLICT",
+            decision(null,"17.50","17.50",1,1));
+        assertEquals("REPORT_INTERNAL_DIFFERENCE",
+            decision("20.00","17.50","17.50",2,0));
+        assertEquals("REPORT_DETAIL_INCOMPLETE",
+            decision(null,null,"17.50",2,0));
+    }
+
+    private static String evidenceStatus(long expected,long actual,
+        long foreignLines,long multipleFinancesReferences,long sharedReports) {
+        return SettlementReportComparisonService.decision(amount("17.50"),
+            amount("17.50"),amount("17.50"),2,0,expected,actual,
+            foreignLines,multipleFinancesReferences,sharedReports);
+    }
+
+    @Test
+    void immutableReportLineCountMismatchCannotMasqueradeAsEqualAmounts() {
+        assertEquals("REPORT_LINE_COUNT_MISMATCH",evidenceStatus(2,1,0,0,0));
+        assertEquals("REPORT_LINE_COUNT_MISMATCH",evidenceStatus(2,3,0,0,0));
+        assertEquals("REPORT_LINE_COUNT_MISMATCH",evidenceStatus(0,0,0,0,0));
+    }
+
+    @Test
+    void mixedCurrencyLinesCannotPassEvenIfArithmeticSumsMatch() {
+        assertEquals("REPORT_LINE_CURRENCY_CONFLICT",
+            evidenceStatus(2,2,1,0,0));
+    }
+
+    @Test
+    void independentlyMatchingTotalsCannotClearMultiSettlementAttribution() {
+        assertEquals("FINANCES_EVENT_MULTI_SETTLEMENT_CLAIM",
+            evidenceStatus(2,2,0,1,0));
+        assertEquals("SETTLEMENT_REFERENCE_SHARED_REPORTS",
+            evidenceStatus(2,2,0,0,1));
+        assertEquals("FINANCES_EVENT_MULTI_SETTLEMENT_CLAIM",
+            evidenceStatus(2,2,0,2,3));
+        assertEquals("SOURCE_AMOUNTS_AGREE_UNVERIFIED",
+            evidenceStatus(2,2,0,0,0));
+    }
+
+    @Test
+    void allEvidenceCountsComeFromTenantMarketplaceBoundedScope() {
         String sql=SettlementReportComparisonService.COMPARISON_SQL;
         assertTrue(sql.contains("r.tenant_id=? AND r.seller_marketplace_id=? AND r.id=?"));
         assertTrue(sql.contains("ref.tenant_id=r.tenant_id"));
@@ -44,5 +74,18 @@ class SettlementReportComparisonServiceTest {
         assertTrue(sql.contains("f.source_family='SPAPI_FINANCES'"));
         assertTrue(sql.contains("f.data_origin='LIVE'"));
         assertTrue(sql.contains("f.currency_code=r.statement_currency"));
+        assertTrue(sql.contains("r.line_count AS expected_line_count"));
+        assertTrue(sql.contains("entry.report_id=r.id"));
+        assertTrue(sql.contains("entry.currency_code<>r.statement_currency"));
+        assertTrue(sql.contains("competing.tenant_id=r.tenant_id"));
+        assertTrue(sql.contains("competing.seller_marketplace_id=r.seller_marketplace_id"));
+        assertTrue(sql.contains("competing.settlement_reference=r.settlement_reference"));
+        assertTrue(sql.contains("other.tenant_id=ref.tenant_id"));
+        assertTrue(sql.contains("other.event_id=ref.event_id"));
+        assertTrue(sql.contains("other.reference_kind='SETTLEMENT_ID'"));
+        assertTrue(sql.contains("other.reference_value<>ref.reference_value"));
+        // One SQL statement gives the evidence counts a single PG snapshot.
+        assertFalse(sql.contains("UPDATE "));
+        assertFalse(sql.contains("INSERT "));
     }
 }

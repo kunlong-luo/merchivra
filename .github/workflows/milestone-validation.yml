@@ -1,3 +1,6 @@
+# V198: full exact-main A3 checks multi-settlement source claims,
+# repeated settlement report identities, and PG18 source completeness.
+# No real Amazon/Ads/Bank access or financial posting.
 # V197: exact-main A3 for read-only V170/V63 refund source snapshot parity,
 # COGS reversal hard blockers, PG18 HTTP/Next and no accounting release.
 # Only synthetic data; real Seller/Ads OAuth and production #104 remain OFF.
@@ -210,7 +213,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V197-A3-refund-source-parity-and-cogs-barriers' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V198-A3-settlement-identity-and-duplicate-source-claims' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -299,6 +302,7 @@ on:
           - V194D-A3-V105-strict-null-safe-fingerprint-pairs
           - V194E-A3-strict-fingerprint-and-browser-route-recheck
           - V197-A3-refund-source-parity-and-cogs-barriers
+          - V198-A3-settlement-identity-and-duplicate-source-claims
 
 permissions:
   contents: read

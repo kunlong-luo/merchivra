@@ -18,6 +18,14 @@ describe('Settlement report review integrity',()=>{
   expect(()=>sourceReview.parse({...body,ledgerPosted:true})).toThrow()
   expect(()=>sourceReview.parse({...body,sourceState:'BANK_PAID'})).toThrow()
  })
+ it('V198 exposes conflicting settlement evidence without pretending it is approved',()=>{
+  expect(sourceReview.parse({...body,
+   sourceState:'FINANCES_EVENT_MULTI_SETTLEMENT_CLAIM'}).sourceState)
+   .toBe('FINANCES_EVENT_MULTI_SETTLEMENT_CLAIM')
+  expect(sourceReview.parse({...body,
+   sourceState:'SETTLEMENT_REFERENCE_SHARED_REPORTS'}).evidenceCurrent).toBe(false)
+  expect(()=>sourceReview.parse({...body,sourceState:'BANK_VERIFIED'})).toThrow()
+ })
  it('reads only the selected marketplace and report without browser tenantId',async()=>{
   const mock=vi.fn().mockResolvedValue({ok:true,json:async()=>body})
   vi.stubGlobal('fetch',mock)

@@ -323,6 +323,12 @@ jobs:
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='105' AND success")" = "1"
           psql -h 127.0.0.1 -U merchivra -d merchivra -v ON_ERROR_STOP=1 \
             -f scripts/smoke_profit_capture_v194.sql
+          # V198: execute the EXACT SettlementReportComparisonService SQL in
+          # PG18 TEMP fixtures. Prevent an event claiming two settlements or a
+          # report reference reused by two docs from appearing reconciled;
+          # detect missing zero-valued lines and mixed-currency report rows.
+          # This never mutates public or production finance tables.
+          MERCHIVRA_V198_DISPOSABLE_ONLY=true python3 scripts/smoke_settlement_source_identity_v198.py
           # The new Owner-only endpoint must never disclose V194 evidence to a guest.
           capture_anon_code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/capture-verification/00000000-0000-4000-8000-000000000202)

@@ -34,3 +34,5 @@
 原始评分 **68/100** 不回写、不自动上调：[`9cdb926`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 已经取得 [完整 A3 #45018945885](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885) **7/7 核心 SUCCESS**、[同 SHA 快 CI #45018945926](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) SUCCESS。真实 PG18 发现 V104 可放行半指纹，Flyway V105 修复并通过双向负例；成功验证增加了工程可信度，但不等于有真实 Amazon/Ads/银行费用或退款 COGS、G1/G2/G3、生产许可。下一次正式复评分按同一六维量表审议，不能因为本次测试成功就将财务真实性 10/25 自动提分。
 
 **V197 新的工程证据（不追溯修改评分）**：[精确代码 `db9d88b`](https://github.com/kunlong-luo/merchivra/commit/db9d88be81ec326194242f75596661cb950cbea7) 的 [同 SHA 快 CI #45020338752](https://github.com/kunlong-luo/merchivra/actions/runs/45020338752) 与 [V197 完整 A3 #45020338812（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45020338812) 均成功。退款 COGS 只读来源核对和结构化阻断补充了真实工程覆盖，但独立外部费用验真、退款实收/过账与 G1/生产批准仍未完成，基线总分仍为 **68/100**。
+
+**V198 执行状态**：继续补强结算报告与 Finances 来源多重归属的只读证据阻断，检验同一 Settlement ID/交易归属冲突时不能把金额相等当作对账事实。成果仍是本地合成技术控制，不改变 2026-11-22 **68/100** 的外部费用真实性、退款 COGS 和生产签署扣分。

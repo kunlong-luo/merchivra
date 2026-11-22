@@ -1,6 +1,6 @@
 # Merchivra · 当前状态与验收边界
 
-> **CURRENT · 2026-11-22 / V197 退款 COGS 阻断、V195 UI + V194 财务。** `main` 已在 [`2136375`](https://github.com/kunlong-luo/merchivra/commit/2136375590abaae2373c565a1de930aa4ce45483) 完成 V195 本地登录服务不可用的错误分类、友好界面及回归测试；该 SHA 的 [快速 CI #45016097852](https://github.com/kunlong-luo/merchivra/actions/runs/45016097852) **SUCCESS**（Java25、React/Next16、pnpm/Orval/Vitest、Compose）。**用户本机 HTTP 500 根因尚未定位**；界面修复不等于 Spring/PG18 服务故障修复。参见 [排错指南](development.md#本地启动时显示服务暂时未就绪)。
+> **CURRENT · 2026-11-22 / V198 结算多重归属阻断、V197 退款、V195 UI、V194 财务。** `main` 已在 [`2136375`](https://github.com/kunlong-luo/merchivra/commit/2136375590abaae2373c565a1de930aa4ce45483) 完成 V195 本地登录服务不可用的错误分类、友好界面及回归测试；该 SHA 的 [快速 CI #45016097852](https://github.com/kunlong-luo/merchivra/actions/runs/45016097852) **SUCCESS**（Java25、React/Next16、pnpm/Orval/Vitest、Compose）。**用户本机 HTTP 500 根因尚未定位**；界面修复不等于 Spring/PG18 服务故障修复。参见 [排错指南](development.md#本地启动时显示服务暂时未就绪)。
 >
 > **V194 / Flyway V104 + V105 严格修补**：版本化 V1 订单/SKU 捕获 SHA-256、独立读时从冻结证据复算，以及 V64 汇总/CSV、V188 瀑布 fail-closed 已在 [`61c8678`](https://github.com/kunlong-luo/merchivra/commit/61c8678288697d20476c44478fafae8bd7739349) 及 [`9d4ebad`](https://github.com/kunlong-luo/merchivra/commit/9d4ebadb7abe45369ea55a7bb6c33b09e920d985) 交付；[快速 CI #45014853040](https://github.com/kunlong-luo/merchivra/actions/runs/45014853040) **SUCCESS**，先前真实 PG18 A3 发现 V104 的 NULL/UNKNOWN CHECK 漏洞，已新增 V105 显式非空约束，**已由[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926)验收**。旧 `extract_sha256` 不能当 V1 指纹，更不能当外部 Amazon 签章。见 [V194 证据边界](finance/v194-versioned-profit-capture-fingerprints.md)。
 >
@@ -9,6 +9,8 @@
 > **全局安全结论**：pre-alpha，真实 Seller/Ads OAuth、真实平台/银行来源核验、退款 COGS 与 G1/DEC-06/07/08 仍关闭或未批准；`realizedNetProfit=null`，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。文档规范以 [ENG-001](governance/engineering-standards.md) 和 [GOV-001](governance/document-control.md) 为准，不能从合成 CI 推出真实上线。
 
 > **V197（[精确代码 `db9d88b`](https://github.com/kunlong-luo/merchivra/commit/db9d88be81ec326194242f75596661cb950cbea7) 的 [V197 完整 A3 #45020338812（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45020338812) 与 [同 SHA 快 CI #45020338752](https://github.com/kunlong-luo/merchivra/actions/runs/45020338752) 均已通过）**：在现有 V170/V63 退款只读准备度上增加 [逐事件 COGS 冲回阻断原因与跨事务来源一致性核验](finance/v197-refund-cogs-source-consistency-barriers.md)。比对原 Finances 退款事件、人工订单、原币、带符号金额；来源不一致时展示 STALE、隐藏不可信的成本敏感度，不自动回补库存/过账。人工独立审核后仍硬性保留外部真实性、实物收货、G1 会计政策和账务发布 NO-GO。完整 A3 验证合成 PG18/HTTP/Chromium/Compose 整体回归，跨事务漂移隐藏金额由本轮真实 Service 单元测试断言；仍不代表真实 Amazon 退款签证。
+
+> **V198（本轮代码和 PG18/A3 待精确 SHA 验收）**：审计 V31 Finances 的 `SETTLEMENT_ID` 存储与 V58 结算报告发现，当同一事件携带多个 Settlement ID、同站点不同报告共用一个结算编号、报告行数缺失或内部混币时，旧比较即使金额相等也可能返回 `SOURCE_AMOUNTS_AGREE_UNVERIFIED`。现已在[原只读比较](finance/v198-settlement-source-claim-integrity.md)补全五个整范围计数及显式阻断状态；V56 双人复核仍复用，不允许人工“金额一致”解除冲突，更不代表真实银行到账。精确结果以本轮 CI/A3 为准。
 
 ## 1. 技术栈与启动事实
 

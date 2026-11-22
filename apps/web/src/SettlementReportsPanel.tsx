@@ -63,12 +63,22 @@ export default function SettlementReportsPanel({tenantId,marketplaceId,connected
        不同币种的来源交易 {compare.data.otherCurrencyTransactionCount} 笔。
        状态：<strong>{({
         REPORT_DETAIL_INCOMPLETE:'报表明细不完整',
+        REPORT_LINE_COUNT_MISMATCH:'实际结算行数与导入快照不一致，禁止信任合计',
+        REPORT_LINE_CURRENCY_CONFLICT:'报告明细有跨币种记录，禁止合并',
+        FINANCES_EVENT_MULTI_SETTLEMENT_CLAIM:'同一 Finances 交易关联多个结算编号，归属冲突',
+        SETTLEMENT_REFERENCE_SHARED_REPORTS:'同一结算编号关联多份报告，需独立排重',
         REPORT_INTERNAL_DIFFERENCE:'报告行合计与报表声明金额不同',
         CURRENCY_CONFLICT:'存在跨币种来源，禁止合并',
         NO_FINANCES_SETTLEMENT_REFERENCE:'没有精确 Settlement ID 来源证据',
         SOURCE_TOTAL_DIFFERENCE:'两种来源有符号金额不一致',
         SOURCE_AMOUNTS_AGREE_UNVERIFIED:'来源有符号金额一致，但仍需人工验真'
        } as Record<string,string>)[compare.data.state]??compare.data.state}</strong></p>
+     <p className="setup-hint">
+      报告预期行数 {compare.data.expectedReportLineCount}，实际 {compare.data.actualReportLineCount}；
+      报告内跨币种行 {compare.data.foreignCurrencyReportLineCount}；
+      多结算编号的 Finances 来源事件 {compare.data.multiplyReferencedFinancesEventCount}；
+      同编号其他报告 {compare.data.otherReportSameSettlementCount}。
+      以上均为本地来源冲突检查，不证明第三方结算或银行已到账。</p>
      <p className="setup-hint">仅比较来源，不自动关联交易、不产生利润或会计凭证，也不代表银行已到账。</p>
     </div>}
    {compare.data&&<SettlementSourceReviewPanel key={selected}

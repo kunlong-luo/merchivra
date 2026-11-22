@@ -22,7 +22,7 @@
 | --- | --- | --- |
 | 技术架构与 API | [整体架构](architecture/overview.md) · [真实 Springdoc/Orval 与早期设计区分](api/README.md) | 不从历史 G2 草案生成线上客户端；Next 默认，Vite 只回退 |
 | 经营利润的核心目标 | [财务规则（G1 待批准）](product/finance-rulebook.md) · [全成本覆盖 V162](finance/full-cost-coverage-v162.md) | 已知范围贡献、预览≠经审净利润 |
-| 费用来源与结算证据 | [结算身份 V181](finance/v181-immutable-settlement-line-identity.md) · [归属 V182](finance/v182-settlement-attribution-evidence.md) · [整期阻断 V183](finance/v183-full-period-profit-evidence-gates.md) | 人工审核和本地 SHA 不认证第三方费用 |
+| 费用来源与结算证据 | [V198 多 Settlement ID / 同编号报告冲突](finance/v198-settlement-source-claim-integrity.md) · [结算身份 V181](finance/v181-immutable-settlement-line-identity.md) · [归属 V182](finance/v182-settlement-attribution-evidence.md) · [整期阻断 V183](finance/v183-full-period-profit-evidence-gates.md) | 人工审核和本地 SHA 不认证第三方费用 |
 | 成本防重与利润展示 | [跨月 V185](finance/v185-original-currency-period-cost-preview.md) · [唯一归属 V186](finance/v186-single-cost-source-ownership-bridge.md) · [跨源风险 V187](finance/v187-full-period-cross-source-risk.md) · [瀑布 V188](finance/v188-period-profit-cost-waterfall-preview.md) | `APPROVED_UNVERIFIED` 不入账 |
 | **冻结订单/SKU 利润证据** | [数据库不变性 V193](finance/v193-frozen-profit-snapshot-database-guards.md) · [独立重算 V194](finance/v194-versioned-profit-capture-fingerprints.md) | 历史旧摘要不能冒充 V1；V194 仍待自己的完整 PG18 A3 |
 | 退货/WMS | [退款成本就绪 V170](finance/refund-cost-readiness-v170.md) · [V197 退款 COGS 阻断与来源一致性](finance/v197-refund-cogs-source-consistency-barriers.md) · [外部主体信任边界](finance/wms-operator-trust-contract-v175-b.md) | B2/B3 外部身份、物理实收、COGS 回转尚不完整 |

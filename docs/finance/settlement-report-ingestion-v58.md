@@ -1,3 +1,5 @@
+> **历史说明（V58，现行开发以 [AGENTS](../../AGENTS.md)、[当前计划](../roadmap/current-plan.md) 为准）**：原文如出现旧包管理命令，仅是当时记录；现在 Web 唯一包管理器是 **pnpm**，Next.js 16 是默认。V198 最新多重结算归属和同报告编号冲突检查见 [V198](v198-settlement-source-claim-integrity.md)，勿将 V58 的“尚缺”视为全仓现状。
+
 # V58 · Amazon Reports 结算明细的只读获取与隔离来源入库
 
 ## 完成范围与尚未完成
@@ -22,7 +24,7 @@
 
 - Java：`cd apps/server && ./gradlew test jacocoTestReport`
 - PG18：V54 Flyway 真迁移启动；复合 Tenant/Marketplace 外键与不可覆盖报告 ID 约束。
-- React 19：`cd apps/web && npm ci && npm run test && npm run build`
+- React 19（**更新后的现行指令**）：`cd apps/web && pnpm install --frozen-lockfile && pnpm test && pnpm build`
 - 当前仅离线解析、SDK 签名编译、Mock 与安全边界测试；**不代表真实 Amazon 下载成功**。你决定在本地授权完成以后再启用生产调用。
 
 ## V58 尚需继续开发（不可冒称已完成）
