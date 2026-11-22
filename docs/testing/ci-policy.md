@@ -28,11 +28,11 @@ V199 拒绝 V54 结算 `declared_net=NULL` 被视为三方来源金额一致：J
 后端 `OrderCostEngineTest` 负例检测多映射、重叠成本区间、候选数未知，且任何歧义不能进入 `provisionalCost`；真实 PG18 合成测试 `scripts/smoke_order_cost_ambiguity_v200.py` 在 TEMP/ROLLBACK 中运行同一 Java SQL 并检查正常、重叠、缺失情形。Next 原有订单成本面板显示清晰阻断原因。精确 V200 源码的完整 A3 已通过 7/7；上述负例是隔离合成数据库技术验证，不代表外部 Amazon 单据、批次实收或实际会计放行。
 
 
-## V201 跨事件退货数量读时阻断（待验收）
+## V201 跨事件退货数量读时阻断（[精确代码 `c47873c`](https://github.com/kunlong-luo/merchivra/commit/c47873cd1ad3e9963f57c9d69dc19b2ba5a17c90) · [快速 CI #45024903306 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45024903306) · [完整 A3 #45024903265（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45024903265)）
 
 - Java `RefundItemReviewServiceV201Test` 检查多事件汇总 SQL 作用域、当前 LIVE 订单项约束和冲突优先序；Next `refund-review-v201.test.ts` 检查明确冲突状态和不可信实收标志的拒绝。
 - PG18 `MERCHIVRA_V201_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_cross_event_quantity_v201.py` 在 TEMP 表 + ROLLBACK 执行**Java 生产源 SQL 原文**，包含已审 2+1 件、订单后改数量、异租户/订单隔离、非 LIVE/旧项与另一商品项的反例。
-- 仅当本次代码精确 SHA 快 CI/完整 A3 明确成功后才将这些验证标为通过；真实物理退货、成本总账与银行仍完全不在 CI 范围内。
+- 本次代码精确 SHA 的快 CI 与完整 A3 已通过 7/7，测试使用隔离 PG18 原 Java SQL 与合成订单/退款行；真实物理退货、成本总账与银行仍完全不在 CI 范围内。
 
 
 ## 最新已确认工程技术证据

@@ -1,6 +1,6 @@
 # V201 · 跨退款事件数量守恒的读取时复核
 
-**状态：2026-11-22 已实现代码，完整 CI/A3 待精确 SHA 验收。** 沿用 V34/V35/V63/V170 以及 V197 的审核和成本敏感度链路，不新增库存账或利润确认。
+**状态：2026-11-22 已实现且通过精确 SHA 合成工程验收。** [精确代码 `c47873c`](https://github.com/kunlong-luo/merchivra/commit/c47873cd1ad3e9963f57c9d69dc19b2ba5a17c90) · [快速 CI #45024903306 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45024903306) · [完整 A3 #45024903265（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45024903265)。 沿用 V34/V35/V63/V170 以及 V197 的审核和成本敏感度链路，不新增库存账或利润确认。
 
 ## 发现的风险与触发条件
 
@@ -20,7 +20,7 @@ V34 的 `RefundItemReviewService.save` 已按订单加锁并在**保存时**检�
 
 - `RefundItemReviewServiceV201Test` 保护状态优先序、跨事件 SQL 作用域和 LIVE/current 筛选。
 - Next `refund-review-v201.test.ts` 验证明确冲突状态、隐藏成本敏感度，以及拒绝伪造的库存签收通过。
-- PG18 `MERCHIVRA_V201_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_cross_event_quantity_v201.py` **从原 Java 文件提取实际 SQL**，在 TEMP 表 + 最后 ROLLBACK 中验证 2+1=3 的完整场景、订单后改成 2 时冲突、不同租户/订单隔离、非 LIVE/旧订单项不作为数量证据，以及不同商品项的冲突。合成数据并非真实 Amazon 退款。
+- PG18 `MERCHIVRA_V201_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_cross_event_quantity_v201.py` **从原 Java 文件提取实际 SQL**，在 TEMP 表 + 最后 ROLLBACK 中验证 2+1=3 的完整场景、订单后改成 2 时冲突、不同租户/订单隔离、非 LIVE/旧订单项不作为数量证据，以及不同商品项的冲突。真实 PG18 原查询与上述案例在该精确 SHA 的完整 A3 中通过；合成数据并非真实 Amazon 退款。
 - 真实采购批次/销售商品出库成本、退款与物理 WMS 入库签收、复数退货的最终会计政策 G1、银行结算仍未核验。**本轮阻断的是数据一致性假阳性，不是完成 COGS 冲回。**
 
 `realizedNetProfit=null`，Seller/Ads 真实 OAuth OFF，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。复评分保留 [V200 的 70/100 基线](../governance/project-scorecard-v200-2026-11-22.md)，不因新 CI 自动加分。
