@@ -35,9 +35,9 @@ V199 拒绝 V54 结算 `declared_net=NULL` 被视为三方来源金额一致：J
 - 本次代码精确 SHA 的快 CI 与完整 A3 已通过 7/7，测试使用隔离 PG18 原 Java SQL 与合成订单/退款行；真实物理退货、成本总账与银行仍完全不在 CI 范围内。
 
 
-## V202 本地采购批次原币来源核对（待精确代码验收）
+## V202 本地采购批次原币来源核对（[精确代码 `4d07d87`](https://github.com/kunlong-luo/merchivra/commit/4d07d87c92366b661ad9c5400b759ac73d98362f) · [快速 CI #45105511319 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45105511319) · [完整 A3 #45105511271（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45105511271)）
 
-`OrderLotProvenanceV202Test` 与 Next Zod/Vitest 检查 Owner/租户隔离、订单成本不 READY 时不开采购来源扫描、冲突/多币种不可任选金额、且响应恒为 `actualBatchCogsVerified=false`。`scripts/smoke_local_lot_cost_provenance_v202.py` 使用 **生产 Java 的同一 SQL**、PG18 TEMP/ROLLBACK 演示隔离时间范围、legacy receipt、QC hold/放行、QC 错连、批次 SKU 冲突、ledger 数量差、多原币/单价。任何合成绿灯都不是 Amazon 出库批次来源或 G1 的真实确认。
+`OrderLotProvenanceV202Test` 与 Next Zod/Vitest 检查 Owner/租户隔离、订单成本不 READY 时不开采购来源扫描、冲突/多币种不可任选金额、且响应恒为 `actualBatchCogsVerified=false`。`scripts/smoke_local_lot_cost_provenance_v202.py` 使用 **生产 Java 的同一 SQL**、PG18 TEMP/ROLLBACK 演示隔离时间范围、legacy receipt、QC hold/放行、QC 错连、批次 SKU 冲突、ledger 数量差、多原币/单价。本轮精确 SHA 快 CI/完整 A3 分别 SUCCESS，A3 首次 7/7 包含 PG18 对生产 Java SQL 的隔离负例；任何合成绿灯都不是 Amazon 出库批次来源或 G1 的真实确认。
 
 
 ## 最新已确认工程技术证据

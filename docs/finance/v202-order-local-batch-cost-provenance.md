@@ -1,6 +1,6 @@
 # Merchivra V202 · 订单 SKU 对本地收货批次与采购成本来源的只读核对
 
-**状态：代码已提交后需按精确 SHA 运行快 CI / 完整 A3（初始文档阶段）**。本轮是批次 COGS 原始证据审计，不是销售批次归属、会计过账或真实 Amazon 验证。
+**状态：2026-11-23 已实现并通过同一 SHA 真实 PostgreSQL 18 / HTTP / Chromium 等隔离合成工程验收。** [精确代码 `4d07d87`](https://github.com/kunlong-luo/merchivra/commit/4d07d87c92366b661ad9c5400b759ac73d98362f) · [快速 CI #45105511319 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45105511319) · [完整 A3 #45105511271（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45105511271)。本轮是批次 COGS 原始证据审计，不是销售批次归属、会计过账或真实 Amazon 验证。
 
 ## 审计现状与不能推断的事实
 
@@ -24,7 +24,7 @@
 - Java `OrderLotProvenanceV202Test`：状态优先顺序、原成本不 READY 时不查采购来源、Owner/no-store、实际 COGS 恒未知。
 - Vitest `order-lot-provenance-v202.test.ts`：原币采购参考、未归属、伪造 `saleLotAttributed=true` / 非空 `realizedBatchCogs` 必须拒绝。
 - 真 PostgreSQL 18 脚本 `MERCHIVRA_V202_DISPOSABLE_ONLY=true python3 scripts/smoke_local_lot_cost_provenance_v202.py`：提取**原 Java SQL**并运行 TEMP/ROLLBACK，覆盖租户及订单时间、无收货/旧收货、QC hold/inspection/release、QC 错连其它 receipt、批次 SKU 错位、放行流水数量差、同 SKU 的不同采购币种/单价。假数据不进入真实租户、库存/财务表。
-- 需要精确 SHA 的快 CI、完整 A3（Java25/Gradle、Next16/React19、Chromium、PG18/Flyway、Spring HTTP、Compose）实际完成后才能写「验收成功」。
+- 同一代码 SHA 的快 CI 与完整 A3 已完成且全部 SUCCESS；A3 7/7 包括 Java25/Gradle、Next16/React19、Chromium、PG18/Flyway 的源 SQL 临时表负例、Spring HTTP 及 Compose。测试只有本地合成技术证明，**不**是 Amazon 销售→批次、真实运输/银行或财务 G1 签署。
 
 ## 阻塞和下阶段
 

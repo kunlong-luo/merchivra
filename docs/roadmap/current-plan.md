@@ -19,9 +19,9 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
-## 本阶段 · V202 本地收货与销售批次成本证据核对（待精确 SHA 验收）
+## 已交付 · V202 本地收货与销售批次成本证据核对（[精确代码 `4d07d87`](https://github.com/kunlong-luo/merchivra/commit/4d07d87c92366b661ad9c5400b759ac73d98362f) · [快速 CI #45105511319 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45105511319) · [完整 A3 #45105511271（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45105511271)）
 
-[技术边界](../finance/v202-order-local-batch-cost-provenance.md)：现有 V20 PO 单价/V46 QC 批次/V39 库存流水仅能证明**本地采购和操作**，不能匹配 Amazon 实际订单的出库批次。复用 V200 有效期订单 SKU 准备度，汇总同租户且收货在订单时间之前的候选本地记录，独立检测收货↔PO SKU/仓库/数量、QC↔receipt、QC_RELEASE↔accepted units 以及多原币/单价冲突；结果永久不允许 `saleLotAttributed=true` 或 `realizedBatchCogs` 非空。Next 复用订单成本面板展示，不堆盈利卡片。之后需要真实销售→批次签证、完整库存流转守恒和 G1/外部 WMS 证明后才能计算实际批次 COGS。此阶段不启用 Seller/Ads/生产写入。
+[技术边界](../finance/v202-order-local-batch-cost-provenance.md)：现有 V20 PO 单价/V46 QC 批次/V39 库存流水仅能证明**本地采购和操作**，不能匹配 Amazon 实际订单的出库批次。复用 V200 有效期订单 SKU 准备度，汇总同租户且收货在订单时间之前的候选本地记录，独立检测收货↔PO SKU/仓库/数量、QC↔receipt、QC_RELEASE↔accepted units 以及多原币/单价冲突；结果永久不允许 `saleLotAttributed=true` 或 `realizedBatchCogs` 非空。Next 复用订单成本面板展示，不堆盈利卡片。之后需要真实销售→批次签证、完整库存流转守恒和 G1/外部 WMS 证明后才能计算实际批次 COGS。本轮完整 A3 已 7/7 成功，但测试全程仅隔离合成，仍不能证明 Amazon 实际销售批次或 G1 认可的批次成本。此阶段不启用 Seller/Ads/生产写入。
 
 
 ## 已交付 · V201 跨退款事件数量守恒读时门禁（[精确代码 `c47873c`](https://github.com/kunlong-luo/merchivra/commit/c47873cd1ad3e9963f57c9d69dc19b2ba5a17c90) · [快速 CI #45024903306 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45024903306) · [完整 A3 #45024903265（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45024903265)）

@@ -44,4 +44,4 @@
 
 当前退款财务可信度补强：[V201 跨事件审核数量读时守恒](finance/v201-refund-cross-event-quantity-read-gate.md)（本轮精确代码 7/7 合成 A3 通过）；沿用 [V200 70/100 复评分](governance/project-scorecard-v200-2026-11-22.md)，真实 G1 与生产授权仍 NO-GO。
 
-V202 新增 [本地采购批次与订单历史 SKU 成本来源核对](finance/v202-order-local-batch-cost-provenance.md)（代码提交/精确 A3 待验）。只读核对 V20/V46/V39 本地链路，**没有 Amazon 销售→批次关联**，因此实际批次 COGS 不确认；评分仍 70/100，生产 NO-GO。
+V202 新增 [本地采购批次与订单历史 SKU 成本来源核对](finance/v202-order-local-batch-cost-provenance.md)（[精确代码 `4d07d87`](https://github.com/kunlong-luo/merchivra/commit/4d07d87c92366b661ad9c5400b759ac73d98362f) · [快速 CI #45105511319 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45105511319) · [完整 A3 #45105511271（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45105511271)）。只读核对 V20/V46/V39 本地链路，**没有 Amazon 销售→批次关联**，因此实际批次 COGS 不确认；评分仍 70/100，生产 NO-GO。
