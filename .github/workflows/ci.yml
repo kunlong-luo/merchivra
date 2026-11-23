@@ -199,14 +199,12 @@ jobs:
             "SELECT count(*) FROM erp_local_lot_disposition_proof_file WHERE size_bytes > 2097152"
           psql -h 127.0.0.1 -U merchivra -d merchivra -v ON_ERROR_STOP=1 -Atc \
             "SELECT count(*) FROM erp_lot_supplier_return_trace"
-          # V129: real PG18 verifies the forward-only V84 audit migration.
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='84' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='85' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='86' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='87' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='88' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='89' AND success")" = "1"
-          # V147: actual forward-only PostgreSQL18 source paging indexes must exist.
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='90' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM pg_indexes WHERE indexname='fba_purchase_link_history_page_v90'")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM pg_indexes WHERE indexname='erp_purchase_order_candidate_page_v90'")" = "1"
@@ -302,47 +300,23 @@ jobs:
           python3 scripts/smoke_supplier_case_pages_v96.py
           python3 scripts/smoke_supplier_finance_settlement_pages_v97.py
           python3 scripts/smoke_finance_audit_pages_v98.py
-          # V164: actual isolated PG18/HTTP manual cost proposal/approval,
-          # source+allocation audit immutability and exact unallocated remainder.
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='91' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='92' AND success")" = "1"
           MERCHIVRA_V164_DISPOSABLE_ONLY=true python3 scripts/smoke_cost_allocation_v164.py
-          # V192: execute exact V188 frozen-order SQL on PG18 TEMP V62 tables.
-          # Two opposite SKU errors must not cancel in a period aggregate.
           MERCHIVRA_V192_DISPOSABLE_ONLY=true python3 scripts/smoke_v192_profit_sku_conservation.py
-          # V193: the REAL V103 triggers installed by Flyway, exercised against
-          # V62-shaped pg_temp fixtures in a transaction. No public table writes.
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='103' AND success")" = "1"
           psql -h 127.0.0.1 -U merchivra -d merchivra -v ON_ERROR_STOP=1 \
             -f scripts/smoke_profit_snapshot_guards_v193.sql
-          # V194 / V105: execute actual Flyway SQL constraints on disposable
-          # PG18 V62-shaped TEMP rows. V104 CHECK accepted UNKNOWN for partial
-          # SHA/version pairs; V105 explicitly rejects both missing halves.
-          # Never mutate public finance rows or promote legacy hashes.
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='104' AND success")" = "1"
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='105' AND success")" = "1"
           psql -h 127.0.0.1 -U merchivra -d merchivra -v ON_ERROR_STOP=1 \
             -f scripts/smoke_profit_capture_v194.sql
-          # V198: execute the EXACT SettlementReportComparisonService SQL in
-          # PG18 TEMP fixtures. Prevent an event claiming two settlements or a
-          # report reference reused by two docs from appearing reconciled;
-          # detect missing zero-valued lines and mixed-currency report rows.
-          # This never mutates public or production finance tables.
           MERCHIVRA_V198_DISPOSABLE_ONLY=true python3 scripts/smoke_settlement_source_identity_v198.py
-          # V200: execute the exact OrderCostReadinessService SQL on isolated
-          # PG18 TEMP tables; ambiguous historical SKU maps/cost overlaps must
-          # hide selected unit cost and never become a ready COGS preview.
           MERCHIVRA_V200_DISPOSABLE_ONLY=true python3 scripts/smoke_order_cost_ambiguity_v200.py
-          # V201: original V34 cross-refund quantity SQL, tested against
-          # disposable PG18 order changes, stale/non-LIVE items and tenant
-          # isolation. Never backfills, mutates or credits real inventory.
           MERCHIVRA_V201_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_cross_event_quantity_v201.py
           # V202: run exact local PO receipt/QC/ledger provenance SQL on
-          # disposable PostgreSQL 18. No inferred sale-to-lot assignment.
           MERCHIVRA_V202_DISPOSABLE_ONLY=true python3 scripts/smoke_local_lot_cost_provenance_v202.py
           # V203: real V106 immutable claims, local item/pick/receipt quantity
-          # conservation, independent live recomputation and retraction holds.
-          # TEMP tables and ROLLBACK; never external WMS/Amazon COGS proof.
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='106' AND success")" = "1"
           MERCHIVRA_V203_DISPOSABLE_ONLY=true python3 scripts/smoke_sale_lot_assignment_v203.py
           MERCHIVRA_V204_DISPOSABLE_ONLY=true python3 scripts/smoke_signed_sale_dispatch_v204.py
@@ -353,21 +327,12 @@ jobs:
           lot_anon_code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202/lot-provenance)
           test "$lot_anon_code" = "401"
-          # The new Owner-only endpoint must never disclose V194 evidence to a guest.
           capture_anon_code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/capture-verification/00000000-0000-4000-8000-000000000202)
           test "$capture_anon_code" = "401"
-          # V165: exact current local identity collisions across 8 source
-          # families hold unverified allocation approvals, not monetary equality.
           MERCHIVRA_V165_DISPOSABLE_ONLY=true python3 scripts/smoke_cost_identity_v165.py
-          # V175: real PG18 Flyway V100 + scoped QC actor guards, immutable
-          # review and negative Session/CSRF HTTP; NOT true physical receipt.
           MERCHIVRA_V175_DISPOSABLE_ONLY=true python3 scripts/smoke_wms_qc_v175.py
-          # V175-B real disposable PG18 + 3 Owner Ed25519 key-control HTTP,
-          # source revocation, replay rejection, never external WMS identity.
           MERCHIVRA_V175B_DISPOSABLE_ONLY=true python3 scripts/smoke_wms_key_possession_v175b.py
-          # Exercise the installed PG18 trigger functions against fully
-          # disposable shadow fixtures for 3 independent reviewers.
           psql -h 127.0.0.1 -U merchivra -d merchivra -v ON_ERROR_STOP=1 \
             -f scripts/smoke_wms_qc_actor_pg18_v175.sql
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='81' AND success")" = "1"
@@ -393,9 +358,6 @@ jobs:
           v70_migration=$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT COUNT(*) FROM flyway_schema_history WHERE version='67' AND success")
           test "$v70_migration" = "1"
           MERCHIVRA_V68_DISPOSABLE_ONLY=true python3 scripts/smoke_http_security_v68.py
-          # V101: verify the REAL Spring Session and CSRF transport via a
-          # disposable Next.js reverse proxy on the same loopback runner.
-          # No Seller OAuth, remote SP-API, production data or real credentials.
           (
             cd apps/web
             MERCHIVRA_API_INTERNAL_URL=http://127.0.0.1:8080 pnpm run build:next
@@ -420,9 +382,6 @@ jobs:
             MERCHIVRA_V101_DISPOSABLE_ONLY=true python3 \
               ../../scripts/smoke_next_session_csrf_v101.py
           )
-          # V141: actual PG18 service-container filesystem, actual read-only
-          # pg_catalog WAL/database bytes and the successful isolated V68 restore.
-          # This is a disposable sample, NOT a production readiness grant.
           v141_attest="$(mktemp /tmp/merchivra-v141-attest-XXXXXX.json)"
           v141_disk="$(mktemp /tmp/merchivra-v141-disk-XXXXXX.json)"
           MERCHIVRA_V141_ATTESTATION_FILE="$v141_attest" \
@@ -452,15 +411,10 @@ jobs:
           print('PASS V141 disposable local PG18 ops: measured disk/WAL, verified restore, never production approval')
           PY
           rm -f -- "$v141_attest" "$v141_disk"
-          # V142: true physical PG18 basebackup + archived WAL recovery to
-          # the server timestamp between two committed fictional markers.
-          # A second restored container MUST pause and EXCLUDE later commits.
           v142_pitr="$(mktemp /tmp/merchivra-v142-pitr-XXXXXX.json)"
           MERCHIVRA_V142_DISPOSABLE_ONLY=true \
             MERCHIVRA_V142_PITR_EVIDENCE_FILE="$v142_pitr" \
             bash scripts/smoke_pg18_pitr_v142.sh
-          # V142: real Alertmanager API and webhook delivery on a Docker
-          # --internal network; no external recipient or published port.
           v142_alert="$(mktemp /tmp/merchivra-v142-alert-XXXXXX.json)"
           MERCHIVRA_V142_DISPOSABLE_ONLY=true \
             MERCHIVRA_V142_ALERT_EVIDENCE_FILE="$v142_alert" \
@@ -481,8 +435,6 @@ jobs:
           assert a['productionApproved'] is False
           print('PASS V142 A3: real local PG18 timestamp PITR + internal Alertmanager delivery; production blocked')
           PY
-          # Leave only sanitized JSON evidence for 7-day Actions artifact.
-          # Never upload basebackup, archived WAL or raw webhook payload.
           echo "PostgreSQL 18 / Flyway / actual finance + FBA OpenAPI and local mock chain verified"
           kill "$app_pid" 2>/dev/null || true
       - name: Preserve V141 disposable disk/WAL/PITR-not-ready metrics (no credentials)
