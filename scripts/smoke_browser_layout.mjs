@@ -1234,9 +1234,17 @@ async function main() {
         console.error('V15 browser debug:',JSON.stringify(state))
         throw e
       }
-      assert.equal(await evaluate(send,
-        "document.querySelector('.team-workspace')?.textContent?.includes('生成邀请')"),
-        true,'V15 invite UI should exist')
+      // Next App Router may briefly unmount the team page after the
+      // member row first appears. Require the SAME mounted owner workspace
+      // to contain both the reviewer and the actual invite form. This is
+      // still a strict UI assertion, not removal of the V15 safety gate.
+      await waitFor(send,
+        "(()=>{const team=document.querySelector('.team-workspace');" +
+        "const form=team?.querySelector('form.team-invite-form');" +
+        "return !!form?.querySelector('button[type=submit]') && " +
+        "form.textContent.includes('生成邀请') && " +
+        "[...team.querySelectorAll('tbody tr')].some(x=>x.textContent.includes('ops-reviewer'))})()",
+        'V15 Owner invite UI and reviewer list coexist after Next route hydration')
       await layout(send,width,'team-owner-360')
       await screenshot(send,'team-owner-360.png')
       if(nextTarget){
