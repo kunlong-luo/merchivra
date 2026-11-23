@@ -1,6 +1,6 @@
 # Merchivra · 当前文档中心
 
-> **CURRENT / 2026-11-22 · DOC-196。** 从这里进入现行规范；不要因为旧 Vxxx 文件包含“当前/最新”就按它启动工作。实际工程为 Java25/Spring Boot4.1.2/Gradle/PG18、React19/**Next.js 16.4.5 默认**、Node24/**pnpm 12.20.0 唯一包管理**；项目 pre-alpha，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
+> **CURRENT / 2026-11-23 · DOC-196。** 从这里进入现行规范；不要因为旧 Vxxx 文件包含“当前/最新”就按它启动工作。实际工程为 Java25/Spring Boot4.1.2/Gradle/PG18、React19/**Next.js 16.4.5 默认**、Node24/**pnpm 12.20.0 唯一包管理**；项目 pre-alpha，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
 
 ## 先看哪份文档
 
@@ -68,4 +68,4 @@ V212 [退款订单行 × 原销售批次认领 × 本地返仓数量守恒](fina
 
 V213 [原采购收货跨订单全局容量与真实落地成本缺证](finance/v213-global-receipt-capacity-and-landed-cost-hold.md)：V212 退款订单下按需展开，检查跨全部本地订单的原采购收货领取量、历史撤销仍占原容量、QC/采购参考单价与原币变化；不推断实际 Amazon 发货或退货原批次，COGS/净利润 NULL。项目评分 70/100、生产 #104 NO-GO；[V213 代码 `e560b63`](https://github.com/kunlong-luo/merchivra/commit/e560b63c9c56987811c98b4a793e72bcc69e4fde) · [同 SHA 快速 CI #45177212591 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45177212591) · [完整 A3 #45177212593（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45177212593) 已完成；PG18 原始 SQL TEMP 回归及匿名 Owner GET 401 有同 SHA 日志。
 
-V214 [原币人工费用对采购收货单的缺失身份与落地成本阻断](finance/v214-manual-cost-receipt-provenance-hold.md)：V91/V92 目前只有人工费用元数据与 SKU/ORDER/PERIOD 分摊，没有直接 receipt 身份；新增受 Owner 保护的只读后端候选元数据覆盖诊断，无实际采购批次金额或财务过账。Java 测试/快 CI/完整 A3 按 V214 精确 SHA 单独验收（当前待核验）；70/100，真实 OAuth OFF，`realizedNetProfit=null`、生产 #104 NO-GO。
+V214 [原币人工费用对采购收货单的缺失身份与落地成本阻断](finance/v214-manual-cost-receipt-provenance-hold.md)：V91/V92 目前只有人工费用元数据与 SKU/ORDER/PERIOD 分摊，没有直接 receipt 身份；新增受 Owner 保护的只读后端候选元数据覆盖诊断，无实际采购批次金额或财务过账。V214 精确代码 `9de829f` 的 [快 CI #45193406175 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45193406175)，PG18 专项 SKIPPED、完整 A3 未执行；70/100，真实 OAuth OFF，`realizedNetProfit=null`、生产 #104 NO-GO。

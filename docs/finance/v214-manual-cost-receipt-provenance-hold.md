@@ -1,6 +1,6 @@
 # Merchivra V214 · V91/V92 人工费用到原采购收货单的身份缺口审计
 
-**2026-11-23 · 只读诊断 / 无新 Flyway / 无实际 COGS 或会计过账。** 代码精确 SHA 和 CI/A3 以合并后的实际结果为准；本文件不会把尚未运行的验证写成成功。
+**2026-11-23 · 只读诊断 / 无新 Flyway / 无实际 COGS 或会计过账。** [V214 精确代码 `9de829f`](https://github.com/kunlong-luo/merchivra/commit/9de829fd8d302663e7589c80b3ec5c920a5ea949) · [同 SHA 快速 CI #45193406175 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45193406175)；Java 25 Gradle、Next.js、Compose 成功，PG18 快速 CI 专项 SKIPPED，完整 A3 尚未执行。本文件不把缺席的真实 PG18/HTTP/A3 验证写成成功。
 
 ## 已确认的数据库事实
 
@@ -22,7 +22,7 @@
 ## 验证与保留限制
 
 - `RefundReceiptCostProvenanceV214Test`：多费用类别与不同 V92 状态；独立人工审核仍不等于真实成本；无费用元数据为 UNKNOWN 非 0；重复源、错误类别、孤儿分摊、旧净利润非空 fail closed；SQL 明确限定 Marketplace，不存在伪造 receipt join；Controller 复用 TenantAccessService 并 `Cache-Control: no-store`。
-- 新 Java/API/金额来源只在提交的**精确 SHA** 上完成快速 CI 后才可称通过；涉及金融边界还应在真实隔离 PG18/HTTP/Chromium/Compose 完成完整 A3。当前不得借用 V213 #45177212593 作为 V214 的验证。
+- V214 代码 SHA `9de829f` 的快速 CI #45193406175 已 SUCCESS（Java25/Next16/Compose），但其中 PG18 为 SKIPPED。涉及金融边界应在相同最终代码 SHA 上单独运行真实隔离 PG18/HTTP/Chromium/Compose 完整 A3；不能借 V213 #45177212593 的历史绿色作为 V214 通过。
 - 前端尚未将新只读路由接入 Next.js；当前 UI 仍显示 V213 的收货容量诊断。新路由是后端证据缺口输出，不是新增已核证报表。
 
 ## V215 / 发布前必要证据

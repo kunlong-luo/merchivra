@@ -19,9 +19,9 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
-## V214 本轮实现 · V91/V92 原币费用到采购收货单身份缺口（待同 SHA CI/A3 验收）
+## V214 已提交 · V91/V92 原币费用到采购收货单身份缺口（[代码 `9de829f`](https://github.com/kunlong-luo/merchivra/commit/9de829fd8d302663e7589c80b3ec5c920a5ea949) · [同 SHA 快 CI #45193406175 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45193406175)；PG18/A3 未执行）
 
-[实现与反例](../finance/v214-manual-cost-receipt-provenance-hold.md)：在现有 V91/V92/186 和 V213 上做**只读**可追溯性审计，发现 V91 只存人工来源金额与 Marketplace、V92 仅可分 SKU/ORDER/PERIOD，均无原采购收货单身份；不能凭来源编号、采购 SKU 或相似时间把头程/进口税/FX 分摊到 receipt。V214 Owner/no-store GET 对 Marketplace 全体人工候选费用分类计数、审查状态、V92 活跃方案状态进行 bounded 双读检查；绝不提供采购收货单实际分摊金额和利润。新 Java 契约测试需核对精确 SHA 的快速 CI，再补真正 PG18/HTTP/A3 验收；Next.js 按需展示尚未接入。
+[实现与反例](../finance/v214-manual-cost-receipt-provenance-hold.md)：在现有 V91/V92/186 和 V213 上做**只读**可追溯性审计，发现 V91 只存人工来源金额与 Marketplace、V92 仅可分 SKU/ORDER/PERIOD，均无原采购收货单身份；不能凭来源编号、采购 SKU 或相似时间把头程/进口税/FX 分摊到 receipt。V214 Owner/no-store GET 对 Marketplace 全体人工候选费用分类计数、审查状态、V92 活跃方案状态进行 bounded 双读检查；绝不提供采购收货单实际分摊金额和利润。新 Java 契约测试在精确代码 SHA 的快速 CI 已通过；PG18 专项在快速 CI 中 SKIPPED，真正 PG18/HTTP/完整 A3 还未执行；Next.js 按需展示尚未接入。
 
 **下一步 V215/P0-B**：先获 G1/DEC 关于资本化、原币/FX、期间与退款回转政策；再设计可追溯采购收货单身份、外部费用单据核证、跨收货单金额守恒和去重审计。未取得真实可信来源时继续报告 UNKNOWN，不能以 V91 审核或 V92 APPROVED_UNVERIFIED 冒充已证实 landed cost。70/100、`realizedNetProfit=null`、真实 Seller/Ads OFF、#104 NO-GO。
 
