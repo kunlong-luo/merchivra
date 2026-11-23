@@ -125,3 +125,9 @@ python3 scripts/check_next_runtime_v122.py
 - 完整 A3 同一代码 SHA Java25/PG18/HTTP/Next16/Chromium/Compose 7/7；单独新 GET 匿名 401 保护。React/Vitest 以 Zod 断言收入/成本认定字段硬 false/NULL、只在用户点击后获取较重的源核对；快 CI 的 PG18 skipped 不算全链路。真实财务/第三方身份仍未经认证。精确代码 SHA 的 A3 7/7 SUCCESS，PG18 真实日志 `PASS V211 PG18 source-exact period/refund cohort/overlap SQL`；实际执行了三个 Java 原文查询、未匹配/重复关联/跨期测试和匿名 401。快 CI 中 PG18 为 skipped，不得冒充这一结果。
 
 - **GitHub Workflow 维护注意**：本阶段 `ci.yml` 增量膨胀至约 41 KiB 时曾出现 GitHub Actions 在创建 Job 之前失败（0 Job）；删除旧版注释、压缩到约 40 KiB 后恢复正常调度。之后应抽出 PG18/HTTP 专项到受版本控制的脚本，保持 YAML 精简；不能将“0 Job 失败”当作 Java/PG18 已运行的验收结论，也不应依赖未经证实的 GitHub 具体大小上限。
+
+## V212 退款原销售批次与返仓数量包络（待同 SHA 验收）
+
+- Java `RefundBatchLineageV212Test`：多退款事件 2+1、同订单原批次认领 2+1 分别 USD/EUR、V171/V172 声称返仓与收货 2；原批次不足、V203 撤销/当前 SKU 失效、pending 不算物理见证、上游 V171 未审核、双包裹超额、重复 V106/V34、无实际退款 COGS 或非 NULL 净利润、Owner/no-store。
+- 真 PG18 通过 `MERCHIVRA_V212_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_batch_lineage_v212.py`：源源码的 V212 3 条 SQL 原文，在 TEMP 合成 V34/V106/V96/V97 上验证两个本地原销售批次不乘法放大、出入库与人工声称的关联、原币成本参考、跨租户/Marketplace/订单排除和读时失效。**V106 integrity 视图在这个专项中是 TEMP 影子，不是对真实 V106 VIEW 的再验证；原 V106/PG18 由 V203 旧专项核验**。所有新测试写入仅在隔离库且 ROLLBACK；V212 无新 Flyway 版本。
+- 同 SHA 快速 CI + 完整 A3 Java25/Next16/Chromium/PG18/HTTP/Compose 7/7，匿名 GET 必须 401。未知不能填 0、不得宣布独立 Amazon/仓库/银行的真实性已完成。

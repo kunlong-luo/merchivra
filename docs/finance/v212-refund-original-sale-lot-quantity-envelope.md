@@ -1,0 +1,60 @@
+# Merchivra V212 · 退款订单行 × 原销售批次 × 本地退货收货：数量守恒与成本阻断
+
+**2026-11-23 · 已编写代码/文档，精确提交 CI/A3 待本阶段验收。无新 Flyway。**
+
+## 业务目标和本轮没有做的事
+
+Merchivra 最重要的能力是基于**可核证的全部收入、亚马逊费用、广告、物流、采购/入库批次和退款回转，最终产生有来源的订单、SKU、期间净利润**。目前缺真实 Amazon/Ads、银行、真实仓库/物流实物确认和 G1 会计政策，因此 `realizedNetProfit=null` 必须保留。
+
+现有 V203 / Flyway V106 已将本地销售订单行绑定到具体拣货/采购批次的**不可变人工认领**，通过 PG18 视图在读取时重算销量、拣货、QC 释放及领取数量；V171/V96 是人工**声称**已退货的数量/条件和独立内部审核；V172/V97 是仓库人工**声称**已收到的本地包裹入库候选；V210 重算同一订单全部已匹配 LIVE 退款事件、V34 审核行及跨事件数量上限；V211 展示订单日期和退款记账期间的差异。
+
+**V212 不能再创建第二个批次表或审核/签名链。** 本轮实现基于已有 V106、V96、V97、V210 的**只读订单行数量包络**，回答：一个商品累计退款多少件、原销售批次本地最多认领多少件、人工声称返仓多少件、实物本地收货候选见证多少件、有什么缺口或历史来源变更？
+
+即使都能对平，这也**不是把某一件退货对应到了某个原销售批次，更不是按 FIFO 猜出来的成本**。V106 原采购单价也可能没有头程运费、关税、换汇和加权入库费用；同一 SKU 的两个采购批次可能币种不同。因此绝不能用 `min/max/pick` 单价与退款件数相乘得到“实际 COGS”。
+
+## 新 API 及范围
+
+```text
+GET /api/v1/finance/marketplaces/{marketplaceId}/orders/{orderId}/refund-batch-lineage-readiness
+```
+
+沿用 Owner/Session、Tenant/Marketplace/订单范围、CSRF、`Cache-Control: no-store`，只读，没有 Seller/Ads/WMS/银行外部调用和退货成本/库存/利润写入口。
+
+`RefundBatchLineageServiceV212` 按如下顺序运行：
+
+1. V210 `RefundOrderConservationServiceV210.preview`，要求订单 LIVE，所有匹配的产品退款及人工 V34 审核得到完整的数量和来源标记。
+2. V203 `OrderLotAssignmentIntegrityServiceV203.preview`，重新核对当前原销售 SKU 映射和 V106 原单/拣货/批次不可变链。**即使 V106 报告本地完整，如果 V203 当前订单 SKU 重映射，则按更严格的 V203 状态阻断。**
+3. 用独立只读 `REPEATABLE READ` 事务完整扫描以下三个原有表族，每类最多 **1000** 行、SQL `LIMIT 1001`，超过直接 HTTP 409 且不显示部分合计：
+   - 全订单 `finance_refund_item_review`：按 `event_id,external_item_id` 区分多次退款的人工数量与 `RESTOCKED_CLAIMED/NOT_RESTOCKED`。
+   - `finance_sale_lot_claim_v106` 联接 `finance_sale_lot_integrity_v106`：每条原订单行的原拣货批次认领、原采购 `receipt_id`、被 PG 自动封存的原采购原币单价和当前本地完整性状态；左连接保留坏/缺失 integrity 的认领以便阻断，不用失效的旧单位重新分配。
+   - `finance_customer_return_intake_v97` 左联 `finance_return_receipt_claim_v96`：每个收货候选的原退款事件/订单行/人工收货数量/状态、返仓条件、上级已独立审核的 V171 人工声称数量。**LEFT JOIN 保留失效或找不到上游 Claim 的候选**，绝不能静默漏掉。
+4. 事务外再次执行 V210 与 V203，且再次读取三个完整来源集合。发现任何订单/金额/数量/状态/批次/本地包裹变更，返回 **HTTP 409**，不宣称通过。此双读仅尽量降低跨事务漂移风险，**并不取代真正外部一致性快照/不可变记录**。
+5. `RefundBatchLineageGuardV212.calculate` 精确比对相同订单行 ID 和每个 `eventId + itemId`：V34 累计退款数量与 V210 完全一致，原销售批次认领数量之和、不同原采购 `receipt_id` 和历史认领撤销标记；按退款行校验所有 PENDING+ATTESTED 包裹在 V34 和 V171 人工申报数量内，REJECTED 不作为实收。只有 ATTESTED_LOCAL 算**本地人工见证**，它不是外部物理收货。
+6. 每订单行展示 `reviewedRefundQuantity`、`locallyAttributedSaleQuantity`、`restockClaimedQuantity`、`attestedLocalReturnQuantity`、`pendingLocalReturnQuantity`、`unassignedRefundQuantity=max(0,退款量-原销售批次认领量)`、`unattestedRestockQuantity=max(0,声称返仓量-ATTESTED_LOCAL)`，并列出原始采购批次 IDs 和**只作来源参考**的原币采购单价。
+
+当 V210 退款变更、历史认领被撤销、原 SKU 映射变旧、退款商品原单数量未知、跨事件超量、原本地销售认领不足、声称返仓但没有足够本地 ATTESTED 包裹、重复包裹超过原退款或人工收货 Claim 额度，均有独立 blocker。历史撤销认领仍占 V106 原始物理批次额度，不被自动回收。
+
+**注意** `localAllItemQuantitiesConsistent=true` 仅是内部人工记录在某次读取时未显示数量矛盾，不等于真实 Amazon 履约或仓库退货已经认证。以下字段永不因 V212 本地数量通过而更新：
+
+- `externalAmazonRefundsComplete=false`、`originalAmazonFulfillmentVerified=false`
+- `physicalReturnReceiptVerified=false`、`independentlyVerifiedActualBatchCogs=false`
+- `accountingRecognitionApproved=false`、`refundCogsReversalAllowed=false`
+- **`actualRefundCogsReversal=null`、`realizedNetProfit=null`**，每条原批次的 `actualBatchCogs=null`。
+
+不新增 V112、不生成新货物成本、没有现金或库存过账、未增加第三方“已核实”按钮。
+
+## 前端
+
+在现有 Next.js 利润中心 V64 → V188 → V211 按需读取的期间退款诊断里，提供 V212 订单选择器：只允许选择本次 V211 已列出的涉及退款订单；用户明确选择后才调用 V212（避免并发针对 100 个订单大规模请求）。显示退款审核数量、历史原销售认领、人工返仓声称、本地见证包裹和两类数量缺口，必要时列前 8 个原采购收货单的原币单价参考。Zod 严格检查真实 COGS/利润状态必须保持 false/null；HTTP 409 以来源变动/越界的业务错误提示，不显示 0 元成本。
+
+## 测试与证据
+
+- `RefundBatchLineageV212Test`：两笔部分退款总数 3、两个原销售采购批次 USD/EUR 2+1、V171/V172 本地收货 2；V106 覆盖不足、返仓未见证、pending 不算实收、retracted/重映射、两个包裹声称超量、上游收货 Claim 未审批、重复 V106/V34 source ID、Owner no-store、无实际 COGS。
+- `MERCHIVRA_V212_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_batch_lineage_v212.py`：在真实 PostgreSQL 18、Flyway 已有 V106/V96/V97/V111 的隔离实例上，以三个 Java 源 SQL 原文与 TEMP 表合成回归验证作用域、源不重乘、不同币种、坏上游收货 Claim 可见、原 V106 状态再读取可见。**该脚本将现有 V106 integrity 视图用 TEMP 表影子模拟，仅验证 V212 的查询/连接行为；真实 V106 触发器/视图独立测试在 V203/既有 PG18 专项，不能把本脚本说成再次独立验证 V106 原始触发器。** 最后 ROLLBACK。
+- 同一代码精确 SHA 跑 Java25/Next16/Chromium/HTTP/PG18/Compose 完整 A3 7/7 和 fast CI，并确保新 GET 匿名 401。文档随后回填准确 SHA 和运行链接，不用之前旧版本测试冒充当前证明。
+
+## 下一阶段与不变的门禁
+
+下一阶段 V213 优先继续实际财务成本的证据完整性与计算准入：**从真实物流/退货返回原销售批次的逐件映射、独立仓库签收、入库最终含税成本、物流与银行结算、跨期间 G1 决议**，以及已实现多次退款的金额/数量唯一归属。不先得到真实外部来源和 G1 会计批准就不能发布真实退款回转或非 NULL 净利润。
+
+**正式评分 70/100，真实 Amazon Seller/Ads OAuth OFF，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) NO-GO，`realizedNetProfit=null`。**

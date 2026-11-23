@@ -1,4 +1,4 @@
-# Merchivra · 当前执行计划（2026-11-23 / V211 期间退款归属与版本化利润阻断）
+# Merchivra · 当前执行计划（2026-11-23 / V212 退款批次原销售/返仓数量守恒）
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
@@ -18,6 +18,12 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 | 最后 | **维护者本地真实 Seller/Ads 只读授权与 API 验收** | Mock Gateway、连接与同步代码 | 用户完成实际授权、合法角色/区域、分页/限流/撤销、凭证/银行真实性和隐私审查之后才可调整访问开关；写入另行审批 |
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
+
+## V212 · 已实现待精确 SHA 验收：退款 × 原销售采购批次认领 × 本地返仓数量包络
+
+[V212 财务数量来源契约](../finance/v212-refund-original-sale-lot-quantity-envelope.md)：不造新表、新内部认证系统或重复审批，直接复用 V210 全事件退款审核数量、V203/V106 采购批次原销售认领与原采购单价/币种封存、V171/V96 人工退货声称、V172/V97 本地包裹 ATTESTED/PENDING 见证。新增 Owner/no-store GET，先分别独立重算 V210 和 V203，在 bounded RR 源快照里读取**全部** V34 退款明细、V106 原认领、V97/V96 收货关系，每源最多 1000 行、越界 HTTP409 不显示部分金额，再执行 V210/V203 与原始源的二次完整读取；旧源、数量超额、SKU 改变、同原收据参考成本不一致均阻断。按原订单行显示累计退款与认领数量、声称返仓与本地收货数量、两类缺口和采购参考原币单价；**不把任一退货事件归属到某个原采购批次，也不乘出真实退货 COGS 或写库存**。Next.js V211 已审核退款单选择器按需调用，避免 100 单自动并发重算。正式利润、实际 COGS、银行和 G1/DEC 仍不可信，生产 #104 NO-GO、70/100、真实 Seller/Ads OAuth OFF 不变。
+
+**后续 V213**：重点从真实外部物流/仓库回执追查退货实物与原销售批次的逐件归属、采购最终落地成本、退款/仓储/广告及银行结算的审计归属与 G1 跨期间确认。授权前继续只读缺证与冲突处理，不采用 FIFO 猜测或内部签名代替外部真实认证。
 
 ## 已交付 · V211 期间退款、跨期与重叠快照利润阻断（[V211 代码 `fec6371`](https://github.com/kunlong-luo/merchivra/commit/fec6371386e5f1a550be6b12856d627ad94b515f) · [同 SHA 快速 CI #45165293616 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45165293616) · [完整 A3 #45165293551（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45165293551)）
 

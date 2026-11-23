@@ -1,6 +1,7 @@
 import {useEffect,useState} from 'react'
 import {useQuery} from '@tanstack/react-query'
 import {getPeriodRefundProfitGuardV211} from './lib/period-refund-profit-guard-v211'
+import RefundBatchLineagePanelV212 from './RefundBatchLineagePanelV212'
 
 /**
  * V211 lives immediately under V188, but its full-period / per-order V210
@@ -109,6 +110,8 @@ export default function PeriodRefundProfitGuardPanelV211({
     发现 {p.repeatedFrozenOrderCount} 个订单同时存在于其他重叠时间窗的
     V64 冻结报表。<strong>这属于报表快照交叉，不代表已经发生财务重复入账</strong>；
     不得将不同版本的冻结 CSV 直接相加作为总利润。</p>}
+   <RefundBatchLineagePanelV212 tenantId={tenantId}
+    marketplaceId={marketplaceId} orders={p.reviewedCohortOrders}/>
    <p className="v179-evidence-warning" role="status">
     <strong>退款 COGS、真实净利润：均未核证，保持 null。</strong>
     没有真实 Amazon/Ads/银行、物流实物归还与 G1 期间会计规则，
