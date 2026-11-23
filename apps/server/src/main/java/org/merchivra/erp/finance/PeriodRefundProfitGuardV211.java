@@ -189,9 +189,14 @@ public final class PeriodRefundProfitGuardV211 {
                 snapshotConsistent=false;
             }
             if(!s.inV64FrozenCohort()) {
-                outCohort++;
-                reasons.add("PERIOD_REFUND_ORDER_OUTSIDE_V64_FROZEN_COHORT");
                 snapshotConsistent=false;
+                // A source WITHOUT a matched order is already counted under
+                // unmatched; don't mislabel it as a valid but out-of-cohort
+                // order. Preserve both independent blockers and source money.
+                if(s.matchedOrderId()!=null&&s.matchedLinkCount()>0) {
+                    outCohort++;
+                    reasons.add("PERIOD_REFUND_ORDER_OUTSIDE_V64_FROZEN_COHORT");
+                }
             }
             RefundOrderConservationEngineV210.Result checkedOrder=
                 s.matchedOrderId()==null?null:byOrder.get(s.matchedOrderId());
