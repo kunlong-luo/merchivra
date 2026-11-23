@@ -19,9 +19,9 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
-## V213 · 已实现待精确 SHA 验收：全订单原采购收货容量 + 落地成本证据门禁
+## 已交付 · V213 全订单原采购收货容量与落地成本阻断（[V213 代码 `e560b63`](https://github.com/kunlong-luo/merchivra/commit/e560b63c9c56987811c98b4a793e72bcc69e4fde) · [同 SHA 快速 CI #45177212591 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45177212591) · [完整 A3 #45177212593（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45177212593)）
 
-[详细契约](../finance/v213-global-receipt-capacity-and-landed-cost-hold.md)：复用 V212 原订单退款/批次证据和 V106 已有不可变领取记录，跨同租户所有订单重算同一采购收货单的原始领取数量（含历史 RETRACTED）；对比冻结 QC 接受量、原采购币种/参考单价版本及当前订单分量。合法共享批次不代表会计重复费用，采购 PO 单价不是已核证最终落地成本，无法推断逐件退货的原批次。所有真实 COGS、净利润保持 NULL；真实 Amazon/Ads OAuth OFF，70/100，生产 #104 NO-GO。 V106 已有 receipt 行锁及总领取不能超 QC accepted 的写时保障；本轮读时不重造约束，只在 V212 重算退货来源后，对原收货单的所有本地销售订单认领进行全局核对，超 1000 行 HTTP 409，跨两次 RR 读取出现差异必须重查。Next.js 在已有 V212 财务订单里按需展示全局共享、占用和参考价格；明确实际落地 COGS / 原批次退货归属 / 真实净利润全部未知。
+[详细契约](../finance/v213-global-receipt-capacity-and-landed-cost-hold.md)：复用 V212 原订单退款/批次证据和 V106 已有不可变领取记录，跨同租户所有订单重算同一采购收货单的原始领取数量（含历史 RETRACTED）；对比冻结 QC 接受量、原采购币种/参考单价版本及当前订单分量。合法共享批次不代表会计重复费用，采购 PO 单价不是已核证最终落地成本，无法推断逐件退货的原批次。所有真实 COGS、净利润保持 NULL；真实 Amazon/Ads OAuth OFF，70/100，生产 #104 NO-GO。 V106 已有 receipt 行锁及总领取不能超 QC accepted 的写时保障；本轮读时不重造约束，只在 V212 重算退货来源后，对原收货单的所有本地销售订单认领进行全局核对，超 1000 行 HTTP 409，跨两次 RR 读取出现差异必须重查。Next.js 在已有 V212 财务订单里按需展示全局共享、占用和参考价格；明确实际落地 COGS / 原批次退货归属 / 真实净利润全部未知。同 SHA PG18/HTTP/Chromium/Next16/Java25/Compose A3 7/7 SUCCESS，实际 PG18 日志 `PASS V213 PG18 exact global V106 receipt-capacity SQL`；其 TEMP V106 影子查询不是已经核验真实来源/落地成本的证明。
 
 **后续 V214**：围绕原采购收货单、物流/关税/支付汇兑真实费用单据的唯一身份和资本化范围建立可审计缺证清单，复用 V91/V92 与现有结算行审查，避免跨期间费用重复扣为经营费用与入库成本；真实授权与 G1/DEC 许可前不能自动过账或假设金额。
 

@@ -1,6 +1,6 @@
 # Merchivra V213 · 原采购收货单的跨订单数量归属与真实落地成本阻断
 
-**2026-11-23 · 无新增 Flyway / 财务过账 / 采购成本回填 · 精确代码 SHA 与 CI/A3 在本轮验收后回填。**
+**2026-11-23 · 无新增 Flyway / 财务过账 / 采购成本回填 · [V213 代码 `e560b63`](https://github.com/kunlong-luo/merchivra/commit/e560b63c9c56987811c98b4a793e72bcc69e4fde) · [同 SHA 快速 CI #45177212591 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45177212591) · [完整 A3 #45177212593（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45177212593)。仅合成工程验收，真实来源尚未核证。**
 
 ## 主目标：补原批次“跨订单”缺口，不新增第二套业务表
 
@@ -34,6 +34,14 @@ V213 补的是**财务读时的跨订单完整性视图**：V212 只返回当前
 - `RefundGlobalReceiptCapacityV213Test`：同一收货单被两订单共享且总量在 QC 之内、跨单超出 QC 接受量、撤销 claim 仍占用历史数量、原采购币种/价格或 QC 接受量版本漂移、V212 原单数量小于本地认领、缺来源、重复收货单/跨订单/跨 Marketplace、Owner/no-store 及每个 COGS/净利润仍 null。
 - PG18 `MERCHIVRA_V213_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_global_receipt_capacity_v213.py`：在安装现有 Flyway 至 V111 的**真实 PG18** 中使用 Java 原始全局来源 SQL，TEMP 影子 V106 表/视图构造同收货单跨三订单、历史撤销仍占原 QC 容量、不同 USD/EUR 采购参考、不同 tenant、原 QC 版本/价格变更等，最后 ROLLBACK。**TEMP 影子视图不是 V106 触发器的真实外部核证**；V106 真正的数据库触发器回归应继续复用已有 A3，不得把脚本包装成“真实批次 COGS 已有凭据”。
 - 完整 A3 精确代码 SHA 的 Java25/React19/Next16/pnpm/Chromium/PG18/HTTP/Compose 7/7，以及同 SHA 新 GET 匿名 401。后续快 CI/文档提交需再次核对具体 SHA，不能借用历史绿灯。
+
+## V213 精确代码验收及回归边界
+
+- [V213 代码 `e560b63`](https://github.com/kunlong-luo/merchivra/commit/e560b63c9c56987811c98b4a793e72bcc69e4fde) 直接提交 `main`，[同 SHA 快速 CI #45177212591 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45177212591) 覆盖 Java 25、React/Next.js 16、pnpm/TypeScript、Compose。
+- [完整 A3 #45177212593（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45177212593) 覆盖真实隔离 PostgreSQL 18、Flyway、HTTP、Chromium/Next.js、Java25、Compose 七项，首次运行全部 SUCCESS。
+- PG18 原始日志明确 `PASS V213 PG18 exact global V106 receipt-capacity SQL`；真实执行同采购收货单被三订单共享的 source-exact 聚合 SQL，历史 RETRACTED 仍占用原 QC 数量、USD/EUR/其他 tenant 隔离、QC 接受数量与 PO 单价版本漂移可检测。新 Owner GET 匿名 401 检查也实际执行。
+- 脚本测试使用 **PG18 TEMP V106 shadow VIEW/table + ROLLBACK**；不能把这次合成 SQL 验证当作 V106 真实数据库 trigger 新增测试、实物交接、采购真实落地成本或 Amazon/银行认证。
+- 初稿单测曾因“其他订单数”改名为“其他订单—收货单关联数”后调用旧 accessor 编译失败，已在最终代码 SHA 上修复并全测通过。该字段按收货单分别统计关联关系，而非跨所有收货单去重的自然人/订单数量。
 
 ## 下一步 V214 与发布禁令
 
