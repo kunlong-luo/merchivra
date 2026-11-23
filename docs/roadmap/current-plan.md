@@ -1,4 +1,4 @@
-# Merchivra · 当前执行计划（2026-11-23 / V207 原件法律保全、留存复核与访问审计）
+# Merchivra · 当前执行计划（2026-11-23 / V208 声称签发方 Ed25519 复算与吊销）
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
@@ -18,6 +18,12 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 | 最后 | **维护者本地真实 Seller/Ads 只读授权与 API 验收** | Mock Gateway、连接与同步代码 | 用户完成实际授权、合法角色/区域、分页/限流/撤销、凭证/银行真实性和隐私审查之后才可调整访问开关；写入另行审批 |
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
+
+## V208 · 已实现待当前精确 SHA 验收：外部声称签发方密钥绑定/撤销与 V206 原件 Ed25519
+
+[V111 原始签名契约、外部信任边界和 V1 canonical 原文](../finance/v208-claimed-issuer-ed25519-signature-integrity.md)：复用现有 WMS Ed25519 实现，不新建重复密码库。签发公钥来源仍是租户 Owner 自行登记，另一 Owner 仅能记录 `REVIEWED_UNVERIFIED`，永久撤销后旧签名不得复活。V111 数据库冻结两个不同类别的文件 SHA、订单、V204 出库 ID、V205 档案编号及源公钥；请求者必须独立于密钥登记人、原件上传人及档案提交人；每次读时由 Java 独立重算真正 Ed25519/规范化原文，绝不以数据库记录冒充 cryptographically verified。提供 Owner/Session/CSRF/no-store 登记、内部审核、撤销、导入及只读诊断。**身份/履约/实际成本 FLAG 固定假，COGS/利润不得写入。** 这一阶段代码的 Java/PG18/HTTP/Next/Chromium/Compose 完整 A3 必须对应自身精确 SHA。
+
+下一阶段 V209/B2 只有维护者本地取得经授权的**真实外部签发机关/运营公司/承运机构**可核验证书链、信任锚和撤销记录后才能考虑独立核实，不能仅增加第三个 Owner 或提供一把自行登记的密钥。P0-B 真实退款 COGS、Amazon/Ads/银行核验与 G1 财务口径签署仍是核心目标；生产 #104 NO-GO、`realizedNetProfit=null`、正式评分 70/100 不变。
 
 ## 已交付 · V207 私有原件治理与访问审计（[V207 精确代码 `8eb1b86`](https://github.com/kunlong-luo/merchivra/commit/8eb1b86a26caf8f73149e9dab6215e65c9a2574d) · [同 SHA 快速 CI #45140330888 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45140330888) · [完整 A3 #45140331187（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45140331187)）
 

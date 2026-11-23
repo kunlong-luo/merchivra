@@ -324,6 +324,16 @@ jobs:
           MERCHIVRA_V205_DISPOSABLE_ONLY=true python3 scripts/smoke_dispatch_custody_dossier_v205.py
           MERCHIVRA_V206_DISPOSABLE_ONLY=true python3 scripts/smoke_custody_original_content_v206.py
           MERCHIVRA_V207_DISPOSABLE_ONLY=true python3 scripts/smoke_custody_original_governance_v207.py
+          MERCHIVRA_V208_DISPOSABLE_ONLY=true python3 scripts/smoke_custody_claimed_issuer_signatures_v208.py
+          issuer_anon=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            http://127.0.0.1:8080/api/v1/finance/custody-issuer-keys)
+          test "$issuer_anon" = "401"
+          issuer_post_anon=$(curl --silent --output /dev/null --write-out '%{http_code}' -X POST \
+            http://127.0.0.1:8080/api/v1/finance/custody-issuer-keys)
+          test "$issuer_post_anon" = "401"
+          issuer_preview_anon=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202/custody-issuer-integrity)
+          test "$issuer_preview_anon" = "401"
           custody_governance_anon=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             http://127.0.0.1:8080/api/v1/finance/custody-originals/capacity)
           test "$custody_governance_anon" = "401"

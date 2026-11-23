@@ -100,3 +100,9 @@ python3 scripts/check_next_runtime_v122.py
 - Java `DispatchCustodyOriginalGovernanceV207Test` 拒绝删除/解除 hold/外部核验的伪决策、过短/超长理由、过期/超长保留期限、无单文件证据时披露和未授权 Owner 操作；API 仅 no-store 元数据。
 - `MERCHIVRA_V207_DISPOSABLE_ONLY=true python3 scripts/smoke_custody_original_governance_v207.py` 需要应用的**真实 PG18 Flyway V110**，使用安装的 V110 原始触发器和 V109/V110 源视图在 TEMP 中逐条验证默认永久 hold、分离上传人/提案人/复核人、上游证据撤销、跨租户访问、数据库覆盖伪 SHA/长度、禁止假标记二进制外流、不可变提案/复核/审计和永假财务核验，最后 ROLLBACK。
 - 精确 V207 代码 SHA 的完整 A3 已 Java、Next、Chromium、HTTP、Compose、PG18 7/7 SUCCESS，原始 PG18 Job 日志含 `PASS V207 PG18 V110 exact guards and source view`；快 CI 中 PG18 skip 并未计为专项验收。所有合成原件不认证机构和承运商，内部留存审批不能解除保全或执行删除。
+
+## V208 外部签发公钥的密码学完整性与来源撤销（待精确 SHA 验收）
+
+- Java `CustodyIssuerAttestationV208Test`：运行时真实 Ed25519 公/私钥正例、文档类型/SHA/文件和档案 UUID/公钥篡改负例、换行注入、过界签发时间、未知来源无 COGS、Controller 租户 Owner/no-store；真实签名验证仍不证明外部签发方身份。
+- `MERCHIVRA_V208_DISPOSABLE_ONLY=true python3 scripts/smoke_custody_claimed_issuer_signatures_v208.py`：**真实 PG18 + Flyway V111**，TEMP 表执行原始部署的公钥 review/撤销/签名 snapshot PL/pgSQL 及 V109/V111 完整源视图，ROLLBACK；覆盖双角色分离、来源 key 类型不一致、跨租户、独立导入人、数据库自行冻结 SHA/订单/出库/公钥引用、不可变/重复签名、已撤销密钥与上游签名失效、外部身份/COGS 永假。该 SQL 层不能证明真实 Ed25519，必须依赖 Java 正反例。
+- CI 在合成 PG18 路径插入 V208 smoke 与匿名 GET/POST 401 断言，并通过 Java、Next、Chromium、Compose、真实 HTTP 全 A3 7/7；快 CI 的 PG18 skipped 不等于专项通过。只有同 V208 代码 SHA 才可标记工程完成，外部权威 CA/企业/承运实际核验仍不可宣称。
