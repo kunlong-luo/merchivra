@@ -322,6 +322,13 @@ jobs:
           MERCHIVRA_V204_DISPOSABLE_ONLY=true python3 scripts/smoke_signed_sale_dispatch_v204.py
           # V205: exact Flyway V108 custody dossier and independent review.
           MERCHIVRA_V205_DISPOSABLE_ONLY=true python3 scripts/smoke_dispatch_custody_dossier_v205.py
+          MERCHIVRA_V206_DISPOSABLE_ONLY=true python3 scripts/smoke_custody_original_content_v206.py
+          custody_original_anon=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202/custody-original-integrity)
+          test "$custody_original_anon" = "401"
+          custody_original_upload_anon=$(curl --silent --output /dev/null --write-out '%{http_code}' -X POST \
+            http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202/custody-dossiers/00000000-0000-4000-8000-000000000205/originals/OPERATOR_REGISTRY)
+          test "$custody_original_upload_anon" = "401"
           custody_anon_code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202/custody-readiness)
           test "$custody_anon_code" = "401"

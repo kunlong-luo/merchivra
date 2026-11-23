@@ -1,3 +1,5 @@
+> **V206 受限原件 API（Springdoc 实际代码，候选 JSON 未同步）**：Owner/Session/CSRF `POST /api/v1/finance/marketplaces/{marketplaceId}/orders/{orderId}/custody-dossiers/{dossierId}/originals/{kind}` 只接收 multipart PDF/PNG/JPEG（2 MiB 上限、V137 ClamAV 生产 fail-closed），上传会绑定到 V205 既有档案并触发 V109 PostgreSQL 从真实 BYTEA 生成和重算 SHA-256；`GET /api/v1/finance/marketplaces/{marketplaceId}/orders/{orderId}/custody-original-integrity` 返回 no-store 元数据及缺口，不公开原件 bytes 和下载能力。对外部主体、实际承运交接、Amazon 履约和 COGS 均固定不可声称 VERIFIED。详见 [V206 原件契约](../finance/v206-private-custody-original-content-integrity.md)。
+
 
 > **V205 当前后端 API（Springdoc 实际代码，候选 JSON 未同步）**：Owner/Session/CSRF 的 `GET /api/v1/finance/marketplaces/{marketplaceId}/orders/{orderId}/custody-readiness` 返回只读 V108 外部证据缺口与失效状态；`POST /api/v1/finance/marketplaces/{marketplaceId}/orders/{orderId}/signed-dispatch/{signedDispatchId}/custody-dossiers` 只记录声称的运营商登记、承运交接及各自文件 SHA-256，`POST /api/v1/finance/marketplaces/{marketplaceId}/orders/{orderId}/custody-dossiers/{dossierId}/review` 只记录不可变独立 Owner 内部文件复核。三个响应 `no-store`，不能确认外部主体、Amazon 已履约、财务 COGS 或产生库存/GL 写入。详见 [V205 合同](../finance/v205-external-dispatch-custody-dossier.md)；实际 OpenAPI 以 Springdoc 为准。
 

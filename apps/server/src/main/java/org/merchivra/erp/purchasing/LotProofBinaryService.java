@@ -40,7 +40,7 @@ public class LotProofBinaryService {
     private static ResponseStatusException missing(){
         return new ResponseStatusException(HttpStatus.NOT_FOUND,"Private proof attachment unavailable");
     }
-    static String mediaType(byte[] bytes){
+    public static String mediaType(byte[] bytes){
         if(bytes==null || bytes.length<4 || bytes.length>MAX_SIZE)
             throw bad("Evidence file must be 1 byte to 2 MiB");
         if(bytes.length>=5 && bytes[0]=='%' && bytes[1]=='P' && bytes[2]=='D'
@@ -52,7 +52,7 @@ public class LotProofBinaryService {
             && (bytes[2]&255)==255)return "image/jpeg";
         throw bad("Only PDF, PNG and JPEG evidence formats are accepted");
     }
-    static String digest(byte[] bytes){
+    public static String digest(byte[] bytes){
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(bytes));
         } catch(NoSuchAlgorithmException e){throw new IllegalStateException(e);}
