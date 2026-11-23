@@ -1,6 +1,6 @@
 # Merchivra V205 · 外部运营主体与承运交接证据档案（内部审计，未认证外部真值）
 
-**2026-11-23 / Flyway V108 / V205 工程合成验收待精确 SHA 确认。**
+**2026-11-23 / Flyway V108 / [V205 精确代码 `99ef9b9`](https://github.com/kunlong-luo/merchivra/commit/99ef9b988de101f3413e0821817071bcce85c370) · [同 SHA 快速 CI #45132910751 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45132910751) · [完整 A3 #45132910387（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45132910387)。全部测试都是隔离合成工程验证，不代表真实第三方运营主体身份。**
 
 ## 为什么做、为什么不直接标记 VERIFIED
 
@@ -30,6 +30,7 @@ V205 新增的，是把下一阶段需要向外部可信渠道取得的**运营�
 - `DispatchCustodyDossierV205Test`：非法外部编号/摘要、企图越级到 VERIFIED、签名撤销读时失效、Owner/no-store 路由及无档案时 COGS 硬阻断。
 - `MERCHIVRA_V205_DISPOSABLE_ONLY=true python3 scripts/smoke_dispatch_custody_dossier_v205.py`：先检查 PostgreSQL18 已应用 Flyway V108，再在 `TEMP` 阴影表内调用**安装的原始 V108 PL/pgSQL 触发器**和从 V108 迁移文件中抽出的完整 `CREATE VIEW` SQL；`ROLLBACK` 后不遗留合成审计记录。负例涵盖源撤销、外键身份、恶意输入的快照覆盖、四种不同独立人员角色、双 SHA 冲突、复核前的失效重算、重复声明、不可变与 `CHECK(FALSE)`。
 - 真正 Ed25519 签名由 V204 Java Test 运行时随机生成 Ed25519 密钥进行正反例；SQL-only 夹具不能、也不应伪称有可信的第三方机构文件。
+- V205 [V205 精确代码 `99ef9b9`](https://github.com/kunlong-luo/merchivra/commit/99ef9b988de101f3413e0821817071bcce85c370) 的 [同 SHA 快速 CI #45132910751 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45132910751) 与 [完整 A3 #45132910387（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45132910387) 已成功，7 个完整 A3 jobs 全部 SUCCESS；PG18 Job 日志实际包含 `PASS V205 PG18 V108 original capture/review guards and source view`。此前 V204 的结果不能代替本次精确 V108 验收。
 
 ## 下一阶段 V206 的不可缺先决条件
 
