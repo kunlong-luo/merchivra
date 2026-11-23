@@ -1,4 +1,4 @@
-# Merchivra · 当前执行计划（2026-11-23 / V209 离线根证书/PKIX/CRL 验证准备度）
+# Merchivra · 当前执行计划（2026-11-23 / V210 全订单退款 COGS 守恒与财务阻断）
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
@@ -18,6 +18,12 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 | 最后 | **维护者本地真实 Seller/Ads 只读授权与 API 验收** | Mock Gateway、连接与同步代码 | 用户完成实际授权、合法角色/区域、分页/限流/撤销、凭证/银行真实性和隐私审查之后才可调整访问开关；写入另行审批 |
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
+
+## V210 · 已实现待本轮精确 SHA 验收：订单级全量退款数量与原币守恒
+
+[V210 退款 COGS 敏感度与整单数量核对契约](../finance/v210-whole-order-refund-cogs-conservation.md)：由此前 P0-D 的本地 WMS 身份准备链回到 P0-B 财务主线。**不新造 Flyway 表、退款过账服务或第二套审批**，直接用 V34/V35/V63/V197/V201。新增 Order/Marketplace/tenant Owner no-store 只读 API，一次 RR 快照读取当前 LIVE 订单行、该订单**所有** V34 已审查数量和已 MATCHED 的全部 LIVE `PRODUCT_REFUND` 事件，按原币保留带符号金额；1000 行每维上限，超出 409 fail-closed，不将当前页合计冒充整单。V63 查询放在快照事务外避免正常 409 导致 RollbackOnly/500；跨事件累计数量超额、老订单行数量变化、V34/V63 处置或数量漂移、缺任一审核、孤儿来源或重复关联令**整个订单的手工历史成本和声称返仓成本风险敏感度 = NULL**，不是 0。即使人工量钱守恒，`actualCogsReversal=null`、`realizedNetProfit=null` 以及外部 Amazon/银行/G1 审批硬阻断保留。
+
+下一步 **V211/P0-C** 应把这份完整订单级退款数量/源状态与 V64/V188 版本化利润及期间收益阻断合并，着重识别跨期间成本/退款重复归属，绝不绕过完整财务来源认证或实际退款成本入账。正式评分 70/100、真实 Seller/Ads OFF、生产 #104 NO-GO 不变。
 
 ## 已交付 · V209 部署侧离线 PKIX/CRL 只读技术准备度（[V209 精确代码 `0a9dc09`](https://github.com/kunlong-luo/merchivra/commit/0a9dc0903a92b64d5891c03011f5b3ef85fbc560) · [同 SHA 快速 CI #45155665615 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45155665615) · [完整 A3 #45155665675（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45155665675) · [同 SHA Redis Session 集成 #45155665716 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45155665716)）
 
