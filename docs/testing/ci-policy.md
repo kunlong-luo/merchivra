@@ -70,3 +70,9 @@ python3 scripts/check_next_runtime_v122.py
 ```
 
 **核心限制**：真实费用来源、重复扣费真实性、退款 COGS 回转、外部 WMS 物理实收、跨币种会计政策和银行结算均未因上述合成测试自动核验。不得把 `realizedNetProfit=null` 重写为已确认利润。生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 一律 NO-GO；历史 [V108 CI 策略](../roadmap/mvp-freeze-release-v108.md) 为保留的阶段性记录，不优先于此页。
+
+## V203 销售批次归属声明数量守恒与失效（待本轮精确 SHA 验收）
+
+- Java `OrderLotAssignmentIntegrityV203Test` 检查 Owner/no-store、source item 与历史 SKU 映射变更、无声明和状态变更时不得确认实际 COGS，任何前端/后端均不得将本地一致性误当外部证明。
+- 隔离 PostgreSQL 18：`MERCHIVRA_V203_DISPOSABLE_ONLY=true python3 scripts/smoke_sale_lot_assignment_v203.py`，在 Flyway V106 已运行的 disposable 数据库，以 TEMP + ROLLBACK 执行实际数据库触发器和源 SQL 视图；分别验证 item/pick/receipt 三维累计数量、唯一归属、并发锁来源、QC 和出库漂移、撤销不释放已分配数量、不可 UPDATE/DELETE 和布尔硬阻断。生产真实身份/签名/财务入账不在合成验证范围。
+- 同 SHA A3 运行必须含 Flyway V106 与匿名 HTTP 401；报告中只有 GitHub 确认完成的 job 才可记为 SUCCESS，不得引用 V202 的 green。

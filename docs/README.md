@@ -45,3 +45,5 @@
 当前退款财务可信度补强：[V201 跨事件审核数量读时守恒](finance/v201-refund-cross-event-quantity-read-gate.md)（本轮精确代码 7/7 合成 A3 通过）；沿用 [V200 70/100 复评分](governance/project-scorecard-v200-2026-11-22.md)，真实 G1 与生产授权仍 NO-GO。
 
 V202 新增 [本地采购批次与订单历史 SKU 成本来源核对](finance/v202-order-local-batch-cost-provenance.md)（[精确代码 `4d07d87`](https://github.com/kunlong-luo/merchivra/commit/4d07d87c92366b661ad9c5400b759ac73d98362f) · [快速 CI #45105511319 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45105511319) · [完整 A3 #45105511271（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45105511271)）。只读核对 V20/V46/V39 本地链路，**没有 Amazon 销售→批次关联**，因此实际批次 COGS 不确认；评分仍 70/100，生产 NO-GO。
+
+V203 继续建立 [本地销售 pick line ↔ 采购收货批次声明的可重算与失效契约](finance/v203-sale-to-lot-link-integrity-contract.md)：Flyway V106 捕获不可变来源，订单项/出库行/收货验收数量守恒，撤销不重复分配；Owner 只读接口仍将任何本地一致性声明标为外部未核证，不确认实际 COGS。该阶段精确 main SHA 的 CI/A3 状态须在提交后单独核查；正式评分 **70/100**、真实 Amazon/Ads OFF、生产 #104 NO-GO 不变。

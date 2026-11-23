@@ -340,6 +340,14 @@ jobs:
           # V202: run exact local PO receipt/QC/ledger provenance SQL on
           # disposable PostgreSQL 18. No inferred sale-to-lot assignment.
           MERCHIVRA_V202_DISPOSABLE_ONLY=true python3 scripts/smoke_local_lot_cost_provenance_v202.py
+          # V203: real V106 immutable claims, local item/pick/receipt quantity
+          # conservation, independent live recomputation and retraction holds.
+          # TEMP tables and ROLLBACK; never external WMS/Amazon COGS proof.
+          test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='106' AND success")" = "1"
+          MERCHIVRA_V203_DISPOSABLE_ONLY=true python3 scripts/smoke_sale_lot_assignment_v203.py
+          sale_lot_anon_code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202/sale-lot-integrity)
+          test "$sale_lot_anon_code" = "401"
           # The V202 finance evidence endpoint is tenant/Owner scoped.
           lot_anon_code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202/lot-provenance)

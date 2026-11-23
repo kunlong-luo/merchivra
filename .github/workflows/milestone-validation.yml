@@ -1,3 +1,5 @@
+# V203: source-exact PG18 sale/item/pick/receipt immutable local claim,
+# retraction and evidence-invalidation contract. Always actual COGS NO-GO.
 # V201: source-exact PG18 refund cross-event quantity read barrier A3.
 # Synthetic-only: no bank verification, actual refund COGS or release GO.
 # V200: A3 tests exact order-cost historical candidate counts in PG18.
@@ -222,7 +224,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V202-A3-local-lot-cost-provenance-fail-closed' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V203-A3-sale-lot-identity-quantity-revalidation-no-cogs' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -317,6 +319,7 @@ on:
           - V200-A3-historical-sku-and-cost-overlap-blockers
           - V201-A3-refund-cross-event-quantity-read-gate
           - V202-A3-local-lot-cost-provenance-fail-closed
+          - V203-A3-sale-lot-identity-quantity-revalidation-no-cogs
 
 permissions:
   contents: read
