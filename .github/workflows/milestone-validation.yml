@@ -225,7 +225,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V212-A3-original-sale-lot-return-quantity-envelope-no-profit' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V212-A3-refund-lot-and-owner-invite-stable-no-profit' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
