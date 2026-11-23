@@ -1,4 +1,4 @@
-# Merchivra · 当前执行计划（2026-11-23 / V204 签名出库证据阻断）
+# Merchivra · 当前执行计划（2026-11-23 / V205 外部交接声明与独立复核）
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
@@ -18,6 +18,12 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 | 最后 | **维护者本地真实 Seller/Ads 只读授权与 API 验收** | Mock Gateway、连接与同步代码 | 用户完成实际授权、合法角色/区域、分页/限流/撤销、凭证/银行真实性和隐私审查之后才可调整访问开关；写入另行审批 |
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
+
+## V205 · 已实现待当前 SHA 验收：外部运营主体/承运交接审计档案
+
+[契约、外部身份信任边界与来源冲突规则](../finance/v205-external-dispatch-custody-dossier.md)：新 V108 不再自造另一套 WMS 密钥、批准和真实库存账本；在 V204 当前签名出库观察上，登记外部运营者/承运原件的声称引用与 SHA-256，数据库自行冻结关联签名、仓库、出库编号和数量。运营商编号与承运交接单号全租户范围检测**相同外部引用的不同声称文件摘要**，独立 Owner 文件核对不得由档案提交人、WMS 签名导入人或公钥登记人执行；来源撤销/批次漂移后旧审查自动失效。Java/PG18 拒绝从内部审查状态升级外部身份、实物交接、Amazon 履约或实际成本。用户未提供真实外部原件/可信核验渠道，**不能标记 B2 VERIFIED；本阶段验收目标是可审计、fail-closed 的取证准备链**。
+
+下一阶段 **V206/P0-D/P0-A** 需要在真实维护者本地授权之后建立可信第三方登记机构与承运方核验渠道、来源原件留存/摘要重算、受控 Amazon 订单履约交叉核验和退款/运费证据链，另由 G1 审签入账成本/原币政策。生产 #104 继续 NO-GO、实际利润继续 NULL、评分 70/100。
 
 ## 已交付 · V204 签名出库观察与可重算失效链（[V204 精确代码 `f89485f`](https://github.com/kunlong-luo/merchivra/commit/f89485fe0b85cb63f7e12614f254c4ba57ed9be9) · [同 SHA 快速 CI #45122956620 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45122956620) · [完整 A3 #45122956610（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45122956610)）
 

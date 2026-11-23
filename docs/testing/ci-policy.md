@@ -82,3 +82,9 @@ python3 scripts/check_next_runtime_v122.py
 - Java `SaleLotSignedDispatchV204Test` 在 JDK 25 生成真实 Ed25519 测试公私钥并验证规范化签名，对 claim/source/quantity/external dispatch 字段做篡改负例，验证无证据与跨租户 Owner/no-store 端点仍不把 WMS 观察升级为实际 COGS。
 - `MERCHIVRA_V204_DISPOSABLE_ONLY=true python3 scripts/smoke_signed_sale_dispatch_v204.py` 要求 Flyway V107 已应用且使用 PostgreSQL 18；用 TEMP 阴影表和安装的真实触发器 + 源 SQL 视图检查无密钥证明、唯一归属、防重放、密钥撤销、原 claim 失效、数量漂移、跨租户、禁止删改和数据库 `CHECK(FALSE)` 阻止伪造真实财务信号。纯 SQL 无法独立重算 Ed25519，必须与 Java 真实签名测试组合；全链路应验证未登录 GET 和 POST 均返回 HTTP 401，CSRF 仍启用。
 - V204 精确代码提交已在 GitHub 对应快 CI 与完整 A3 确认 SUCCESS，PG18 真实触发器 + 独立视图日志含明确 `PASS V204`。首次工作流过长导致两个 Actions 运行未创建任何 jobs；将冗长内联注释归档至文档、保留独立 Python V204 smoke 调用后恢复正常。**工作流立即 failure 且 0 jobs 不等于测试失败；必须先核查 YAML/行长/步骤大小，再核查正常任务的真实日志。** 所有通过仅为隔离合成数据，不构成 Amazon/FBA/FBM 或 WMS 外部主体认证。
+
+## V205 证据档案与独立内部复核（待精确代码 SHA 验收）
+
+- Java `DispatchCustodyDossierV205Test` 直接验证危险编号/散列输入、想越级到身份 VERIFIED 的状态、自审/来源签名更新的独立失效逻辑、GET/POST Owner/no-store 接口与无外部证据时实际 COGS 的硬阻断。
+- `MERCHIVRA_V205_DISPOSABLE_ONLY=true python3 scripts/smoke_dispatch_custody_dossier_v205.py`：检查 PG18/Flyway V108 的真实触发器/完整原始 SQL 视图，TEMP 阴影表 + ROLLBACK，不调用生产 WMS/Amazon。覆盖注册来源撤销、签名漂移、数据库快照覆盖伪参数、档案/复核不可变、三类有利益冲突的人不得独立复核、相同交接编号摘要冲突、重复提交、跨租户及实际身份/成本布尔值永假。
+- CI 中加入单行 Python V205 smoke 调用，避免超大 Shell 工作流拒绝创建 jobs；Owner 匿名 HTTP 401/拒绝 POST 和 CSRF 控制不可关闭。精确 SHA 的快 CI/完整 A3 通过后才能标记 V205 工程验收，不等于真实 B2 外部运营主体认证。

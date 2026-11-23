@@ -1,3 +1,6 @@
+
+> **V205 当前后端 API（Springdoc 实际代码，候选 JSON 未同步）**：Owner/Session/CSRF 的 `GET /api/v1/finance/marketplaces/{marketplaceId}/orders/{orderId}/custody-readiness` 返回只读 V108 外部证据缺口与失效状态；`POST /api/v1/finance/marketplaces/{marketplaceId}/orders/{orderId}/signed-dispatch/{signedDispatchId}/custody-dossiers` 只记录声称的运营商登记、承运交接及各自文件 SHA-256，`POST /api/v1/finance/marketplaces/{marketplaceId}/orders/{orderId}/custody-dossiers/{dossierId}/review` 只记录不可变独立 Owner 内部文件复核。三个响应 `no-store`，不能确认外部主体、Amazon 已履约、财务 COGS 或产生库存/GL 写入。详见 [V205 合同](../finance/v205-external-dispatch-custody-dossier.md)；实际 OpenAPI 以 Springdoc 为准。
+
 > **V191 当前入口（2026-11-21）**：API 的现行事实以 Spring Boot MVC Controller/实际 Springdoc 生成合同及 Orval 代码为准。React19/Next16、pnpm12.20.0，前端校验使用 `cd apps/web && pnpm install --frozen-lockfile && pnpm api:check`；不要使用本文历史 G2 OpenAPI 草案代替真实接口。真实 Seller/Ads OAuth 关闭，生产 #104 NO-GO。[当前架构](../architecture/overview.md) · [开发指南](../development.md)。
 
 # API-002 · G2 OpenAPI 设计草案与真实后端契约（2026-11-08）

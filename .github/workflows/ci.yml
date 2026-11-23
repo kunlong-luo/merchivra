@@ -320,6 +320,11 @@ jobs:
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='106' AND success")" = "1"
           MERCHIVRA_V203_DISPOSABLE_ONLY=true python3 scripts/smoke_sale_lot_assignment_v203.py
           MERCHIVRA_V204_DISPOSABLE_ONLY=true python3 scripts/smoke_signed_sale_dispatch_v204.py
+          # V205: exact Flyway V108 custody dossier and independent review.
+          MERCHIVRA_V205_DISPOSABLE_ONLY=true python3 scripts/smoke_dispatch_custody_dossier_v205.py
+          custody_anon_code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202/custody-readiness)
+          test "$custody_anon_code" = "401"
           sale_lot_anon_code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202/sale-lot-integrity)
           test "$sale_lot_anon_code" = "401"
