@@ -94,3 +94,9 @@ python3 scripts/check_next_runtime_v122.py
 - Java `DispatchCustodyOriginalV206Test`：复用 V52 文件魔数、SHA-256、2 MiB 输入限制；V137 clamd 失败先阻断，不应尝试读取或写入数据库；测试 Owner/Session/CSRF/no-store、上游来源失效优先、没有两份原件时无法解除外部主体/实际 COGS 阻断。
 - `MERCHIVRA_V206_DISPOSABLE_ONLY=true python3 scripts/smoke_custody_original_content_v206.py`：真实 PostgreSQL18 安装 V109 后，在 TEMP 表上复用原 V109 触发器和源 SQL 视图、整事务回滚；检验 BYTEA 生成散列与读时 SHA-256 独立复算、两份缺一份、非真实魔数 MIME、错误声称散列、同种重复文件、跨租户、来源撤销、不可变及硬性 FALSE 身份/过账约束。CI 除上述脚本外须验证匿名 GET/POST 返回 401、Next/Java/Compose/Chromium 回归。
 - 由于这是安全/财务/数据库变更，该 V206 精确代码 SHA 快 CI 和完整 A3 7/7 已 SUCCESS，PG18 job 原始日志含 `PASS V206 PG18 V109 exact original trigger and source view`，不可套用 V205 结果；绿灯不代表生产 ClamAV、外部法人、承运商、真实平台来源或 G1 审批已经核证。
+
+## V207 法律保全/留存期限复核与私有原件元数据访问审计（待同 SHA 验收）
+
+- Java `DispatchCustodyOriginalGovernanceV207Test` 拒绝删除/解除 hold/外部核验的伪决策、过短/超长理由、过期/超长保留期限、无单文件证据时披露和未授权 Owner 操作；API 仅 no-store 元数据。
+- `MERCHIVRA_V207_DISPOSABLE_ONLY=true python3 scripts/smoke_custody_original_governance_v207.py` 需要应用的**真实 PG18 Flyway V110**，使用安装的 V110 原始触发器和 V109/V110 源视图在 TEMP 中逐条验证默认永久 hold、分离上传人/提案人/复核人、上游证据撤销、跨租户访问、数据库覆盖伪 SHA/长度、禁止假标记二进制外流、不可变提案/复核/审计和永假财务核验，最后 ROLLBACK。
+- 完整 A3 需要 Java、Next、Chromium、HTTP、Compose、PG18 的 7/7 同 SHA SUCCESS，快 CI 的 PG18 skip 不能冒充专项通过；所有合成原件不认证机构和承运商，内部留存审批不能解除保全或执行删除。

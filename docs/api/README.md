@@ -1,3 +1,5 @@
+> **V207 当前受限原件治理 API（Springdoc 实际实现，候选 OpenAPI JSON 未同步）**：Owner/Session/CSRF `GET /api/v1/finance/custody-originals/capacity` 查看租户私有原件容量及法律保全状态；`GET /api/v1/finance/marketplaces/{marketplaceId}/orders/{orderId}/custody-dossiers/{dossierId}/originals/{kind}/governance` 在同一事务记不可变元数据读取日志后返回 no-store SHA/大小/法律保全元数据；同路径的 `POST /retention-proposals` 与 `POST /retention-proposals/{proposalId}/review` 只允许独立 Owner 审查未来保留期限，**永不解除 hold、删除原件或核验真实承运商/Amazon 履约**。详见 [V207 契约](../finance/v207-custody-original-retention-governance.md)。
+
 > **V206 受限原件 API（Springdoc 实际代码，候选 JSON 未同步）**：Owner/Session/CSRF `POST /api/v1/finance/marketplaces/{marketplaceId}/orders/{orderId}/custody-dossiers/{dossierId}/originals/{kind}` 只接收 multipart PDF/PNG/JPEG（2 MiB 上限、V137 ClamAV 生产 fail-closed），上传会绑定到 V205 既有档案并触发 V109 PostgreSQL 从真实 BYTEA 生成和重算 SHA-256；`GET /api/v1/finance/marketplaces/{marketplaceId}/orders/{orderId}/custody-original-integrity` 返回 no-store 元数据及缺口，不公开原件 bytes 和下载能力。对外部主体、实际承运交接、Amazon 履约和 COGS 均固定不可声称 VERIFIED。详见 [V206 原件契约](../finance/v206-private-custody-original-content-integrity.md)。
 
 

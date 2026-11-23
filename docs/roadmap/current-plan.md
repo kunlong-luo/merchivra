@@ -1,4 +1,4 @@
-# Merchivra · 当前执行计划（2026-11-23 / V206 原件字节可核对但外部来源未认证）
+# Merchivra · 当前执行计划（2026-11-23 / V207 原件法律保全、留存复核与访问审计）
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
@@ -18,6 +18,12 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 | 最后 | **维护者本地真实 Seller/Ads 只读授权与 API 验收** | Mock Gateway、连接与同步代码 | 用户完成实际授权、合法角色/区域、分页/限流/撤销、凭证/银行真实性和隐私审查之后才可调整访问开关；写入另行审批 |
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
+
+## V207 · 已提交待精确 SHA 验收：私有原件治理与全链访问日志
+
+[证据法律保全、不可变访问审计、留存双人复核契约](../finance/v207-custody-original-retention-governance.md)：Flyway V110 复用 V138 的保留策略和现有 append-only，所有 V109 原件永久 `legalHold=true` 且 `deletionPermitted=false`；与上传人不同的 Owner 提议保留期限、另一名独立 Owner 只可记录 `REVIEWED_NO_PURGE` 或拒绝。真实 PG18 触发器读取 V109 源状态，禁止被撤销的签名/摘要冲突上继续批准；读取单文件 SHA、大小、类型时同步写入数据库自己捕获原始长度/哈希的不可变审计。增加 Owner/CSRF/no-store 容量摘要和元数据治理 API。**无 DELETE、无 hold 解除、无后台 purge、无真实第三方接口、无任何实际 COGS 过账。** 运行当前 SHA Java/PG18/HTTP/Next/Chromium/Compose 后再记录验收。
+
+下一阶段 V208 仅在维护者本地许可及信任/隐私合规齐备时处理真实外部机构签发方/承运商核验回执（另需证书链/撤销复核）；真实 Amazon Seller/Ads OAuth 和 G1/DEC 会计授权未到位，仍须阻断完整净利润与生产 #104，正式评分 70/100。
 
 ## 已交付 · V206 外部运营商/承运原件内容独立 SHA-256（[V206 精确代码 `c85feba`](https://github.com/kunlong-luo/merchivra/commit/c85feba8cf77919e89a1626d9ddc0981f13deb74) · [同 SHA 快速 CI #45138354698 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45138354698) · [完整 A3 #45138354709（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45138354709)）
 
