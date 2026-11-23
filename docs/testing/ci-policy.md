@@ -126,8 +126,10 @@ python3 scripts/check_next_runtime_v122.py
 
 - **GitHub Workflow 维护注意**：本阶段 `ci.yml` 增量膨胀至约 41 KiB 时曾出现 GitHub Actions 在创建 Job 之前失败（0 Job）；删除旧版注释、压缩到约 40 KiB 后恢复正常调度。之后应抽出 PG18/HTTP 专项到受版本控制的脚本，保持 YAML 精简；不能将“0 Job 失败”当作 Java/PG18 已运行的验收结论，也不应依赖未经证实的 GitHub 具体大小上限。
 
-## V212 退款原销售批次与返仓数量包络（待同 SHA 验收）
+## V212 退款原销售批次与返仓数量包络（[V212 精确代码 `921c2e2`](https://github.com/kunlong-luo/merchivra/commit/921c2e250ad4554349fb290e777c650b279fc259) · [同 SHA 快速 CI #45170646181 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45170646181) · [完整 A3 #45170646128（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45170646128)）
 
 - Java `RefundBatchLineageV212Test`：多退款事件 2+1、同订单原批次认领 2+1 分别 USD/EUR、V171/V172 声称返仓与收货 2；原批次不足、V203 撤销/当前 SKU 失效、pending 不算物理见证、上游 V171 未审核、双包裹超额、重复 V106/V34、无实际退款 COGS 或非 NULL 净利润、Owner/no-store。
 - 真 PG18 通过 `MERCHIVRA_V212_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_batch_lineage_v212.py`：源源码的 V212 3 条 SQL 原文，在 TEMP 合成 V34/V106/V96/V97 上验证两个本地原销售批次不乘法放大、出入库与人工声称的关联、原币成本参考、跨租户/Marketplace/订单排除和读时失效。**V106 integrity 视图在这个专项中是 TEMP 影子，不是对真实 V106 VIEW 的再验证；原 V106/PG18 由 V203 旧专项核验**。所有新测试写入仅在隔离库且 ROLLBACK；V212 无新 Flyway 版本。
 - 同 SHA 快速 CI + 完整 A3 Java25/Next16/Chromium/PG18/HTTP/Compose 7/7，匿名 GET 必须 401。未知不能填 0、不得宣布独立 Amazon/仓库/银行的真实性已完成。
+- **实际验收（V212，代码 `921c2e2`）**：同 SHA [同 SHA 快速 CI #45170646181 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45170646181)、[完整 A3 #45170646128（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45170646128) 均 SUCCESS，A3 7/7。PG18 作业原始日志含 `PASS V212 PG18 exact V34/V106/V96/V97 source SELECT scope`，检查了两原始销售批次 2+1、不同采购原币参考、V171/V172 见证与 pending、租户/订单隔离及来源变更。此脚本用 TEMP 阴影 V106 view，不能代替实际 V106 VIEW/Flyway V106 触发器专项的证明；HTTP 新 GET 匿名 401 断言执行且通过。
+- **CI/Chromium 实际修复**：最初增量后 `ci.yml` 约 40.6 KiB 时 Actions 未创建 Job，不能当作 Java 或 PG18 失败；复用九条 Owner 401 URL 的公共 shell 路径将文件精简至约 39.8 KiB，调度恢复且没有删除任何 401 断言。首次 V212 完整 A3 的 V15 邀请页面检查在 Next 路由短暂卸载间隙返回 `undefined`；将“成员行及邀请表单存在”改为在同一个稳定页面内重试，**保留原 V15 安全检查**，新同 SHA A3 的 Chromium 任务 SUCCESS。避免以后无限向单个 YAML 添加长 HTTP 命令，优先抽脚本，且不能将此现象归因于未经证实的某个 GitHub 硬性字节限制。

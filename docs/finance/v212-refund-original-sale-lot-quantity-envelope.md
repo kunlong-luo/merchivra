@@ -1,6 +1,6 @@
 # Merchivra V212 · 退款订单行 × 原销售批次 × 本地退货收货：数量守恒与成本阻断
 
-**2026-11-23 · 已编写代码/文档，精确提交 CI/A3 待本阶段验收。无新 Flyway。**
+**2026-11-23 · 无新 Flyway。[V212 精确代码 `921c2e2`](https://github.com/kunlong-luo/merchivra/commit/921c2e250ad4554349fb290e777c650b279fc259) · [同 SHA 快速 CI #45170646181 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45170646181) · [完整 A3 #45170646128（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45170646128)。工程合成验收完成；外部真实财务仍未核证。**
 
 ## 业务目标和本轮没有做的事
 
@@ -52,6 +52,16 @@ GET /api/v1/finance/marketplaces/{marketplaceId}/orders/{orderId}/refund-batch-l
 - `RefundBatchLineageV212Test`：两笔部分退款总数 3、两个原销售采购批次 USD/EUR 2+1、V171/V172 本地收货 2；V106 覆盖不足、返仓未见证、pending 不算实收、retracted/重映射、两个包裹声称超量、上游收货 Claim 未审批、重复 V106/V34 source ID、Owner no-store、无实际 COGS。
 - `MERCHIVRA_V212_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_batch_lineage_v212.py`：在真实 PostgreSQL 18、Flyway 已有 V106/V96/V97/V111 的隔离实例上，以三个 Java 源 SQL 原文与 TEMP 表合成回归验证作用域、源不重乘、不同币种、坏上游收货 Claim 可见、原 V106 状态再读取可见。**该脚本将现有 V106 integrity 视图用 TEMP 表影子模拟，仅验证 V212 的查询/连接行为；真实 V106 触发器/视图独立测试在 V203/既有 PG18 专项，不能把本脚本说成再次独立验证 V106 原始触发器。** 最后 ROLLBACK。
 - 同一代码精确 SHA 跑 Java25/Next16/Chromium/HTTP/PG18/Compose 完整 A3 7/7 和 fast CI，并确保新 GET 匿名 401。文档随后回填准确 SHA 和运行链接，不用之前旧版本测试冒充当前证明。
+
+## 本轮真实提交、验收与修复记录
+
+[V212 精确代码 `921c2e2`](https://github.com/kunlong-luo/merchivra/commit/921c2e250ad4554349fb290e777c650b279fc259) 为最终代码/CI/浏览器检查提交，[同 SHA 快速 CI #45170646181 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45170646181) 已通过；[完整 A3 #45170646128（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45170646128) 首次运行 **7/7 SUCCESS**，包括 Java25、Next16/React19/pnpm、Chromium/Vite/Next 回归、Compose、隔离真实 PG18/Flyway 和 HTTP。
+
+PG18 作业原始日志记录 `PASS V212 PG18 exact V34/V106/V96/V97 source SELECT scope`，并实际执行新 Owner 只读接口的匿名 401 断言。临时脚本虽直接执行 V212 Java 三条 SQL，却以 TEMP 表影子代替 V106 integrity VIEW，仅检验新查询关联和隔离，不重做 V203 对真实 View/触发器的完整性校验。
+
+本轮首次 A3（[#45169687230](https://github.com/kunlong-luo/merchivra/actions/runs/45169687230)）**仅 6/7**，失败的是旧 V15 Owner 邀请表单的 Chromium 同步断言：Next App Router 导航短暂卸载团队 Workspace，列表单次等待成功后直接读取邀请页面可能返回 `undefined`。未删除权限检查，改为等待**同一次挂载中成员列表和实际邀请表单同时存在**；最终 [完整 A3 #45170646128（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45170646128) 的 Chromium 项已验证修复。之前一次修改过长 `ci.yml` 在 Actions 创建 0 个测试 Job 前失败，也不能归类为业务测试运行失败；将 9 个重复匿名安全 URL 变成单个 shell 基础路径后恢复调度，保留全部检查。
+
+**技术数量守恒不能证明退款对应哪个真实采购批次**：本轮不生成 FIFO、原始成本乘积、入库记账或真实净利润。仍须外部 G1/DEC、Amazon/物流/银行真实性来源，评分 70/100、真实 OAuth OFF、生产 NO-GO 和 `realizedNetProfit=null` 原样保留。
 
 ## 下一阶段与不变的门禁
 

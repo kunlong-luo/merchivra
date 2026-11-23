@@ -19,9 +19,9 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
-## V212 · 已实现待精确 SHA 验收：退款 × 原销售采购批次认领 × 本地返仓数量包络
+## 已交付 · V212 退款 × 原销售批次 × 本地返仓数量包络（[V212 精确代码 `921c2e2`](https://github.com/kunlong-luo/merchivra/commit/921c2e250ad4554349fb290e777c650b279fc259) · [同 SHA 快速 CI #45170646181 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45170646181) · [完整 A3 #45170646128（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45170646128)）
 
-[V212 财务数量来源契约](../finance/v212-refund-original-sale-lot-quantity-envelope.md)：不造新表、新内部认证系统或重复审批，直接复用 V210 全事件退款审核数量、V203/V106 采购批次原销售认领与原采购单价/币种封存、V171/V96 人工退货声称、V172/V97 本地包裹 ATTESTED/PENDING 见证。新增 Owner/no-store GET，先分别独立重算 V210 和 V203，在 bounded RR 源快照里读取**全部** V34 退款明细、V106 原认领、V97/V96 收货关系，每源最多 1000 行、越界 HTTP409 不显示部分金额，再执行 V210/V203 与原始源的二次完整读取；旧源、数量超额、SKU 改变、同原收据参考成本不一致均阻断。按原订单行显示累计退款与认领数量、声称返仓与本地收货数量、两类缺口和采购参考原币单价；**不把任一退货事件归属到某个原采购批次，也不乘出真实退货 COGS 或写库存**。Next.js V211 已审核退款单选择器按需调用，避免 100 单自动并发重算。正式利润、实际 COGS、银行和 G1/DEC 仍不可信，生产 #104 NO-GO、70/100、真实 Seller/Ads OAuth OFF 不变。
+[V212 财务数量来源契约](../finance/v212-refund-original-sale-lot-quantity-envelope.md)：不造新表、新内部认证系统或重复审批，直接复用 V210 全事件退款审核数量、V203/V106 采购批次原销售认领与原采购单价/币种封存、V171/V96 人工退货声称、V172/V97 本地包裹 ATTESTED/PENDING 见证。新增 Owner/no-store GET，先分别独立重算 V210 和 V203，在 bounded RR 源快照里读取**全部** V34 退款明细、V106 原认领、V97/V96 收货关系，每源最多 1000 行、越界 HTTP409 不显示部分金额，再执行 V210/V203 与原始源的二次完整读取；旧源、数量超额、SKU 改变、同原收据参考成本不一致均阻断。按原订单行显示累计退款与认领数量、声称返仓与本地收货数量、两类缺口和采购参考原币单价；**不把任一退货事件归属到某个原采购批次，也不乘出真实退货 COGS 或写库存**。Next.js V211 已审核退款单选择器按需调用，避免 100 单自动并发重算。正式利润、实际 COGS、银行和 G1/DEC 仍不可信，生产 #104 NO-GO、70/100、真实 Seller/Ads OAuth OFF 不变。 此版本精确 SHA 同时通过 Java25/Next16/Chromium/Compose/真实 PG18/HTTP A3 7/7；PG18 真实日志的 `PASS V212 PG18 exact V34/V106/V96/V97 source SELECT scope` 只验证 V212 原 SQL 作用域，脚本中的 V106 VIEW 为 TEMP 影子而非真实 V106 trigger 测试。匿名新接口 401 实测通过。
 
 **后续 V213**：重点从真实外部物流/仓库回执追查退货实物与原销售批次的逐件归属、采购最终落地成本、退款/仓储/广告及银行结算的审计归属与 G1 跨期间确认。授权前继续只读缺证与冲突处理，不采用 FIFO 猜测或内部签名代替外部真实认证。
 

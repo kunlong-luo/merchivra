@@ -6,6 +6,12 @@
 Status: lightweight browser-based **layout smoke**, **not** production end-to-end
 testing, browser accessibility certification, or a real Amazon integration.
 
+## V212 / V15 Next.js hydration regression — 2026-11-23
+
+V212 的首次 [完整 A3 #45169687230](https://github.com/kunlong-luo/merchivra/actions/runs/45169687230) 曾在 V15 团队页面出现 `V15 invite UI should exist`：Chromium 收到租户成员行后，Next App Router 导航或客户端 hydration 在紧邻的单次读取中短暂卸载了 `.team-workspace`，返回 `undefined`。组件 `apps/web/src/TeamWorkspace.tsx` 的邀请表单始终存在，**没有为了过关而删除或隐藏邀请功能，也没有删除浏览器权限检查**。
+
+浏览器脚本改为在同一挂载的 `.team-workspace` 中**等待 V15 成员行和实际 `form.team-invite-form button[type=submit]` 同时存在**（原严格邀请可见性要求不降低），Next/Vite 路由加载后再截图与布局检查。最终 [V212 精确 SHA `921c2e2`](https://github.com/kunlong-luo/merchivra/commit/921c2e250ad4554349fb290e777c650b279fc259) 的 [完整 A3 #45170646128](https://github.com/kunlong-luo/merchivra/actions/runs/45170646128) **7/7 SUCCESS**，Chromium 浏览器任务通过。此修复是合成浏览器异步状态的测试稳定性修正，不涉及真实客户邀请令牌或本地登录 500 的根因修复。
+
 ## What runs
 
 The standalone GitHub Actions workflow
