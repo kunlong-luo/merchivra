@@ -77,8 +77,8 @@ python3 scripts/check_next_runtime_v122.py
 - 隔离 PostgreSQL 18：`MERCHIVRA_V203_DISPOSABLE_ONLY=true python3 scripts/smoke_sale_lot_assignment_v203.py`，在 Flyway V106 已运行的 disposable 数据库，以 TEMP + ROLLBACK 执行实际数据库触发器和源 SQL 视图；分别验证 item/pick/receipt 三维累计数量、唯一归属、并发锁来源、QC 和出库漂移、撤销不释放已分配数量、不可 UPDATE/DELETE 和布尔硬阻断。生产真实身份/签名/财务入账不在合成验证范围。
 - V203 精确代码提交的快 CI 和完整 A3 7/7 经过 GitHub 核对，包含 Flyway V106 与匿名 HTTP 401；第一次和第二次 A3 的负例测试夹具错误均保留为历史失败，本次真实 PG18 测试修正后已通过。代码 SHA 是 [精确代码 `3d94550`](https://github.com/kunlong-luo/merchivra/commit/3d94550b9a2ef5a53c15db358b390ed88b60478b)，绝不引用 V202 的 green 或将合成验证当成外部真实性。
 
-## V204 签名出库观察（待当前精确 SHA 验收）
+## V204 签名出库观察（[V204 精确代码 `f89485f`](https://github.com/kunlong-luo/merchivra/commit/f89485fe0b85cb63f7e12614f254c4ba57ed9be9) · [同 SHA 快速 CI #45122956620 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45122956620) · [完整 A3 #45122956610（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45122956610)）
 
 - Java `SaleLotSignedDispatchV204Test` 在 JDK 25 生成真实 Ed25519 测试公私钥并验证规范化签名，对 claim/source/quantity/external dispatch 字段做篡改负例，验证无证据与跨租户 Owner/no-store 端点仍不把 WMS 观察升级为实际 COGS。
 - `MERCHIVRA_V204_DISPOSABLE_ONLY=true python3 scripts/smoke_signed_sale_dispatch_v204.py` 要求 Flyway V107 已应用且使用 PostgreSQL 18；用 TEMP 阴影表和安装的真实触发器 + 源 SQL 视图检查无密钥证明、唯一归属、防重放、密钥撤销、原 claim 失效、数量漂移、跨租户、禁止删改和数据库 `CHECK(FALSE)` 阻止伪造真实财务信号。纯 SQL 无法独立重算 Ed25519，必须与 Java 真实签名测试组合；全链路应验证未登录 GET 和 POST 均返回 HTTP 401，CSRF 仍启用。
-- 快 CI 和完整 A3 只有在本轮精确 SHA 状态为 SUCCESS 后，方可记录为验收通过；不能使用 V203 的结果代替，也不构成 Amazon/FBA/FBM 或 WMS 外部主体认证。
+- V204 精确代码提交已在 GitHub 对应快 CI 与完整 A3 确认 SUCCESS，PG18 真实触发器 + 独立视图日志含明确 `PASS V204`。首次工作流过长导致两个 Actions 运行未创建任何 jobs；将冗长内联注释归档至文档、保留独立 Python V204 smoke 调用后恢复正常。**工作流立即 failure 且 0 jobs 不等于测试失败；必须先核查 YAML/行长/步骤大小，再核查正常任务的真实日志。** 所有通过仅为隔离合成数据，不构成 Amazon/FBA/FBM 或 WMS 外部主体认证。

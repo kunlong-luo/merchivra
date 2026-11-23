@@ -40,6 +40,8 @@
 | Flyway/约束/并发/持久化 | 新迁移、正反向 DML 守护、隔离租户、幂等/重复提交/原始证据；合成 PG18/Flyway/A3 | Java 静态测试足以证明真实 PG18 执行 |
 | Next Node/Compose/回退 | Next /api 同源代理、Spring 身份/DB 健康、Session/CSRF、Docker/Chromium/回退 | 只要构建通过即生产部署通过 |
 
+复杂 PG18/HTTP 回归脚本必须维护成独立 `scripts/smoke_*.py` 等文件，CI 工作流使用短调用；不要无限向单个 `run: |` 区块追加内联 shell，避免工作流解析失败且 0 jobs。每次先核对 Actions 是否真实创建 jobs，再核对源码 SHA 与测试结论；零个 job 不算已验证。
+
 完整触发条件及实际任务参照 [CI 策略](../testing/ci-policy.md)。每次记录：`commit SHA`、`run URL`、`run_attempt`、`completed/failed/skipped`、验证目标和限制。被 SKIPPED 的专项不得计为已验证。
 
 ## 5. 财务与库存的不可破坏不变量

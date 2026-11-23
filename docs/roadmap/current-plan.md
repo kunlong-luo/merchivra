@@ -19,9 +19,9 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
-## V204 · 已实现待当前 SHA 验收：签名出库观察与可重算失效链
+## 已交付 · V204 签名出库观察与可重算失效链（[V204 精确代码 `f89485f`](https://github.com/kunlong-luo/merchivra/commit/f89485fe0b85cb63f7e12614f254c4ba57ed9be9) · [同 SHA 快速 CI #45122956620 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45122956620) · [完整 A3 #45122956610（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45122956610)）
 
-[设计、规范化 Ed25519 字节契约、读时失效与安全边界](../finance/v204-signed-sale-dispatch-identity-gate.md)：不造第二套 WMS 公钥治理，沿用 V98/V101 独立密钥持有权证明、V203 的全批次归属校验和 V200 历史订单 SKU 门禁。V107 不可变签名出库观察在写时要求登记源已批准、密钥持有权已证明、V106 本地归属有效，按精确数量/仓库/订单/批次保存规范化签名与指纹；读时对来源撤销、归属失效、历史 SKU 漂移、原始签名字节与 SHA-256 独立重算。没有 Amazon 外部订单项履约 API 的真实授权与外部 WMS 法人/设备身份认证，仍**只得到 SIGNATURE_ONLY_UNVERIFIED，不得确认实际 COGS**。优先验收 Java Ed25519 真值负例、PG18 V107 原 SQL、HTTP 401/CSRF、Chromium/Compose；本段不提前声明 CI 已通过。
+[设计、规范化 Ed25519 字节契约、读时失效与安全边界](../finance/v204-signed-sale-dispatch-identity-gate.md)：不造第二套 WMS 公钥治理，沿用 V98/V101 独立密钥持有权证明、V203 的全批次归属校验和 V200 历史订单 SKU 门禁。V107 不可变签名出库观察在写时要求登记源已批准、密钥持有权已证明、V106 本地归属有效，按精确数量/仓库/订单/批次保存规范化签名与指纹；读时对来源撤销、归属失效、历史 SKU 漂移、原始签名字节与 SHA-256 独立重算。没有 Amazon 外部订单项履约 API 的真实授权与外部 WMS 法人/设备身份认证，仍**只得到 SIGNATURE_ONLY_UNVERIFIED，不得确认实际 COGS**。本轮精确代码提交的 Java Ed25519 真值负例、PG18 V107 真触发器和原 SQL、HTTP、Chromium/Compose 已完成 7/7 合成 A3；真实外部 WMS/Amazon 与 G1 审批仍独立阻断。
 
 下阶段 V205/P0-D 应建立独立真实外部仓库运营主体/设备身份和具合法来源的发货/交付证明流程，另在维护者本地同意且权限、审计、合规完成后才安排 Seller/Ads 只读联调；真实账务、退款 COGS 和 G1 会计签署仍需单独批准。生产 #104 **NO-GO**，评分 **70/100**，已实现逻辑不代表真实利润完成。
 

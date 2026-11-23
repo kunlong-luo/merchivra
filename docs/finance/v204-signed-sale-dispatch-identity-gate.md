@@ -1,6 +1,6 @@
 # Merchivra V204 · 独立可重算的本地 WMS 签名出库观察，不代表平台履约
 
-**2026-11-23；代码与合成测试待本轮精确 SHA 验收。** 本阶段是在 V203 的不可变批次归属声明上增加 **Ed25519 签名观察**，不引入真实 Seller/Ads OAuth、不导入平台真实性、不中断既有 V98/V101 登记与密钥轮换，不执行 COGS/库存/GL 过账。
+**2026-11-23；[V204 精确代码 `f89485f`](https://github.com/kunlong-luo/merchivra/commit/f89485fe0b85cb63f7e12614f254c4ba57ed9be9) · [同 SHA 快速 CI #45122956620 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45122956620) · [完整 A3 #45122956610（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45122956610)。隔离合成工程验收已完成，仍未具备独立外部 WMS 法人主体、Amazon 原件或 G1 会计批准。** 本阶段是在 V203 的不可变批次归属声明上增加 **Ed25519 签名观察**，不引入真实 Seller/Ads OAuth、不导入平台真实性、不中断既有 V98/V101 登记与密钥轮换，不执行 COGS/库存/GL 过账。
 
 ## 复用与证明层级
 
@@ -45,7 +45,7 @@ MERCHIVRA_WMS_SALE_DISPATCH_V1
 
 - Java：`SaleLotSignedDispatchV204Test` 用运行时生成的 Ed25519 测试密钥签名并验证数量、claim、source、dispatch 四类篡改失效；响应始终不能确认真实 COGS；Owner、no-store、API 作用域均受保护。
 - PG18：`MERCHIVRA_V204_DISPOSABLE_ONLY=true python3 scripts/smoke_signed_sale_dispatch_v204.py` 在隔离数据库上检查 **已应用 Flyway V107 的真实触发器和源 SQL VIEW**，TEMP + ROLLBACK，覆盖没有 V101 密钥证明、重复 claim、源撤销、声明失效、数量更改、跨租户引用、不可变与伪造 TRUE 拒绝。纯 SQL 测试不证明 Ed25519 真伪；Java 单元测试负责算法层。
-- 精确代码 SHA 的快速 CI / 完整 A3 成功后才能在此写入测试验收结论。所有 CI 使用隔离合成来源，不能证明真实第三方身份或 Amazon 原件。
+- [V204 精确代码 `f89485f`](https://github.com/kunlong-luo/merchivra/commit/f89485fe0b85cb63f7e12614f254c4ba57ed9be9) 的 [同 SHA 快速 CI #45122956620 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45122956620)、[完整 A3 #45122956610（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45122956610) 均为 GitHub 已完成的对应提交，PG18 Job 日志明确 `PASS V204 PG18 V107 exact trigger/view`，覆盖独立密钥持有权、重复 claim、撤销、来源/数量漂移、跨租户与 COGS 硬拦截。所有 CI 使用隔离合成来源，不能证明真实第三方身份或 Amazon 原件。
 
 下一阶段继续 **V205/P0-D 与 P0-B**：取得有授权且独立审计的外部 WMS 主体身份/设备登记、原始出库与交付见证；在维护者本地真实 Seller/Ads 只读授权、G1/G2/G3 合规审签之后才能开展真实平台订单项履约交叉核证，另需按批准的原币会计政策处理物流/关税及退款 COGS 回转。届时仍不得仅凭签名自动开启 COGS。
 
