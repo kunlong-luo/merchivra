@@ -133,3 +133,9 @@ python3 scripts/check_next_runtime_v122.py
 - 同 SHA 快速 CI + 完整 A3 Java25/Next16/Chromium/PG18/HTTP/Compose 7/7，匿名 GET 必须 401。未知不能填 0、不得宣布独立 Amazon/仓库/银行的真实性已完成。
 - **实际验收（V212，代码 `921c2e2`）**：同 SHA [同 SHA 快速 CI #45170646181 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45170646181)、[完整 A3 #45170646128（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45170646128) 均 SUCCESS，A3 7/7。PG18 作业原始日志含 `PASS V212 PG18 exact V34/V106/V96/V97 source SELECT scope`，检查了两原始销售批次 2+1、不同采购原币参考、V171/V172 见证与 pending、租户/订单隔离及来源变更。此脚本用 TEMP 阴影 V106 view，不能代替实际 V106 VIEW/Flyway V106 触发器专项的证明；HTTP 新 GET 匿名 401 断言执行且通过。
 - **CI/Chromium 实际修复**：最初增量后 `ci.yml` 约 40.6 KiB 时 Actions 未创建 Job，不能当作 Java 或 PG18 失败；复用九条 Owner 401 URL 的公共 shell 路径将文件精简至约 39.8 KiB，调度恢复且没有删除任何 401 断言。首次 V212 完整 A3 的 V15 邀请页面检查在 Next 路由短暂卸载间隙返回 `undefined`；将“成员行及邀请表单存在”改为在同一个稳定页面内重试，**保留原 V15 安全检查**，新同 SHA A3 的 Chromium 任务 SUCCESS。避免以后无限向单个 YAML 添加长 HTTP 命令，优先抽脚本，且不能将此现象归因于未经证实的某个 GitHub 硬性字节限制。
+
+## V213 原采购收货跨订单全局容量（本轮精确代码验收待回填）
+
+- `RefundGlobalReceiptCapacityV213Test`：2–3 本地销售订单共享同一收货批次，原 QC 仍足够、不合法跨订单总领取超 QC、历史撤销仍占容量、不同采购价格/币种/接受量快照版本、原单领取超销量、重复/缺失来源、Owner/no-store 和实际 COGS/利润 false/null。
+- `MERCHIVRA_V213_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_global_receipt_capacity_v213.py`：真实 PG18 与 V111 Flyway 前置，使用 Java 真实聚合 SQL 和 TEMP V106 claim/view 影子模拟跨三单共享、USD/EUR、撤销仍占容量、不同租户/价格/ QC 数量漂移，末尾 ROLLBACK。TEMP 视图不是 V106 真触发器或真实采购成本/仓库核证。
+- 同一精确代码 SHA 完整 A3 Java25/Next16/Chromium/PG18/HTTP/Compose 7/7，匿名新 Owner GET 401；快 CI 的 PG18 skipped 不算新数据库专项。避免继续加长已有 YAML，优先用现有脚本。

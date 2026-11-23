@@ -1,6 +1,7 @@
 import {useEffect,useState} from 'react'
 import {useQuery} from '@tanstack/react-query'
 import {getRefundBatchLineageV212} from './lib/refund-batch-lineage-v212'
+import RefundGlobalReceiptCapacityPanelV213 from './RefundGlobalReceiptCapacityPanelV213'
 
 /** On-demand original-sale-lot vs refund/intake quantity envelope, never COGS. */
 export default function RefundBatchLineagePanelV212({
@@ -86,6 +87,8 @@ export default function RefundBatchLineagePanelV212({
     即使数量相符也没有退回件与原采购批次的一对一证据，不能自动过账。
     阻断：{p.blockerCodes.join('、')}。
    </p>
+   <RefundGlobalReceiptCapacityPanelV213 tenantId={tenantId}
+    marketplaceId={marketplaceId} orderId={selected}/>
   </>}
  </section>
 }

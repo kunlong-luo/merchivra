@@ -1,4 +1,4 @@
-# Merchivra · 当前执行计划（2026-11-23 / V212 退款批次原销售/返仓数量守恒）
+# Merchivra · 当前执行计划（2026-11-23 / V213 原采购批次跨订单全局容量与真实落地成本缺证）
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
@@ -18,6 +18,12 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 | 最后 | **维护者本地真实 Seller/Ads 只读授权与 API 验收** | Mock Gateway、连接与同步代码 | 用户完成实际授权、合法角色/区域、分页/限流/撤销、凭证/银行真实性和隐私审查之后才可调整访问开关；写入另行审批 |
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
+
+## V213 · 已实现待精确 SHA 验收：全订单原采购收货容量 + 落地成本证据门禁
+
+[详细契约](../finance/v213-global-receipt-capacity-and-landed-cost-hold.md)：复用 V212 原订单退款/批次证据和 V106 已有不可变领取记录，跨同租户所有订单重算同一采购收货单的原始领取数量（含历史 RETRACTED）；对比冻结 QC 接受量、原采购币种/参考单价版本及当前订单分量。合法共享批次不代表会计重复费用，采购 PO 单价不是已核证最终落地成本，无法推断逐件退货的原批次。所有真实 COGS、净利润保持 NULL；真实 Amazon/Ads OAuth OFF，70/100，生产 #104 NO-GO。 V106 已有 receipt 行锁及总领取不能超 QC accepted 的写时保障；本轮读时不重造约束，只在 V212 重算退货来源后，对原收货单的所有本地销售订单认领进行全局核对，超 1000 行 HTTP 409，跨两次 RR 读取出现差异必须重查。Next.js 在已有 V212 财务订单里按需展示全局共享、占用和参考价格；明确实际落地 COGS / 原批次退货归属 / 真实净利润全部未知。
+
+**后续 V214**：围绕原采购收货单、物流/关税/支付汇兑真实费用单据的唯一身份和资本化范围建立可审计缺证清单，复用 V91/V92 与现有结算行审查，避免跨期间费用重复扣为经营费用与入库成本；真实授权与 G1/DEC 许可前不能自动过账或假设金额。
 
 ## 已交付 · V212 退款 × 原销售批次 × 本地返仓数量包络（[V212 精确代码 `921c2e2`](https://github.com/kunlong-luo/merchivra/commit/921c2e250ad4554349fb290e777c650b279fc259) · [同 SHA 快速 CI #45170646181 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45170646181) · [完整 A3 #45170646128（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45170646128)）
 
