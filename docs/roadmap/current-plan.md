@@ -19,9 +19,9 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
-## V203 · 已实现待同 SHA 验收：本地销售出库对采购批次的不可变关联声明
+## 已交付 · V203 销售出库对采购批次的不可变关联声明（[精确代码 `3d94550`](https://github.com/kunlong-luo/merchivra/commit/3d94550b9a2ef5a53c15db358b390ed88b60478b) · [同 SHA 快 CI #45116800143 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45116800143) · [完整 A3 #45116800085（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45116800085)）
 
-[契约、数量守恒与审计边界](../finance/v203-sale-to-lot-link-integrity-contract.md)：优先复用 V48 pick line、V40 OUTBOUND、V46 QC 与 V20 receipt/PO 身份，新增 Flyway V106 的原子捕获和独立 PostgreSQL 重算视图；同一订单项/pick line/收货批次全历史数量守恒，独立追加撤销不释放旧数量，更新源数据需显示 STALE。Owner/no-store 只读 API 复核 V200 历史 SKU 映射。工程验证需检查本轮精确 main SHA 的快 CI 及 PG18/HTTP/Chromium/Compose 完整 A3；未验收前不写“通过”。本地声明和摘要不构成 Amazon 或外部 WMS 真实证明；不得生成实际 COGS/GL、退款冲回或已核实利润。
+[契约、数量守恒与审计边界](../finance/v203-sale-to-lot-link-integrity-contract.md)：优先复用 V48 pick line、V40 OUTBOUND、V46 QC 与 V20 receipt/PO 身份，新增 Flyway V106 的原子捕获和独立 PostgreSQL 重算视图；同一订单项/pick line/收货批次全历史数量守恒，独立追加撤销不释放旧数量，更新源数据需显示 STALE。Owner/no-store 只读 API 复核 V200 历史 SKU 映射。该代码精确 SHA 已通过快 CI 及 PG18/HTTP/Chromium/Compose 完整 A3 7/7；所有验证为合成隔离环境，不是实物发货与 G1 核证。本地声明和摘要不构成 Amazon 或外部 WMS 真实证明；不得生成实际 COGS/GL、退款冲回或已核实利润。
 
 下一阶段优先 **P0-D/B**：实际外部 WMS 主体独立身份与出库履约证明、平台订单项↔外部运输/交付的来源认证、退款实收与 COGS 转回、头程/运费/关税归属/原币会计政策审批。需要正式 G1/G2/G3 审签；生产 #104 保持 NO-GO，实际净利润继续 NULL，评分 **70/100**。
 

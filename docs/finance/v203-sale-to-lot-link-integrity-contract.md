@@ -1,6 +1,6 @@
 # Merchivra V203 · 销售出库 ↔ 采购收货批次不可变归属声明契约
 
-**2026-11-23；代码阶段。验收以 main 精确 SHA 的 CI/A3 为准，不借用 V202 的绿灯。** 本阶段建立能够独立重算的**本地归属声明**契约，不宣称 Amazon/FBA/FBM 实际履约、外部仓库主体已核证，也不授权任何实物批次 COGS 会计过账。
+**2026-11-23；本地合成工程验收完成：[精确代码 `3d94550`](https://github.com/kunlong-luo/merchivra/commit/3d94550b9a2ef5a53c15db358b390ed88b60478b) · [同 SHA 快 CI #45116800143 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45116800143) · [完整 A3 #45116800085（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45116800085)。这些是精确代码提交的工程验证，不是实际 Amazon/WMS 发货真伪或 G1 批准。** 本阶段建立能够独立重算的**本地归属声明**契约，不宣称 Amazon/FBA/FBM 实际履约、外部仓库主体已核证，也不授权任何实物批次 COGS 会计过账。
 
 ## 复用与身份闭环
 
@@ -25,7 +25,7 @@
 
 - Java `OrderLotAssignmentIntegrityV203Test`：无声明不能确认 COGS、独立状态覆盖、历史 SKU 漂移、Owner/no-store、无 INSERT/UPDATE read API。
 - `MERCHIVRA_V203_DISPOSABLE_ONLY=true python3 scripts/smoke_sale_lot_assignment_v203.py` 在**已执行 Flyway V106 的隔离 PG18** 上，使用真实触发器 + 完整原始视图 SQL，建立 TEMP 阴影表并整体 ROLLBACK；负例覆盖重复 pick、跨 pick item 超额、跨事件 receipt 超额、订单数量后改、QC 验收件数漂移、pick 改量、撤销不回收数量、声明更新拒绝，以及外部证据标志恒假。CI 还要求匿名 HTTP 401。
-- Fast CI 与精确 SHA 完整 A3 在这轮提交后才可写成 SUCCESS。任何合成 PG18/Chromium 绿灯都不等于实际 Amazon/WMS/银行证明。
+- 本阶段最初 A3 负例测试仅接受唯一键异常，但数量触发器先阻断重复认领；随后测试脚本新 DO 分隔符缺失，均已在测试中纠正，未修改 Flyway V106。最终 [精确代码 `3d94550`](https://github.com/kunlong-luo/merchivra/commit/3d94550b9a2ef5a53c15db358b390ed88b60478b) 的 [同 SHA 快 CI #45116800143 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45116800143) 与 [完整 A3 #45116800085（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45116800085) 已确认通过，包含真实 PG18、Flyway、HTTP、Java、Next、Chromium、Compose 7/7。任何合成绿灯不等于实际 Amazon/WMS/银行证明。
 
 ## 尚未完成的 G1 / P0
 
