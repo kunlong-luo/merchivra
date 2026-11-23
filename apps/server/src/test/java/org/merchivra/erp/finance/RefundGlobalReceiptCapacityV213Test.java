@@ -55,7 +55,7 @@ class RefundGlobalReceiptCapacityV213Test {
         assertTrue(result.completeGlobalLocalReceiptCapacity());
         assertEquals(1,result.originalReceiptCount());
         assertEquals(1,result.sharedOriginalReceiptCount());
-        assertEquals(1,result.otherOriginalSaleOrdersObserved());
+        assertEquals(1,result.otherOrderReceiptMembershipCount());
         assertEquals(2,result.globalClaimRows());
         var r=result.receipts().getFirst();
         assertEquals(2,r.thisOrderClaimedUnits());
