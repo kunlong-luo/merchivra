@@ -1,6 +1,6 @@
 # Merchivra V210 · 订单级全量退款数量守恒与 COGS 回转阻断
 
-**2026-11-23 · 无新 Flyway 迁移 · 精确代码 SHA/CI/A3 本轮核验后回填。**
+**2026-11-23 · 无新 Flyway 迁移 · [V210 精确代码 `dc7e1b3`](https://github.com/kunlong-luo/merchivra/commit/dc7e1b336bc5d1ac762c2172db657b5961a8bbdd) · [同 SHA 快速 CI #45159869191 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45159869191) · [完整 A3 #45159869175（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45159869175)。合成工程验收通过，真实财务与外部成本仍未核证。**
 
 ## 为什么必须以“整单全量”核对，而非当前页/某次退货
 
@@ -51,7 +51,7 @@ V210 不重造退款表、独立复核机制或财务台账。核心缺口是**�
 
 - Java `RefundOrderConservationV210Test`：两笔部分退款按 SKU/订单行累计数量 2+1≤5、signed USD -20/-10、claimed restock 成本风险敏感度 16、原始历史成本风险 24；跨事件 3+3>5、V34/V63 数量偏移、旧退款金额/币种/事件/订单漂移、V34 孤儿审查、缺 V63、原单数量未知、正数“退款”、不同币种不得汇率合并、重复来源/行、无源不能当完整，以及 Scope/no-store。
 - PG18 `MERCHIVRA_V210_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_order_conservation_v210.py`：在安装现行 Flyway 的**实际 PG18** 上，用 V210 Java 文件内三个真实 SQL text block，对 TEMP 合成 LIVE 订单行、两次退款、未匹配事件、其他订单、其他租户、已过时/合成订单行做全源检查；变更当前订单行数量应让重算看到缩减与多次退款数量冲突。最后 `ROLLBACK`。
-- CI 同一精确提交的 Java25/Next16/Chromium/PG18/Flyway/HTTP/Compose 完整 A3、匿名 401 拦截；快 CI 中 PG18 跳过不能视作专项成功。V210 无新增 Flyway，不能声称 V112 或生产资金真实核证。
+- 本阶段 [V210 精确代码 `dc7e1b3`](https://github.com/kunlong-luo/merchivra/commit/dc7e1b336bc5d1ac762c2172db657b5961a8bbdd) 的 [同 SHA 快速 CI #45159869191 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45159869191) 和 [完整 A3 #45159869175（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45159869175) 已实际 SUCCESS，A3 7/7。PG18 日志含 `PASS V210 PG18 exact full-order LIVE refund source SQL`，核对两次部分退款不重乘、跨租户/订单隔离、旧 LIVE 订单数量变更。新路由按现有 Spring Security `anyRequest().authenticated()` + Owner/no-store Controller 单测保护；**尚未新增此单一端点的匿名 HTTP 401 专项 smoke**，不能把已运行其他接口的 401 冒充该端点的精确测试。快 CI 中 PG18 skipped 不视为本次数据库验收。V210 无新增 Flyway，不能声称 V112 或生产资金真实核证。
 
 ## 未完成与下一步 V211
 

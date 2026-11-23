@@ -112,8 +112,8 @@ python3 scripts/check_next_runtime_v122.py
 - `OfflineIssuerCertificateTrustV209Test`：仅使用 `src/test/resources/v209/` 下的**合成公钥证书和签名 CRL，绝不提交私钥**；固定时钟执行 Java 25 PKIX 对受限根+Ed25519 leaf+DNS SAN+SPKI 哈希+签名 CRL 的技术正例。对同实例 CRL 新签发撤销、CRL 过期、错误 SAN/角色、错误 SPKI、缺失文件、伪造根证书、禁用开关及没有 V208 签名/来源的情况测试失败关闭。生产不可用这些合成根证书。
 - CI 新增 `GET /api/v1/finance/marketplaces/{marketplaceId}/orders/{orderId}/custody-external-trust-readiness` 匿名 401 检验；读操作无新数据库迁移。安全敏感行为仍按精确 SHA 跑 Java25/Next16/Chromium/Compose/HTTP/PG18 A3；不以快速 CI 中的 PostgreSQL skipped 冒充 PG18 联调。同一 V209 SHA 快速 CI、Redis Session 与完整 A3（7/7）已 SUCCESS，后者包括真实 PG18/HTTP 回归、Java PKIX/签名 CRL 合成正反例。由于没有 V209 新迁移，不能声称运行了“V209 Flyway 源触发器”；离线链和 CRL 通过仍不能证明根证书分发来源、真实运营公司、实体签收或净利润。
 
-## V210 全订单退款数量守恒与退款 COGS 风险 (待精确 SHA 验收)
+## V210 全订单退款数量守恒与退款 COGS 风险（[V210 精确代码 `dc7e1b3`](https://github.com/kunlong-luo/merchivra/commit/dc7e1b336bc5d1ac762c2172db657b5961a8bbdd) · [同 SHA 快速 CI #45159869191 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45159869191) · [完整 A3 #45159869175（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45159869175)）
 
 - Java `RefundOrderConservationV210Test`：以两笔 partial refund、原单数量 5、手工退款数量 2+1、USD 来源 -20/-10 验证不重复的原币与未核证历史成本 24 / 声称返仓敏感度 16；跨事件数量 3+3>5、V34/V63 数量/处置漂移、来源金额/订单/币种漂移、V34 孤儿、未做 V63、缺原单数量、正数“退款”、币种隔离和重复 source/item 都须 fail-closed。完整本地人工平衡不自动放开真实 COGS 或利润。
 - `MERCHIVRA_V210_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_order_conservation_v210.py`：真实 PG18、现有 Flyway 不变，直接抽取 V210 Java 三个 SQL text block，在 TEMP 合成测试数据验证**两次全量匹配事件、原币金额不重乘、跨租户/订单、旧/虚构订单行与当前数量更新**；事务末 ROLLBACK。无 V210 新迁移，不能声称新 Flyway 版本验收。
-- A3 同一精确提交的 Java25、真实 PG18/HTTP、Next16、Chromium、Compose 7/7，CI 添加匿名整单 GET 必须 401；快 CI 的 PG18 skip 不算数据库专项。退款真实来源、B2/B3、G1/DEC 与 `realizedNetProfit=null` 不变。
+- 本轮同 SHA Java25、真实 PG18/HTTP、Next16、Chromium、Compose 完整 A3 已 7/7 SUCCESS，PG18 Job 原始日志明确 `PASS V210 PG18 exact full-order LIVE refund source SQL`；V210 没有单独新增 HTTP 匿名 401 smoke，仍由现有 Spring Security 全局 `anyRequest().authenticated()` 和 Controller Owner/no-store 单元测试覆盖，端点级 401 独立回归属后续补充。快 CI 的 PG18 skipped 不算数据库专项。退款真实来源、B2/B3、G1/DEC 与 `realizedNetProfit=null` 不变。
