@@ -117,3 +117,9 @@ python3 scripts/check_next_runtime_v122.py
 - Java `RefundOrderConservationV210Test`：以两笔 partial refund、原单数量 5、手工退款数量 2+1、USD 来源 -20/-10 验证不重复的原币与未核证历史成本 24 / 声称返仓敏感度 16；跨事件数量 3+3>5、V34/V63 数量/处置漂移、来源金额/订单/币种漂移、V34 孤儿、未做 V63、缺原单数量、正数“退款”、币种隔离和重复 source/item 都须 fail-closed。完整本地人工平衡不自动放开真实 COGS 或利润。
 - `MERCHIVRA_V210_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_order_conservation_v210.py`：真实 PG18、现有 Flyway 不变，直接抽取 V210 Java 三个 SQL text block，在 TEMP 合成测试数据验证**两次全量匹配事件、原币金额不重乘、跨租户/订单、旧/虚构订单行与当前数量更新**；事务末 ROLLBACK。无 V210 新迁移，不能声称新 Flyway 版本验收。
 - 本轮同 SHA Java25、真实 PG18/HTTP、Next16、Chromium、Compose 完整 A3 已 7/7 SUCCESS，PG18 Job 原始日志明确 `PASS V210 PG18 exact full-order LIVE refund source SQL`；V210 没有单独新增 HTTP 匿名 401 smoke，仍由现有 Spring Security 全局 `anyRequest().authenticated()` 和 Controller Owner/no-store 单元测试覆盖，端点级 401 独立回归属后续补充。快 CI 的 PG18 skipped 不算数据库专项。退款真实来源、B2/B3、G1/DEC 与 `realizedNetProfit=null` 不变。
+
+## V211 期间退款跨期/重复快照与 V188/V210 整单会计阻断（待精确 SHA 验收）
+
+- Java `PeriodRefundProfitGuardV211Test`：同一订单的本期及下期退款 + 不同原币事件、源 0/2 匹配、超出 V64 冻结订单的旧单退款、V210 新/变更的原币/时间事件、重复源/订单、两个重叠 V64 报表不是实际重复入账、无分类来源不能认 0、Owner/no-store GET。全部真实成本/净利润 null。
+- `MERCHIVRA_V211_DISPOSABLE_ONLY=true python3 scripts/smoke_period_refund_profit_guard_v211.py`：使用本次 Java 服务的**三个原始 SQL**于已安装现有 Flyway 的真实 PG18 TEMP 合成数据中验证事件不因 2 个 MATCHED 关联被放大、USD/EUR 分币、漏归属/错订单/错租户、冻结订单下期退款仍可发现、其他 V64 快照区分本次报表，末尾 ROLLBACK。V211 不新增 Flyway，不能声称 V112 检查。
+- 完整 A3 同一代码 SHA Java25/PG18/HTTP/Next16/Chromium/Compose 7/7；单独新 GET 匿名 401 保护。React/Vitest 以 Zod 断言收入/成本认定字段硬 false/NULL、只在用户点击后获取较重的源核对；快 CI 的 PG18 skipped 不算全链路。真实财务/第三方身份仍未经认证。

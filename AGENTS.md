@@ -14,6 +14,7 @@
 1. 项目 **pre-alpha**，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。真实 Amazon Seller/Ads OAuth、实际 API 出站/写入和真实银行核证关闭；只能使用明确隔离的合成数据。未经维护者本地明确授权、外部合规与 G1/G2/G3 审批不得擅自开启。
 2. **UNKNOWN ≠ 0**；跨币种不得未经批准合并；金额使用 BigDecimal/PostgreSQL NUMERIC 和原币精度，保留报告/行/来源版本、归属、审计及独立复核。人工 `APPROVED_UNVERIFIED` 不代表外部真伪，不自动入账。
 3. V64 是**已知范围贡献**，V188 是**原币敏感度预览**；V194 指纹只证明本地冻结数据能独立重算；V105 以严格 NULL-safe CHECK 修补 V104 半指纹漏洞，不能证明来源真实性。退款 COGS 回转和 G1/DEC-06/07/08 尚未签署；`realizedNetProfit=null` 必须继续保持，不得用合成费用伪造“净利润”。
+   **退款期间守恒**：V64 订单创建时间、Finances 退款 `posted_at` 和 V91 费用业务日期互不等同；V210/V211 只核对本地来源，不能将退款从 V188 已有的有符号收入再扣一次，也不能将多个相同订单的 V64 快照直接相加成正式净利润。
 4. 库存及 WMS 签名不自动证明第三方运营商真实身份或物理实收，不以内部三方 QC 替代外部确认；库存过账与退款回转必须受证据和批准限制。
 5. 不提交或输出任何实际 Seller/Ads、银行、客户或 WMS 凭据、密钥、会话和私有证据。不要关闭 Session/CSRF、绕过 Owner/租户校验或公开 Actuator 来解决本地启动错误。
 
