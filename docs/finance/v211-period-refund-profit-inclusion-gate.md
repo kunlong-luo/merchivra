@@ -1,6 +1,6 @@
 # Merchivra V211 · 期间退款归属、跨期和冻结报表重叠的利润阻断
 
-**2026-11-23 · 无新 Flyway / 无新会计分录 · 精确代码 SHA/CI/A3 待核验。**
+**2026-11-23 · 无新 Flyway / 无新会计分录 · [V211 代码 `fec6371`](https://github.com/kunlong-luo/merchivra/commit/fec6371386e5f1a550be6b12856d627ad94b515f) · [同 SHA 快速 CI #45165293616 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45165293616) · [完整 A3 #45165293551（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45165293551)。仅合成工程验收，真实财务来源未核证。**
 
 ## 核心目标与现有能力复用
 
@@ -54,6 +54,14 @@ GET /api/v1/finance/marketplaces/{marketplaceId}/period-refund-profit-guard/{job
 - PG18 `MERCHIVRA_V211_DISPOSABLE_ONLY=true python3 scripts/smoke_period_refund_profit_guard_v211.py`：使用**V211 Java 源码里三个 SQL 原文**、现有 Flyway V111 后的真实 PostgreSQL 18，在 TEMP 表上构造 USD/EUR 跨期退款、不同租户、其他 Marketplace、无匹配、多重匹配、不同 V64 快照、旧期间与新期间；从源查询核对没有重复乘额，最后 ROLLBACK。SQL 合成验证不证明真实 Amazon 完整性或任何利润。
 - 同一精确代码 SHA 的 Java25/Next16 pnpm/Chromium/HTTP/PG18/Compose **完整 A3 7/7** 和快速 CI；针对新 GET 匿名请求 HTTP 401。无新 Flyway 数据表或迁移，不应声称 V112 已经运行。
 - 技术栈不变：Java25/Spring Boot4.1.2/Gradle/PostgreSQL18，React19/Next.js16.4.5/pnpm，**不使用 npm/Maven，不向 Vite 回退扩展新功能**。直接提交 `main`。
+
+## V211 代码与验收证据（同一精确 SHA）
+
+- 直接开发并合并于 `main`：[V211 代码 `fec6371`](https://github.com/kunlong-luo/merchivra/commit/fec6371386e5f1a550be6b12856d627ad94b515f)。
+- [同 SHA 快速 CI #45165293616 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45165293616)：Java 25 Gradle 回归、Next.js 16/React 19/pnpm 构建及 Compose 成功。
+- [完整 A3 #45165293551（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45165293551)：Java25、Next16、Chromium、真实隔离 PG18/Flyway、HTTP 与 Compose 7/7 SUCCESS。PG18 Job 原始日志含 `PASS V211 PG18 source-exact period/refund cohort/overlap SQL`，实际用 TEMP/ROLLBACK 对三条 Java SQL 进行了两次退款/跨期/多匹配/不同原币/跨租户验证。匿名 `period-refund-profit-guard` GET 401 断言被执行。
+- 此轮早期先后遇到 Java 测试将“无订单匹配”误计为“已匹配但非 V64 冻结订单”的数量分类问题，以及过长 CI YAML 导致零 Job 调度失败；均已修复并以最终代码 SHA 重测。前者影响**风险信号计数，不影响已按来源 event ID 唯一汇总的金额**；后者没有任何业务任务运行，不能引用为测试失败或成功。
+- 未取得 Amazon/Ads/银行、CA/外部实体或 G1/DEC 的正式来源证明；上述 7/7 仍不得代表生产上线/账务过账许可。
 
 ## 后续 V212 及正式上线闸门
 

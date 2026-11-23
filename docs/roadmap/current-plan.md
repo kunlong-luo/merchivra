@@ -19,9 +19,9 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
-## V211 · 已实现待精确 SHA 验收：V188 期间利润与 V210 退款归属、跨期和重叠快照阻断
+## 已交付 · V211 期间退款、跨期与重叠快照利润阻断（[V211 代码 `fec6371`](https://github.com/kunlong-luo/merchivra/commit/fec6371386e5f1a550be6b12856d627ad94b515f) · [同 SHA 快速 CI #45165293616 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45165293616) · [完整 A3 #45165293551（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45165293551)）
 
-[财务契约与 Next.js 交互](../finance/v211-period-refund-profit-inclusion-gate.md)：V64 按订单 `order_time` UTC 选择固定订单集合，LIVE Finances 退款按 `posted_at` UTC 在不同期间出现，V91 费用另用人工业务日期。**不能将这三个日期轴合并，也不能从已有 V188 有符号销售收入里再扣一次退款。** 新增只读 Owner/no-store GET：先经 V188/194 验证冻结订单/原币成本来源，然后读取本期所有已分类 LIVE 退款（包括无 MATCHED 订单/多重归属/非 V64 冻结订单）、冻结订单跨所有时间的退款订单（含 V34 孤儿），以及其他重叠 V64 报表共同的订单。每期来源最多 1000 条、退款订单 100 单、快照重叠 100 条，越界明确 HTTP 409 而非截断金额。事务结束后逐订单调用 V210 做全量身份/金额/日期重算；跨期、来源漂移与快照重叠都有独立阻断码，重叠仅是不同报表版本，不等于已发生重复账本扣款。Next.js V64 利润中心 V188 下新增按需展开的 V211 诊断，禁止将 `refundAdjustedContribution` 与 `realizedNetProfit` 伪装成有值。尚无外部官方退款覆盖、真实物流实收、G1/DEC、银行核验；生产 #104 NO-GO、评分 70/100 不变。
+[财务契约与 Next.js 交互](../finance/v211-period-refund-profit-inclusion-gate.md)：V64 按订单 `order_time` UTC 选择固定订单集合，LIVE Finances 退款按 `posted_at` UTC 在不同期间出现，V91 费用另用人工业务日期。**不能将这三个日期轴合并，也不能从已有 V188 有符号销售收入里再扣一次退款。** 新增只读 Owner/no-store GET：先经 V188/194 验证冻结订单/原币成本来源，然后读取本期所有已分类 LIVE 退款（包括无 MATCHED 订单/多重归属/非 V64 冻结订单）、冻结订单跨所有时间的退款订单（含 V34 孤儿），以及其他重叠 V64 报表共同的订单。每期来源最多 1000 条、退款订单 100 单、快照重叠 100 条，越界明确 HTTP 409 而非截断金额。事务结束后逐订单调用 V210 做全量身份/金额/日期重算；跨期、来源漂移与快照重叠都有独立阻断码，重叠仅是不同报表版本，不等于已发生重复账本扣款。Next.js V64 利润中心 V188 下新增按需展开的 V211 诊断，禁止将 `refundAdjustedContribution` 与 `realizedNetProfit` 伪装成有值。尚无外部官方退款覆盖、真实物流实收、G1/DEC、银行核验；生产 #104 NO-GO、评分 70/100 不变。 同 SHA A3 7/7 SUCCESS，真实 PG18 日志含 `PASS V211 PG18 source-exact period/refund cohort/overlap SQL`，验证实际执行源码三个 SQL 原文、匿名路由 401；并不证明真实 Amazon、物流或成本来源。
 
 **下一阶段 V212** 优先在明确 G1 决议与真实 Amazon/Ads/银行/第三方授权可取得后，继续退款 COGS 对真实原始批次唯一归属、跨期退款归属规则和真实可核验成本闭环，不再堆叠新的自登记真实性档案；没有获授权前只允许继续解决现有只读守恒与测试缺口。
 
