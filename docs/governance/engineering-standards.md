@@ -62,6 +62,8 @@
 - **V212 退款不能凭相同 SKU 猜原采购批次**：复用 V203/V106 原销售采购批次人工认领、V210 同订单全事件退款、V171/V172 本地收货数量，先按原订单行和每个 `refundEventId + externalItemId` 重新核验，再计算“可覆盖多少件”，不创建第二套账本/身份认证。原批次历史认领撤销不回收原物理额度；V203 当期 SKU 映射更严格时使用 V203 失效状态。ATTESTED_LOCAL 仅本地人工见证，PENDING 不算实收，复数包裹及收货 Claim 数量不能超过退款审核；原采购单价不等于最终入库 COGS，同 SKU 多采购批次/币种不允许 FIFO 猜测。全部真实退款 COGS/利润字段必须 NULL、不可入账。整个订单每类 1000 条有界、源漂移必须 409，不可用截断当前页凑合计。
 - **V213 全订单原收货容量不可仅按退款订单估算**：V106 已按 receipt 行锁限制物理 QC 接受数量，需跨所有本地订单连同历史撤销 claims 独立读时汇总；同一 receipt 多订单合法共享不能直接视作重复账务，而跨订单超额、原采购单价/币种或 QC 版本漂移必须 fail-closed。绝不将原 PO unit cost 当含运费/关税/FX 的已核证 landed cost，也不能从匿名批次分布推导退货逐件 COGS；外部凭据/G1/DEC 不全时净利润与退货成本 NULL。
 
+- **V214 人工费用不能自动落到原采购批次**：V91 人工发票/承运来源和 V92 原币 SKU/ORDER/PERIOD 分摊只属于未核证 Marketplace 元数据；它们没有 `purchase_receipt_id` 身份，也没有已签 G1 分摊会计政策。不得把 V92 `APPROVED_UNVERIFIED`、V20 原采购参考单价或 V213 全订单收货容量重命名成已核证 landed cost；V214 只读候选行检查需租户/Marketplace 限定、最多 1000 行、双读不一致 409，并持续固定实际 COGS/退款冲回/净利润 NULL。参见 [V214 契约](../finance/v214-manual-cost-receipt-provenance-hold.md)。
+
 ## 6. UX、会话与本地失败处理
 
 - 用 Next.js 16 正式工作区设计；优先复用 Base UI 和现有设计 token。需检查 360px/桌面自适应、键盘焦点、对比度、数据来源、用户动作反馈、空态和错误态。
