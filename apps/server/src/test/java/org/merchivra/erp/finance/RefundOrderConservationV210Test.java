@@ -181,7 +181,7 @@ class RefundOrderConservationV210Test {
             List.of(reviewed(EVENT1,1,"RESTOCKED_CLAIMED")),
             List.of(new RefundOrderConservationEngineV210.Probe(
                 source(EVENT1,"USD","20"),
-                status(EVENT1,"USD","20",1,"RESTOCKED_CLAIMED","8")));
+                status(EVENT1,"USD","20",1,"RESTOCKED_CLAIMED","8"))));
         assertTrue(positive.blockerCodes().contains(
             "SOURCE_EVENT_NOT_NEGATIVE_PRODUCT_REFUND"));
         assertNull(positive.currencies().getFirst()
