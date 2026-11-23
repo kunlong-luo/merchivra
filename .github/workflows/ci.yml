@@ -337,6 +337,13 @@ jobs:
           # disposable PG18 order changes, stale/non-LIVE items and tenant
           # isolation. Never backfills, mutates or credits real inventory.
           MERCHIVRA_V201_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_cross_event_quantity_v201.py
+          # V202: run exact local PO receipt/QC/ledger provenance SQL on
+          # disposable PostgreSQL 18. No inferred sale-to-lot assignment.
+          MERCHIVRA_V202_DISPOSABLE_ONLY=true python3 scripts/smoke_local_lot_cost_provenance_v202.py
+          # The V202 finance evidence endpoint is tenant/Owner scoped.
+          lot_anon_code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202/lot-provenance)
+          test "$lot_anon_code" = "401"
           # The new Owner-only endpoint must never disclose V194 evidence to a guest.
           capture_anon_code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/capture-verification/00000000-0000-4000-8000-000000000202)

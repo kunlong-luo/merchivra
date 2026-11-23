@@ -35,6 +35,11 @@ V199 拒绝 V54 结算 `declared_net=NULL` 被视为三方来源金额一致：J
 - 本次代码精确 SHA 的快 CI 与完整 A3 已通过 7/7，测试使用隔离 PG18 原 Java SQL 与合成订单/退款行；真实物理退货、成本总账与银行仍完全不在 CI 范围内。
 
 
+## V202 本地采购批次原币来源核对（待精确代码验收）
+
+`OrderLotProvenanceV202Test` 与 Next Zod/Vitest 检查 Owner/租户隔离、订单成本不 READY 时不开采购来源扫描、冲突/多币种不可任选金额、且响应恒为 `actualBatchCogsVerified=false`。`scripts/smoke_local_lot_cost_provenance_v202.py` 使用 **生产 Java 的同一 SQL**、PG18 TEMP/ROLLBACK 演示隔离时间范围、legacy receipt、QC hold/放行、QC 错连、批次 SKU 冲突、ledger 数量差、多原币/单价。任何合成绿灯都不是 Amazon 出库批次来源或 G1 的真实确认。
+
+
 ## 最新已确认工程技术证据
 
 - **V198 / `11864a739451f0e91c0bd9639b2c4bfe441b518e`**：[精确代码 `11864a7`](https://github.com/kunlong-luo/merchivra/commit/11864a739451f0e91c0bd9639b2c4bfe441b518e) 的 [完整 A3 #45021678686（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45021678686)，及 [同 SHA 快 CI #45021678580](https://github.com/kunlong-luo/merchivra/actions/runs/45021678580) SUCCESS。首次 `f5bc560` 的 [完整 A3 #45021496225](https://github.com/kunlong-luo/merchivra/actions/runs/45021496225) **FAILED**，原因是老版 `SettlementSourceReviewServiceTest` 构造参数以及旧 Vitest 比较夹具缺少五个新字段；并非放宽判定后通过，现已修正。实际 PostgreSQL 18 阶段先前已通过并有 `PASS V198 real PG18 exact Java SQL` 日志证据。旧 V58/V31 只读比较补齐重复结算归属/重复报告/缺失行与混币检测，Java/Vitest 合同负例及原 SQL 的 PG18 TEMP 表 `ROLLBACK` 验证。修改 `ci.yml` full_suite 跑真实 PG18；V198 修复后的同 SHA 完整 A3 7/7 验证独立成立，与 V197 的历史绿灯互不借用。
