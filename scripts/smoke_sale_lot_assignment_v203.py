@@ -156,15 +156,15 @@ DO $$ BEGIN
   IF SQLSTATE<>'23505'
      AND SQLERRM NOT LIKE '%quantity conservation exceeded%' THEN RAISE; END IF;
  END;
-END $;
-DO $ BEGIN
+END $$;
+DO $$ BEGIN
  IF NOT EXISTS (
   SELECT 1 FROM pg_constraint
   WHERE conrelid='pg_temp.finance_sale_lot_claim_v106'::regclass
     AND contype='u'
     AND pg_get_constraintdef(oid) LIKE '%order_item_id, pick_line_id%'
  ) THEN RAISE EXCEPTION 'V203: duplicate item/pick identity not UNIQUE'; END IF;
-END $;
+END $$;
 INSERT INTO erp_local_stock_operation VALUES
  ('{op2}','{tenant}','OUTBOUND','{warehouse}','{sku}',2,-2);
 INSERT INTO erp_local_lot_pick VALUES
