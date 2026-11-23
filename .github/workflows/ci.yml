@@ -319,14 +319,15 @@ jobs:
           MERCHIVRA_V210_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_order_conservation_v210.py
           MERCHIVRA_V211_DISPOSABLE_ONLY=true python3 scripts/smoke_period_refund_profit_guard_v211.py
           MERCHIVRA_V212_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_batch_lineage_v212.py
+          v212_order_base=http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202
           v212_anon=$(curl --silent --output /dev/null --write-out '%{http_code}' \
-            http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202/refund-batch-lineage-readiness)
+            ${v212_order_base}/refund-batch-lineage-readiness)
           test "$v212_anon" = "401"
           v211_profit_guard_anon=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/period-refund-profit-guard/00000000-0000-4000-8000-000000000202)
           test "$v211_profit_guard_anon" = "401"
           issuer_operator_trust_anon=$(curl --silent --output /dev/null --write-out '%{http_code}' \
-            http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202/custody-external-trust-readiness)
+            ${v212_order_base}/custody-external-trust-readiness)
           test "$issuer_operator_trust_anon" = "401"
           issuer_anon=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             http://127.0.0.1:8080/api/v1/finance/custody-issuer-keys)
@@ -335,28 +336,28 @@ jobs:
             http://127.0.0.1:8080/api/v1/finance/custody-issuer-keys)
           test "$issuer_post_anon" = "401"
           issuer_preview_anon=$(curl --silent --output /dev/null --write-out '%{http_code}' \
-            http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202/custody-issuer-integrity)
+            ${v212_order_base}/custody-issuer-integrity)
           test "$issuer_preview_anon" = "401"
           custody_governance_anon=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             http://127.0.0.1:8080/api/v1/finance/custody-originals/capacity)
           test "$custody_governance_anon" = "401"
           custody_governance_post_anon=$(curl --silent --output /dev/null --write-out '%{http_code}' -X POST \
-            http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202/custody-dossiers/00000000-0000-4000-8000-000000000205/originals/OPERATOR_REGISTRY/retention-proposals)
+            ${v212_order_base}/custody-dossiers/00000000-0000-4000-8000-000000000205/originals/OPERATOR_REGISTRY/retention-proposals)
           test "$custody_governance_post_anon" = "401"
           custody_original_anon=$(curl --silent --output /dev/null --write-out '%{http_code}' \
-            http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202/custody-original-integrity)
+            ${v212_order_base}/custody-original-integrity)
           test "$custody_original_anon" = "401"
           custody_original_upload_anon=$(curl --silent --output /dev/null --write-out '%{http_code}' -X POST \
-            http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202/custody-dossiers/00000000-0000-4000-8000-000000000205/originals/OPERATOR_REGISTRY)
+            ${v212_order_base}/custody-dossiers/00000000-0000-4000-8000-000000000205/originals/OPERATOR_REGISTRY)
           test "$custody_original_upload_anon" = "401"
           custody_anon_code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
-            http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202/custody-readiness)
+            ${v212_order_base}/custody-readiness)
           test "$custody_anon_code" = "401"
           sale_lot_anon_code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
-            http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202/sale-lot-integrity)
+            ${v212_order_base}/sale-lot-integrity)
           test "$sale_lot_anon_code" = "401"
           lot_anon_code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
-            http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202/lot-provenance)
+            ${v212_order_base}/lot-provenance)
           test "$lot_anon_code" = "401"
           capture_anon_code=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/capture-verification/00000000-0000-4000-8000-000000000202)
