@@ -1,6 +1,6 @@
 # Merchivra V209 · 部署侧离线 X.509/PKIX + 签名 CRL 信任准备度
 
-**2026-11-23 · 无新 Flyway 迁移 · 精确提交的 CI/A3 待本阶段核验。**
+**2026-11-23 · 无新 Flyway 迁移 · [V209 精确代码 `0a9dc09`](https://github.com/kunlong-luo/merchivra/commit/0a9dc0903a92b64d5891c03011f5b3ef85fbc560) · [同 SHA 快速 CI #45155665615 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45155665615) · [完整 A3 #45155665675（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45155665675) · [同 SHA Redis Session 集成 #45155665716 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45155665716)。只有合成工程验收，没有独立外部法人认证。**
 
 ## 目的与业务硬边界
 
@@ -43,7 +43,7 @@ Spring `application.yml` 中新增以下**纯部署侧**配置，以环境变量
 - 当前 CRL 在同一服务运行中被运营方替换为真实签名的撤销清单后，必须立刻返回吊销阻断；旧 CRL 到期必须阻断，不能缓存先前的绿色结果。
 - 没有 V208 Ed25519 或旧来源已经失效时，不得调用离线证书核验，不能显示任何外部身份已核实；返回总是 `realizedBatchCogs=null`。
 - 公开的合成证书是测试信任材料，**禁止复制到生产配置**。测试时使用注入的固定时钟，避免静态 CRL 测试凭据过期造成漂移；真实运行始终用 UTC 当前时钟。
-- 完整 A3 必须是**本次代码的精确 SHA**，包括 Java25/Next16/Chromium/Compose/隔离真实 PG18 及 HTTP，且新增接口匿名 GET 必须 401。V209 不增加迁移或 PostgreSQL 写状态，不能把“V209 新 Flyway 验收”写入记录。
+- 本轮 [V209 精确代码 `0a9dc09`](https://github.com/kunlong-luo/merchivra/commit/0a9dc0903a92b64d5891c03011f5b3ef85fbc560) 的 [同 SHA 快速 CI #45155665615 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45155665615)、[完整 A3 #45155665675（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45155665675)（A3 7/7）和 [同 SHA Redis Session 集成 #45155665716 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45155665716) 均已 SUCCESS，Java25/Next16/Chromium/Compose/隔离 PG18、HTTP 回归通过；匿名新 GET 401 纳入 CI。V209 不增加迁移或 PostgreSQL 写状态，不能把“V209 新 Flyway 验收”写入记录。
 
 ## 尚未完成的真实 B2/P0-A 与后续 V210
 

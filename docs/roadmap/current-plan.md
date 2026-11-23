@@ -19,9 +19,9 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
-## V209 · 已实现待本次精确 SHA 验收：部署侧可信根/PKIX/签名 CRL 读取准备度
+## 已交付 · V209 部署侧离线 PKIX/CRL 只读技术准备度（[V209 精确代码 `0a9dc09`](https://github.com/kunlong-luo/merchivra/commit/0a9dc0903a92b64d5891c03011f5b3ef85fbc560) · [同 SHA 快速 CI #45155665615 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45155665615) · [完整 A3 #45155665675（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45155665675) · [同 SHA Redis Session 集成 #45155665716 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45155665716)）
 
-[离线证书链安全契约和部署方配置](../finance/v209-operator-offline-pkix-crl-readiness.md)：V208 的 tenant-enrolled Ed25519 签名并不证明机构的法定身份。V209 **不增加另一套 DB/内部 Owner 批准系统**，而是新增默认 OFF 的本地运维证书准入：部署人员配置受限 PEM 根 CA、发行证书包及 7 日有效的签名 CRL，运营商登记/承运交接独立 DNS 白名单；Java 25 只从本地文件构造证书路径并执行 PKIX 签名和有效期验证、SPKI SHA 对比、精确 SAN DNS、CRL 签名/撤销校验。每次 V208 Preview 已真实 Ed25519 核验后再做离线复核，所有无有效资料、失效/被撤销证书与旧来源都返回技术阻断。即使通过也只是 `OFFLINE_PKIX_AND_CRL_MATCH_TENANT_KEY_EXTERNAL_IDENTITY_UNVERIFIED`，真实身份、交接、Amazon 和实际 COGS 固定假；无新 Flyway、无本阶段持久性真值或公网调用。完整 Java/PG18/HTTP/Next/Chromium/Compose A3 待本轮核对。
+[离线证书链安全契约和部署方配置](../finance/v209-operator-offline-pkix-crl-readiness.md)：V208 的 tenant-enrolled Ed25519 签名并不证明机构的法定身份。V209 **不增加另一套 DB/内部 Owner 批准系统**，而是新增默认 OFF 的本地运维证书准入：部署人员配置受限 PEM 根 CA、发行证书包及 7 日有效的签名 CRL，运营商登记/承运交接独立 DNS 白名单；Java 25 只从本地文件构造证书路径并执行 PKIX 签名和有效期验证、SPKI SHA 对比、精确 SAN DNS、CRL 签名/撤销校验。每次 V208 Preview 已真实 Ed25519 核验后再做离线复核，所有无有效资料、失效/被撤销证书与旧来源都返回技术阻断。即使通过也只是 `OFFLINE_PKIX_AND_CRL_MATCH_TENANT_KEY_EXTERNAL_IDENTITY_UNVERIFIED`，真实身份、交接、Amazon 和实际 COGS 固定假；无新 Flyway、无本阶段持久性真值或公网调用。本轮同 SHA 快速 CI、Redis Session 及完整 Java/PG18/HTTP/Next/Chromium/Compose A3 已全部 SUCCESS，A3 7/7；V209 没有新的数据库迁移，测试的 PostgreSQL 18 工作流仅证明现有数据库/服务回归无破坏。
 
 **下一阶段 V210 优先回到 P0-B 退款 COGS 与可审计利润的缺证盘点/守恒校验**，避免继续堆叠没有真实证据来源的本地认证环节。真正的 B2 外部签发方，需要维护者通过独立合法渠道获得真实 CA 和运营主体、证书吊销与实体交付证明；目标生产 #104 NO-GO、`realizedNetProfit=null`、Seller/Ads OAuth OFF、正式评分 70/100 保持不变。
 
