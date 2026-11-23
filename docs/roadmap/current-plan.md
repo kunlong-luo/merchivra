@@ -19,9 +19,9 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
-## V208 · 已实现待当前精确 SHA 验收：外部声称签发方密钥绑定/撤销与 V206 原件 Ed25519
+## 已交付 · V208 声称外部签发方密钥/撤销与 Ed25519 原件签名复核（[V208 精确代码 `6678558`](https://github.com/kunlong-luo/merchivra/commit/66785586f1856fc5647c48bbf4a975152a16fce7) · [同 SHA 快速 CI #45150207475 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45150207475) · [完整 A3 #45150207574（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45150207574)）
 
-[V111 原始签名契约、外部信任边界和 V1 canonical 原文](../finance/v208-claimed-issuer-ed25519-signature-integrity.md)：复用现有 WMS Ed25519 实现，不新建重复密码库。签发公钥来源仍是租户 Owner 自行登记，另一 Owner 仅能记录 `REVIEWED_UNVERIFIED`，永久撤销后旧签名不得复活。V111 数据库冻结两个不同类别的文件 SHA、订单、V204 出库 ID、V205 档案编号及源公钥；请求者必须独立于密钥登记人、原件上传人及档案提交人；每次读时由 Java 独立重算真正 Ed25519/规范化原文，绝不以数据库记录冒充 cryptographically verified。提供 Owner/Session/CSRF/no-store 登记、内部审核、撤销、导入及只读诊断。**身份/履约/实际成本 FLAG 固定假，COGS/利润不得写入。** 这一阶段代码的 Java/PG18/HTTP/Next/Chromium/Compose 完整 A3 必须对应自身精确 SHA。
+[V111 原始签名契约、外部信任边界和 V1 canonical 原文](../finance/v208-claimed-issuer-ed25519-signature-integrity.md)：复用现有 WMS Ed25519 实现，不新建重复密码库。签发公钥来源仍是租户 Owner 自行登记，另一 Owner 仅能记录 `REVIEWED_UNVERIFIED`，永久撤销后旧签名不得复活。V111 数据库冻结两个不同类别的文件 SHA、订单、V204 出库 ID、V205 档案编号及源公钥；请求者必须独立于密钥登记人、原件上传人及档案提交人；每次读时由 Java 独立重算真正 Ed25519/规范化原文，绝不以数据库记录冒充 cryptographically verified。提供 Owner/Session/CSRF/no-store 登记、内部审核、撤销、导入及只读诊断。**身份/履约/实际成本 FLAG 固定假，COGS/利润不得写入。** 本轮精确代码 [V208 精确代码 `6678558`](https://github.com/kunlong-luo/merchivra/commit/66785586f1856fc5647c48bbf4a975152a16fce7) 的真实 PostgreSQL18/Java25/Next16/Chromium/Compose/HTTP 完整 A3 已 7/7 SUCCESS，PG18 日志含 `PASS V208 PG18 V111 exact source capture/key guards/view`；其中 SQL 只核实本地来源/租户/快照，真正 Ed25519 正反例由 Java 执行，均不建立外部 CA/企业真值。
 
 下一阶段 V209/B2 只有维护者本地取得经授权的**真实外部签发机关/运营公司/承运机构**可核验证书链、信任锚和撤销记录后才能考虑独立核实，不能仅增加第三个 Owner 或提供一把自行登记的密钥。P0-B 真实退款 COGS、Amazon/Ads/银行核验与 G1 财务口径签署仍是核心目标；生产 #104 NO-GO、`realizedNetProfit=null`、正式评分 70/100 不变。
 

@@ -1,6 +1,6 @@
 # Merchivra V208 · 外部文件声称签发方的 Ed25519 绑定与读时复算
 
-**2026-11-23 · Flyway V111 · 本阶段精确 SHA 的 Java/PG18/完整 A3 待核对。**
+**2026-11-23 · Flyway V111 · [V208 精确代码 `6678558`](https://github.com/kunlong-luo/merchivra/commit/66785586f1856fc5647c48bbf4a975152a16fce7) · [同 SHA 快速 CI #45150207475 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45150207475) · [完整 A3 #45150207574（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45150207574)。仅合成工程测试成功，第三方真实身份信任锚仍未建立。**
 
 ## 问题与信任边界
 
@@ -49,7 +49,7 @@ claimed_issued_at_utc_ISO_INSTANT
 ## 验收及下一步
 
 - Java `CustodyIssuerAttestationV208Test` 运行时生成真实 Ed25519 密钥并签署 V1 原文；逐项修改文件种类、SHA-256、签发公钥、原件 UUID 和档案 UUID 应全部不能复核成功；拒绝超界时间/换行注入/伪 VERIFY 标签，并验证 Owner/no-store 与无证据时实际利润 NULL。
-- PostgreSQL18 `MERCHIVRA_V208_DISPOSABLE_ONLY=true python3 scripts/smoke_custody_claimed_issuer_signatures_v208.py`：先检查 Flyway V111 已安装，在 TEMP 阴影表调用真正 V111 数据库触发器和从迁移文件提取的原始 V109/V111 视图 SQL，最后 ROLLBACK；覆盖内部公钥审核不得自审、分离导入人、跨租户/错种类、公钥不能篡改与复用、签名快照 DB 覆盖、重复签名、撤销实时失效、上游失效、财务硬假。SQL 不生成真实可信签名，只有 Java 测试实际执行密码算法。完整 A3/快 CI 必须对应同一代码 SHA，不得引用 V207 结果。
+- PostgreSQL18 `MERCHIVRA_V208_DISPOSABLE_ONLY=true python3 scripts/smoke_custody_claimed_issuer_signatures_v208.py`：先检查 Flyway V111 已安装，在 TEMP 阴影表调用真正 V111 数据库触发器和从迁移文件提取的原始 V109/V111 视图 SQL，最后 ROLLBACK；覆盖内部公钥审核不得自审、分离导入人、跨租户/错种类、公钥不能篡改与复用、签名快照 DB 覆盖、重复签名、撤销实时失效、上游失效、财务硬假。SQL 不生成真实可信签名，只有 Java 测试实际执行密码算法。本轮 [V208 精确代码 `6678558`](https://github.com/kunlong-luo/merchivra/commit/66785586f1856fc5647c48bbf4a975152a16fce7) 的 [同 SHA 快速 CI #45150207475 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45150207475) 和 [完整 A3 #45150207574（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45150207574) 已通过，A3 7 个 Job 全部 SUCCESS。PG18 Job 实际含 `PASS V208 PG18 V111 exact source capture/key guards/view`；SQL 证明 V111 原始触发器/视图的来源约束与撤销失效，Java 用真实运行时 Ed25519 完成签名重算。不得用 V207 的绿灯代替本轮验收；也不得据此声称外部身份。
 - **下一阶段 V209/B2** 首先需要维护者本地明确授权的**权威签发方/机构注册来源**、可信证书或公钥指纹的外部认证、证书有效期/吊销机制和独立托管证据；否则不能从 `SIGNATURE_VALID_FOR_TENANT_KEY_ONLY_EXTERNAL_UNVERIFIED` 升级到真实核证。随后 Amazon 授权需另行合规批准与只读交叉核验；G1/DEC 财务政策和退款 COGS 仍未签署，不能自动核算真实利润。
 
 正式项目评分 **70/100**，`realizedNetProfit=null`，真实 Amazon Seller/Ads OAuth **OFF**，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
