@@ -225,7 +225,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V210-A3-whole-order-refund-cogs-conservation-no-posting' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V209-A3-operator-pkix-crl-trust-fail-closed-no-cogs' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -325,7 +325,6 @@ on:
           - V207-A3-immutable-custody-original-governance-no-purge
           - V208-A3-claimed-issuer-ed25519-readtime-no-cogs
           - V209-A3-operator-pkix-crl-trust-fail-closed-no-cogs
-          - V210-A3-whole-order-refund-cogs-conservation-no-posting
           - V205-A3-custody-evidence-independent-review-no-cogs
 
 permissions:
