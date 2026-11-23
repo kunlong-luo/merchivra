@@ -19,9 +19,9 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
-## V207 · 已提交待精确 SHA 验收：私有原件治理与全链访问日志
+## 已交付 · V207 私有原件治理与访问审计（[V207 精确代码 `8eb1b86`](https://github.com/kunlong-luo/merchivra/commit/8eb1b86a26caf8f73149e9dab6215e65c9a2574d) · [同 SHA 快速 CI #45140330888 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45140330888) · [完整 A3 #45140331187（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45140331187)）
 
-[证据法律保全、不可变访问审计、留存双人复核契约](../finance/v207-custody-original-retention-governance.md)：Flyway V110 复用 V138 的保留策略和现有 append-only，所有 V109 原件永久 `legalHold=true` 且 `deletionPermitted=false`；与上传人不同的 Owner 提议保留期限、另一名独立 Owner 只可记录 `REVIEWED_NO_PURGE` 或拒绝。真实 PG18 触发器读取 V109 源状态，禁止被撤销的签名/摘要冲突上继续批准；读取单文件 SHA、大小、类型时同步写入数据库自己捕获原始长度/哈希的不可变审计。增加 Owner/CSRF/no-store 容量摘要和元数据治理 API。**无 DELETE、无 hold 解除、无后台 purge、无真实第三方接口、无任何实际 COGS 过账。** 运行当前 SHA Java/PG18/HTTP/Next/Chromium/Compose 后再记录验收。
+[证据法律保全、不可变访问审计、留存双人复核契约](../finance/v207-custody-original-retention-governance.md)：Flyway V110 复用 V138 的保留策略和现有 append-only，所有 V109 原件永久 `legalHold=true` 且 `deletionPermitted=false`；与上传人不同的 Owner 提议保留期限、另一名独立 Owner 只可记录 `REVIEWED_NO_PURGE` 或拒绝。真实 PG18 触发器读取 V109 源状态，禁止被撤销的签名/摘要冲突上继续批准；读取单文件 SHA、大小、类型时同步写入数据库自己捕获原始长度/哈希的不可变审计。增加 Owner/CSRF/no-store 容量摘要和元数据治理 API。**无 DELETE、无 hold 解除、无后台 purge、无真实第三方接口、无任何实际 COGS 过账。** 本轮精确代码 SHA 的 Java25/Next16/Chromium/Compose/HTTP 与真实 PostgreSQL18 完整 A3 已 7/7 SUCCESS，真实 PG18 日志 `PASS V207 PG18 V110 exact guards and source view`，覆盖源撤销、跨租户、独立提案/复核、PG 审计快照与法务保全/过账硬阻断；仍只有合成工程证据。
 
 下一阶段 V208 仅在维护者本地许可及信任/隐私合规齐备时处理真实外部机构签发方/承运商核验回执（另需证书链/撤销复核）；真实 Amazon Seller/Ads OAuth 和 G1/DEC 会计授权未到位，仍须阻断完整净利润与生产 #104，正式评分 70/100。
 

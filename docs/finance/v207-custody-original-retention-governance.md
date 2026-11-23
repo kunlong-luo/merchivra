@@ -1,6 +1,6 @@
 # Merchivra V207 · 私有外部凭证原件的法律保全、保留期限与访问审计
 
-**2026-11-23 / Flyway V110 / 精确代码 SHA 的 CI/A3 待本轮确认。**
+**2026-11-23 / Flyway V110 / [V207 精确代码 `8eb1b86`](https://github.com/kunlong-luo/merchivra/commit/8eb1b86a26caf8f73149e9dab6215e65c9a2574d) · [同 SHA 快速 CI #45140330888 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45140330888) · [完整 A3 #45140331187（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45140331187)。本阶段仅合成工程验收，不是实际第三方身份/法务生产签署。**
 
 V203 本地销售到批次声明、V204 租户密钥的 Ed25519 观察、V205 声称外部运营商/承运文档摘要、V206 私有原件 `BYTEA` SHA-256 重算均已实现，但**没有**可信外部登记机关/承运商/签发人认证，也没有真实 Amazon 授权。V207 解决原件的治理准备度，而不是把内部操作员的两次认可冒充第三方主体真实性。
 
@@ -31,7 +31,7 @@ V203 本地销售到批次声明、V204 租户密钥的 Ed25519 观察、V205 �
 
 - `DispatchCustodyOriginalGovernanceV207Test`：拦截 release/delete/VERIFIED 伪决策、过期/超长留存期限、不合法理由、缺失文件防披露，检验 Controller Owner 范围、无原件字节、no-store。
 - `MERCHIVRA_V207_DISPOSABLE_ONLY=true python3 scripts/smoke_custody_original_governance_v207.py`：在安装 Flyway V110 的**真实 PG18** 上，用 V109/V110 迁移源 SQL 视图、真正部署的 V110 PL/pgSQL 触发器、TEMP 表和 ROLLBACK，检测默认 hold、提案人/复核人与上传人独立、旧来源撤销、审计 SHA/字节长度不可伪造、同文件重复复核、跨租户引用、不可变以及外部身份/实际 COGS 永不升级。不会写生产表、不会调用真实 Seller/Ads 或外部 WMS。
-- 最终以本轮**精确代码 SHA** 快速 CI 和完整 A3（PG18、Java25、Next16、Chromium、HTTP、Compose）为准；不能用 V206 的绿灯冒充 V207 的验收。
+- [V207 精确代码 `8eb1b86`](https://github.com/kunlong-luo/merchivra/commit/8eb1b86a26caf8f73149e9dab6215e65c9a2574d) 的 [同 SHA 快速 CI #45140330888 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45140330888) 与 [完整 A3 #45140331187（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45140331187) 均已核实 SUCCESS，A3 全部 7/7 Job 成功。真实 PG18 Job 日志确有 `PASS V207 PG18 V110 exact guards and source view`，对默认法律保全、独立留存提案/复核、数据库捕获的 SHA/size 访问审计、源撤销、跨租户及不允许过账/删除做了实际触发器测试。此前 V206 的绿灯不作为本次验收依据。
 
 ## 下一阶段 V208 的必须条件
 
