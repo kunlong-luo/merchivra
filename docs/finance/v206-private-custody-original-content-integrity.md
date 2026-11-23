@@ -1,6 +1,6 @@
 # Merchivra V206 · 外部凭据原件内容 SHA-256 可重算契约
 
-**2026-11-23 · Flyway V109 · 当前代码及隔离合成验收待本阶段精确提交。** 本阶段继续 P0-D/A 的原件真实性准备链，但严格区分「上传文件内容与租户声称摘要一致」和「第三方真的签发、物流真的交接、Amazon 订单实际履约」。
+**2026-11-23 · Flyway V109 · [V206 精确代码 `c85feba`](https://github.com/kunlong-luo/merchivra/commit/c85feba8cf77919e89a1626d9ddc0981f13deb74) · [同 SHA 快速 CI #45138354698 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45138354698) · [完整 A3 #45138354709（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45138354709)。已完成合成工程验收，未完成第三方签发和真实 Amazon 核证。** 本阶段继续 P0-D/A 的原件真实性准备链，但严格区分「上传文件内容与租户声称摘要一致」和「第三方真的签发、物流真的交接、Amazon 订单实际履约」。
 
 ## 现有基础和复用策略
 
@@ -29,7 +29,7 @@ Session/CSRF、Owner、租户+Marketplace+订单范围和 V205/V204 的已有限
 
 - Java `DispatchCustodyOriginalV206Test`：复用既有文件魔数/摘要、输入非法 kind、上游撤销优先、缺少文件不认证外部、扫描失败时不查询或写数据库、Owner/no-store 控制器和 2 MiB 文件大小限制。
 - `MERCHIVRA_V206_DISPOSABLE_ONLY=true python3 scripts/smoke_custody_original_content_v206.py`：隔离 PostgreSQL18 安装 Flyway V109 后，使用**真实安装的触发器函数 + V109 源 SQL 视图**和 TEMP 表，最后 ROLLBACK；覆盖实际字节生成 SHA、读取重算、两份缺一份、错内容散列、错媒体魔数、上游撤销/摘要漂移、跨租户、重复文档类型、不可变和不可伪造外部核验。
-- 运行当前精确 SHA 的 Java/Next/Chromium/Compose/真实 PG18/HTTP A3；只有 GitHub 结果成功才能把「工程验收通过」写入本文件。即使 7/7 绿灯，也是**合成技术证据**，不是可信文件来源和现实物流证明。
+- [V206 精确代码 `c85feba`](https://github.com/kunlong-luo/merchivra/commit/c85feba8cf77919e89a1626d9ddc0981f13deb74) 的 [同 SHA 快速 CI #45138354698 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45138354698) 和 [完整 A3 #45138354709（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45138354709) 均已成功，完整 A3 7/7。真实 PG18 job 日志明确 `PASS V206 PG18 V109 exact original trigger and source view`，验证生成 SHA-256、读时独立重算、文件魔数、缺承运原件、重复文件、跨租户、不可变与外部核证/COGS 硬阻断。**合成技术证据**不是可信文件来源、实际签发方或现实物流证明。
 
 ## 下一阶段 V207 前置条件
 

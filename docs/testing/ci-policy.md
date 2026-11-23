@@ -89,8 +89,8 @@ python3 scripts/check_next_runtime_v122.py
 - `MERCHIVRA_V205_DISPOSABLE_ONLY=true python3 scripts/smoke_dispatch_custody_dossier_v205.py`：检查 PG18/Flyway V108 的真实触发器/完整原始 SQL 视图，TEMP 阴影表 + ROLLBACK，不调用生产 WMS/Amazon。覆盖注册来源撤销、签名漂移、数据库快照覆盖伪参数、档案/复核不可变、三类有利益冲突的人不得独立复核、相同交接编号摘要冲突、重复提交、跨租户及实际身份/成本布尔值永假。
 - CI 中加入单行 Python V205 smoke 调用，避免超大 Shell 工作流拒绝创建 jobs；Owner 匿名 HTTP 401/拒绝 POST 和 CSRF 控制不可关闭。精确 SHA 的快 CI 和完整 A3 已成功，完整 A3 7/7 SUCCESS，原始 PG18 job 日志含 `PASS V205 PG18 V108 original capture/review guards and source view`；不等于真实 B2 外部运营主体认证。
 
-## V206 私有原件安全与数据库字节重算（待精确 SHA 验收）
+## V206 私有原件安全与数据库字节重算（[V206 精确代码 `c85feba`](https://github.com/kunlong-luo/merchivra/commit/c85feba8cf77919e89a1626d9ddc0981f13deb74) · [同 SHA 快速 CI #45138354698 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45138354698) · [完整 A3 #45138354709（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45138354709)）
 
 - Java `DispatchCustodyOriginalV206Test`：复用 V52 文件魔数、SHA-256、2 MiB 输入限制；V137 clamd 失败先阻断，不应尝试读取或写入数据库；测试 Owner/Session/CSRF/no-store、上游来源失效优先、没有两份原件时无法解除外部主体/实际 COGS 阻断。
 - `MERCHIVRA_V206_DISPOSABLE_ONLY=true python3 scripts/smoke_custody_original_content_v206.py`：真实 PostgreSQL18 安装 V109 后，在 TEMP 表上复用原 V109 触发器和源 SQL 视图、整事务回滚；检验 BYTEA 生成散列与读时 SHA-256 独立复算、两份缺一份、非真实魔数 MIME、错误声称散列、同种重复文件、跨租户、来源撤销、不可变及硬性 FALSE 身份/过账约束。CI 除上述脚本外须验证匿名 GET/POST 返回 401、Next/Java/Compose/Chromium 回归。
-- 由于这是安全/财务/数据库变更，必须有同一 V206 代码 SHA 的快 CI 与完整 A3 7/7，不得套用 V205 结果；绿灯不代表生产 ClamAV、外部法人、承运商、真实平台来源或 G1 审批已经核证。
+- 由于这是安全/财务/数据库变更，该 V206 精确代码 SHA 快 CI 和完整 A3 7/7 已 SUCCESS，PG18 job 原始日志含 `PASS V206 PG18 V109 exact original trigger and source view`，不可套用 V205 结果；绿灯不代表生产 ClamAV、外部法人、承运商、真实平台来源或 G1 审批已经核证。
