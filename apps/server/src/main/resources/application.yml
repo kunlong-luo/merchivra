@@ -78,6 +78,18 @@ merchivra:
     av-required: ${MERCHIVRA_EVIDENCE_AV_REQUIRED:false}
     av-host: ${MERCHIVRA_EVIDENCE_AV_HOST:}
     av-port: ${MERCHIVRA_EVIDENCE_AV_PORT:3310}
+  external-issuer:
+    offline-trust:
+      # V209 technical PKIX/CRL checks only; never external legal identity.
+      # These paths are deployed by the OPERATIONS team outside tenant APIs.
+      # No AIA, CRLDP, OCSP, certificate network fetch, or CA enrollment route.
+      # Strict default OFF and no access without root+chain+current signed CRL.
+      enabled: ${MERCHIVRA_EXTERNAL_ISSUER_OFFLINE_TRUST_ENABLED:false}
+      root-cert-file: ${MERCHIVRA_EXTERNAL_ISSUER_TRUST_ROOT_CERT_FILE:}
+      issuer-chain-file: ${MERCHIVRA_EXTERNAL_ISSUER_TRUST_CHAIN_FILE:}
+      crl-file: ${MERCHIVRA_EXTERNAL_ISSUER_TRUST_CRL_FILE:}
+      operator-dns-allowlist: ${MERCHIVRA_EXTERNAL_ISSUER_OPERATOR_DNS_ALLOWLIST:}
+      carrier-dns-allowlist: ${MERCHIVRA_EXTERNAL_ISSUER_CARRIER_DNS_ALLOWLIST:}
   redis:
     # Explicit opt-in: shared Session/CSRF only when Redis is configured.
     sessions-enabled: ${MERCHIVRA_REDIS_SESSIONS_ENABLED:false}

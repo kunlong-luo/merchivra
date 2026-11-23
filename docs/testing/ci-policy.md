@@ -106,3 +106,8 @@ python3 scripts/check_next_runtime_v122.py
 - Java `CustodyIssuerAttestationV208Test`：运行时真实 Ed25519 公/私钥正例、文档类型/SHA/文件和档案 UUID/公钥篡改负例、换行注入、过界签发时间、未知来源无 COGS、Controller 租户 Owner/no-store；真实签名验证仍不证明外部签发方身份。
 - `MERCHIVRA_V208_DISPOSABLE_ONLY=true python3 scripts/smoke_custody_claimed_issuer_signatures_v208.py`：**真实 PG18 + Flyway V111**，TEMP 表执行原始部署的公钥 review/撤销/签名 snapshot PL/pgSQL 及 V109/V111 完整源视图，ROLLBACK；覆盖双角色分离、来源 key 类型不一致、跨租户、独立导入人、数据库自行冻结 SHA/订单/出库/公钥引用、不可变/重复签名、已撤销密钥与上游签名失效、外部身份/COGS 永假。该 SQL 层不能证明真实 Ed25519，必须依赖 Java 正反例。
 - CI 在合成 PG18 路径插入 V208 smoke 与匿名 GET/POST 401 断言，并通过 Java、Next、Chromium、Compose、真实 HTTP 全 A3 7/7；快 CI 的 PG18 skipped 不等于专项通过。同 V208 代码 SHA 的快速 CI 与完整 A3 7/7 已 SUCCESS；PG18 原始 Job 日志明确 `PASS V208 PG18 V111 exact source capture/key guards/view`，不能用快 CI 中的 PG18 skip 冒充专项验收。外部权威 CA/企业/承运实际核验仍不可宣称。
+
+## V209 部署侧离线证书链与 CRL 失效（待精确 SHA 验收）
+
+- `OfflineIssuerCertificateTrustV209Test`：仅使用 `src/test/resources/v209/` 下的**合成公钥证书和签名 CRL，绝不提交私钥**；固定时钟执行 Java 25 PKIX 对受限根+Ed25519 leaf+DNS SAN+SPKI 哈希+签名 CRL 的技术正例。对同实例 CRL 新签发撤销、CRL 过期、错误 SAN/角色、错误 SPKI、缺失文件、伪造根证书、禁用开关及没有 V208 签名/来源的情况测试失败关闭。生产不可用这些合成根证书。
+- CI 新增 `GET /api/v1/finance/marketplaces/{marketplaceId}/orders/{orderId}/custody-external-trust-readiness` 匿名 401 检验；读操作无新数据库迁移。安全敏感行为仍按精确 SHA 跑 Java25/Next16/Chromium/Compose/HTTP/PG18 A3；不以快速 CI 中的 PostgreSQL skipped 冒充 PG18 联调。离线链和 CRL 通过不能证明根证书分发来源、真实运营公司、实体签收或净利润。
