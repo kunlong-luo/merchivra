@@ -1,5 +1,3 @@
-# V204: Ed25519 source-exact signed local outbound claim / key revocation
-# and PG18 V107 fail-closed; no actual Amazon fulfillment or COGS release.
 # V203C: correct disposable SQL DO dollar quoting; repeat exact-SHA A3.
 # V203B: accept either conservation guard or UNIQUE constraint as the first\n# fail-closed duplicate claim rejection; re-run exact main SHA PG18 A3.\n# V203: source-exact PG18 sale/item/pick/receipt immutable local claim,
 # retraction and evidence-invalidation contract. Always actual COGS NO-GO.
@@ -227,7 +225,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V204-A3-signed-wms-sale-dispatch-unverified-no-cogs' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V203-A3-sale-lot-identity-quantity-revalidation-no-cogs' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -323,7 +321,6 @@ on:
           - V201-A3-refund-cross-event-quantity-read-gate
           - V202-A3-local-lot-cost-provenance-fail-closed
           - V203-A3-sale-lot-identity-quantity-revalidation-no-cogs
-          - V204-A3-signed-wms-sale-dispatch-unverified-no-cogs
 
 permissions:
   contents: read
