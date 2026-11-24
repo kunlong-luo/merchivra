@@ -1,4 +1,4 @@
-# Merchivra · 当前执行计划（2026-11-24 / V224B / Flyway V114+V115 真 PG18 安全验收 7/7 已完成，下一阶段 V225 保守优化评估）
+# Merchivra · 当前执行计划（2026-11-24 / V224B / Flyway V114+V115 真 PG18 安全验收 7/7 已完成，V225 15 表写入/长事务/真来源 ABA 专项待 A3 验收）
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
@@ -18,6 +18,14 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 | 最后 | **维护者本地真实 Seller/Ads 只读授权与 API 验收** | Mock Gateway、连接与同步代码 | 用户完成实际授权、合法角色/区域、分页/限流/撤销、凭证/银行真实性和隐私审查之后才可调整访问开关；写入另行审批 |
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
+
+## V225 实现待验收 · V91 批量来源事务形状、跨站点锁与真实 Owner 来源 ABA
+
+[专项测试与 15 表读取依赖矩阵](../finance/v225-epoch-bulk-write-long-transaction-and-source-aba.md) 已提交：延续 V113/V114/V115 的 46 个生产触发器且**不新增 Flyway/不变更任何财务过账**，在仅 main/disposable PG18 的 V219–V224 真 Spring Owner 环境核对 15 表各 3 个 transition triggers；将同样 20 条 V91 来源 INSERT→DELETE 分别作为 2 条集合 SQL（预期 2 次 tenant revision）与 40 条逐行 SQL（预期 40 次 revision），每种重复 4 次、记录客户端中位数/P95/原始延迟；审查 V91 staged 的不合法无变化审核 UPDATE 是否被拒绝且不递增；在 A1 长事务持有源版本锁时证明同租户 A2 必须等待、另租户 B 独立提交；真实 Spring Owner 两 RR 中插入同租户异站点 V91 两次分别提交的 INSERT→DELETE ABA 必须返回 409（异租户和无写入返回 200）；非强制 80 GET/32 批量写事务记录观察 409 和客户端 P95/P99，**不当成生产自然 409 率**。
+
+本轮优先让多行真实 SQL 语句的成本/版本守恒有可复核结果，**不先修改剩余 13 张来源表的 UPDATE 保护、不擅自拆分租户版本**。必须等**当前精确 SHA** 的快速 CI 与完整 A3 PG18 Job 打印 V225 结构化结果和 PASS，且 V221–V224 完整回归均通过，方可在文档记录实际数值并标记技术通过。当前 **尚待验收**，不能借用 V224 SHA 的 7/7。
+
+**下一阶段 V226 候选**：在 V225 真实数据基础上，针对真实业务服务找出可安全组合为同一 SQL 的批量来源写入（保留原始审计日志和来源不可变性），测量多租户多 Marketplace 代表性 P95/P99、锁/WAL/读写混合分布；只有共享 PO/receipt、tenant.status、V165 的全部依赖独立核证且真 Owner ABA 仍能拦截时，才评估更细版本。P0 真实外部账单、退款 COGS 与 G1/DEC 政策签署继续优先。维持 **70/100**、`realizedNetProfit=null`、真实 Seller/Ads OAuth OFF、生产 #104 **NO-GO**。
 
 ## V224B 已验收 · 无变化 UPDATE 的跨 Marketplace epoch 减噪（[精确代码 `74a2d04b9`](https://github.com/kunlong-luo/merchivra/commit/74a2d04b93cac371396ccf4f9299e6b65f75f5ce) · [快速 CI #45323010683 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45323010683) · [完整 A3 #45323010754（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45323010754)）
 
