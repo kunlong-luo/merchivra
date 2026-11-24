@@ -21,6 +21,12 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
+## V230B 已实现待最后 PG18 · 类别化外部原始来源核证缺口与 Next 工作流
+
+[V230 证据合同及首次 6/7、PG18 独立通过记录](../finance/v230-external-source-proof-dossier-and-owner-workflow.md)：复用 V229 本地 V91 source + 初始/独立 reviewer audit 和 V182/V165/V94/V102 本地结算行/重复归属核对，**只读单一 REPEATABLE_READ 快照**按八类费用生成缺少哪些合法外部第三方原始材料的有序清单，不能要求所有非平台货代/关税/退货费用均具有 Amazon Settlement 行。Next 财务页从 V228 费用暂存/重放返回的每个 UUID 点击“查看缺口”；唯一 Orval HTTP + Zod 严格身份/币种/未核证标志/no-store，任何伪造成功均阻断，无法由本地复核自动升级真实利润、取消生产闸门。首轮 [A3 #45367537947](https://github.com/kunlong-luo/merchivra/actions/runs/45367537947) **6/7**：PG18 真 Owner/真实 Springdoc、Java、Next、Compose、mock-chain PASS，浏览器 Next App Router 表格挂载竞态失败；修复浏览器测试限定精确当前面板、受控重试并保留数据身份/列数断言后， [V230B 精确代码 A3 #45368066154](https://github.com/kunlong-luo/merchivra/actions/runs/45368066154) 已重新执行，**仅最后 PG18 项仍在运行**。未取得该 SHA 7/7 前不能宣称技术完成，评分先保持 **74/100**；全成本真实来源仍未核证。
+
+**下一阶段 V231 候选**：真正连接合法独立获取的 Amazon Seller/Ads/银行/货代/税费/WMS 资料，以原文件字节重算 SHA、签发方/主体权限、行级金额/币种/期间、唯一费用归属/退款实际 COGS 和 G1/DEC 独立签署的可撤销证据链推进；仍由维护者本地授权，不开启线上生产写入。不要用更多缺口 UI 或合成账单冒充真利润。
+
 ## V229 已验收 · 真 PG18 Owner 来源审计完整性守恒、外部真实性仍阻断
 
 [新 V229 后端 + PG18 真 Owner HTTP 技术合同](../finance/v229-source-review-audit-integrity-and-external-proof-hold.md) 只复用既有 V91/V92 手工原币来源+append-only 审计，不重复已有 V182/V183/V187 结算归属系统。单一 REPEATABLE_READ 读快照审查：STAGED 的 maker 初始 audit 必须 **1/1**，REVIEWED_UNVERIFIED/REJECTED 的 maker STAGED + 独立 checker 一次相应 decision 必须 **2/2**；额外 audit、缺失 audit、自审或当前状态不匹配均 `V91_SOURCE_AUDIT_INCONSISTENT`，不可无声认定可信。Session 租户/Marketplace/来源 UUID 严格限定，GET no-store，没有任何数据库写入。所有返回即便本地审计完整，必须保留 `claimedDocumentBytesVerified=false`、`independentExternalIssuerVerified=false`、`externalChargeVerified=false`、`actualCogsVerified=false`、`realizedNetProfit=null`。
