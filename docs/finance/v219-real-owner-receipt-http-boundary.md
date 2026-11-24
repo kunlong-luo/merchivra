@@ -25,6 +25,10 @@ V218 已通过 Next16/Chromium 合成界面的 401/403/404/409 与旧值隔离�
 - 真正净利润仍需独立核对 Amazon Finances/Settlement/Ads、货代/海关/银行以及原批次物理凭证，并由 G1/DEC-06/07/08 决定资本化、汇率、跨期、退款回转。生产上线还必须独立签署。
 - 测试不连生产、不打开真实 Seller/Ads OAuth、不新增财务写接口或费用提案，真实 COGS 和利润继续 null。
 
+## CI 调度修复记录
+
+首次 V219 提交后，GitHub Actions 在当前工作流上出现 **completed/failure 但 0 jobs**，表示业务/权限 SQL 根本未运行，不能标为测试失败也不能标为验收成功。为恢复可验证性，将 CI YAML 中 **7 条 Flyway 版本检查 + 9 条 PostgreSQL index 检查 + 1 条 constraint 检查** 归并为显式列表循环，仍对每个原有版本、索引和约束逐一判定 count=1，并保留全部其他验收任务。此变更只压缩工作流重复文本，不放宽或跳过检查。重跑新的精确 SHA Job 后才能判断 V219 实际 HTTP 成功与否。
+
 ## 验收依据与后续
 
 必须记录**精确 V219 代码 SHA**、pnpm/Vitest/Next16 快 CI，以及包含 PostgreSQL18、真实 Spring Session 权限脚本、Chromium、Compose 的完整 A3 7/7；PG18 原始日志须出现 PASS V219 real Spring/PG18 HTTP。任何真实 SQL 或权限失败须修复，不允许用 V218 绿色冒充 V219 验收。

@@ -155,3 +155,5 @@ python3 scripts/check_next_runtime_v122.py
 - 使用真实 Spring CSRF、两个独立 CookieJar 的登录和 tenant switch；匿名 401、授权 Owner 200+no-store+UNKNOWN、同租户两 Marketplace 合法读、恶意查询 tenantId 忽略、非法 tenant switch 403、A 员工/B Owner 混合身份在 A GET 403/B GET 200、跨 tenant mp/receipt 404、注销独立 401；PG18 日志必须输出 PASS V219 real Spring/PG18 HTTP。
 - 前端使用既有 V144 purgeBusinessSessionCache 移除业务 Query，同时保证 V216 fetch 使用 TanStack AbortSignal，在身份更替中取消未结束请求、无旧缓存复活；不引入第二套 QueryClient。
 - **Mock Chromium 的 403/404 不是真实后端 403/404**。V219 完整 A3 的 PG18 HTTP 实际执行才允许在文档记为真正授权负例；V215/V216 TEMP SQL 已覆盖的仍仅是合成独立归属与本地规则。未有真实外部费用/批次会计凭据前，actualBatchCogs/netProfit 继续 NULL。
+
+- **V219 首次调度（不可作为测试证据）**：增加真实 Session/PG18 脚本后，初始 V219 SHA 的 CI/A3 返回 0 jobs/failure，Java、PostgreSQL 和新增 HTTP 脚本根本未执行。维护时改写 YAML 重复的 Flyway 84–90 七项、九项现有 index 和一项 constraint 为逐项 for 循环，必须保证原有测试未减少，然后使用**新精确 SHA** 重新触发。不要把 0 jobs 当作 SQL 业务结论，也不要臆测未获 GitHub 公开确认的 YAML 字节硬限制。
