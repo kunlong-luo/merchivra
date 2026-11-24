@@ -20,6 +20,17 @@ class CostSourceReviewServiceTest {
         return new CostSourceReviewService.Draft("INBOUND_FREIGHT","MANUAL_INVOICE",
             "INVOICE-2026-0001",SHA,LocalDate.of(2026,11,10),"12.340000","USD");
     }
+    @Test void localCostOpenApiRecordsCannotCollideWithOtherSourceDtos() {
+        var draft=CostSourceReviewService.Draft.class.getAnnotation(
+            io.swagger.v3.oas.annotations.media.Schema.class);
+        var source=CostSourceReviewService.Source.class.getAnnotation(
+            io.swagger.v3.oas.annotations.media.Schema.class);
+        assertNotNull(draft);
+        assertNotNull(source);
+        assertEquals("ManualCostDraftV228",draft.name());
+        assertEquals("ManualCostSourceV228",source.name());
+        assertNotEquals(draft.name(),source.name());
+    }
     @Test void acceptsOnlyPositiveOriginalCurrencyAmountAndHonestManualEvidence() {
         assertEquals(new BigDecimal("12.340000"),
             CostSourceReviewService.validate(draft()));
