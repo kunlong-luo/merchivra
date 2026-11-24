@@ -1,3 +1,5 @@
+# V229: real Spring Owner V91 stage/decision audit completeness in PG18,
+# missing/extra audit 1/0/2 fail-closed; never verified issuer/COGS/profit.
 # V228C: disambiguate CostSourceReviewService nested Draft/Source
 # schema names after true Springdoc response failed full-field check;
 # do NOT suppress or downgrade the required response schema proof.
@@ -276,7 +278,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V228C-A3-unique-manual-cost-DTO-Springdoc-schema' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V229-A3-V91-source-audit-integrity-and-origin-hold' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
