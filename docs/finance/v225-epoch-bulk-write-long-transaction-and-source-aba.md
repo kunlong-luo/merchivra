@@ -41,6 +41,21 @@
 5. **真 Owner 双 RR 来源 ABA**：不用 V222 的 PO update，而是在读取 A1 receipt 期间对 A2 独立 V91 原币来源分别 INSERT 和 DELETE、两笔事务已提交，最终行集恢复原样却须真 HTTP409；异租户同样操作不能造成 A1 409，无变化对照为 HTTP200。复用 V222 的正式 API Cookie/CSRF 与只对固定虚构 receipt 启用的 CI 同步点。409 响应不能泄漏旧 plans/actualBatchCogs/realizedNetProfit，200 仍 UNKNOWN/null。
 6. **非强制混合样本**：2 并发 writers × 各 16 笔事务 × 每笔批量写入/删除 10 个来源，80 次 Owner GET，记录实测 HTTP200/409、客户端 P95/P99，所有 32 笔事务均合法提交，64 个版本 tick。**这是合成负载，没有代表性到达过程、真实商品规模、第三方真实延迟、租户长事务占比或服务器饱和条件，不能称自然生产 409 率或批准 SLO。**
 
+## 首轮 A3 运行与测试脚本修复（历史不删除）
+
+精确代码 [`badde09dd35637c0bd04e815e3cd9e0ab71cd385`](https://github.com/kunlong-luo/merchivra/commit/badde09dd35637c0bd04e815e3cd9e0ab71cd385) 对应 [快速 CI #45324675472 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45324675472)、[完整 A3 #45324675583 **6/7 SUCCESS，PG18 FAIL**](https://github.com/kunlong-luo/merchivra/actions/runs/45324675583)。真实 PG18 Job #138211339703 的**前五组**打印如下结构化证据，不能因第六组脚本出错就冒充全部通过：
+
+| 首轮真实 disposable PG18 输出 | 精确观测 | 解释 |
+| --- | --- | --- |
+| `V225_TRIGGER_COVERAGE` | 15 张、45 个 statement trigger + 1 个 tenant.status、V115 已应用 | 逐表三种 DML 都存在 |
+| `V225_BULK_V91`（4 次，每次 20 条） | 集合 SQL：2 ticks / 中位 **63.19ms** / P95 **68.82ms**，原始 61.74、64.65、68.82、58.92ms | SQL batch 比较包含 psql 进程启动，不是生产 TPS |
+| 同组逐行 SQL | 40 ticks / 中位 **78.22ms** / P95 **81.08ms**，原始 81.08、73.17、76.93、79.50ms | 相同 20 条来源、相同事务边界，40 个独立 SQL 语句 |
+| `V225_V91_GUARD` | staged 的无变化审核 UPDATE 被数据库拒绝；失败 0 ticks、提交 INSERT/DELETE 2 ticks | 不能把不合法 UPDATE 当作省版本的优化目标 |
+| `V225_LONG_TRANSACTION` | 同租户异 Marketplace 不同费用行有真实 Lock 等待；异租户在 A 未提交时可独立提交，A 待提交版本其他会话不可见 | 真 V113 tenant 锁热点与租户隔离同时成立 |
+| `V225_FORCED_V91_HTTP` | 无写入 2/2 HTTP200，异租户来源 2/2 HTTP200，同租户异 Marketplace V91 INSERT→DELETE 3/3 真 HTTP409 | 实际来源 ABA 仍拦截，409 无旧财务金额或 plans |
+
+**首轮失败原因是测试并发记账的错误假设**：2 个 writer 同时写同一个 tenant 的 10 行批量事务时，脚本 `write_sources` 在每个线程分别从“本线程开始前/结束后”的全局 `finance_receipt_read_epoch_v113` 读取版本，并错误要求差值**恰好 2**。合法的另一 writer 可能在同一窗口也提交 +2，实际差值可大于 2；PG18 日志报 `AssertionError: ('tenant epoch conservation', True, 10, 2)`。这**没有**证明版本守恒失效，且 V225 前五组已独立成功。修复后的每线程只断言 **≥2**，在两个 writer 全部完成后统一核对 **32 个事务 ×2 tick = 全局正好 64**；此精确并发窗口没有其他有意写入。修复仅涉及 Python 测试脚本，**没有**修改 Flyway、业务规则或生产 API。必须重新跑新代码 SHA 的完整 A3 才算本阶段完成。
+
 ## 版本与验收纪律
 
 脚本及对应 CI 接入在提交 `main` 后，必须由此**精确代码 SHA** 的快 CI `py_compile`/Gradle/Next/Compose 和触发真正 PG18 的完整 A3（同时 V219–V224 老测试）分别成功；PG18 Job 的结构化输出须包含 `V225_TRIGGER_COVERAGE`、`V225_BULK_V91`、`V225_V91_GUARD`、`V225_LONG_TRANSACTION`、`V225_FORCED_V91_HTTP`、`V225_UNFORCED_MIXED_HTTP`、`PASS V225`。未验收不得宣称成功；失败按精确 SHA 追踪，必要修改须在新提交重新 A3。此段将在真实跑完后追加实际数字与链接。
