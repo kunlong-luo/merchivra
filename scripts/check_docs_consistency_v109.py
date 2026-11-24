@@ -16,7 +16,6 @@ from urllib.parse import unquote, urlsplit
 ROOT = Path(__file__).resolve().parents[1]
 ACTIVE_FILES = (
     "AGENTS.md",
-    "Agent.md",
     "README.md",
     "README.zh-CN.md",
     "CONTRIBUTING.md",
@@ -133,7 +132,7 @@ if frontend["scripts"].get("build") != "next build":
 if not frontend["scripts"].get("dev:vite", "").startswith("vite "):
     errors.append("Explicit Vite fallback must remain available")
 for filepath in (
-    "AGENTS.md", "Agent.md", "README.md", "README.zh-CN.md",
+    "AGENTS.md", "README.md", "README.zh-CN.md",
     "CONTRIBUTING.md", "DESIGN.md", "docs/README.md", "docs/current-status.md", "docs/roadmap/current-plan.md",
     "docs/development.md", "docs/architecture/overview.md",
     "docs/governance/engineering-standards.md", "docs/governance/document-control.md",
@@ -160,14 +159,17 @@ for context, content in (("runtime", runtime), ("plan", active_plan),
         errors.append(f"V191 safety gate missing: {context}")
 # DOC-196: prevent a second contradictory Agent instruction stack.
 agents = load("AGENTS.md")
-agent_alias = load("Agent.md")
 engineering = load("docs/governance/engineering-standards.md")
 governance = load("docs/governance/document-control.md")
 audit_196 = load("docs/governance/docs-audit-2026-11-22.md")
 if len(agents) > 15000 or "唯一生效的 Agent 指令入口" not in agents:
     errors.append("AGENTS.md must be a concise, single canonical Agent policy")
-if len(agent_alias) > 2000 or "[AGENTS.md](AGENTS.md)" not in agent_alias:
-    errors.append("Agent.md must remain a short compatibility pointer, not another policy")
+# V231: The old mixed-case legacy alias has no runtime purpose. It was
+# deliberately deleted; do not recreate a second Agent instruction file.
+if (ROOT / "Agent.md").exists():
+    errors.append("Retired Agent.md alias reintroduced: use AGENTS.md only")
+if (ROOT / "docs/purchasing/supplier-followup-return-trace-v120.md").exists():
+    errors.append("Obsolete V120 pending-PR duplicate reintroduced")
 for path, content in (
     ("AGENTS.md", agents), ("engineering", engineering),
     ("governance", governance), ("docs hub", hub),
@@ -208,6 +210,26 @@ for file in ("apps/web/Dockerfile", "apps/web/Dockerfile.next",
         errors.append(f"{file}: missing frozen pnpm install")
     if re.search(r"\bnpm\s+(?:ci|install|run|test)\b", content):
         errors.append(f"{file}: legacy npm CLI in active CI/Docker")
+
+# V231: explicitly track the retained source/ops/docs boundaries. No
+# generic deletion by timestamp or test status; historical evidence stays.
+root_readme = load("README.md")
+zh_readme = load("README.zh-CN.md")
+for directory in ("apps/server", "apps/web", ".github/workflows", "deploy",
+                  "ops", "scripts", "docs", "docs/roadmap", "docs/governance",
+                  "docs/finance", "docs/testing", "docs/architecture",
+                  "docs/purchasing"):
+    if not (ROOT / directory).is_dir():
+        errors.append(f"Required runtime or evidence directory missing: {directory}")
+for directory in ("apps/", "deploy/", "ops/", "scripts/", ".github/",
+                  "docs/"):
+    if directory not in root_readme or directory not in zh_readme:
+        errors.append(f"Root README directory map missing: {directory}")
+for current in ("docs/current-status.md", "docs/roadmap/current-plan.md",
+                "docs/governance/project-scorecard-v230-2026-11-24.md",
+                "docs/finance/v230-external-source-proof-dossier-and-owner-workflow.md"):
+    if current not in root_readme and current not in zh_readme:
+        errors.append(f"Root READMEs omit current reference: {current}")
 
 if errors:
     for error in errors:
