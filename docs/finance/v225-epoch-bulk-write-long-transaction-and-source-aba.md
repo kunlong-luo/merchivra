@@ -2,6 +2,24 @@
 
 **2026-11-24；实验仅使用本仓库 main 的 GitHub Actions disposable PostgreSQL18 + 真实 Spring Owner Session。此阶段不新增生产 Flyway，不修改 V113/V114/V115 的账务/业务触发函数或财务 API。**
 
+## V225B 最终验收 · 精确 SHA 与真实 PostgreSQL 18 证据
+
+**2026-11-24 技术验收已完成**：[代码提交 `e360e74be8177d472434723b3516fd6340e918c0`](https://github.com/kunlong-luo/merchivra/commit/e360e74be8177d472434723b3516fd6340e918c0) · [同 SHA 快速 CI #45325472769 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45325472769) · [同 SHA 完整 A3 #45325472831（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45325472831)。真 PostgreSQL 18 / Flyway **Job #138213939404** 原始日志再次打印 `PASS V221`、`PASS V222 REAL Spring Owner HTTP ABA`、`PASS V223`、`PASS V224`，并完整打印下面的 `V225_*` 与 `PASS V225`。Java25/Gradle、Next.js16/React19/pnpm、Chromium、Compose 和 mock-chain 同轮全部成功。
+
+| V225B 真 PG18 项目 | 输出/测量值 | 允许的解释 |
+| --- | --- | --- |
+| `V225_TRIGGER_COVERAGE` | 15 张表，每表 3 个 transition trigger，共 45 + tenant.status 1；V115 已安装 | **逐表**覆盖经真实系统目录核对，没有改动 V113/V114/V115 |
+| `V225_BULK_V91`：4 个事务试验、每次 20 条 V91 | **集合 SQL** INSERT 20 + DELETE 20：**2 tick**，耗时中位 **33.51ms** / P95 **33.56ms**，原始 33.56、33.48、33.12、33.53ms | 同样事实、同样最终空集，一条 INSERT + 一条 DELETE statement；小样本包含 psql 启动、不是生产 TPS |
+| 同批对照 | **逐行 SQL** 20× INSERT + 20× DELETE：**40 tick**，耗时中位 **37.45ms** / P95 **38.07ms**，原始 36.96、37.71、38.07、37.20ms | 相比逐行语句，集合 SQL 在这组场景减少 **38/40=95%** statement-level version updates，**非**已证明生产吞吐加速 95% |
+| `V225_V91_GUARD` | staged 来源 `review_state=review_state` 真数据库拒绝、失败 tick=0；正常 INSERT/DELETE tick=2 | 不允许以“无字段变化”绕开来源审核状态机 |
+| `V225_LONG_TRANSACTION` | A1 V91 长事务对 A2 不同来源行造成真实 `Lock`；B 租户仍能独立提交，A 未提交版本对另一会话不可见；最终版本守恒 | 锁热点存在，不能仅凭批量 SQL 宣称消失 |
+| `V225_FORCED_V91_HTTP` | 无写入 2/2 **200**，异租户 V91 INSERT→DELETE 2/2 **200**，同租户异 Marketplace 两次已提交来源 ABA **3/3 HTTP409** | 真 Owner Session + V222 CI-only 双 RR 条件化交错，响应无旧 plans/COGS/净利润 |
+| `V225_UNFORCED_MIXED_HTTP` | 2 workers ×16 笔 = **32 个已提交批量事务**、共 **64 次租户版本更新**（全局严格守恒）；640 条来源行变动；80 GET 中 **78×200、2×409**；客户端 **P95 5.96ms / P99 6.45ms** | **合成有限到达过程**，观察值 2/80 = 2.5% 不能作为生产自然 409 比率 / SLA |
+
+第一轮 [A3 #45324675583 6/7](https://github.com/kunlong-luo/merchivra/actions/runs/45324675583) 与本轮 7/7 的**耗时不同**（首轮集合 SQL 中位 63.19ms，逐行 SQL 中位 78.22ms），进一步证明 runner 启动/资源和短样本影响很大；不能对真实业务吞吐做基于 4 次试验的加速承诺。首轮失败是合成线程错误地把共享租户全局 epoch 当成私有计数，修复改为**窗口总量严格 +64**，并非放松全局正确性要求。保留首次失败日志与已证实的来源 ABA 409，不冒充首轮 7/7。
+
+**阶段结论**：V225 已提供可重复的真实 PG18 技术诊断，并未交付覆盖全部费用来源的生产性能 SLO、未改变业务入账和批量审核 API、未减少既有来源审计、未验证真实平台/银行费用。后续 V226 应以这组数据为基础评估有独立审计/回滚/冲突约束的服务级批量写入与容量测试，不应单纯为省 epoch tick 合并独立的会计事件。保持 **70/100**、`realizedNetProfit=null`、真实 Seller/Ads OAuth OFF、生产 #104 **NO-GO**。
+
 ## 范围与前提
 
 [V223](v223-tenant-epoch-contention-and-cross-marketplace-409.md) 已在小规模合成 CI 中证明跨 Marketplace 同租户存在 epoch 行锁竞争；[V224](v224-identical-update-epoch-and-concurrency.md) 通过 Flyway V114/V115 仅减少 `erp_purchase_order` / `seller_marketplace` **真正完全相同完整行集**的 UPDATE epoch tick，代码已按 [精确 SHA `74a2d04b9` / A3 7/7](https://github.com/kunlong-luo/merchivra/actions/runs/45323010754) 验收。真实 V91 来源、审核及 V165 外部来源的写入热点**仍存在**；不能以 2 张表的减噪暗示所有 15 表可安全跳过 UPDATE。
@@ -58,7 +76,7 @@
 
 ## 版本与验收纪律
 
-脚本及对应 CI 接入在提交 `main` 后，必须由此**精确代码 SHA** 的快 CI `py_compile`/Gradle/Next/Compose 和触发真正 PG18 的完整 A3（同时 V219–V224 老测试）分别成功；PG18 Job 的结构化输出须包含 `V225_TRIGGER_COVERAGE`、`V225_BULK_V91`、`V225_V91_GUARD`、`V225_LONG_TRANSACTION`、`V225_FORCED_V91_HTTP`、`V225_UNFORCED_MIXED_HTTP`、`PASS V225`。未验收不得宣称成功；失败按精确 SHA 追踪，必要修改须在新提交重新 A3。此段将在真实跑完后追加实际数字与链接。
+脚本及对应 CI 接入在提交 `main` 后，必须由此**精确代码 SHA** 的快 CI `py_compile`/Gradle/Next/Compose 和触发真正 PG18 的完整 A3（同时 V219–V224 老测试）分别成功；PG18 Job 的结构化输出须包含 `V225_TRIGGER_COVERAGE`、`V225_BULK_V91`、`V225_V91_GUARD`、`V225_LONG_TRANSACTION`、`V225_FORCED_V91_HTTP`、`V225_UNFORCED_MIXED_HTTP`、`PASS V225`。未验收不得宣称成功；失败按精确 SHA 追踪，必要修改须在新提交重新 A3。真实验收结果、完整运行号及数值已在文首 V225B 章节登记；未曾将首轮 6/7 当作验收。
 
 **后续 V226 候选**：分析批量语句是否可通过已存在的业务服务接口安全使用，而不是通过降低审计精度来减少行锁；补多租户/多 Marketplace 高写入、真实 Owner GET P95/P99、POSTGRES WAL/锁采样、稀疏/高密度 V165 交叉来源的代表性压测。若考虑细粒度 epoch，先画出跨 PO/receipt/tenant.status/V165 的读写依赖及真实 ABA 正反例，不能为了规避 409 而漏掉一次真实财务变更。
 
