@@ -1,3 +1,5 @@
+# V228B: actual Springdoc V226 POST 200 response is declared */*,
+# not application/json; require JSON-compatible array Source without overfitting media.
 # V228: live Springdoc/Orval bounded manual Owner source staging,
 # TSV validation, same-origin CSRF/no-store, safe Next finance UI.
 # V227: exact-main PG18 real Owner batch 1/5/20, replay-ratio,
@@ -271,7 +273,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V228-A3-Orval-Owner-manual-source-batch-UX' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V228B-A3-live-Springdoc-wildcard-source-schema' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
