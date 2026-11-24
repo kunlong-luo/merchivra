@@ -7,6 +7,8 @@ V112 installed triggers were tested by V215; this script checks read-time SQL.
 import os
 import subprocess
 from pathlib import Path
+from urllib.error import HTTPError
+from urllib.request import urlopen
 
 if os.environ.get("MERCHIVRA_V216_DISPOSABLE_ONLY") != "true":
     raise SystemExit("V216 requires disposable PG18 opt-in")
@@ -153,6 +155,19 @@ p = subprocess.run(["psql","-X","-h","127.0.0.1","-U","merchivra",
                    input=sql,text=True,capture_output=True,timeout=120)
 if p.returncode:
     raise SystemExit("V216 PG18 source-exact SQL failed: " + p.stderr[-6500:])
+# The same live isolated Spring HTTP process must reject unauthenticated access.
+# Do not interpret a missing service, HTTP 500 or a redirect as an authorization pass.
+endpoint = ("http://127.0.0.1:8080/api/v1/finance/marketplaces/"
+            "00000000-0000-4000-8000-000000000204/purchase-receipts/"
+            "00000000-0000-4000-8000-000000000202/manual-cost-integrity")
+try:
+    with urlopen(endpoint, timeout=10) as response:
+        raise SystemExit(f"V216 unauthorized GET unexpectedly returned {response.status}")
+except HTTPError as error:
+    if error.code != 401:
+        raise SystemExit(f"V216 unauthorized GET expected 401, got {error.code}")
+print("PASS V216 anonymous Owner GET 401")
+
 print("PASS V216 PG18 exact receipt/V91/V92 evidence SQL: source-wide "
       "original currency, independent audit, V92 conflict, "
       "PO drift, tenant/Marketplace isolation, synthetic TEMP ROLLBACK")
