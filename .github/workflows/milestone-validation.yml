@@ -1,3 +1,5 @@
+# V223: exact-main PG18 V113 tenant-epoch write contention, sampled locks,
+# cross-Marketplace forced Owner HTTP409; no production SLA/GO claim.
 # V222: real Spring Owner HTTP interrupted between independent RR snapshots,
 # disposable PG18 PO USD->EUR->USD, V113 committed-epoch HTTP 409.
 # V221C: exact-main repeat full A3 after Docker Gradle bounded
@@ -255,7 +257,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V213-A3-cross-order-receipt-capacity-and-landed-cost-hold' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V223-A3-tenant-epoch-contention-and-cross-marketplace-409' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
