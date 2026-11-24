@@ -1,5 +1,6 @@
 import {useMemo,useState,type FormEvent} from 'react'
 import {useMutation,useQueryClient} from '@tanstack/react-query'
+import ManualCostProofDossierPanelV230 from './ManualCostProofDossierPanelV230'
 import {
  manualCostCategories,manualCostKinds,
  previewManualCostBatch,stageManualCostBatchV228,
@@ -30,11 +31,12 @@ export default function ManualCostBatchPanelV228({
  const [input,setInput]=useState('')
  const [error,setError]=useState('')
  const [results,setResults]=useState<ManualCostSource[]|null>(null)
+ const [proofSourceId,setProofSourceId]=useState<string|null>(null)
  const preview=useMemo(()=>previewManualCostBatch(input,currency),
   [input,currency])
  const submitting=useMutation({
   mutationFn:()=>stageManualCostBatchV228(marketplaceId,currency,preview.rows),
-  onMutate:()=>{setError('');setResults(null)},
+  onMutate:()=>{setError('');setResults(null);setProofSourceId(null)},
   onSuccess:records=>{
    setResults(records);setError('')
    void cache.invalidateQueries({queryKey:['finance',tenantId]})
@@ -51,7 +53,7 @@ export default function ManualCostBatchPanelV228({
   if(!preview.errors.length&&preview.rows.length&&!submitting.isPending)
    submitting.mutate()
  }
- const edit=(next:string)=>{setInput(next);setError('');setResults(null)}
+ const edit=(next:string)=>{setInput(next);setError('');setResults(null);setProofSourceId(null)}
  return <section className="panel full-panel"
    aria-label="人工费用来源批量暂存（未核验，绝不入账）">
   <div className="panel-heading"><div>
@@ -140,13 +142,21 @@ export default function ManualCostBatchPanelV228({
    <div className="table-scroll" role="region" tabIndex={0}
      aria-label="安全暂存的费用来源身份和审核状态">
     <table><thead><tr>{['来源编号','来源 UUID','业务日期',
-      '金额','本地审核状态','外部核验'].map(h=><th key={h}>{h}</th>)}
+      '金额','本地审核状态','外部核验','证据缺口'].map(h=><th key={h}>{h}</th>)}
     </tr></thead><tbody>{results.map(r=><tr key={r.id}>
      <td>{r.sourceKey}</td><td title={r.id}>
       <code>{r.id.slice(0,8)}…</code></td>
      <td>{r.businessDate}</td><td>{r.currency} {r.amount}</td>
      <td>{reviewLabel[r.state]??r.state}</td><td>未核验</td>
+     <td><button type="button" className="refresh-button"
+      onClick={()=>setProofSourceId(r.id)}
+      aria-label={'查看来源 '+r.sourceKey+' 的外部凭证缺口'}>
+      查看缺口</button></td>
     </tr>)}</tbody></table></div>
+   {proofSourceId&&results.some(r=>r.id===proofSourceId)&&
+    <ManualCostProofDossierPanelV230 key={proofSourceId}
+     tenantId={tenantId} marketplaceId={marketplaceId}
+     sourceId={proofSourceId} currency={currency}/>}
   </section>}
  </section>
 }
