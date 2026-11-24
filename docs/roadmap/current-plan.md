@@ -19,9 +19,9 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
-## V217 本轮实现 · Next.js 收货单级人工费用证据联动（[代码 `a790f1c`](https://github.com/kunlong-luo/merchivra/commit/a790f1c297034e2a13fd66332717c3a67284161e) · [快 CI #45304018584 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45304018584)；完整 A3 待核实）
+## V217 本轮实现 · Next.js 收货单级人工费用证据联动（[代码 `a790f1c`](https://github.com/kunlong-luo/merchivra/commit/a790f1c297034e2a13fd66332717c3a67284161e) · [快 CI #45304018584 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45304018584)；[V217 同 SHA 完整 A3 #45304346700（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45304346700)）
 
-[V217 界面与字段契约](../finance/v217-receipt-cost-evidence-workbench.md)：财务工作台在成本准备度区新增原采购 receipt UUID 主动查询，采购 V46 批次页新增“核对本收货单的费用来源”入口；选择 V91 来源 Marketplace 后按需执行复用的 V216 Owner GET。严格 Zod 对象在客户端拒绝任何假外部核证、COGS/利润/过账字段、原币超额、来源重复或 incomplete page；所有候选金额仅作为待核证的原币来源，不聚合币种、不产生新账本。TanStack Query 与会话/站点/receipt 分区缓存、只在明确提交后请求、409 显示错误而非局部成本，复用 Base UI 选择器。新增 Vitest 正反例；在代码 SHA `a790f1c` 上 pnpm/Next16 快 CI 已 SUCCESS，PG18 快 CI SKIPPED，完整 A3 仍须核实。
+[V217 界面与字段契约](../finance/v217-receipt-cost-evidence-workbench.md)：财务工作台在成本准备度区新增原采购 receipt UUID 主动查询，采购 V46 批次页新增“核对本收货单的费用来源”入口；选择 V91 来源 Marketplace 后按需执行复用的 V216 Owner GET。严格 Zod 对象在客户端拒绝任何假外部核证、COGS/利润/过账字段、原币超额、来源重复或 incomplete page；所有候选金额仅作为待核证的原币来源，不聚合币种、不产生新账本。TanStack Query 与会话/站点/receipt 分区缓存、只在明确提交后请求、409 显示错误而非局部成本，复用 Base UI 选择器。新增 Vitest 正反例；在代码 SHA `a790f1c` 上 pnpm/Next16 快 CI 已 SUCCESS，PG18 快 CI SKIPPED；`451cfa9` 同代码+文档 [V217 同 SHA 完整 A3 #45304346700（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45304346700) 7/7 SUCCESS，PG18 原始日志确认 V215/V216 合成回归与匿名 Owner 401。V217 专属按钮交互的完整浏览器 E2E 负例仍留到 V218，不能把 A3 基线验收扩大为外部财务核证。
 
 **下一阶段 V218**：对 V216 Owner 权限与 GET 错误界面做真正 HTTP/browser 回归，核查本地财务来源失效后 stale UI 清空与跨租户/站点只读保护；G1 资本化/FX/退款口径与外部真实账单身份未完成以前，不讨论实际利润解锁。70/100、`realizedNetProfit=null`、OAuth OFF、生产 #104 NO-GO。
 
