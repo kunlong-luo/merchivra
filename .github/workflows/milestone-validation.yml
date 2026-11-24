@@ -1,3 +1,5 @@
+# V215B: V91 synthetic REVIEWED_UNVERIFIED fixture must include nonmaker
+# reviewer identity/time/reason; rerun exact-main real PG18 negative tests.
 # V215: exact-main full PG18 V112 receipt-scoped original-currency manual
 # allocation, V92 bidirectional ownership guard and immutable audit; synthetic
 # only, no actual landed COGS, real Amazon/Ads/bank or production GO.

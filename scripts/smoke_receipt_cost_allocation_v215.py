@@ -21,7 +21,8 @@ badbatch=u(2166)
 source_values = lambda sid: (
     f"('{sid}','{tenant}','{mp}','INBOUND_FREIGHT','MANUAL_INVOICE',"
     f"'TEST-INBOUND-{sid[-8:]}','{'a'*64}','2026-11-23','USD',"
-    f"100.000000,'MANUAL_UNVERIFIED','REVIEWED_UNVERIFIED','{maker}')"
+    f"100.000000,'MANUAL_UNVERIFIED','REVIEWED_UNVERIFIED','{maker}',"
+    f"'{reviewer}',now(),'synthetic independent metadata review')"
 )
 
 sql=f"""
@@ -73,7 +74,7 @@ CREATE TRIGGER v215_v92_cross_guard AFTER INSERT OR UPDATE OF state
 INSERT INTO finance_cost_source_v91
  (id,tenant_id,seller_marketplace_id,category,source_kind,source_key,
   source_document_sha256,business_date,currency_code,amount,
-  evidence_origin,review_state,created_by) VALUES
+  evidence_origin,review_state,created_by,reviewed_by,reviewed_at,review_reason) VALUES
  {source_values(source1)},
  {source_values(source2)},
  {source_values(source3)};

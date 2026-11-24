@@ -21,3 +21,7 @@ V20 的 erp_purchase_receipt.id 是本地采购收货身份；V106/V213 的领�
 合成测试脚本 scripts/smoke_receipt_cost_allocation_v215.py 仅在 MERCHIVRA_V215_DISPOSABLE_ONLY=true、PG18/Flyway V112 环境下用 TEMP 影子表+真实已安装函数，覆盖来源快照、双向 V92 冲突、超额/跨币种、空审批、不可变和自动审计，最后 ROLLBACK。CI 完整 PG18 任务中加入脚本；测试是否真实成功必须另核对精确 SHA 与日志，不能借旧 V213 green。
 
 V216 优先实现独立只读源漂移/跨来源双计诊断以及 V112 回归；写入与双人审批应用入口待 G1/DEC-06/07/08 原币资本化、退款和期间政策确认及受控权限回归之后再决定。真实 Seller/Ads/银行授权 OFF；realizedNetProfit=null；评分 70/100；生产 #104 NO-GO。
+
+## 初次 A3 失败记录
+
+V215 第一次完整 A3 #45295153716 在精确 `7515edd` 的 PostgreSQL 18 专项 FAILED：新 TEMP V91 fixture 填写 REVIEWED_UNVERIFIED，却缺 required reviewed_by/reviewed_at/review_reason，原 V91 CHECK 正确拦截；不是已经证明 V112 的触发器失败。已修正测试夹具而**未放宽** V91/V112 的任何真实约束；下一次同 SHA A3 成功后才可验收。
