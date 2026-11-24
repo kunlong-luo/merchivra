@@ -244,13 +244,7 @@ public class SettlementReportScanService {
         });
     }
     private static void sameScope(SpApiSellerScope expected,SpApiSellerScope live) {
-        if(!expected.tenantId().equals(live.tenantId())
-            || !expected.sellerAccountId().equals(live.sellerAccountId())
-            || !expected.sellerId().equals(live.sellerId())
-            || !expected.marketplaceId().equals(live.marketplaceId())
-            || expected.region()!=live.region()
-            || !live.approvedRoles().contains("Finance and Accounting"))
-            throw new SecurityException("Finance grant changed during report read");
+        SpApiSettlementReportsWorker.requireUnchangedFinanceScope(expected,live);
     }
     private Job assertLease(Claim c) {
         Job j=job(c.tenant(),c.marketplace(),true);

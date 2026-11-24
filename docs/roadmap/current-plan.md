@@ -56,6 +56,14 @@ V230 首轮 [#45367537947](https://github.com/kunlong-luo/merchivra/actions/runs
 
 **评分闸门**：V231 76/100 与真实利润 10/25 仍为最新已验收基线；V232 未通过上述真实证据关卡前不发布新评分。合成 CI 通过只证明工程契约，不能代替会计签署。保持 `realizedNetProfit=null`、Seller/Ads OAuth OFF、#104 NO-GO。真实材料须由维护者在合法本地环境取得，独立财务人员签署，不由开发代理代签。
 
+### V232 E1-A · Amazon 原始报告在途授权边界（代码变更，验收待定）
+
+现有 `SpApiSettlementReportsWorker` 已通过官方 SDK 获取列表/原件元数据，并经预签名 URL 下载、V54 原字节 SHA 与不可变 staging；V208/V209 另有外仓签名/离线 PKIX/CRL 技术能力，不得复制造新的自述核对模块。此次发现列表读与文档下载/租约提交间的 Seller scope 比较未包含刷新凭证，可能把在途旧凭证响应重新归给新授权。
+
+- 修复：列表返回、逐报告处理、文档元数据返回、下载后及最终分页完成前，必须比较原始 Finance scope（含刷新凭证及角色）；fenced import 与 checkpoint 同样复用该比较，原 scope 交给导入方。拒绝授权变更，不记录凭证或摘要，不添加公开 API/财务写入口。
+- 新增合成 Java 负例：同 Seller/Marketplace 刷新凭证变化、角色缺失、站点变化、空 scope，以及列表返回后凭证轮换时不得触发文档下载或入库。待精确提交 CI 证明，不宣称已执行。
+- 局限：这是观察到的 scope 变化阻断，不是持久化 grant generation/ABA 防护；现有 SQL 授权复核、分页跨任务版本绑定、凭证撤销与真实外部报告的身份/完整性仍需分别验收。未取得真实材料或 G1 签署，不得将技术成功归为 E1 已完成或加分。
+
 ## 文档清理规则
 
 - 现行入口只保留 [当前状态](../current-status.md)、本计划、[工程规范](../governance/engineering-standards.md)、[AGENTS](../../AGENTS.md)、[文档控制](../governance/document-control.md)及具体运行指引。旧历史计划 [`docs/roadmap.md`](../roadmap.md)、[V108](mvp-freeze-release-v108.md)标记 ARCHIVE，**不再重用其“下一步”**。

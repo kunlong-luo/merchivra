@@ -64,6 +64,7 @@ public class SpApiSettlementReportsWorker {
                     List.of(SettlementReportImportService.TYPE),
                     List.of("DONE"),List.of(marketplace),20,from,until,null)
                 : api.getReportsWithHttpInfo(null,null,null,null,null,null,token));
+        requireUnchangedFinanceScope(seller,approved(tenant,account,marketplace));
         if(result==null || result.getReports()==null)
             throw new IllegalStateException("Reports list missing");
         var reports=result.getReports();
@@ -90,6 +91,7 @@ public class SpApiSettlementReportsWorker {
                 skipped++;continue;
             }
             var current=approved(tenant,account,marketplace);
+            requireUnchangedFinanceScope(seller,current);
             if(importer.alreadyImported(current,report.getReportId(),
                 report.getReportDocumentId())) {
                 known++;continue;
@@ -100,6 +102,7 @@ public class SpApiSettlementReportsWorker {
             if(document==null || !report.getReportDocumentId().equals(
                 document.getReportDocumentId()) || document.getUrl()==null)
                 throw new IllegalStateException("Unexpected report document metadata");
+            requireUnchangedFinanceScope(seller,approved(tenant,account,marketplace));
             boolean gzip=false;
             if(document.getCompressionAlgorithm()!=null) {
                 if(!"GZIP".equals(document.getCompressionAlgorithm().name()))
@@ -110,11 +113,26 @@ public class SpApiSettlementReportsWorker {
             // is fetched on every attempt after any crash or URL expiry.
             byte[] body=downloader.fetch(document.getUrl());
             current=approved(tenant,account,marketplace);
-            fencedImport.persist(current,report.getReportId(),
+            requireUnchangedFinanceScope(seller,current);
+            fencedImport.persist(seller,report.getReportId(),
                 report.getReportDocumentId(),body,gzip);
             imported++;
         }
+        requireUnchangedFinanceScope(seller,approved(tenant,account,marketplace));
         return new Page(following,0,inspected,imported,known,skipped,following==null);
+    }
+
+    /**
+     * Never re-label an in-flight original response with another Seller grant.
+     * Record equality includes the refresh credential, not just public scope.
+     * No token/hash is exposed or persisted by this check. This is an
+     * observed-scope guard, not a committed grant-epoch/ABA guarantee.
+     */
+    static void requireUnchangedFinanceScope(SpApiSellerScope expected,SpApiSellerScope live) {
+        if(expected==null || live==null
+            || !expected.approvedRoles().contains("Finance and Accounting")
+            || !expected.equals(live))
+            throw new SecurityException("Finance grant changed during report read");
     }
 
     private SpApiSellerScope approved(UUID tenant,UUID account,String marketplace) {

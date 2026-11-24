@@ -44,6 +44,8 @@
 
 **评分控制**：现行最新已验收基线为 [V231 76/100](docs/governance/project-scorecard-v231-2026-11-24.md)，原 V228 73、V200 70 为历史，不追溯修改。原六维实际得分为架构18/20、功能18/20、真实利润10/25、安全14/15、前端9/10、测试运营7/10。V232 以[现行 P0 执行计划](docs/roadmap/current-plan.md)的 E1–E5 独立外部证据关卡为准，不再因同类展示、自述核对或文档数量发布新评分。真实材料缺失时仅允许合成契约测试，不可宣称外部签发、真实 landed/退款 COGS、资金对账或 G1/DEC 已验收。不得代签、不得把真实凭证提交到公开 Git；`realizedNetProfit=null`、Seller/Ads OAuth OFF、生产 #104 NO-GO 不变。
 
+**V232 E1-A 原始 Reports 在途授权边界**：列表、文档元数据、下载、fenced import 与分页 checkpoint 不得将旧凭证响应换成另一 Seller scope；比较范围包括刷新凭证和已批准角色，仅在内存比较，禁止记录秘密及新增外部核验标志。此检查不是 grant epoch/ABA 防护，不取代 SQL 当前角色/租户/租约审查；未获真实第三方材料、独立签署与精确 CI 不得标记 E1 完成。见[当前 P0](docs/roadmap/current-plan.md)。
+
 ## 每次执行的固定步骤
 
 1. **先核对事实**：读 [当前状态](docs/current-status.md)、[执行计划](docs/roadmap/current-plan.md)、相关 Controller/Flyway/React 页面/测试，明确“已有能力、真实缺口、外部待批准”。先复用，再扩展；不要重复造账本、审批或 API 客户端。

@@ -22,6 +22,10 @@
 - **V230B**：从 V228 暂存或重放来源点击“查看缺口”；单个 RR 快照复用 V229 和 V182/V165/V94/V102 的审计/结算/重复候选，按八类来源列出哪些**真正独立第三方原始文件、签发主体、原币收费与成本守恒**尚未证明。Next/Orval/Zod 一律拒绝伪造的 `VERIFIED`、跨 Marketplace、错误原币、非 null 真实利润等响应；报告没有外部真实过账行为。详见 [V230](finance/v230-external-source-proof-dossier-and-owner-workflow.md)。
 - **V231 已验收（代码 SHA `9ff02147de17`、完整 A3 7/7）**：新增浏览器本地 SHA-256 按字节重算，最多读取 8 MiB 用户合法持有的文件，与 V91 **用户自述**摘要比较；不上传/保存文件或文件名，MATCH 仅称 `LOCAL_BYTES_MATCH_USER_CLAIM_ONLY`，不变更 V91/V182 审计、外部真实性或 `realizedNetProfit`。另外删去重复 `Agent.md` 和过时 V120 草稿，重建根中英文 README 目录用途、文档索引与自动目录守卫。详见 [V231 交付与清理](finance/v231-local-byte-claim-check-and-repository-pruning.md)。
 
+## V232 E1-A · 在途 Amazon 原件授权一致性（待验收）
+
+本轮针对已有 Amazon Reports Worker/Scan Service 收紧 scope 比较，防止检测到刷新凭证/角色/站点变更后仍继续下载、入库或提交分页进度。新增两组 Java 合成回归；尚无本轮精确 CI 与真实授权报告证据。此项只是观察到的授权变化阻断，不能证明未发生 ABA 或真正第三方签发身份。V231 76/100、真实利润10/25、OAuth OFF、`realizedNetProfit=null` 和生产 NO-GO 仍是当前状态。具体任务见[现行计划](roadmap/current-plan.md)。
+
 ## 最近精确验收（切勿混用不同 SHA 的 CI）
 
 | 阶段 | 精确代码 / 测试 | 技术证明边界 |

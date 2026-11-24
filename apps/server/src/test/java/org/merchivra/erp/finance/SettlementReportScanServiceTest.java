@@ -4,6 +4,14 @@ import java.time.Clock;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
 import org.merchivra.erp.spapi.SpApiSellerGrantVault;
+import org.merchivra.erp.spapi.SpApiSellerScope;
+import org.merchivra.erp.spapi.SpApiRegion;
+import org.merchivra.erp.spapi.SpApiOfficialSdkFactory;
+import org.merchivra.erp.spapi.SpApiOperation;
+import software.amazon.spapi.api.reports.v2021_06_30.ReportsApi;
+import java.time.OffsetDateTime;
+import java.util.Optional;
+import java.util.Set;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -38,6 +46,62 @@ class SettlementReportScanServiceTest {
             ()->service.start(UUID.randomUUID(),UUID.randomUUID(),null));
         assertEquals(HttpStatus.UNAUTHORIZED,error.getStatusCode());
         verifyNoInteractions(jdbc);
+    }
+
+    @Test
+    void observedGrantChangeRejectsSameSellerWithDifferentCredentialWithoutLeakingIt() {
+        UUID tenant=UUID.randomUUID(),account=UUID.randomUUID();
+        String site="ATVPDKIKX0DER";
+        var roles=Set.of("Finance and Accounting");
+        var original=new SpApiSellerScope(tenant,account,"A1TESTSELLER",site,
+            SpApiRegion.NA,"synthetic-old-grant",roles);
+        var unchanged=new SpApiSellerScope(tenant,account,"A1TESTSELLER",site,
+            SpApiRegion.NA,"synthetic-old-grant",roles);
+        var rotated=new SpApiSellerScope(tenant,account,"A1TESTSELLER",site,
+            SpApiRegion.NA,"synthetic-new-grant",roles);
+        var otherSite=new SpApiSellerScope(tenant,account,"A1TESTSELLER","A1OTHER",
+            SpApiRegion.NA,"synthetic-old-grant",roles);
+        var noFinance=new SpApiSellerScope(tenant,account,"A1TESTSELLER",site,
+            SpApiRegion.NA,"synthetic-old-grant",Set.of());
+        assertDoesNotThrow(()->SpApiSettlementReportsWorker.requireUnchangedFinanceScope(original,unchanged));
+        var rejected=assertThrows(SecurityException.class,
+            ()->SpApiSettlementReportsWorker.requireUnchangedFinanceScope(original,rotated));
+        assertEquals("Finance grant changed during report read",rejected.getMessage());
+        assertThrows(SecurityException.class,
+            ()->SpApiSettlementReportsWorker.requireUnchangedFinanceScope(original,otherSite));
+        assertThrows(SecurityException.class,
+            ()->SpApiSettlementReportsWorker.requireUnchangedFinanceScope(original,noFinance));
+        assertThrows(SecurityException.class,
+            ()->SpApiSettlementReportsWorker.requireUnchangedFinanceScope(noFinance,noFinance));
+        assertThrows(SecurityException.class,
+            ()->SpApiSettlementReportsWorker.requireUnchangedFinanceScope(original,null));
+    }
+
+    @Test
+    void reportListResponseCannotProceedAfterObservedGrantRotation() throws Exception {
+        UUID tenant=UUID.randomUUID(),account=UUID.randomUUID();
+        String site="ATVPDKIKX0DER";
+        var roles=Set.of("Finance and Accounting");
+        var original=new SpApiSellerScope(tenant,account,"A1TESTSELLER",site,
+            SpApiRegion.NA,"synthetic-old-grant",roles);
+        var rotated=new SpApiSellerScope(tenant,account,"A1TESTSELLER",site,
+            SpApiRegion.NA,"synthetic-new-grant",roles);
+        var vault=mock(SpApiSellerGrantVault.class);
+        var sdk=mock(SpApiOfficialSdkFactory.class);
+        var downloader=mock(SignedReportDocumentDownloader.class);
+        var importer=mock(SettlementReportImportService.class);
+        var persist=mock(SpApiSettlementReportsWorker.FencedImport.class);
+        when(vault.loadFinancesApproved(tenant,account,site))
+            .thenReturn(Optional.of(original),Optional.of(rotated));
+        var worker=new SpApiSettlementReportsWorker(sdk,vault,downloader,importer);
+        OffsetDateTime now=OffsetDateTime.now();
+        // SDK mocked; guard must run before even interpreting the list response.
+        assertThrows(SecurityException.class,()->worker.scanPage(tenant,account,site,
+            now.minusDays(1),now,null,0,2,persist));
+        verify(sdk).executeObservedRead(eq(original),eq(SpApiOperation.GET_REPORTS),
+            eq(ReportsApi.class),any());
+        verifyNoMoreInteractions(sdk);
+        verifyNoInteractions(downloader,importer,persist);
     }
 
     @Test
