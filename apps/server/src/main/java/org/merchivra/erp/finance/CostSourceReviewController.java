@@ -35,6 +35,17 @@ public class CostSourceReviewController {
             service.create(access.currentTenant(auth,request),marketplaceId,
                 access.authenticatedUser(auth),draft));
     }
+    @Operation(operationId="stageManualCostSourceBatch")
+    @PostMapping("/batch")
+    public ResponseEntity<List<CostSourceReviewService.Source>> createBatch(
+        @Parameter(hidden=true) Authentication auth,
+        @Parameter(hidden=true) HttpServletRequest request,
+        @PathVariable UUID marketplaceId,
+        @RequestBody List<CostSourceReviewService.Draft> drafts) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            service.createBatch(access.currentTenant(auth,request),marketplaceId,
+                access.authenticatedUser(auth),drafts));
+    }
     @Operation(operationId="listManualCostSources")
     @GetMapping
     public ResponseEntity<List<CostSourceReviewService.Source>> list(
