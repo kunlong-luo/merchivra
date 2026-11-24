@@ -1,13 +1,13 @@
 # V230 · 原币费用的第三方证明缺口清单、同快照组合检查与 Owner 工作台
 
-**2026-11-24 · V230 代码已提交 `main`。首轮真实 PG18 费用来源专项通过，但完整 A3 因 Next 浏览器重挂载竞态仅 6/7；修复版 [A3 #45368066154](https://github.com/kunlong-luo/merchivra/actions/runs/45368066154) 正在重新验收。** 本轮目标是从 **V229 完整的本地费用来源审计**走向“哪些材料才可证明真实第三方费用”的可操作准备度，而非新建财务真实性状态表、开通 Seller/Ads API 或将本地 Owner 复核升级为已认证真实利润。
+**2026-11-24 · V230B 已按精确代码 SHA 的真实 Spring Owner / PostgreSQL18 / Next.js / Chromium 完整 A3 7/7 SUCCESS 验收；首轮因 Next DOM 重挂载竞态仅 6/7 的失败历史保留。** 本轮目标是从 **V229 完整的本地费用来源审计**走向“哪些材料才可证明真实第三方费用”的可操作准备度，而非新建财务真实性状态表、开通 Seller/Ads API 或将本地 Owner 复核升级为已认证真实利润。
 
 ## 实际 PG18 数据与首次 A3 失败（保留历史）
 
 - [首轮代码 SHA `6baef5a3230dd799815b4dbf230ce74de55d82a3`](https://github.com/kunlong-luo/merchivra/commit/6baef5a3230dd799815b4dbf230ce74de55d82a3) 的 [完整 A3 #45367537947](https://github.com/kunlong-luo/merchivra/actions/runs/45367537947) **6/7**；Java/Gradle、Next/pnpm/Orval、Compose、mock-chain 与真实 PG18 均通过，**browser-layout FAIL**。PG18 Job **#138353131033** 原始日志同时打印 `PASS V230 live Springdoc namespaced Orval read dossier ...`、`V230_SOURCE_PROOF_DOSSIER`、`PASS V230 real PG18 Owner ...`。 
 - 真 PG18 源类别：`ADS_SPEND`、`INBOUND_FREIGHT`、`FBA_STORAGE`、`RETURN_HANDLING` 各自匹配不同必需外部凭证代码。真实 Owner POST/GET 检测 V91 正常1/缺失0/重复2条初始审计；两个不同来源采用相同用户声明 SHA 时 **V165 potential overlap 保持 hold（仅本地候选，不是已确认重复扣款）**；匿名401、错误 Marketplace404；只读 GET V113 epoch +0。所有外部签发主体、原始文件重算、收费、COGS、会计批准与利润始终 false/null。
 - 初轮 Next 浏览器失败是 `scripts/smoke_browser_layout.mjs` 在 Next App Router 路由转换期间，刚查到订单行就通过**未按面板限定**的 `.core-data-scroll table` 读取列，DOM 短暂被卸载导致 `Uncaught`。已在代码中改成目标 `#core-panel-orders` / `#core-panel-inventory` 表格定位，并在异步重挂载时受控重试 90×140ms；**必须仍满足选择的订单/货位、真实测试行、来源标识、非空表头/数据和列数相等**。首轮失败不能覆盖或伪写成成功。
-- [V230B 精确代码完整 A3 #45368066154](https://github.com/kunlong-luo/merchivra/actions/runs/45368066154) 已启动，尚无最终结论；在其 **7/7 SUCCESS** 前当前独立评分仍以 [V229 74/100](../governance/project-scorecard-v229-2026-11-24.md) 为准，不能把 PG18 专项通过冒充完整发布验收。
+- [**V230B 接受代码 SHA `a8e5eba353d501de9761685cdd0d05de1d340982`**](https://github.com/kunlong-luo/merchivra/commit/a8e5eba353d501de9761685cdd0d05de1d340982) 的 [完整 A3 #45368066154（run_attempt=1，**7/7 SUCCESS**）](https://github.com/kunlong-luo/merchivra/actions/runs/45368066154) 已完成。真实 PG18/Spring Job **#138355672453** 原始日志打印 `PASS V230 live Springdoc...`、`V230_SOURCE_PROOF_DOSSIER` 与 `PASS V230 real PG18 Owner...`；V229/V228/V227/V226 等原始正反例同轮通过，Gradle、Next/pnpm/Orval、Chromium（修复后严格通过）、Compose、mock-chain 均 SUCCESS。**正式独立复评分为 [V230 75/100](../governance/project-scorecard-v230-2026-11-24.md)，只因真正可操作的业务来源证明缺口流程 +1，真实利润仍10/25。**
 
 ## 原有能力与缺口
 
@@ -29,10 +29,10 @@ V91/V92 的手工费用来源不可变、审核事件追加；V229 [真实 PG18 
 - TypeScript：`manual-cost-proof-v230.test.ts` 必须覆盖相同 UUID/原币、安全响应、伪造的外部 `true`、非法利润字符串、伪造别的站点身份、缺材料、相互矛盾的审核状态及不支持缓存的读取。类型客户端应由 pnpm prebuild/pretest 经真实静态合同 SHA 重生成，不能手改 `src/generated`。
 - 真实 PG18：`smoke_external_cost_proof_dossier_v230.py` 仅可在仓库 GitHub Actions `main` / `ci-v222` / disposable PG18 / 明确 SP-API/OAuth OFF 运行。它必须通过真实 Owner Cookie/CSRF POST 暂存四类来源，再由 GET 独立确认不同类别材料、V91 正常/缺失/重复审计对整份清单的优先级、同摘要不同源的 V165 本地碰撞提示、匿名401/跨 Marketplace404、只读 GET 0 个 V113 版本写入。**禁止在真实运营数据库插入“缺审计/重复审计”负例**。
 - 真实 Springdoc：现有 `scripts/check_manual_cost_openapi_v228.py` 扩展校验 V230 GET 路径、operationId、`@Schema(name)` 唯一身份以及响应中类别/原币/外部证明数组/全部禁止的真实费用和利润字段，不能以“只匹配 200”替代真实 DTO 字段完整性。
-- 精确代码 SHA 的 7/7 完整 A3、Java/Next/Chromium/Compose/mock-chain/真 PG18 和新 Vitest 全部成功，才能标记 V230 已验收。**首轮 A3 #45367537947 为6/7，浏览器竞态失败已留档；V230B #45368066154 尚待最终结论，不能提前标记完成**。
+- 精确代码 SHA 的 7/7 完整 A3、Java/Next/Chromium/Compose/mock-chain/真 PG18 和新 Vitest 全部成功，才能标记 V230 已验收。**首轮 A3 #45367537947 为6/7，浏览器竞态失败已留档；V230B 精确 SHA #45368066154 现为完整7/7 SUCCESS**。
 
 ## 下一阶段 V231 与评分
 
-V230 解决了**财务来源可操作核证准备度**，但因为用户尚未授权真实 Seller/Ads、未提供独立签发的原始发票/银行/报关资料、外部 WMS 实收未证实、退款实际 COGS 与 DEC-06/07/08 口径未批准，真实利润仍 `null`，生产 #104 **NO-GO**。旧 [V229 74/100](../governance/project-scorecard-v229-2026-11-24.md) 不能直接自动变高；如上述完整验收通过，可按原六维**业务工作流完整性**复评 +1（16→17），但真实利润 **10/25 不变**、安全14/15和测试7/10不重复加分。
+V230 解决了**财务来源可操作核证准备度**，但因为用户尚未授权真实 Seller/Ads、未提供独立签发的原始发票/银行/报关资料、外部 WMS 实收未证实、退款实际 COGS 与 DEC-06/07/08 口径未批准，真实利润仍 `null`，生产 #104 **NO-GO**。已根据完整7/7形成 [V230 新版 **75/100** 独立评分](../governance/project-scorecard-v230-2026-11-24.md)（旧 [V229 74/100](../governance/project-scorecard-v229-2026-11-24.md) 保留历史）：只按原六维**业务工作流完整性 +1（16→17）**，真实利润 **10/25 不变**、安全14/15和测试7/10不重复加分。
 
 V231 优先沿用这一类别化清单，针对维护者在本地取得的**合法、可复核、真实第三方原始文件字节与签发方**定义独立验真、保密存储、撤销和失效机制；禁止操作者单方面上传自己的声明 hash 就自动 `VERIFIED`。同时推动真实订单/退款/货件的 landed COGS 守恒和 G1/DEC 签署。未经真实授权仍保持 Amazon Seller/Ads OAuth OFF。
