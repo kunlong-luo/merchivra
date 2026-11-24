@@ -146,7 +146,7 @@ public class CostSourceReviewService {
         var keys=new HashSet<String>();
         for(var draft:drafts) {
             BigDecimal amount=validate(draft);
-            if(!keys.add(draft.sourceKind()+"\\u0000"+draft.sourceKey()))
+            if(!keys.add(draft.sourceKind()+"|"+draft.sourceKey()))
                 throw bad(); // ambiguous repeat within one batch
             amounts.add(amount);
         }
