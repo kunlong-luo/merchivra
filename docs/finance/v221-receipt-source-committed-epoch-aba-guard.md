@@ -34,6 +34,12 @@ V221 既保留 V216 对**结果本身**的独立比较，又给每一个证据�
 - 此机制依赖数据库业务写入通过受监控的 INSERT/UPDATE/DELETE 触发器执行，无法对超级管理员禁用触发器、TRUNCATE、手工更改迁移或业务规则外的表变更做真实性保证。V165 增减信号源表时必须同步扩展 V113 触发器覆盖；这种依赖纳入 ENG-001 工程规范。RR 第二次取样之后才发生的新提交属于新请求应重新读取的时间窗口，不能声称永久锁定了结果。
 - V113 为**版本工具**不是会计政策审批。Amazon Seller/Ads 实际 OAuth 关闭，真实平台原始对账、真实采购批次证据、关税/货代/银行与 G1/DEC-06/07/08 尚待核实。项目评分 **70/100**，`realizedNetProfit=null`，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
 
+## 首次完整 A3 故障与修复记录
+
+- [首轮 V221 触发提交 `106c398`](https://github.com/kunlong-luo/merchivra/commit/106c398431dd858cd6f97334b6f36910fc879ff9) 的 [完整 A3 #45316142338](https://github.com/kunlong-luo/merchivra/actions/runs/45316142338) **6/7 SUCCESS、PG18 FAIL**。Java25/Gradle/Next16/Chromium/Compose 通过，Flyway V113 已实际安装，真实 V219 和 V220 PG18 HTTP 日志也再次分别 PASS。**V221 的双连接测试在等待读者会话退出时发生 15 秒超时**；没有打印 PASS V221，因此不可称已验收。
+- 原因是早期脚本让锁持有者连接执行服务器端 `pg_sleep(25)`，之后只终止 `psql` 客户端。客户端 SIGTERM 不保证 PostgreSQL 后端马上觉察连接关闭，导致 (221,2) advisory lock 可能仍保持至服务端 sleep 结束。该问题是**测试同步机制缺陷**，不是证明源版本设计通过或失败。
+- 修复使用**持续打开 stdin 的真实 `psql` 持锁会话**，不用 `pg_sleep`；两笔 PO 更改提交后主动由同一个持锁会话执行 `pg_advisory_unlock(221,2)` 并退出，再收取读者旧 RR/新 RR 的实际结果。保持原有两连接、rollback、跨租户版本、V165 来源 ABA 和真实 Owner GET 全部断言；必须按新精确 SHA 重跑 A3。
+
 ## 验收判定
 
 只有该**精确 V221 代码 SHA** 的快 CI Java25+Gradle、Node24+pnpm/Next16 和真实 PG18/Chromium/Compose 完整 A3 **7/7 SUCCESS**，且 PG18 原始日志包含 `PASS V221 PG18 committed tenant epoch`，才将 V221 标为通过；任何未运行、0 jobs、SQL 错误、并发等待超时都必须按未验收如实记录。

@@ -146,10 +146,14 @@ assert num("SELECT count(*) FROM finance_cost_source_v91 "
 # read epoch in RR1 -> takes (221,1) -> blocks on H's (221,2).
 # Coordinator then commits USD->EUR->USD, releases H, R reads again
 # INSIDE RR1 (same original epoch) and in NEW RR2 (higher epoch).
+# Keep a live psql session holding the advisory gate while idle.
+# Killing a client blocked in server-side pg_sleep may leave its backend
+# and advisory lock alive until the sleep ends; use explicit unlock instead.
 holder = subprocess.Popen(
-    PARGS + ["-c", "SELECT pg_advisory_lock(221,2); "
-             "SELECT pg_sleep(25);"],
+    PARGS, stdin=subprocess.PIPE,
     stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+holder.stdin.write("SELECT pg_advisory_lock(221,2);\n")
+holder.stdin.flush()
 reader = None
 
 
@@ -198,13 +202,17 @@ COMMIT;
        f"WHERE tenant_id='{tenant_a}' AND id='{po_a}';")
     assert currency(po_a, tenant_a) == first_business_value
 finally:
-    # Always release the gate even on assertion failure.
-    holder.terminate()
-    try:
-        holder.communicate(timeout=5)
-    except subprocess.TimeoutExpired:
-        holder.kill()
-        holder.communicate()
+    # Release the gate at the SERVER from the SAME advisory-lock owner.
+    # A SIGTERM to a sleeping psql client does not guarantee that the
+    # backend will notice the closed socket before the sleep completes.
+    if holder.poll() is None:
+        try:
+            holder.stdin.write("SELECT pg_advisory_unlock(221,2);\n\\q\n")
+            holder.stdin.flush()
+            holder.communicate(timeout=8)
+        except (BrokenPipeError, subprocess.TimeoutExpired):
+            holder.kill()
+            holder.communicate()
 
 assert reader is not None
 out, err = reader.communicate(timeout=15)

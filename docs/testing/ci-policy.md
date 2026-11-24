@@ -175,3 +175,5 @@ python3 scripts/check_next_runtime_v122.py
 - V216 将 scope 查询移入每个 RR 事务，取来源、V165 八信号与 V113 epoch 同 PG MVCC 视图；两次版本不同先 409，内容不同仍 409，不返回已过期金额。Java25/Gradle 重点验证**内容相同、版本不同**返回 409，空 population ABA、稳定版本但财务仍 UNKNOWN/UNVERIFIED、scope 在第二个 RR 变化 404。
 - PG18 完整 A3 在 V219/V220 disposable 数据之后执行 scripts/smoke_receipt_read_epoch_v221.py：严格限定本仓库 main GitHub Actions/固定 loopback 数据库/OAuth OFF，验证 V113 46 个触发器、回滚不增长、B 租户变动不污染 A、V91 INSERT+DELETE 源恢复后版本仍增长；使用 advisory lock 对两条真连接同步，确定性交错 A PO USD→EUR→USD，第一 RR 两次 epoch 不变、第二 RR 版本更高；最后真 Spring Owner GET 仍仅未核证的候选原币、realizedNetProfit null。
 - **不要扩大证据范围**：DB 两连接确定性交错 + Java 服务中模拟双快照 409 ≠ 真实 in-flight HTTP 的跨线程强制暂停。V220 的第 51 项 HTTP 409 也不是 ABA 409。需同一精确提交的全套 A3 7/7、PG18 原始输出 PASS V221 PG18 committed tenant epoch，方可标为 V221 已通过。
+
+- **V221 首次 A3 未通过的真实原因**：[A3 #45316142338](https://github.com/kunlong-luo/merchivra/actions/runs/45316142338) 为 6/7，PG18 V113 已安装且 V219/V220 真实 HTTP PASS，V221 双连接持锁测试出现读者 15 秒等待超时；原脚本先在 server pg_sleep 再杀 psql client，不能保证后端马上释放锁。修复为持锁端 `psql` stdin 会话发送显式 pg_advisory_unlock，之后再验证旧/新 RR。首轮不算 V221 验收，必须以新 SHA 和 PASS V221 输出为准。
