@@ -1,3 +1,5 @@
+# V225B: correct concurrent epoch conservation by asserting 2*32 ticks
+# over one tenant-wide window; initial A3's per-writer exact delta was false.
 # V225: PG18 true V91 bulk-versus-row transactions, V113 epoch tick
 # conservation, V91 immutable guard, tenant lock and Owner source ABA409.
 # V224B: forward-only V115 makes old/new transition comparison UPDATE-only;
@@ -263,7 +265,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V225-A3-V91-bulk-long-txn-and-Owner-source-ABA' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V225B-A3-shared-tenant-epoch-global-conservation' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
