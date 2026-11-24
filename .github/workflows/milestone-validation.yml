@@ -1,3 +1,5 @@
+# V220: exact-main PG18 Spring Session with nonempty V91/V112,
+# V165 collision, V92 duplicate exclusion, PO drift, 50/51 scoped population.
 # V219C: rerun PG18 after fixing only-one-tenant fixture assumption;
 # validate actual Owner/staff and foreign receipt / Marketplace HTTP.
 # V219B: rerun exact-main PG18 real Spring Owner/staff/cross-tenant
