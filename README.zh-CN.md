@@ -11,7 +11,7 @@
 
 ## 当前工程状态
 
-V234 仍是最新通过的完整 A3。V236 服务恢复测试已编写，但 CI 受阻；V237 修复剩余运维文档旧链接、独立 JUnit 验收检查。见[当前事实](docs/current-status.md)。
+V237 快速 CI 已通过；V238 核查时其完整 A3 尚在运行，最近确认完整通过的仍是 V234。见[当前事实](docs/current-status.md)。
 
 ## 一、仓库根目录：保留哪些，分别有什么用？
 
@@ -40,13 +40,13 @@ V234 仍是最新通过的完整 A3。V236 服务恢复测试已编写，但 CI 
 | `docs/architecture/`、`docs/requirements/`、`docs/product/` | 架构/ADR、需求验收/业务场景、尚待批准的真实财务业务政策 |
 | `docs/purchasing/`、`docs/inventory/`、`docs/catalog/`、`docs/operations/`、`docs/analytics/` | 采购、供应商、FBA、货位、Listing、异常/经营质量的分领域技术、运维手册与历史证据 |
 | `docs/security/`、`docs/integrations/` | 租户权限、Session、Amazon SP-API/Ads 安全与授权流程合同 |
-| `docs/design/`、`docs/ux/`、`docs/diagrams/`、`docs/processes/`、`docs/templates/` | Next 页面设计、操作旅程、Mermaid 图、业务流程、ADR 模板。某些只有一个文件，**但该文件有明确用途，不应为减少目录数就误删** |
+| `docs/design/`、`docs/diagrams/`、`docs/processes/`、`docs/templates/` | Next 页面设计、操作旅程、Mermaid 图、业务流程、ADR 模板。某些只有一个文件，**但该文件有明确用途，不应为减少目录数就误删** |
 
 **本次清理原则**：真正重复、没有现行用途的文件直接删除；前向 Flyway 迁移、真实 CI 失败历史、版本评分、源账目证明、回退机制与尚未签署的 G1/DEC 文件保留。已删除早期 V120“PR 还在等 CI”的重复短稿，正式[供应商退货历史 V120 文档](docs/purchasing/supplier-followup-return-traces-v120.md) 保留。删除历史仍可从 Git commit 查看。完整文档入口/分类见 [docs/README.md](docs/README.md)，判定依据见 [文档控制规范](docs/governance/document-control.md)。
 
 ### 目录维护与去重
 
-V231 删除重复 Agent 别名与 V120 草稿；V233 精简规则与 Demo 指南，V234 去除过时工作流注释，V235 将 README/文档中心重复状态与验收流水账收敛到当前事实和领域证据。目录保留用途以上表为准；统一删留规则见[文档控制](docs/governance/document-control.md)。V236 将单文件目录 `docs/ops/` 并入 `docs/operations/`，保留[运维手册](docs/operations/operations.md)；根 `ops/` 仍为实际运维工具。不删除历史迁移或真实验收任务。
+V231 删除重复 Agent 别名与 V120 草稿；V233 精简规则与 Demo 指南，V234 去除过时工作流注释，V235 将 README/文档中心重复状态与验收流水账收敛到当前事实和领域证据。目录保留用途以上表为准；统一删留规则见[文档控制](docs/governance/document-control.md)。V236 将单文件目录 `docs/ops/` 并入 `docs/operations/`，保留[运维手册](docs/operations/operations.md)；根 `ops/` 仍为实际运维工具。V238 将旧 `docs/ux/` 并入 `docs/design/`，保留一份[导航与页面状态参考](docs/design/navigation-and-page-states.md)，旧线框仅在 Git 历史保留。不删除历史迁移或真实验收任务。
 
 ## 三、本地启动（包含 PostgreSQL 18）
 

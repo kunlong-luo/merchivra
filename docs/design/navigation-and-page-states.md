@@ -1,6 +1,27 @@
-# UX-002 · 页面状态矩阵和可追踪交互
+# UX-001 / UX-002 · 导航与页面状态参考
 
-**状态：Draft（低保真交互契约）**。页面稿不得隐藏数据异常，也不能把缺失值默认显示为零。
+**历史设计参考（非现行实现清单）**。本文件合并早期低保真导航与页面状态矩阵，保留 UX-001/UX-002 需求追踪标识。实际 Next.js 页面以 [根设计规范](../../DESIGN.md)、[当前事实](../current-status.md) 和 [现行计划](../roadmap/current-plan.md) 为准。不得把原草图的页面、指标、移动端优先级或计划中的交付物解释成当前实现或批准决策。真实净利润未知，不因显示而确认。
+
+## 导航与业务入口
+
+```mermaid
+flowchart TD
+Root["Merchivra ERP"] --> Home["工作台 / 告警"]
+Root --> Stores["店铺与站点"]
+Root --> Catalog["商品 / Listing / SKU 映射"]
+Root --> Orders["订单 / 退款"]
+Root --> Inv["FBA 库存 / 阈值"]
+Root --> Finance["成本 / 财务交易 / 预估利润"]
+Root --> Sync["同步任务 / 错误中心"]
+Root --> Admin["成员 / 角色 / 系统配置"]
+Stores --> Connect["授权连接 / 状态"]
+Catalog --> Mapping["待关联 Seller SKU"]
+Finance --> Evidence["利润来源 / 完整度说明"]
+```
+
+历史线框保留于 [V237 精确 Git 原文](https://github.com/kunlong-luo/merchivra/blob/c6ef07a3250aa52922f35ae7ee2f075083c94047/docs/ux/navigation.md)，不再复制到现行设计文档。现行页面设计见 [Next 工作台](next16-command-center-visual-refresh.md) 与 [多工作区设计](next16-multi-workspace-polish-v178.md)。
+
+## 页面状态矩阵（UX-002）
 
 | 页面 | 正常 | 空/未配置 | 数据异常 | 权限失败 | 明确操作 |
 |---|---|---|---|---|---|
@@ -29,4 +50,4 @@
 4. E2E-05：利润面板避免双计，并展示费用未覆盖。
 5. E2E-06：同步中心展示断点恢复、退避及异常证据。
 
-详见 [导航与线框](navigation.md)、[API 契约](../architecture/api-contracts.md)、[业务场景](../testing/end-to-end-scenarios.md)。
+详见 [API 契约](../architecture/api-contracts.md)、[业务场景](../testing/end-to-end-scenarios.md)。原 UX-002 完整历史见 [Git 原文](https://github.com/kunlong-luo/merchivra/blob/c6ef07a3250aa52922f35ae7ee2f075083c94047/docs/ux/page-state-matrix.md)。

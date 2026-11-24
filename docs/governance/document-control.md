@@ -25,6 +25,8 @@ V235 起 README 仅承担产品入口、目录用途、启动和开发导航；�
 
 V236 将单文件 docs/ops/ 并入 docs/operations/，运行维护概要与专项证据统一归类；根 ops/ 保留实际执行工具。迁移内容完整保留，新入口见 [运维手册](../operations/operations.md)，旧路径删除且不得重建。
 
+V238 将旧 UX-001/002 合并为 [导航与页面状态参考](../design/navigation-and-page-states.md)，旧草图及原文保留精确 Git 历史，删除 `docs/ux/`；现行视觉规则仍由根 DESIGN.md 管理。目录迁移必须核查所有相对链接，并让 CI 拒绝重建旧目录。
+
 ## 状态词（文档和 CI 不得混用）
 
 - **DRAFT**：未完成提案；**PROPOSED**：可评审方案，尚未批准；**ACCEPTED**：明确记录批准人、日期、范围与依据的决定。

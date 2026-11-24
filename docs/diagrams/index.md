@@ -17,7 +17,7 @@
 | D-13 | 安全信任边界图 | [安全设计](../security/security-design.md) | P0 | PII、token、隔离 |
 | D-14 | 本地部署图 | [部署设计](../architecture/deployment.md) | P0 | Mock / localhost |
 | D-15 | 生产参考部署图 | [部署设计](../architecture/deployment.md) | P0 | TLS、私网、备份 |
-| D-16 | UI 导航结构图 | [交互设计](../ux/navigation.md) | P0 | 页面完整性 |
+| D-16 | UI 导航结构图 | [交互设计](../design/navigation-and-page-states.md) | P0 | 页面完整性 |
 | D-17 | 财务计算时序图 | [财务模型](../architecture/finance-model.md) | P0 | 数据来源可追踪 |
 
 ## 第二轮新增的实际图纸

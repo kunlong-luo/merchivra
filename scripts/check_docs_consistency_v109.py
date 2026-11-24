@@ -31,6 +31,8 @@ ACTIVE_FILES = (
     "docs/development.md",
     "docs/architecture/overview.md",
     "docs/architecture/deployment.md",
+    "docs/design/navigation-and-page-states.md",
+    "docs/diagrams/index.md",
     "docs/operations/operations.md",
     "docs/architecture/open-source-erp-benchmark-2026-11-08.md",
     "docs/purchasing/local-purchase-workflow.md",
@@ -245,6 +247,20 @@ for relative in (ROOT / "docs").rglob("*.md"):
         if not parts.scheme and not parts.netloc and parts.path:
             if (relative.parent / unquote(parts.path)).resolve() == ROOT / "docs/ops/operations.md":
                 errors.append(f"{relative.relative_to(ROOT)}: stale moved runbook link")
+
+# V238: one design directory; old UX files must not return.
+if (ROOT / "docs/ux").exists():
+    errors.append("Retired UX directory reintroduced; use docs/design")
+if not (ROOT / "docs/design/navigation-and-page-states.md").is_file():
+    errors.append("Canonical navigation and page-state reference missing")
+for relative in [*ROOT.glob("*.md"), *(ROOT / "docs").rglob("*.md")]:
+    for found in INLINE.finditer(relative.read_text(encoding="utf-8")):
+        href = found.group(1).strip().split(' "', 1)[0].strip().strip("<>")
+        parts = urlsplit(href)
+        if not parts.scheme and not parts.netloc and parts.path:
+            resolved = (relative.parent / unquote(parts.path)).resolve()
+            if resolved.is_relative_to(ROOT / "docs/ux"):
+                errors.append(f"{relative.relative_to(ROOT)}: stale UX reference: {href}")
 
 if errors:
     for error in errors:

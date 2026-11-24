@@ -11,7 +11,7 @@
 
 ## Current engineering status
 
-V234 remains the latest successful full A3. V236 service recovery tests are implemented but blocked by CI; V237 repairs the remaining moved-runbook link and extracts the JUnit evidence check. See [current status](docs/current-status.md).
+V237 quick CI passed; its full isolated A3 was still running at the V238 review. V234 remains the last confirmed full A3 at that review. See [current status](docs/current-status.md).
 
 ## What the repository directories actually do
 
@@ -40,13 +40,13 @@ Root-level `.env.example`, `.gitignore`, `.editorconfig` configure safe local de
 | `architecture/`, `requirements/`, `product/` | Architecture/ADRs, business acceptance, still-unsigned financial decisions and scope |
 | `purchasing/`, `inventory/`, `catalog/`, `operations/`, `analytics/` | Domain implementations, purchasing/FBA, catalog, operational runbooks and business-data quality evidence |
 | `security/`, `integrations/` | Session/CSRF/tenant security and Seller/Ads/SP-API integration boundary documentation |
-| `design/`, `ux/`, `diagrams/`, `processes/`, `templates/` | Next UI references, user flows, Mermaid diagrams, ADR template; some contain just one **referenced, useful** file |
+| `design/`, `diagrams/`, `processes/`, `templates/` | Next UI references, user flows, Mermaid diagrams, ADR template; some contain just one **referenced, useful** file |
 
 **Deletion policy:** remove proven obsolete duplicate drafts and unused aliases; retain deployed code, rollback mechanisms, migration history, policies and version-specific A3/PG18/financial evidence. Git history preserves deleted drafts. The previously duplicated pending-PR V120 supplier note was removed; the canonical [completed V120 supplier trace](docs/purchasing/supplier-followup-return-traces-v120.md) remains. See [the documentation map](docs/README.md) and [document-control rules](docs/governance/document-control.md).
 
 ### Directory maintenance
 
-Retain the functional directories above. V231 removed the obsolete Agent alias and duplicate V120 draft; V233 shortened policy/demo documents, V234 trimmed obsolete workflow comments, and V235 consolidates repeated status/history from README and the documentation index into the current-status and domain evidence. See [document control](docs/governance/document-control.md) for the single maintenance policy. V236 merges the single-file `docs/ops/` into `docs/operations/`: [operations runbook](docs/operations/operations.md). Root `ops/` remains executable operational tooling. No historical migration or validation task is removed.
+Retain the functional directories above. V231 removed the obsolete Agent alias and duplicate V120 draft; V233 shortened policy/demo documents, V234 trimmed obsolete workflow comments, and V235 consolidates repeated status/history from README and the documentation index into the current-status and domain evidence. See [document control](docs/governance/document-control.md) for the single maintenance policy. V236 merges the single-file `docs/ops/` into `docs/operations/`: [operations runbook](docs/operations/operations.md). Root `ops/` remains executable operational tooling. V238 merges the former `docs/ux/` into `docs/design/`, retaining one [navigation and page-state reference](docs/design/navigation-and-page-states.md); obsolete wireframes remain in Git history. No historical migration or validation task is removed.
 
 ## Quick start — isolated local PostgreSQL 18
 

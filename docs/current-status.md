@@ -1,6 +1,6 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-24 · V234 的 V116 真 PG18 回归已通过完整 A3 7/7；V235 快速 CI 通过；V236 验收受 CI 阻断；V237 修复工作流与文档引用待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-24 · V234 的 V116 真 PG18 回归已通过完整 A3 7/7；V235 快速 CI 通过；V236 验收受 CI 阻断；V237 快速 CI 已通过、完整 A3 待结果；V238 合并设计目录。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 核心项目状态
 
@@ -45,6 +45,10 @@ Owner start 在任务行锁后复查并锁定 grant/role 版本；授权缺失�
 ## V237 · V236 验收阻断修复（待验收）
 
 V236 首次提交 `9ddce626c205` 的 [CI #45394392278](https://github.com/kunlong-luo/merchivra/actions/runs/45394392278) Java/Next SUCCESS，Compose 文档检查因 architecture/deployment.md 仍引用已移动的 docs/ops/operations.md 失败，PG18 SKIPPED。随后精确 `0988f5f2ed92` 的 [快速 CI #45394458129](https://github.com/kunlong-luo/merchivra/actions/runs/45394458129) 与 [完整 A3 #45394460077](https://github.com/kunlong-luo/merchivra/actions/runs/45394460077) 均 FAILURE 且 API 返回 0 jobs；未取得具体 GitHub 工作流拒绝诊断，不能认定根因。V237 修复剩余旧链接，将 JUnit 非跳过验证移至独立 stdlib Python 脚本，保留原 A3 执行步骤和严格校验，重新触发验收。V236 服务测试尚未获真实 PG18 执行证明。
+
+## V238 · 设计文档归并与验收跟踪
+
+V237 精确 [SHA c6ef07a3250a](https://github.com/kunlong-luo/merchivra/commit/c6ef07a3250aa52922f35ae7ee2f075083c94047) 的 [快速 CI #45398093903](https://github.com/kunlong-luo/merchivra/actions/runs/45398093903) SUCCESS（Java/Next/Compose；PG18 SKIPPED），[完整 A3 #45398094170](https://github.com/kunlong-luo/merchivra/actions/runs/45398094170) 核查时 IN_PROGRESS，不能宣称 V236 服务测试已实际运行。V238 将旧 UX 导航/状态矩阵合并到 [设计参考](design/navigation-and-page-states.md)，删除旧目录及重复线框，更新追踪矩阵/图纸目录/README/守卫。未变更业务代码、未取得外部财务证据，评分不变。
 
 ## 最近精确验收（切勿混用不同 SHA 的 CI）
 
