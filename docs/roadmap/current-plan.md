@@ -1,4 +1,4 @@
-# Merchivra · 当前执行计划（2026-11-24 / V223 已验收；V224 selective no-op epoch 代码与 PG18 真 HTTP A3 待验收）
+# Merchivra · 当前执行计划（2026-11-24 / V223 已验收；V224 V114 首轮 PG18 INSERT 回归失败，已追加 V115 修复并重跑 A3）
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
@@ -21,7 +21,7 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 ## V224 实现待验收 · Flyway V114 同行无变化更新减噪
 
-已新增 [V224 作用范围、Flyway V114、安全/性能专项合同](../finance/v224-identical-update-epoch-and-concurrency.md)：审计发现 V113 语句级 UPDATE 即使命中行未变，仍更新 tenant revision、锁住同租户其他站点写入并可能在 V216 双 RR 期间触发额外 409。新 Flyway V114 前向更换**原函数实现而非已应用迁移**；仅对共享的 `erp_purchase_order` 和 `seller_marketplace`，旧/新完整行 JSONB 多重集双向 `EXCEPT ALL` 一致才跳过版本，其余 13 表/真实 DML 及 tenant.status 保持原保护。新增 `scripts/smoke_receipt_epoch_noop_v224.py`：真实 PG18 零变化单/双站点和零行 UPDATE 不增长、PO 两次已提交 USD→EUR→USD 增长 2、ROLLBACK 不增长、PO 长事务与另站点不同业务行的真实 Lock 等待；真实 Owner HTTP 在双 RR 边界无变化 A2 UPDATE 3/3 200、真正 A2 ABA 3/3 409、正常混合 V91 来源写入与 Owner GET 返回状态/延迟测量但不推断生产 409 率。连同 V221/V222/V223 完整回归在当前 `main` 完整 A3 核验。**当前只标记“实现待验收”；不以旧 V223 green 冒充 V224 精确 SHA 新迁移已成功。**
+已新增 [V224 作用范围、Flyway V114、安全/性能专项合同](../finance/v224-identical-update-epoch-and-concurrency.md)：审计发现 V113 语句级 UPDATE 即使命中行未变，仍更新 tenant revision、锁住同租户其他站点写入并可能在 V216 双 RR 期间触发额外 409。新 Flyway V114 前向更换**原函数实现而非已应用迁移**；仅对共享的 `erp_purchase_order` 和 `seller_marketplace`，旧/新完整行 JSONB 多重集双向 `EXCEPT ALL` 一致才跳过版本，其余 13 表/真实 DML 及 tenant.status 保持原保护。新增 `scripts/smoke_receipt_epoch_noop_v224.py`：真实 PG18 零变化单/双站点和零行 UPDATE 不增长、PO 两次已提交 USD→EUR→USD 增长 2、ROLLBACK 不增长、PO 长事务与另站点不同业务行的真实 Lock 等待；真实 Owner HTTP 在双 RR 边界无变化 A2 UPDATE 3/3 200、真正 A2 ABA 3/3 409、正常混合 V91 来源写入与 Owner GET 返回状态/延迟测量但不推断生产 409 率。连同 V221/V222/V223 完整回归在当前 `main` 完整 A3 核验。**当前只标记“实现待验收”；不以旧 V223 green 冒充 V224 精确 SHA 新迁移已成功。****首轮失败、必须保留：** [V224 A3 #45322692498](https://github.com/kunlong-luo/merchivra/actions/runs/45322692498) 的 PG18 在创建 Marketplace 时报 `relation old_rows does not exist`/HTTP500。V114 将 `TG_OP='UPDATE' AND` 与 UPDATE-only transition relation 放同一 SQL 条件，PG 不保证短路；新增前向 **V115** 将判断置于独立 PL/pgSQL UPDATE 分支，原迁移不改，专项增加真实 Marketplace INSERT/DELETE epoch +1/+1，**必须重跑该精确 SHA 的 A3**。
 
 **下一阶段 V225 候选**：若本阶段真实 PG18/HTTP 验收通过，专注评估保守 13 表中多语句写入和 UPDATE 全行比较的 CPU 开销、业务长事务切分、代表性匿名混合读写及可批准自然 409/P95/P99 指标；共享 PO/receipt/tenant.status/V165 的严格全范围依赖矩阵未证实前不能细化 Marketplace epoch。仍优先 P0 真实来源与 G1/DEC 财务审批，评分70/100、`realizedNetProfit=null`、真实 Seller/Ads OAuth OFF、生产 #104 NO-GO。
 
