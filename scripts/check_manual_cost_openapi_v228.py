@@ -66,3 +66,45 @@ assert actual_fields >= required_fields, (
 print("PASS V228 actual Springdoc Owner batch POST matches reviewed Orval "
       "operation, input Draft fields, response Source shape, and same-origin "
       "session+CSRF contract; no verified profit")
+
+
+# V230 extends the SAME reviewed Orval config, not a parallel HTTP
+# client: validate the new actual Java operation and namespaced DTO schema.
+V230_PATH="/api/v1/finance/marketplaces/{marketplaceId}/cost-sources/{sourceId}/external-proof-dossier"
+V230_DOSSIER="ExternalCostProofDossierV230"
+V230_REQUIREMENT="ExternalCostProofRequirementV230"
+assert expected["paths"][V230_PATH]["get"]["operationId"] == (
+    "getManualCostExternalProofDossierV230")
+assert expected["components"]["schemas"][V230_DOSSIER]["properties"][
+    "realizedNetProfit"]["nullable"] is True
+expected_fields=set(expected["components"]["schemas"][V230_DOSSIER]["required"])
+critical={
+    "sourceId","marketplaceId","category","originalCurrency",
+    "sourceReviewState","localAuditStatus","localAttributionStatus",
+    "localCollisionHeld","localSourceAuditComplete",
+    "independentMetadataReviewComplete","localDossierStatus","blockerCodes",
+    "requiredExternalProof","issuerIdentityVerified","originalBytesVerified",
+    "originalChargeVerified","actualLandedOrRefundCogsVerified",
+    "accountingPolicyApproved","eligibleForRealizedProfit","realizedNetProfit"
+}
+assert expected_fields >= critical
+live_get=live["paths"][V230_PATH]["get"]
+assert live_get["operationId"]=="getManualCostExternalProofDossierV230"
+assert {"marketplaceId","sourceId"} <= {
+    p["name"] for p in live_get["parameters"] if p.get("in")=="path"
+    and p.get("required")}
+live_content=live_get["responses"]["200"]["content"]
+live_media=next((key for key in ("application/json","*/*",
+    "application/*+json") if key in live_content),None)
+assert live_media, "V230 must advertise a JSON-compatible dossier"
+live_dossier=deref(live_content[live_media]["schema"])
+actual=set(live_dossier.get("properties",{}))
+assert actual >= critical, ("V230 real Springdoc source dossier mismatch",
+                           sorted(critical-actual),sorted(actual))
+live_requirements=deref(live_dossier["properties"]["requiredExternalProof"])
+assert live_requirements.get("type")=="array"
+live_requirement=deref(live_requirements["items"])
+assert {"code","description","independentlyVerified"} <= set(
+    live_requirement.get("properties",{}))
+print("PASS V230 live Springdoc namespaced Orval read dossier with audited "
+      "source, scoped proof requirements, all external truth/profit fields",flush=True)
