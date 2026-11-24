@@ -1,3 +1,6 @@
+# V215: exact-main full PG18 V112 receipt-scoped original-currency manual
+# allocation, V92 bidirectional ownership guard and immutable audit; synthetic
+# only, no actual landed COGS, real Amazon/Ads/bank or production GO.
 # V203C: correct disposable SQL DO dollar quoting; repeat exact-SHA A3.
 # V203B: accept either conservation guard or UNIQUE constraint as the first\n# fail-closed duplicate claim rejection; re-run exact main SHA PG18 A3.\n# V203: source-exact PG18 sale/item/pick/receipt immutable local claim,
 # retraction and evidence-invalidation contract. Always actual COGS NO-GO.
