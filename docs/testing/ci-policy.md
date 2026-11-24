@@ -177,3 +177,5 @@ python3 scripts/check_next_runtime_v122.py
 - **不要扩大证据范围**：DB 两连接确定性交错 + Java 服务中模拟双快照 409 ≠ 真实 in-flight HTTP 的跨线程强制暂停。V220 的第 51 项 HTTP 409 也不是 ABA 409。需同一精确提交的全套 A3 7/7、PG18 原始输出 PASS V221 PG18 committed tenant epoch，方可标为 V221 已通过。
 
 - **V221 首次 A3 未通过的真实原因**：[A3 #45316142338](https://github.com/kunlong-luo/merchivra/actions/runs/45316142338) 为 6/7，PG18 V113 已安装且 V219/V220 真实 HTTP PASS，V221 双连接持锁测试出现读者 15 秒等待超时；原脚本先在 server pg_sleep 再杀 psql client，不能保证后端马上释放锁。修复为持锁端 `psql` stdin 会话发送显式 pg_advisory_unlock，之后再验证旧/新 RR。首轮不算 V221 验收，必须以新 SHA 和 PASS V221 输出为准。
+
+- **V221 第二轮 PG18 真正 PASS，但全套 A3 尚非 7/7**：[A3 #45316961822](https://github.com/kunlong-luo/merchivra/actions/runs/45316961822)，精确 SHA `97e559c` 的 PG18 Job #138186054911 实际输出 `PASS V221 PG18 committed tenant epoch`，确认真实 advisory unlock、rollback、跨租户隔离、V91 INSERT/DELETE ABA、PG18 两 RR 旧/新 revision 和正常 Owner GET；V219/V220 真 HTTP 同样 PASS。独立 mock-chain Job #138186054740 则在 Docker 构建 Gradle 依赖期间遇 Maven Central `spring-core:7.0.10` HTTP 429，整轮失败。该 429 不属业务代码错误，但完整 A3 必须如实判 FAIL；Dockerfile 仅对 429/502/503/504 的已记录 transient HTTP 响应有界最多三次重试、任何普通构建失败仍立即退出，重跑时需同一精确 SHA 的 Compose 真成功。

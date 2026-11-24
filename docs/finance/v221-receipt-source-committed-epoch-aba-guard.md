@@ -40,6 +40,12 @@ V221 既保留 V216 对**结果本身**的独立比较，又给每一个证据�
 - 原因是早期脚本让锁持有者连接执行服务器端 `pg_sleep(25)`，之后只终止 `psql` 客户端。客户端 SIGTERM 不保证 PostgreSQL 后端马上觉察连接关闭，导致 (221,2) advisory lock 可能仍保持至服务端 sleep 结束。该问题是**测试同步机制缺陷**，不是证明源版本设计通过或失败。
 - 修复使用**持续打开 stdin 的真实 `psql` 持锁会话**，不用 `pg_sleep`；两笔 PO 更改提交后主动由同一个持锁会话执行 `pg_advisory_unlock(221,2)` 并退出，再收取读者旧 RR/新 RR 的实际结果。保持原有两连接、rollback、跨租户版本、V165 来源 ABA 和真实 Owner GET 全部断言；必须按新精确 SHA 重跑 A3。
 
+## 第二轮真 PG18 成功、Compose 依赖服务限流（分开判定）
+
+- 修复测试会话释放后，[第二轮 A3 #45316961822](https://github.com/kunlong-luo/merchivra/actions/runs/45316961822)，精确 SHA [`97e559c`](https://github.com/kunlong-luo/merchivra/commit/97e559c521b13b01ae343fde02746cfe1f415443) 的 **PG18 Job #138186054911 SUCCESS**，原始日志明确输出 `PASS V221 PG18 committed tenant epoch`；同时 V219、V220 真 Spring/PG18 HTTP 重新 PASS。V221 真 PG18 核验 46 个触发器、回滚稳定、跨租户版本不混入、V91 INSERT/DELETE 来源回到原值但版本单调、两连接旧 RR/新 RR 在 PO USD→EUR→USD 后版本不同，正常 Owner GET 仍无实际 COGS/利润。
+- **同一 A3 尚非完整 7/7**：独立 Compose mock-chain Job #138186054740 在冷 Docker Gradle `bootJar` 解析 `spring-core:7.0.10` 时，Maven Central 返回 **HTTP 429 Too Many Requests**，Gradle 无法下载依赖。该项不是 Flyway V113 或 Java 编译回归，且不允许将 PG18 SUCCESS 冒充全套 CI 成功。
+- `apps/server/Dockerfile` 的依赖构建增加**仅针对原始 Gradle 日志中明确的 HTTP 429/502/503/504** 的最多三次、每次短暂递增间隔的重试；普通编译/测试失败立即退出，不跳过 `bootJar` 或自动切到其他技术栈。重试日志仍可追溯。该修复在**新的精确 SHA** 的完整 Compose 和 A3 成功前不算已验收。
+
 ## 验收判定
 
 只有该**精确 V221 代码 SHA** 的快 CI Java25+Gradle、Node24+pnpm/Next16 和真实 PG18/Chromium/Compose 完整 A3 **7/7 SUCCESS**，且 PG18 原始日志包含 `PASS V221 PG18 committed tenant epoch`，才将 V221 标为通过；任何未运行、0 jobs、SQL 错误、并发等待超时都必须按未验收如实记录。

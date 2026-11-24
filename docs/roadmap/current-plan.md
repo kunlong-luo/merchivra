@@ -21,7 +21,7 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 ## V221 当前实施 · V113 已提交来源版本与 V216 ABA fail-closed（精确 SHA/A3 待验收）
 
-[V221 并发快照/ABA 契约](../finance/v221-receipt-source-committed-epoch-aba-guard.md)：既有 V216 两次独立 RR 只比较读取内容，已提交的 A→B→A 仍可能恢复完全相同内容。新增 Flyway V113 tenant 级提交顺序一致的 epoch，语句级监听 V91/V92/V112、采购单/收货/Marketplace、V165 所有本地来源输入（45 个 transition trigger + 1 个 tenant 状态触发器）。V216 将租户/Marketplace/receipt 活性校验移进每次 RR，同行证据与 epoch 读取共享 MVCC；两个 epoch 不同必须 409，再检查内容变动。Java 服务专项验证相同内容不同版本、空内容 ABA、无版本仍 UNKNOWN、scope 变化 404；实际 PG18 双连接 advisory lock 对 PO USD→EUR→USD 做确定性时序，旧 RR 仍原版本，新 RR 必须更高，回滚与其他 tenant 写入不影响。**PG18 并发证明与 Java 单测分别验证能力，不冒充真实 HTTP 请求中途强制交错**。现阶段等本轮真实 A3 验收。
+[V221 并发快照/ABA 契约](../finance/v221-receipt-source-committed-epoch-aba-guard.md)：既有 V216 两次独立 RR 只比较读取内容，已提交的 A→B→A 仍可能恢复完全相同内容。新增 Flyway V113 tenant 级提交顺序一致的 epoch，语句级监听 V91/V92/V112、采购单/收货/Marketplace、V165 所有本地来源输入（45 个 transition trigger + 1 个 tenant 状态触发器）。V216 将租户/Marketplace/receipt 活性校验移进每次 RR，同行证据与 epoch 读取共享 MVCC；两个 epoch 不同必须 409，再检查内容变动。Java 服务专项验证相同内容不同版本、空内容 ABA、无版本仍 UNKNOWN、scope 变化 404；实际 PG18 双连接 advisory lock 对 PO USD→EUR→USD 做确定性时序，旧 RR 仍原版本，新 RR 必须更高，回滚与其他 tenant 写入不影响。**PG18 并发证明与 Java 单测分别验证能力，不冒充真实 HTTP 请求中途强制交错**。第二轮 PG18 Job 已由 [A3 #45316961822](https://github.com/kunlong-luo/merchivra/actions/runs/45316961822) 原始 `PASS V221 PG18 committed tenant epoch` 验收，**完整 A3 仍因独立 Compose Maven Central 429 而不是 7/7**；已在 Dockerfile 对明确的下载限流做 3 次有界重试，等新精确 SHA 的 full A3 才结束 V221。
 
 **下一阶段 V222**：真实请求级读边界交错 / 高写入租户性能与 409 比率验证、必要时以业务来源约束收窄版本范围；同时优先推进可信外部账单原件及 G1/DEC 财务政策。继续 70/100、realizedNetProfit=null、真实 Amazon Seller/Ads OAuth OFF、生产 #104 NO-GO。
 
