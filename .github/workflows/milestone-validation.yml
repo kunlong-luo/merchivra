@@ -1,3 +1,5 @@
+# V224B: forward-only V115 makes old/new transition comparison UPDATE-only;
+# first V224 A3 failed PG18 Marketplace INSERT on old_rows under compound IF.
 # V224: exact-main V114 no-op shared scope epoch guard + real PG18
 # cross-Marketplace in-flight Owner HTTP ABA + mixed 409 diagnostic.
 # V223: exact-main PG18 V113 tenant-epoch write contention, sampled locks,
@@ -259,7 +261,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V224-A3-noop-epoch-and-cross-marketplace-ABA' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V224B-A3-V115-INSERT-safe-epoch-noop-and-ABA' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
