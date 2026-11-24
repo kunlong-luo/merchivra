@@ -133,6 +133,8 @@ public class SettlementReportScanService {
             if("RUNNING".equals(previous.state())
                 && previous.lease()!=null && previous.lease().isAfter(clock.instant()))
                 throw new ResponseStatusException(HttpStatus.CONFLICT,"Report job is active");
+            // Lock the captured grant/role before returning a freshly bound job.
+            lockRevisions(scope);
             if(!previous.id().equals(id))jdbc.update("""
                 UPDATE spapi_settlement_scan_job
                 SET state='READY',window_after=?,window_before=?,
@@ -160,6 +162,8 @@ public class SettlementReportScanService {
                 jdbc.update("""
                     UPDATE spapi_settlement_scan_job
                     SET state='PAUSED',last_failure_code='AUTHORIZATION_REJECTED',
+                        next_token=NULL,token_issued_at=NULL,row_offset=0,
+                        page_index=0,retry_at=NULL,
                         lease_owner=NULL,lease_expires_at=NULL,updated_at=now()
                     WHERE tenant_id=? AND seller_marketplace_id=?
                       AND state IN ('READY','RETRY','RUNNING')
@@ -181,6 +185,7 @@ public class SettlementReportScanService {
                     UPDATE spapi_settlement_scan_job
                     SET state='PAUSED',last_failure_code='AUTHORIZATION_REVISION_CHANGED',
                         next_token=NULL,token_issued_at=NULL,row_offset=0,
+                        page_index=0,retry_at=NULL,
                         lease_owner=NULL,lease_expires_at=NULL,updated_at=now()
                     WHERE tenant_id=? AND id=?
                     """,tenant,j.id());
@@ -308,24 +313,31 @@ public class SettlementReportScanService {
                 r.getObject(2,UUID.class)},count);
     }
 
-    private void fail(Claim c,Exception failure) {
-        int status=failure instanceof ApiException api?api.getCode():0;
+    record FailurePolicy(String code,boolean retryable,boolean clearCursor) {}
+    static FailurePolicy failurePolicy(Exception failure,int status,boolean hasToken) {
+        if(failure instanceof SecurityException||status==401||status==403)
+            return new FailurePolicy("AUTHORIZATION_REJECTED",false,true);
         boolean stale=failure instanceof SpApiSettlementReportsWorker.StaleCursorException
-            || ((status==400||status==422)&&c.job().token()!=null);
-        boolean transientFailure=stale || status==429 || status>=500
+            || ((status==400||status==422)&&hasToken);
+        if(stale)return new FailurePolicy("CURSOR_RESTART",true,true);
+        boolean retryable=status==429||status>=500
             || failure instanceof SpApiAdmissionException
             || failure instanceof IOException || failure instanceof InterruptedException;
-        String code=stale?"CURSOR_RESTART":
-            (failure instanceof SecurityException||status==401||status==403)?
-                "AUTHORIZATION_REJECTED":
-            transientFailure?"UPSTREAM_RETRY":"SOURCE_VALIDATION_FAILED";
+        return new FailurePolicy(retryable?"UPSTREAM_RETRY":"SOURCE_VALIDATION_FAILED",
+            retryable,false);
+    }
+
+    private void fail(Claim c,Exception failure) {
+        int status=failure instanceof ApiException api?api.getCode():0;
+        FailurePolicy policy=failurePolicy(failure,status,c.job().token()!=null);
+        String code=policy.code();
         tx.executeWithoutResult(t->{
             Job current=job(c.tenant(),c.marketplace(),true);
             if(current==null||current.epoch()!=c.epoch()
                 ||!c.owner().equals(current.owner())
                 ||current.lease()==null
                 ||!current.lease().isAfter(clock.instant()))return;
-            boolean again=transientFailure&&current.attempts()<8;
+            boolean again=policy.retryable()&&current.attempts()<8;
             Duration minimum=failure instanceof SpApiAdmissionException adm
                 ?adm.retryAfter():Duration.ofMinutes(1);
             if(minimum.compareTo(Duration.ofMinutes(1))<0)
@@ -344,7 +356,8 @@ public class SettlementReportScanService {
                 WHERE tenant_id=? AND id=? AND lease_epoch=? AND lease_owner=?
                 """,again?"RETRY":"PAUSED",db(again?clock.instant().plus(wait):null),
                 again?code:"RETRY_LIMIT_OR_"+code,
-                stale,stale,stale,stale,stale,
+                policy.clearCursor(),policy.clearCursor(),policy.clearCursor(),
+                policy.clearCursor(),policy.clearCursor(),
                 c.tenant(),current.id(),c.epoch(),c.owner());
         });
     }

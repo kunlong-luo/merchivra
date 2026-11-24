@@ -226,7 +226,7 @@ for directory in ("apps/", "deploy/", "ops/", "scripts/", ".github/",
     if directory not in root_readme or directory not in zh_readme:
         errors.append(f"Root README directory map missing: {directory}")
 for current in ("docs/current-status.md", "docs/roadmap/current-plan.md",
-                "docs/governance/project-scorecard-v230-2026-11-24.md",
+                "docs/governance/project-scorecard-v231-2026-11-24.md",
                 "docs/finance/v230-external-source-proof-dossier-and-owner-workflow.md"):
     if current not in root_readme and current not in zh_readme:
         errors.append(f"Root READMEs omit current reference: {current}")

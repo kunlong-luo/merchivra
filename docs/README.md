@@ -1,6 +1,6 @@
 # Merchivra 文档中心 · 唯一现行入口
 
-> **CURRENT · 2026-11-24 / V230B 与 V231 均已按各自精确代码 SHA 通过完整 A3 7/7；现行六维评分76/100。** Java 25/Spring Boot 4.1.2/**Gradle**/PostgreSQL 18、React19/**Next.js 16.4.5**/Node24/**pnpm 12.20.0 唯一包管理器**。本仓库仍是 **pre-alpha**；真实 Seller/Ads OAuth 关闭，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**；`realizedNetProfit=null`。所有现行代码和文档直接维护在 `main`，本入口不把本地手工账单或模拟 CI 冒充真实净利润。
+> **CURRENT · 2026-11-24 / V234 完整 A3 7/7；V235 待验收；现行六维评分76/100。** Java 25/Spring Boot 4.1.2/**Gradle**/PostgreSQL 18、React19/**Next.js 16.4.5**/Node24/**pnpm 12.20.0 唯一包管理器**。本仓库仍是 **pre-alpha**；真实 Seller/Ads OAuth 关闭，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**；`realizedNetProfit=null`。所有现行代码和文档直接维护在 `main`，本入口不把本地手工账单或模拟 CI 冒充真实净利润。
 
 ## 先读这些权威文档
 
@@ -40,23 +40,8 @@
 
 不存在单纯为了“目录看起来少”而删除活动代码、测试、历史迁移、回退资产或可核查的版本证据的理由。详见根 [README 中文版](../README.zh-CN.md) 和 [英文版](../README.md) 的**仓库目录用途表**。
 
-## 清理与删除结果（V231 / V233 / V234）
+## 文档维护与财务证据
 
-V234：移除 A3 工作流冗余历史注释、合并现行计划中的重复已完成版本叙述，执行步骤与原验收证据保留。V233：缩短 AGENTS、去除根 README 的历史流水账与 Demo 过期启动说明，纠正中文 README 现行评分。Git Tree 未发现完全相同的 Markdown 文件对；仅保留有独立用途的文件。详细目录职责以根 README 为准。
+目录的保留与删除由 [GOV-001 文档控制](governance/document-control.md) 统一管理；实际版本、CI 成败与外部未核证边界只在 [当前事实](current-status.md) 和对应领域证据维护，下一阶段只在 [现行 P0](roadmap/current-plan.md) 维护。V231 的删除记录与本地文件摘要限制见 [专项证据](finance/v231-local-byte-claim-check-and-repository-pruning.md)。不再在文档中心复制完整版本流水账。
 
-- **删除**：根目录大小写重复的 `Agent.md` 兼容别名。它没有独立规则；标准入口是 [AGENTS.md](../AGENTS.md)。历史仍可由 Git log 查看。
-- **删除**：`purchasing/supplier-followup-return-trace-v120.md`（旧英文短稿还停留在“PR/CI 待验收”）。保留信息和范围更完整的 [`supplier-followup-return-traces-v120.md`](purchasing/supplier-followup-return-traces-v120.md)，不重复维护两份“V120”。
-- **保留**：`docs/roadmap.md`、`roadmap/mvp-freeze-release-v108.md` 和所有带精确 SHA/A3 原始结果的 Vxxx/评分文档，作为**历史证据而非现行指令**。保留 `architecture/adrs/`、`templates/` 和单文档目录中有用途的文件。
-- **不应出现**：`node_modules/`、`dist/`、`.next/`、`build/`、运行日志、单独 `pom.xml`、npm/yarn 第二份锁文件、重复 Agent 规则。这些无需手动清理 Git 中的 tracked 文件；当前 Git 树没有跟踪这种误提交的构建垃圾。
-
-文档真实正确性由 `python3 scripts/check_docs_consistency_v109.py` 与 V231 已实现的删除文件/目录映射检查守护；[精确代码 SHA `9ff02147de17`](https://github.com/kunlong-luo/merchivra/commit/9ff02147de17996d28ec95875a4eaa6445e1c197) 的 [完整 A3 #45373462870（7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45373462870) 中真实输出 **DOC-196 26份入口/504条相对链接 PASS**。删掉文件后**不再重新创建同名占位符**；失效旧链接应更新到上述保留的正式入口。过时结论在 Git 历史中可溯源，不擅自把旧失败改写为成功。
-
-**V231 证据与删除记录**：[浏览器原字节摘要核验及仓库文档/目录安全裁剪](finance/v231-local-byte-claim-check-and-repository-pruning.md)，[完整 A3 #45373462870（7/7）](https://github.com/kunlong-luo/merchivra/actions/runs/45373462870)，94 个前端测试文件/461 项、DOC-196 26 入口/504 链接均成功；与外部真实费用认证分离。
-
-## 财务资料的分类与真实性边界
-
-V230 的来源级清单把费用分为广告、FBA 仓储、FBM/头程货代、退货、关税、银行汇兑与其他经营费用；对每类要求**外部签发主体、原始字节与重算 SHA、真实收费/原币、归属守恒、独立审核与正式会计决定**。在没有合法取得的 Seller/Ads/银行/仓库原始证据之前，所有“本地审计完整”“本地金额与来源相似”均不是外部签发认证。
-
-V231 可选择在**本地浏览器**对手工声明摘要重算用户自己持有文件的 SHA-256，不上传原件/文件名，不过账；即使匹配，也只能称 **LOCAL_BYTES_MATCH_USER_CLAIM_ONLY**，不能写成外部认证或真实净利润。该增量已由[自身精确代码 SHA `9ff02147de17`](https://github.com/kunlong-luo/merchivra/commit/9ff02147de17996d28ec95875a4eaa6445e1c197) 的[完整 A3 #45373462870（7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45373462870) 和[快速 CI #45373462897（SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45373462897) 验收，详见 [V231 专项](finance/v231-local-byte-claim-check-and-repository-pruning.md)。
-
-**最新独立评分 [V231 76/100](governance/project-scorecard-v231-2026-11-24.md)**（V230 历史75分），唯一加分来自浏览器真实字节与手工声明 SHA 可操作核对，未获得任何真正外部签发方证明；尚未取得财务 G1/DEC 和外部真实成本时 `realizedNetProfit=null`，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 保持 **NO-GO**。
+财务 G1/DEC 未签署、第三方真实原件未核证时，不得把本地摘要匹配、授权版本或合成 CI 当成真实费用或净利润；`realizedNetProfit=null`，#104 NO-GO。

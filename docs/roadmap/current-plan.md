@@ -1,6 +1,6 @@
 # Merchivra · 唯一现行 P0 执行计划
 
-**CURRENT · 2026-11-24 · V234：验证 V116 授权版本，继续 E1 独立外部原件。**
+**CURRENT · 2026-11-24 · V235：完成 Reports 服务层恢复与 E1 独立外部原件。**
 
 > **北极星**：对 Amazon Seller ERP 的每笔订单、退款、SKU、采购批次及每个原币费用来源建立可以由独立第三方验证的记录，覆盖全成本/真实库存 COGS，最后在经批准的 G1/DEC 会计政策下生成可审计期间净利润。不能为了显示一个数字填补 UNKNOWN 为0。项目仍为 pre-alpha、`realizedNetProfit=null`，真实 Seller/Ads OAuth OFF，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
 
@@ -8,7 +8,7 @@
 
 ## 已验收基线与现行 P0
 
-[V231 76/100](../governance/project-scorecard-v231-2026-11-24.md) 是最新完整 A3 已验收评分，真实利润 10/25；V194/V195 等旧版本详细结果只在[当前事实及精确验收](../current-status.md)和领域证据维护，不在计划重复。V232/V233 原始报告授权保护已进入代码，V233 快 CI 成功、PG18 跳过，V234 补齐实际数据库回归。
+[V231 76/100](../governance/project-scorecard-v231-2026-11-24.md) 是最新完整 A3 已验收评分，真实利润 10/25；V194/V195 等旧版本详细结果只在[当前事实及精确验收](../current-status.md)和领域证据维护，不在计划重复。V232/V233 原始报告授权保护已进入代码，V233 快 CI 成功、PG18 跳过，V234 实际数据库回归及完整 A3 已通过。
 
 ### V232 执行顺序及真实验收（BLOCKED：未取得外部原件/签署）
 
@@ -26,11 +26,11 @@
 
 **评分闸门**：V231 76/100 与真实利润 10/25 仍为最新已验收基线；V232 未通过上述真实证据关卡前不发布新评分。合成 CI 通过只证明工程契约，不能代替会计签署。保持 `realizedNetProfit=null`、Seller/Ads OAuth OFF、#104 NO-GO。真实材料须由维护者在合法本地环境取得，独立财务人员签署，不由开发代理代签。
 
-### 当前执行：V234 授权版本实际数据库验收
+### 当前执行：V235 服务层授权恢复与外部原件
 
-- 复用 V232/V233 官方 Reports Worker、V116 grant/Finance role revisions、扫描租约和不可变 staging。历史实现与精确 CI 见[当前事实](../current-status.md)，不在此复制。
-- V234 在 disposable PG18 中执行真实迁移触发器和实际表的独立事务：撤销恢复 ABA、role 变化、回滚、删除重建、旧游标版本差异、跨租户和行锁阻断、报告版本冻结。完整 A3 待验收；未启用 Reports/OAuth 或真实银行/第三方材料。
-- 后续需验证实际服务层分页恢复、旧任务 Owner restart、其余 tenant/member/Marketplace 资格变更，以及 E1 非 Amazon 独立签发渠道；不得将 SQL 正例当作真实第三方身份或财务证明。
+- V234 真 PG18 版本测试、完整 A3 结果见[当前事实](../current-status.md)，不复制历史验收。
+- V235 统一授权失败清除 token/offset，Owner restart 锁定授权版本，授权错误不得自动重试；Java 分类负例待 CI。后续验证实际 start/step/fenced import 及旧游标恢复、跨进程资格变更。
+- E1 非 Amazon：复用 V208/V209 及既有费用来源，选择真实供应商/货代/银行/报关样本和可信签发渠道；未提供合法原件前不制造虚拟外部身份或增加自述 UI。
 
 ## 文档清理规则
 

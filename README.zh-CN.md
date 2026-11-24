@@ -11,7 +11,7 @@
 
 ## 当前工程状态
 
-V233 [精确快速 CI #45381222988](https://github.com/kunlong-luo/merchivra/actions/runs/45381222988) Java、Next、Compose 通过，PG18 跳过；V234 将 V116 实际数据库版本回归接入完整 A3。各 SHA 成败与剩余边界只看[当前事实](docs/current-status.md)，不代表外部核证。
+V234 完整隔离 A3 7/7 通过，包含真实 PostgreSQL18 V116 版本检查；V235 服务层游标恢复待验收。精确 SHA、失败历史与剩余边界统一见[当前事实](docs/current-status.md)。
 
 ## 一、仓库根目录：保留哪些，分别有什么用？
 
@@ -44,11 +44,9 @@ V233 [精确快速 CI #45381222988](https://github.com/kunlong-luo/merchivra/act
 
 **本次清理原则**：真正重复、没有现行用途的文件直接删除；前向 Flyway 迁移、真实 CI 失败历史、版本评分、源账目证明、回退机制与尚未签署的 G1/DEC 文件保留。已删除早期 V120“PR 还在等 CI”的重复短稿，正式[供应商退货历史 V120 文档](docs/purchasing/supplier-followup-return-traces-v120.md) 保留。删除历史仍可从 Git commit 查看。完整文档入口/分类见 [docs/README.md](docs/README.md)，判定依据见 [文档控制规范](docs/governance/document-control.md)。
 
-### V233–V234 目录与去重结果
+### 目录维护与去重
 
-清理前 Git Tree 共 1,435 个 tracked 文件，未发现内容完全相同的 Markdown 文件对。现有目录均有运行、规则或证据用途，暂不盲删整目录。将 AGENTS 收敛为长期有效规则，根中英文 README 删除重复版本流水账，旧 Demo 文档去除 Maven/Vue/过期命令；保留 V231 已删除的重复别名状态。旧详细记录仍在对应领域文档与 Git 历史，不再复制到现行规则。
-
-V234 进一步清理 A3 工作流顶部历史注释，现行路线图只保留 P0 与当前验收工作，不复制已完成版本；历史精确证据仍由当前事实和领域文档追溯，原有测试任务和手动触发选项保留。
+V231 删除重复 Agent 别名与 V120 草稿；V233 精简规则与 Demo 指南，V234 去除过时工作流注释，V235 将 README/文档中心重复状态与验收流水账收敛到当前事实和领域证据。目录保留用途以上表为准；统一删留规则见[文档控制](docs/governance/document-control.md)。不删除历史迁移或真实验收任务。
 
 ## 三、本地启动（包含 PostgreSQL 18）
 

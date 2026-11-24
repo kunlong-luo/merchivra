@@ -117,6 +117,23 @@ class SettlementReportScanServiceTest {
     }
 
     @Test
+    void authorizationFailureClearsCursorWithoutRetryButTransientErrorsPreserveIt() {
+        var auth=new SettlementReportScanService.FailurePolicy("AUTHORIZATION_REJECTED",false,true);
+        var stale=new SettlementReportScanService.FailurePolicy("CURSOR_RESTART",true,true);
+        var retry=new SettlementReportScanService.FailurePolicy("UPSTREAM_RETRY",true,false);
+        var invalid=new SettlementReportScanService.FailurePolicy("SOURCE_VALIDATION_FAILED",false,false);
+        assertEquals(auth,SettlementReportScanService.failurePolicy(new SecurityException(),0,true));
+        assertEquals(auth,SettlementReportScanService.failurePolicy(new IllegalStateException(),401,false));
+        assertEquals(auth,SettlementReportScanService.failurePolicy(new IllegalStateException(),403,true));
+        assertEquals(stale,SettlementReportScanService.failurePolicy(new IllegalStateException(),400,true));
+        assertEquals(stale,SettlementReportScanService.failurePolicy(new IllegalStateException(),422,true));
+        assertEquals(invalid,SettlementReportScanService.failurePolicy(new IllegalStateException(),400,false));
+        assertEquals(retry,SettlementReportScanService.failurePolicy(new java.io.IOException(),0,true));
+        assertEquals(retry,SettlementReportScanService.failurePolicy(new IllegalStateException(),429,true));
+        assertEquals(retry,SettlementReportScanService.failurePolicy(new IllegalStateException(),503,true));
+    }
+
+    @Test
     void reportWorkerPageValidatesUnboundedInputWithoutNetworkOrDb(){
         var worker=new SpApiSettlementReportsWorker(null,null,null,null);
         assertThrows(IllegalArgumentException.class,()->worker.scanPage(

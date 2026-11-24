@@ -11,7 +11,7 @@
 
 ## Current engineering status
 
-V233 [exact quick CI #45381222988](https://github.com/kunlong-luo/merchivra/actions/runs/45381222988) passed Java, Next and Compose; PG18 was skipped. V234 adds the disposable V116 revision regression to full A3. See [current status](docs/current-status.md) for exact results, including failures; no real external evidence or production approval.
+V234 completed the full isolated A3 (7/7), including actual PostgreSQL 18 V116 revision checks. V235 service-level cursor recovery is pending verification. Exact SHAs, results and limitations live only in [current status](docs/current-status.md).
 
 ## What the repository directories actually do
 
@@ -44,11 +44,9 @@ Root-level `.env.example`, `.gitignore`, `.editorconfig` configure safe local de
 
 **Deletion policy:** remove proven obsolete duplicate drafts and unused aliases; retain deployed code, rollback mechanisms, migration history, policies and version-specific A3/PG18/financial evidence. Git history preserves deleted drafts. The previously duplicated pending-PR V120 supplier note was removed; the canonical [completed V120 supplier trace](docs/purchasing/supplier-followup-return-traces-v120.md) remains. See [the documentation map](docs/README.md) and [document-control rules](docs/governance/document-control.md).
 
-### Directory maintenance (V233–V234)
+### Directory maintenance
 
-Tracked-tree audit before V233: 1,435 tracked blobs; no byte-identical Markdown file pairs. The existing root/domain directories still have independent runtime, policy, or evidence purposes. Shortened AGENTS to enduring policy, removed repeated release narratives from both root READMEs, and replaced stale Maven/Vue demo instructions with the current isolated workflow. Keep the V231 deleted aliases deleted; no additional whole file or directory is proven disposable in this pass. Historic evidence remains in the linked domain documents and Git history, not duplicated in current policies.
-
-V234 additionally removes the historical comment-only preamble in `.github/workflows/milestone-validation.yml` and consolidates past acceptance prose into current-status/domain evidence rather than the active roadmap. Workflow dispatch labels and all prior validation jobs remain; no independently useful directory is deleted.
+Retain the functional directories above. V231 removed the obsolete Agent alias and duplicate V120 draft; V233 shortened policy/demo documents, V234 trimmed obsolete workflow comments, and V235 consolidates repeated status/history from README and the documentation index into the current-status and domain evidence. See [document control](docs/governance/document-control.md) for the single maintenance policy. No historical migration or validation task is removed.
 
 ## Quick start — isolated local PostgreSQL 18
 
