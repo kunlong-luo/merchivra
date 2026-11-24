@@ -1,3 +1,5 @@
+# V219B: rerun exact-main PG18 real Spring Owner/staff/cross-tenant
+# receipt-cost HTTP after preserving/checking original CI PG indexes.
 # V219: validate real Spring PG18 owner/staff/tenant/Marketplace V216 GET,
 # cross-session isolation and active-tenant permission boundaries (no OAuth).
 # V218B: bounded mandatory CJK font install before exact-main Next Chromium
