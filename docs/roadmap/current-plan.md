@@ -21,6 +21,14 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
+## V229 实现待完整 A3 · 先守住 V91 来源审计与真实费用之间的边界
+
+[新 V229 后端 + PG18 真 Owner HTTP 技术合同](../finance/v229-source-review-audit-integrity-and-external-proof-hold.md) 只复用既有 V91/V92 手工原币来源+append-only 审计，不重复已有 V182/V183/V187 结算归属系统。单一 REPEATABLE_READ 读快照审查：STAGED 的 maker 初始 audit 必须 **1/1**，REVIEWED_UNVERIFIED/REJECTED 的 maker STAGED + 独立 checker 一次相应 decision 必须 **2/2**；额外 audit、缺失 audit、自审或当前状态不匹配均 `V91_SOURCE_AUDIT_INCONSISTENT`，不可无声认定可信。Session 租户/Marketplace/来源 UUID 严格限定，GET no-store，没有任何数据库写入。所有返回即便本地审计完整，必须保留 `claimedDocumentBytesVerified=false`、`independentExternalIssuerVerified=false`、`externalChargeVerified=false`、`actualCogsVerified=false`、`realizedNetProfit=null`。
+
+**验收**：真实 PG18/Owner HTTP 创建正确 STAGED 源，再直接在 disposable PG18 中构造无初始审计/重复初始审计的负例，审计计数 1/0/2 和匿名401/跨 Marketplace404、不变性/无真实入账必须通过，同时重新跑 V221–V228；[V229 精确代码 A3 #45363362444](https://github.com/kunlong-luo/merchivra/actions/runs/45363362444) 尚未有最终结果。在确切 7/7 前**保持现行独立评分 73/100**；若全部通过，可以按原六维仔细复评安全/审计项，**真实财务真实性分始终不能靠合成数据加分**。
+
+**V230 候选**：收紧合法外部文件/签发主体/报告行的独立来源核证与 COGS 真实成本守恒材料；没有真实 Seller/Ads/银行/WMS 授权，依然先实施 fail-closed 合同，不增加虚假 VERIFIED 写入 API 或利润卡片。生产 #104 NO-GO。
+
 ## V228C 已验收 · Orval 生成、安全 TSV 预览与真实 Springdoc 来源合同
 
 [V228 具体代码及正反例](../finance/v228-manual-cost-orval-batch-ux.md) 已接入正式 Next 财务工作台：1–20 行表格六列 TSV、Zod 严格类别/编号/原始声明 SHA/真实日期/原币金额/批内重复校验，任一行非法不提交，入口只对 Owner 显示且后端仍做 Session/CSRF/tenant/Marketplace 与原币防越权；基于审阅 OpenAPI 的 Orval 自动生成客户端统一复用 `merchivraFetch`，不能形成第二套手写 API。成功需对来源 UUID/币种/金额/claimed SHA/顺序和 no-store 逐一验证；历史重放展示原 ID，409 全批冲突不猜某行已成功；原始费用永远 MANUAL_UNVERIFIED、不做外部入账。Next 前端已通过 92 个测试文件、452 项测试（含 V228 新5项），完整 A3 首轮 [#45359294822](https://github.com/kunlong-luo/merchivra/actions/runs/45359294822) **6/7**：PG18 前序 V221–V227 均 PASS，V228 Springdoc 检查脚本仅接纳 `application/json`、未接纳实际 `*/*` 的200 schema；已向前修复脚本并启动 [第二轮 V228B A3 #45360086678](https://github.com/kunlong-luo/merchivra/actions/runs/45360086678) **仍仅6/7**：修复媒体键后暴露 Springdoc 200 response Source[] 模型字段并非完整 V91 来源，严格核对不放宽。已在 Java Draft/Source 上为两个嵌套记录添加唯一 `@Schema` 名称并增加回归/字段差异日志；[V228C 精确代码 `e268af7c9972`](https://github.com/kunlong-luo/merchivra/commit/e268af7c9972dcd5198c134187bb49879c1531c3) 的 [完整 A3 #45360965067（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45360965067) **已通过**；真实 PG18 Job #138330697669 输出 `PASS V228`，表明运行中的 Springdoc 已提供正确、完整的 V91 Draft/Source 字段，并重跑此前 V221–V227 ABA/租户/审计正反例。前两次6/7失败历史不删除。独立产品成熟度为 [73/100](../governance/project-scorecard-v228-2026-11-24.md)，不是生产可用率，真实利润仍 NULL、#104 NO-GO。
