@@ -2,6 +2,22 @@
 
 **2026-11-24 · 技术前提与门禁。** [V225B 真 PG18 量化结果](v225-epoch-bulk-write-long-transaction-and-source-aba.md) 表明，同事务 20 条本地 V91 来源用集合 SQL 的 INSERT+DELETE 是 2 个语句级 tenant epoch tick，对照逐行 SQL 是 40 个；但此结果只量化来源语句形状，并**不自动授权将财务来源审批或会计过账合并**。项目未启用真实 Amazon Seller/Ads OAuth，外部费用、库存实际收货和银行来源没有独立认证，`realizedNetProfit=null`，生产 #104 仍 NO-GO。
 
+## V226 真实验收结果 · 2026-11-24
+
+**代码精确 SHA**：[`81ea17187dd693da3c12344aa5e6a6da49c7cf7e`](https://github.com/kunlong-luo/merchivra/commit/81ea17187dd693da3c12344aa5e6a6da49c7cf7e)。[同 SHA 快速 CI #45326774290 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45326774290)；[完整 A3 #45326774310（run_attempt=2，**7/7 SUCCESS**）](https://github.com/kunlong-luo/merchivra/actions/runs/45326774310)：精确 Spring/PG18 Job **#138218184069** 的原始日志打印 `PASS V222`/`PASS V223`/`PASS V224`/`PASS V225` 和全部 `V226_*`，`PASS V226`；Java25/Gradle、Next16/React19/pnpm、Chromium、Compose/static、mock-chain 均最终 PASS。**该技术结果不是生产容量许可或真实外部费用证明。**
+
+| 真实 Owner/CSRF/PG18 原始日志 | 实际结论 |
+| --- | --- |
+| `V226_REAL_HTTP_BATCH_NEW` | 20 新 V91 来源 = 20 个唯一 UUID + 20 条 STAGED 审计行，完整响应且 no-store，租户 epoch **+2** |
+| `V226_REAL_HTTP_REPLAY` | 同样 20 条重放，原 UUID 不变，**epoch +0 / 新审计 +0**；单来源旧接口重放一致；5 旧+3 新仅增加 3 个来源及 3 个独立审计，**epoch +2** |
+| `V226_REAL_HTTP_ROLLBACK` | 旧键不同原币金额返回真实 **HTTP409** 且前面的合法新候选没有部分写入；4 组非法输入（坏 claimed SHA、重复键、21 条、空集合）均 **HTTP400**，失败请求 **epoch +0** |
+| `V226_REAL_HTTP_AUTH` | 匿名真实 **401**、没有 CSRF **403**、跨租户 B Marketplace **404**；A 的非 Owner 只读人员不能写入；失败请求没有 V91 版本影响 |
+| `PASS V226` | 真 V216 收货完整性 Owner GET 仍 **`actualBatchCogs=null`、`realizedNetProfit=null`、`postingAllowed=false`、`completeExternalCostCoverage=false`**；没有真实外部发票/费用确认，Seller/Ads OAuth OFF |
+
+**首轮 A3 失败记录必须保留**：[同 SHA A3 #45326774310 · run_attempt=1](https://github.com/kunlong-luo/merchivra/actions/runs/45326774310) 的 PostgreSQL18/真实 HTTP **PASS**，7 项中有 6 项成功；独立 mock-chain Job #138218183813 在冷 Docker bootJar 三次有界重试中均遭 Maven Central **HTTP429 Too Many Requests**（例如 `spring-boot-buildpack-platform:4.1.2` 的 POM），所以完整 A3 **FAIL**。没有跳过 Docker、改变业务 SQL、改写已发布 Flyway 或使用旧 V225 A3 冒充通过。在 run_attempt=2 **只重试失败 Job #138219684488，最终 SUCCESS**，完整 A3 同 SHA **7/7 SUCCESS**。限流是外部依赖可用性问题，不应归因于源计费/库存逻辑已经无误或生产服务 SLO 已达标。
+
+**阶段结论**：安全受控的 V91 原币费用**批量暂存** API 可用，单条来源身份、审计行、幂等回放、事务原子及 Owner/CSRF/租户范围已经由真实 PG18 验证；整批只有新的 `STAGED/MANUAL_UNVERIFIED`。未实现批量审核或来源/报告真实有效性认证，故本项目评分继续 **70/100**、`realizedNetProfit=null`、生产 #104 NO-GO。下一阶段 V227 应继续覆盖不同批次大小、并发站点和重放压力，以及 Orval 客户端/前端导入体验；其前提是保留本轮原币/证据链。
+
 ## 代码实现与保持的契约
 
 复用既有 `CostSourceReviewService.create` 和 `CostSourceReviewController`，仅新增：
@@ -25,7 +41,7 @@
 5. 匿名 HTTP401，缺 CSRF HTTP403，非 Owner 的 A READ 无权写入（403/404，不能成功），A Owner 无权向 B tenant Marketplace 写入（HTTP404）。所有未授权请求不得改变任何来源或 epoch。
 6. 已创建 23 条 STAGED 合成费用后，真实 V216 Owner 收货完整性 GET 仍返回 `actualBatchCogs=null`、`realizedNetProfit=null`、`postingAllowed=false`、`completeExternalCostCoverage=false`；批量暂存绝不证明实际 landed cost。
 
-保留原有 V225 真 PG18 15 表/长事务/真实来源 ABA 与 V221–V224 的 A3 正反例。**验收标准**：精确代码 SHA 的快 CI Java25/Gradle、Next16/React19/pnpm 和 Compose，以及完整 A3 **7/7**；独立 PostgreSQL 18 Job 必须打印 `V226_REAL_HTTP_BATCH_NEW`、`V226_REAL_HTTP_REPLAY`、`V226_REAL_HTTP_ROLLBACK`、`V226_REAL_HTTP_AUTH` 和 `PASS V226`，还要打印 `PASS V225` 及前序 ABA。若运行报错，必须保留失败 SHA 和日志、修改后重新跑完整 A3，不能让 V225 的旧 7/7 冒充本轮成功。
+保留原有 V225 真 PG18 15 表/长事务/真实来源 ABA 与 V221–V224 的 A3 正反例。**验收标准已由上述精确代码 SHA 满足**：快 CI Java25/Gradle、Next16/React19/pnpm 和 Compose，以及完整 A3 **run_attempt=2、7/7 SUCCESS**；独立 PostgreSQL 18 Job 必须打印 `V226_REAL_HTTP_BATCH_NEW`、`V226_REAL_HTTP_REPLAY`、`V226_REAL_HTTP_ROLLBACK`、`V226_REAL_HTTP_AUTH` 和 `PASS V226`，还要打印 `PASS V225` 及前序 ABA。若运行报错，必须保留失败 SHA 和日志、修改后重新跑完整 A3，不能让 V225 的旧 7/7 冒充本轮成功。
 
 ## 后续 V227 候选
 
