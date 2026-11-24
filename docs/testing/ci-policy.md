@@ -146,5 +146,5 @@ python3 scripts/check_next_runtime_v122.py
 - 在现有 \`scripts/smoke_browser_layout.mjs\` 里直接使用真实 **Next App Router / Chromium 360px** 和本地合成 API。依次打开采购 V46 收货批次页并选择确切 UUID，财务页先输入无效再输入有效 UUID；仅按需点击后出现一次新的 V216 Owner GET，绝不写入；原币人工候选金额仍不是外部已证 landed cost。
 - 实际浏览器脚本模拟 409/403/404/401 后旧 DOM 金额必须隐藏；切换 Base UI Marketplace 不触发旧收货费用预取，新 Marketplace 无本地来源则显示 UNKNOWN 非零。严格对照请求数量、GET method 和 Scope；仅添加静态/Zod 单测不能代替此浏览器测试。
 - **Mock HTTP 的 403 与 401 只验证前端行为，不证明 Spring Security 实际跨用户/跨租户授权。** 独立 PG18 A3 的实际匿名 401、真实 Tenant/Marketplace SQL Scope 回归另查日志；未来 V219 必须补真实 Owner 与非 Owner 跨租户 HTTP 负例。
-- CJK 字体是截图可读性的 CI 前置依赖；如 Runner apt 下载阻塞/失败，应单独记录为基础设施未验证，不允许把未运行的 Chromium/Next 断言宣称 SUCCESS，更不能修改测试以无条件通过。
+- CJK 字体是截图可读性的 CI 前置依赖。V218 将本地 Runner APT 安装设为快路径 + 有上限的 update/retry（每个外部 APT 调用均有 timeout、单步骤上限 4 分钟）；最终 `fc-match Noto Sans CJK SC` 必须返回真实 Noto CJK 字族，否则浏览器 Job 失败。如 Runner 下载仍阻塞，不允许把未运行的 Chromium/Next 断言宣称 SUCCESS，也不允许通过无条件跳过字体制造假绿色。
 - V218 精确代码/CI/A3 验收结果以本轮工作流完成时间、SHA、7 项 Job 和 Node/PG18 原始日志为准；暂不得借用 V217 的 7/7。

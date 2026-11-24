@@ -31,11 +31,27 @@ jobs:
         working-directory: apps/web
         run: pnpm run build:vite
       - name: Install CJK fonts in disposable runner for faithful Chinese screenshots
+        shell: bash
+        timeout-minutes: 4
         run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y --no-install-recommends fonts-noto-cjk
+          set -euo pipefail
+          # APT refresh can hang on a transient mirror; never spend an entire
+          # 18-minute Chromium job before executing the V218 source tests.
+          # Preserve the visual quality gate: missing CJK font is a FAILURE,
+          # not a silent fallback to tofu screenshots or an A3 success.
+          if ! fc-match -f '%{family}\n' 'Noto Sans CJK SC' | grep -q 'Noto Sans CJK'; then
+            if ! timeout 90s sudo apt-get -o Acquire::Retries=1 \
+                -o Acquire::http::Timeout=15 install -y \
+                --no-install-recommends fonts-noto-cjk; then
+              timeout 45s sudo apt-get -o Acquire::Retries=1 \
+                -o Acquire::http::Timeout=15 update -qq
+              timeout 90s sudo apt-get -o Acquire::Retries=1 \
+                -o Acquire::http::Timeout=15 install -y \
+                --no-install-recommends fonts-noto-cjk
+            fi
+          fi
           fc-cache -f
-          fc-match -f '%{family}\n' 'Noto Sans CJK SC'
+          fc-match -f '%{family}\n' 'Noto Sans CJK SC' | grep -q 'Noto Sans CJK'
       - name: Browser layout and table provenance smoke with synthetic API
         run: |
           set -euo pipefail
