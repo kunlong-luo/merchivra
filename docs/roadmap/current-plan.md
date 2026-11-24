@@ -1,4 +1,4 @@
-# Merchivra · 当前执行计划（2026-11-24 / V224B / Flyway V114+V115 真 PG18 安全验收 7/7 已完成，V225B 批量来源/真 HTTP ABA PG18 A3 7/7 完成，V226 Owner 有限批量暂存 API 已通过真 PG18 A3 attempt2 7/7，V227 尺度/重放/并发真 PG18 A3 7/7 完成，下一阶段 V228）
+# Merchivra · 当前执行计划（2026-11-24 / V224B / Flyway V114+V115 真 PG18 安全验收 7/7 已完成，V225B 批量来源/真 HTTP ABA PG18 A3 7/7 完成，V226 Owner 有限批量暂存 API 已通过真 PG18 A3 attempt2 7/7，V227 真 PG18 A3 7/7 完成，V228B Orval/Next Owner 手工来源批量 UX 修复版 A3 待验收）
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
@@ -18,6 +18,12 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 | 最后 | **维护者本地真实 Seller/Ads 只读授权与 API 验收** | Mock Gateway、连接与同步代码 | 用户完成实际授权、合法角色/区域、分页/限流/撤销、凭证/银行真实性和隐私审查之后才可调整访问开关；写入另行审批 |
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
+
+## V228B 实现待最终 A3 · Orval 生成、安全 TSV 预览与真实 Springdoc 契约
+
+[V228 具体代码及正反例](../finance/v228-manual-cost-orval-batch-ux.md) 已接入正式 Next 财务工作台：1–20 行表格六列 TSV、Zod 严格类别/编号/原始声明 SHA/真实日期/原币金额/批内重复校验，任一行非法不提交，入口只对 Owner 显示且后端仍做 Session/CSRF/tenant/Marketplace 与原币防越权；基于审阅 OpenAPI 的 Orval 自动生成客户端统一复用 `merchivraFetch`，不能形成第二套手写 API。成功需对来源 UUID/币种/金额/claimed SHA/顺序和 no-store 逐一验证；历史重放展示原 ID，409 全批冲突不猜某行已成功；原始费用永远 MANUAL_UNVERIFIED、不做外部入账。Next 前端已通过 92 个测试文件、452 项测试（含 V228 新5项），完整 A3 首轮 [#45359294822](https://github.com/kunlong-luo/merchivra/actions/runs/45359294822) **6/7**：PG18 前序 V221–V227 均 PASS，V228 Springdoc 检查脚本仅接纳 `application/json`、未接纳实际 `*/*` 的200 schema；已向前修复脚本并启动 [精确代码 V228B A3 #45360086678](https://github.com/kunlong-luo/merchivra/actions/runs/45360086678)，**未验收前不能标 V228 完成或提高产品正式评分**。
+
+**下一阶段 V229 候选**：回归 P0 真利润核心——第三方合法来源与 V91 本地声明之间的可独立核验状态转换、原始报告/金额/币种/分摊与退款 COGS 跨平台审计标准；外部授权仍由维护者本地完成。另行完善真实浏览器操作、错误恢复和移动端反馈。保留 realNetProfit null、真实 Seller/Ads OAuth OFF、#104 NO-GO。
 
 ## V227 已验收 · 有上限 Owner 批量压力/重放/跨 Marketplace 行锁（[精确 SHA `782c2121c2ce`](https://github.com/kunlong-luo/merchivra/commit/782c2121c2cee8091e9ae1ff5e976d59e4ad346a) · [快 CI #45328943995 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45328943995) · [完整 A3 #45328944026（7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45328944026)）
 
