@@ -1,3 +1,5 @@
+# V221C: exact-main repeat full A3 after Docker Gradle bounded
+# Maven Central 429 retry; V113 PG18 committed epoch already PASS.
 # V221B: exact-main A3 after explicit pg_advisory_unlock on live
 # idle psql holder, no server-side pg_sleep SIGTERM ambiguity.
 # V221: exact-main V113 tenant committed epoch, V216 double RR ABA,
