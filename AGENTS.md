@@ -1,6 +1,8 @@
 # Merchivra · 现行 Agent 与开发守则
 
-> **CURRENT · 2026-11-24 / DOC-196。唯一生效的 Agent 指令入口。** 旧 `Agent.md` 只是跳转；V1–V195 版本说明和 Git 历史是证据，不是叠加的永续指令。发生冲突先核对实际代码、当前决策和精确 SHA 的测试，按[文档控制规则](docs/governance/document-control.md)处理。此文件规定执行边界；具体实践见[工程规范](docs/governance/engineering-standards.md)。
+> **CURRENT · 2026-11-24 / DOC-196。唯一生效的 Agent 指令入口。** 旧大小写重复的 `Agent.md` 已于 V231 清理删除（原内容可查 Git 历史）；**只有本 `AGENTS.md` 有效**。V1–V230 的版本说明和 A3 记录是历史证据，不得变成第二套执行指令。发生冲突先核对实际代码、当前决策和精确 SHA 的测试，按[文档控制规则](docs/governance/document-control.md)处理。此文件规定执行边界；具体实践见[工程规范](docs/governance/engineering-standards.md)。
+
+**V231 原文件字节核对与仓库精简规则**：本地 `crypto.subtle.digest` 重算用户合法持有文件字节 SHA-256（1B–8MiB）并与 V91 用户自述摘要核对，不上传、不留文件内容/名称；`LOCAL_BYTES_MATCH_USER_CLAIM_ONLY` 仍不等于独立 Amazon/银行/货代签发、真实费用/COGS/利润，`realizedNetProfit=null` 与 #104 NO-GO 不变。2026-11-24 清理已从 `main` 删除旧 `Agent.md` 兼容别名和重复 V120 PR 待验收短稿；仅 `AGENTS.md` 为规则入口，所有有效目录与 Flyway、历史 A3/财务证明保留。根 [README](README.zh-CN.md) 列每个目录作用，[V231 清理记录](docs/finance/v231-local-byte-claim-check-and-repository-pruning.md) 解释删/留理由；完成本轮精确代码 SHA A3 前不提高正式评分。
 
 ## 必须遵守的工程基线
 
