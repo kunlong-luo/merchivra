@@ -88,7 +88,9 @@ V222 [真实 Owner HTTP 在双 RR 中途提交已提交 ABA 的 PG18 409 测试]
 
 历史 [V228 六维复评：73/100（旧 V200 70 分保留历史）](governance/project-scorecard-v228-2026-11-24.md)：非利润五项 63/75、真实利润项仍 10/25；新增安全/前端/测试工程证据各 +1，真实 Amazon/Ads/银行成本和 G1/DEC 仍未核证，#104 NO-GO，不能以 GitHub A3 通过代替发布签署。
 
-**现行最新独立评分：[V229 74/100（2026-11-24）](governance/project-scorecard-v229-2026-11-24.md)**，较 V228 73 分增加 1 分，仅来自真 PG18 证明的 V91 来源审计缺失/重复可独立检测；真实全成本与利润依旧 10/25，外部签发方/银行/实物 COGS 和 G1/DEC 未核证、生产 #104 NO-GO。V228 73、V200 70 均为历史，不追溯篡改。
+**现行最新独立成熟度评分：[V230 75/100（2026-11-24）](governance/project-scorecard-v230-2026-11-24.md)**；较 V229 74 分增加 1 分，仅来自八类费用来源的真实 Owner 证据缺口可操作工作流（V230B 精确代码真 PG18/Chromium A3 7/7），真实全成本/利润仍 10/25，Seller/Ads/银行/外部货代与 COGS 未核证、#104 NO-GO。[V229 74 分](governance/project-scorecard-v229-2026-11-24.md)、V228 73、V200 70 均为历史，不追溯篡改。
+
+V230 [八类费用原始第三方凭证缺口、V229/V182 同快照核对及 Next.js Owner 逐笔查看流程](finance/v230-external-source-proof-dossier-and-owner-workflow.md)：[代码 SHA `a8e5eba353d5`](https://github.com/kunlong-luo/merchivra/commit/a8e5eba353d501de9761685cdd0d05de1d340982) 的 [真实 PG18 完整 A3 #45368066154（7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45368066154)，PG18 Job #138355672453 打印 `PASS V230`，V91审计1/0/2、V165 本地候选碰撞、匿名401/跨站点404、读版本+0及真实费用/COGS/净利润始终未核验。首轮 [A3 #45367537947](https://github.com/kunlong-luo/merchivra/actions/runs/45367537947) 6/7 的 Next 浏览器挂载竞态已严格修复，失败历史保留。新 GET/Orval/Zod/Next 工作台只列出合法外部证明缺项，不上传或确认原始外部账单，不过账、不启用 OAuth。
 
 V229 [V91 来源初始 STAGED + 独立复核审计完整性、缺审计/重复审计阻断与外部原始费用真实性边界](finance/v229-source-review-audit-integrity-and-external-proof-hold.md)：[代码 SHA `3c857c788b6e`](https://github.com/kunlong-luo/merchivra/commit/3c857c788b6eeac5db8fa770caff14b7a253ab0a) 已在 [完整 A3 #45363362444（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45363362444) 真 PG18 Job #138338765615 打印 `PASS V229`；Owner HTTP/SQL 1/0/2 条审计分别完整/缺失/重复，匿名401、跨 Marketplace404、GET 0 版本写入。所有本地审计完整仍 `externalChargeVerified=false`、真实 COGS 和净利润 null；不会因为已人工审核就开启 Amazon 授权或生产过账。
 
