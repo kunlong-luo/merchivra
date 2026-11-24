@@ -1,5 +1,7 @@
 # DOC-196 · 文档规范收敛与查漏补缺（2026-11-22）
 
+> **2026-11-24 V231 事后勘误（历史原文保留）**：下文曾要求保留 `Agent.md` 兼容跳转，属于 DOC-196 当时决策；V231 经目录/使用审计已确认它没有运行或独立规范用途，已从 `main` 删除。现行唯一规则是根 [AGENTS.md](../../AGENTS.md)，目录/实际删除决策见 [V231 专项记录](../finance/v231-local-byte-claim-check-and-repository-pruning.md) 与 [根 README](../../README.zh-CN.md)。历史当时的真实 PR、SHA、CI 记录均未改写。
+
 **状态：文档治理实施记录，非新功能/财务/生产验收。** 检查依据：整理前 `main` [`2136375`](https://github.com/kunlong-luo/merchivra/commit/2136375590abaae2373c565a1de930aa4ce45483)；该 SHA 的[快速 CI #45016097852](https://github.com/kunlong-luo/merchivra/actions/runs/45016097852) SUCCESS。V193 [完整 A3 #45012495202](https://github.com/kunlong-luo/merchivra/actions/runs/45012495202) SUCCESS 属于旧 SHA `6008832`，**不能继承为 V194/V195 或本次文档提交的 A3**。本轮新提交的 CI 以实际运行结果另行报告。
 
 ## 已发现且明确处理的高影响问题
