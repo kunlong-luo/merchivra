@@ -38,11 +38,16 @@ export const externalProofDossierV230=z.object({
  eligibleForRealizedProfit:z.literal(false),
  realizedNetProfit:z.null()
 }).superRefine((d,ctx)=>{
+ if((d.localAuditStatus==='LOCAL_AUDIT_COMPLETE')!==d.localSourceAuditComplete)
+  ctx.addIssue({code:'custom',message:'来源审计布尔值与审计状态不一致'})
+ if(d.independentMetadataReviewComplete &&
+  (!d.localSourceAuditComplete||d.sourceReviewState!=='REVIEWED_UNVERIFIED'))
+  ctx.addIssue({code:'custom',message:'本地独立审核不能绕开来源审计或拒绝状态'})
  if(d.requiredExternalProof.some(r=>!d.blockerCodes.includes(r.code)))
   ctx.addIssue({code:'custom',message:'原始外部凭证缺项与阻断代码不一致'})
  if(d.localDossierStatus==='LOCAL_REVIEW_COMPLETE_EXTERNAL_UNVERIFIED' &&
   (!d.localSourceAuditComplete||!d.independentMetadataReviewComplete||
-   d.localCollisionHeld))
+   d.localCollisionHeld||d.sourceReviewState!=='REVIEWED_UNVERIFIED'))
   ctx.addIssue({code:'custom',message:'本地审核显示与来源审计/冲突证据矛盾'})
  if(d.localDossierStatus==='LOCAL_AUDIT_INCONSISTENT_HOLD' &&
   d.localSourceAuditComplete)
