@@ -76,11 +76,25 @@ public class ReceiptCostIntegrityServiceV216 {
         tx.setReadOnly(true);
     }
 
+    // V221 / Flyway V113: unlike result equality, a committed epoch cannot
+    // silently return to its old value after an A->B->A source mutation.
     record Snapshot(List<ReceiptCostIntegrityGateV216.Source> sources,
-        Map<UUID,CostIdentityReconciliationService.Preview> overlaps) {}
+        Map<UUID,CostIdentityReconciliationService.Preview> overlaps,
+        long committedEvidenceRevision) {}
 
     private Snapshot snapshot(UUID tenant,UUID marketplace,UUID receipt) {
         return tx.execute(ignored -> {
+            // Scope and evidence must share the SAME RR snapshot. An outer
+            // non-transactional scope check could be stale before the scan.
+            Integer scope=jdbc.queryForObject("""
+                SELECT count(*) FROM erp_purchase_receipt r
+                JOIN tenant t ON t.id=r.tenant_id AND t.status='ACTIVE'
+                WHERE r.tenant_id=? AND r.id=?
+                  AND EXISTS(SELECT 1 FROM seller_marketplace m
+                    WHERE m.tenant_id=r.tenant_id AND m.id=?)
+                """,Integer.class,tenant,receipt,marketplace);
+            if(scope==null || scope!=1)
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
             var rows=jdbc.query(RECEIPT_SCOPE_SQL,(r,i)->
                 new ReceiptCostIntegrityGateV216.Source(
                     r.getObject("plan_id",UUID.class),
@@ -104,7 +118,20 @@ public class ReceiptCostIntegrityServiceV216 {
             Map<UUID,CostIdentityReconciliationService.Preview> flags=
                 ids.isEmpty()?Map.of():reconciliation.previewBatch(
                     tenant,marketplace,ids);
-            return new Snapshot(List.copyOf(rows),flags);
+            // Query after the evidence scan but INSIDE this RR transaction:
+            // it must observe the same PostgreSQL visibility snapshot as all
+            // V112/V91/V92/V165 SQL statements. The first mutation starts at 1;
+            // historical tenants with no V113 event observe 0, NOT verified.
+            Long epoch=jdbc.queryForObject("""
+                SELECT coalesce((
+                  SELECT revision FROM finance_receipt_read_epoch_v113
+                  WHERE tenant_id=?
+                ),0)::bigint
+                """,Long.class,tenant);
+            if(epoch==null || epoch<0)
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Receipt source revision unavailable");
+            return new Snapshot(List.copyOf(rows),flags,epoch);
         });
     }
 
@@ -113,20 +140,15 @@ public class ReceiptCostIntegrityServiceV216 {
         if(tenant==null||marketplace==null||receipt==null)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "Tenant, marketplace and receipt required");
-        // V20 receipts are tenant-scoped, NOT marketplace-scoped. The source
-        // Marketplace is enforced independently on V91 via the query above.
-        Integer scope=jdbc.queryForObject("""
-            SELECT count(*) FROM erp_purchase_receipt r
-            JOIN tenant t ON t.id=r.tenant_id AND t.status='ACTIVE'
-            WHERE r.tenant_id=? AND r.id=?
-              AND EXISTS(SELECT 1 FROM seller_marketplace m
-                WHERE m.tenant_id=r.tenant_id AND m.id=?)
-            """,Integer.class,tenant,receipt,marketplace);
-        if(scope==null||scope!=1)
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         var before=snapshot(tenant,marketplace,receipt);
         var after=snapshot(tenant,marketplace,receipt);
-        if(!before.equals(after))
+        // The V113 tenant epoch catches a committed A->B->A change whose
+        // two readable source/collision populations are otherwise IDENTICAL.
+        if(before.committedEvidenceRevision()!=after.committedEvidenceRevision())
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Receipt cost evidence changed during independent read");
+        if(!before.sources().equals(after.sources())
+            || !before.overlaps().equals(after.overlaps()))
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "Receipt allocation/source collision population changed");
         try {

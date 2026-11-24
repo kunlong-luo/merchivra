@@ -1,4 +1,4 @@
-# Merchivra · 当前执行计划（2026-11-24 / V220 已验证完整 A3，V221 并发快照与真实来源仍待推进）
+# Merchivra · 当前执行计划（2026-11-24 / V221 V113 committed tenant epoch 与双 RR ABA 防护验证）
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
@@ -18,6 +18,12 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 | 最后 | **维护者本地真实 Seller/Ads 只读授权与 API 验收** | Mock Gateway、连接与同步代码 | 用户完成实际授权、合法角色/区域、分页/限流/撤销、凭证/银行真实性和隐私审查之后才可调整访问开关；写入另行审批 |
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
+
+## V221 当前实施 · V113 已提交来源版本与 V216 ABA fail-closed（精确 SHA/A3 待验收）
+
+[V221 并发快照/ABA 契约](../finance/v221-receipt-source-committed-epoch-aba-guard.md)：既有 V216 两次独立 RR 只比较读取内容，已提交的 A→B→A 仍可能恢复完全相同内容。新增 Flyway V113 tenant 级提交顺序一致的 epoch，语句级监听 V91/V92/V112、采购单/收货/Marketplace、V165 所有本地来源输入（45 个 transition trigger + 1 个 tenant 状态触发器）。V216 将租户/Marketplace/receipt 活性校验移进每次 RR，同行证据与 epoch 读取共享 MVCC；两个 epoch 不同必须 409，再检查内容变动。Java 服务专项验证相同内容不同版本、空内容 ABA、无版本仍 UNKNOWN、scope 变化 404；实际 PG18 双连接 advisory lock 对 PO USD→EUR→USD 做确定性时序，旧 RR 仍原版本，新 RR 必须更高，回滚与其他 tenant 写入不影响。**PG18 并发证明与 Java 单测分别验证能力，不冒充真实 HTTP 请求中途强制交错**。现阶段等本轮真实 A3 验收。
+
+**下一阶段 V222**：真实请求级读边界交错 / 高写入租户性能与 409 比率验证、必要时以业务来源约束收窄版本范围；同时优先推进可信外部账单原件及 G1/DEC 财务政策。继续 70/100、realizedNetProfit=null、真实 Amazon Seller/Ads OAuth OFF、生产 #104 NO-GO。
 
 ## V220 已实现并验收 · V112 非空本地费用、审核、双重归属、读时失效和 51 项全量上限（[V220 精确验收代码 `b821ecb`](https://github.com/kunlong-luo/merchivra/commit/b821ecbf0be925f4073c80cff0e146fbaf4b43f0) · [快速 CI #45314064511 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45314064511) · [完整 A3 #45314064469（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45314064469)）
 

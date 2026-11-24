@@ -76,6 +76,8 @@
 
 - **V220 非空 V112 本地审核来源不能解锁真实 COGS**：真 PG18+Spring Owner GET 要核验原币 40/90、V91/V112 双独立审核、V165 同站点 claimed SHA 仅 potential collision、其他 Marketplace 来源不混合、V92 trigger 禁止重复归属、PO 币种变更让旧批准读时失效；恰好 50 份必须全部 200、51 份必须 409 且无旧金额或部分结果。真实 COGS/netProfit 全程 null，任何 Mock/TEMP/快 CI PG18 skipped 都不能冒充实际安全验收。上述非空本地原币/来源/全量合同已由 [完整 A3 #45314064469（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45314064469) 的真 PG18 Job #138176547718 独立通过；不代表真实外部账单、COGS 或利润核证。见 [V220](../finance/v220-receipt-source-population-real-http.md)。
 
+- **V221 V113 ABA 版本覆盖规范**：不得仅对两次 V216 RR Source/V165 对象 equals 就宣称已防 ABA。来源/身份/receipt/V92/V165 所有输入的可提交写入须经过版本触发器；每个 PostgreSQL 语句每个租户一次版本增长，回滚不计入，tenant 之间不互相增长。每次 V216 RR 同步读取 tenant/Marketplace/receipt scope、全部计划、碰撞和提交有序 revision；两次版本不一致优先 409，内容不一致也 409。新增 V165 来源类型必须同步迁移触发覆盖与并发测试。租户级合并写入可能增加锁竞争与误拒绝，真实负载测试属于未来生产准入；不能以降低 409 为由回退至忽略 ABA。真实 PG18 双连接 MVCC 与 Java 测试需要分别注明范围，见 [V221](../finance/v221-receipt-source-committed-epoch-aba-guard.md)。
+
 ## 6. UX、会话与本地失败处理
 
 - 用 Next.js 16 正式工作区设计；优先复用 Base UI 和现有设计 token。需检查 360px/桌面自适应、键盘焦点、对比度、数据来源、用户动作反馈、空态和错误态。
