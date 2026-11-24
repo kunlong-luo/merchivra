@@ -2,6 +2,8 @@
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
+**最新复评分为 [73/100](../governance/project-scorecard-v228-2026-11-24.md)，不是旧的 V200 70 分**。保留同一六维、不给真实利润项虚假加分：架构18/20、功能16/20、真实成本与利润10/25、安全13/15、前端9/10、测试运营7/10。旧版本规划段落出现的70分都属于对应历史阶段；当前版本以本段与最新评分文档为准。真正影响下一次较大评分提升的 P0 任务仍是合法第三方费用/退货 COGS/会计口径和 G1/G2/G3 生产审批，而不是再造报表 UI。
+
 ## 北极星与边界
 
 Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有证据的真实收入、费用、货物成本和退款回转，核对重复归属并形成可追溯的利润报表**。不能为了“有利润数字”绕开不可信来源、币种和会计政策。正式本地 UI 已切 Next.js 16，pnpm 是前端唯一包管理器；这两个工程完成项**不能**代替业务真值。
