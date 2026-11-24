@@ -1,3 +1,6 @@
+# V230: original issuer/source/category evidence requirements composed from
+# V229 V91 audit + V182 settlement/V165 local attribution in ONE RR snapshot.
+# Never enable real Amazon/Ads OAuth, actual COGS or realized profit.
 # V229: real Spring Owner V91 stage/decision audit completeness in PG18,
 # missing/extra audit 1/0/2 fail-closed; never verified issuer/COGS/profit.
 # V228C: disambiguate CostSourceReviewService nested Draft/Source
@@ -278,7 +281,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V229-A3-V91-source-audit-integrity-and-origin-hold' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V230-A3-external-source-proof-dossier-and-Orval-UX' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
