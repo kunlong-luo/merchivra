@@ -53,10 +53,16 @@ produces = next((key for key in ("application/json", "*/*",
                                  "application/*+json") if key in responses), None)
 assert produces is not None, "V228 missing declared JSON-compatible 200 schema"
 result = deref(responses[produces]["schema"])
-assert result["type"] == "array"
-assert set(deref(result["items"]).get("properties",{})) >= {
+assert result["type"] == "array", "V228 response must be Source[]"
+item_schema = deref(result["items"])
+required_fields = {
     "id", "marketplaceId", "sourceKey", "documentSha256", "amount", "currency",
     "origin", "state"}
+actual_fields = set(item_schema.get("properties", {}))
+assert actual_fields >= required_fields, (
+    "V228 real Springdoc response does not describe a complete V91 Source: "
+    f"items={result['items']!r}, available={sorted(actual_fields)!r}, "
+    f"missing={sorted(required_fields-actual_fields)!r}")
 print("PASS V228 actual Springdoc Owner batch POST matches reviewed Orval "
       "operation, input Draft fields, response Source shape, and same-origin "
       "session+CSRF contract; no verified profit")
