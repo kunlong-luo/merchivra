@@ -1,6 +1,13 @@
 # V230 · 原币费用的第三方证明缺口清单、同快照组合检查与 Owner 工作台
 
-**2026-11-24 · V230 代码已提交 `main`；真实 PG18 A3 [#45367537947](https://github.com/kunlong-luo/merchivra/actions/runs/45367537947) 待最终验收。** 本轮目标是从 **V229 完整的本地费用来源审计**走向“哪些材料才可证明真实第三方费用”的可操作准备度，而非新建财务真实性状态表、开通 Seller/Ads API 或将本地 Owner 复核升级为已认证真实利润。
+**2026-11-24 · V230 代码已提交 `main`。首轮真实 PG18 费用来源专项通过，但完整 A3 因 Next 浏览器重挂载竞态仅 6/7；修复版 [A3 #45368066154](https://github.com/kunlong-luo/merchivra/actions/runs/45368066154) 正在重新验收。** 本轮目标是从 **V229 完整的本地费用来源审计**走向“哪些材料才可证明真实第三方费用”的可操作准备度，而非新建财务真实性状态表、开通 Seller/Ads API 或将本地 Owner 复核升级为已认证真实利润。
+
+## 实际 PG18 数据与首次 A3 失败（保留历史）
+
+- [首轮代码 SHA `6baef5a3230dd799815b4dbf230ce74de55d82a3`](https://github.com/kunlong-luo/merchivra/commit/6baef5a3230dd799815b4dbf230ce74de55d82a3) 的 [完整 A3 #45367537947](https://github.com/kunlong-luo/merchivra/actions/runs/45367537947) **6/7**；Java/Gradle、Next/pnpm/Orval、Compose、mock-chain 与真实 PG18 均通过，**browser-layout FAIL**。PG18 Job **#138353131033** 原始日志同时打印 `PASS V230 live Springdoc namespaced Orval read dossier ...`、`V230_SOURCE_PROOF_DOSSIER`、`PASS V230 real PG18 Owner ...`。 
+- 真 PG18 源类别：`ADS_SPEND`、`INBOUND_FREIGHT`、`FBA_STORAGE`、`RETURN_HANDLING` 各自匹配不同必需外部凭证代码。真实 Owner POST/GET 检测 V91 正常1/缺失0/重复2条初始审计；两个不同来源采用相同用户声明 SHA 时 **V165 potential overlap 保持 hold（仅本地候选，不是已确认重复扣款）**；匿名401、错误 Marketplace404；只读 GET V113 epoch +0。所有外部签发主体、原始文件重算、收费、COGS、会计批准与利润始终 false/null。
+- 初轮 Next 浏览器失败是 `scripts/smoke_browser_layout.mjs` 在 Next App Router 路由转换期间，刚查到订单行就通过**未按面板限定**的 `.core-data-scroll table` 读取列，DOM 短暂被卸载导致 `Uncaught`。已在代码中改成目标 `#core-panel-orders` / `#core-panel-inventory` 表格定位，并在异步重挂载时受控重试 90×140ms；**必须仍满足选择的订单/货位、真实测试行、来源标识、非空表头/数据和列数相等**。首轮失败不能覆盖或伪写成成功。
+- [V230B 精确代码完整 A3 #45368066154](https://github.com/kunlong-luo/merchivra/actions/runs/45368066154) 已启动，尚无最终结论；在其 **7/7 SUCCESS** 前当前独立评分仍以 [V229 74/100](../governance/project-scorecard-v229-2026-11-24.md) 为准，不能把 PG18 专项通过冒充完整发布验收。
 
 ## 原有能力与缺口
 
@@ -22,7 +29,7 @@ V91/V92 的手工费用来源不可变、审核事件追加；V229 [真实 PG18 
 - TypeScript：`manual-cost-proof-v230.test.ts` 必须覆盖相同 UUID/原币、安全响应、伪造的外部 `true`、非法利润字符串、伪造别的站点身份、缺材料、相互矛盾的审核状态及不支持缓存的读取。类型客户端应由 pnpm prebuild/pretest 经真实静态合同 SHA 重生成，不能手改 `src/generated`。
 - 真实 PG18：`smoke_external_cost_proof_dossier_v230.py` 仅可在仓库 GitHub Actions `main` / `ci-v222` / disposable PG18 / 明确 SP-API/OAuth OFF 运行。它必须通过真实 Owner Cookie/CSRF POST 暂存四类来源，再由 GET 独立确认不同类别材料、V91 正常/缺失/重复审计对整份清单的优先级、同摘要不同源的 V165 本地碰撞提示、匿名401/跨 Marketplace404、只读 GET 0 个 V113 版本写入。**禁止在真实运营数据库插入“缺审计/重复审计”负例**。
 - 真实 Springdoc：现有 `scripts/check_manual_cost_openapi_v228.py` 扩展校验 V230 GET 路径、operationId、`@Schema(name)` 唯一身份以及响应中类别/原币/外部证明数组/全部禁止的真实费用和利润字段，不能以“只匹配 200”替代真实 DTO 字段完整性。
-- 精确代码 SHA 的 7/7 完整 A3、Java/Next/Chromium/Compose/mock-chain/真 PG18 和新 Vitest 全部成功，才能标记 V230 已验收。**本轮初始 A3 #45367537947 尚未最终核查；任何 6/7 失败都应保留并修复再跑**。
+- 精确代码 SHA 的 7/7 完整 A3、Java/Next/Chromium/Compose/mock-chain/真 PG18 和新 Vitest 全部成功，才能标记 V230 已验收。**首轮 A3 #45367537947 为6/7，浏览器竞态失败已留档；V230B #45368066154 尚待最终结论，不能提前标记完成**。
 
 ## 下一阶段 V231 与评分
 
