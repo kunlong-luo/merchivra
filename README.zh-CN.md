@@ -4,10 +4,10 @@
 
 **技术基线（2026-11-24）**：Java 25、Spring Boot 4.1.2、**Gradle**、PostgreSQL 18/Flyway；React 19、**Next.js 16.4.5 App Router**、Node 24、**pnpm 12.20.0（唯一前端包管理器，不用 npm）**。默认使用 Next.js；Vite/Nginx 仅供明确回退与 GitHub Pages **虚构展示**，不得误认为默认正式前端。
 
-- 现行独立成熟度评分：**[V230 75/100](docs/governance/project-scorecard-v230-2026-11-24.md)**。该分数不是生产就绪度，也不是真实净利润已核证的比例。
+- 现行独立成熟度评分：**[V231 76/100](docs/governance/project-scorecard-v231-2026-11-24.md)**（历史 V230 [75/100](docs/governance/project-scorecard-v230-2026-11-24.md)）。该分数不是生产就绪度，也不是真实净利润已核证的比例。
 - [V230B 精确代码完整 A3 7/7 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45368066154)，对应 [`a8e5eba353d5`](https://github.com/kunlong-luo/merchivra/commit/a8e5eba353d501de9761685cdd0d05de1d340982)，覆盖隔离真 PostgreSQL18/Spring Owner HTTP、Java、Next/Orval、Chromium、Compose。此前 [V230 首次 A3 6/7 的浏览器失败](https://github.com/kunlong-luo/merchivra/actions/runs/45367537947) 必须保留。
 - **真实净利润仍不能确认**：`realizedNetProfit=null`；真实 Amazon Seller/Ads OAuth **关闭**，真实银行、货代、关税、独立 WMS、退款实际 COGS 与 G1/DEC 财务口径未核证；生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
-- **V231 开发中**：已有浏览器本地 SHA-256 原文件字节和 V91 用户声明摘要的对照功能，**不上传文件**；匹配不代表真实第三方签发、扣款或可入账。验收状态以[当前项目状态](docs/current-status.md)为准。
+- **V231 已完成隔离工程验收**：用户可在浏览器本地以 SHA-256 将合法持有的文件原始字节与 V91 用户声明摘要对照，**不上传文件**。精确代码 [`9ff02147de17`](https://github.com/kunlong-luo/merchivra/commit/9ff02147de17996d28ec95875a4eaa6445e1c197) 的 [完整 A3 7/7 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45373462870) 和 [同 SHA 快速 CI SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45373462897) 已通过；94文件461个前端测试、文档检查26入口/504链接均通过。**匹配仍不证明第三方签发、真实扣款或可入账**。
 
 [English](README.md) · [当前事实](docs/current-status.md) · [唯一现行 P0 计划](docs/roadmap/current-plan.md) · [文档中心](docs/README.md) · [开发指南](docs/development.md) · [工程规范](docs/governance/engineering-standards.md) · [安全](SECURITY.md)
 
