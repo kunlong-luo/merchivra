@@ -1,12 +1,18 @@
 # V228 · 有界手工费用批量暂存的 Orval 客户端与 Next.js 财务入口
 
-**2026-11-24；现行实现已提交 `main`，真实 PostgreSQL 18 与浏览器 A3 需要按精确代码 SHA 完成后才能宣称通过。** 本阶段交付的是 V226 已验证 Owner-only **1–20 条本地 `MANUAL_UNVERIFIED` 费用来源暂存**的可操作入口，不是 Amazon、Ads、银行、货代或税务证据的真伪验证。真实性、G1/DEC 审批、退款 COGS、利润过账、生产 #104 均继续独立阻断。
+**2026-11-24；V228C 已按精确代码 SHA 的真实 PostgreSQL 18 / Springdoc / Next.js / 浏览器完整 A3 7/7 验收。** 本阶段交付的是 V226 已验证 Owner-only **1–20 条本地 `MANUAL_UNVERIFIED` 费用来源暂存**的可操作入口，不是 Amazon、Ads、银行、货代或税务证据的真伪验证。真实性、G1/DEC 审批、退款 COGS、利润过账、生产 #104 均继续独立阻断。
+
+## 最终技术验收 · V228C 精确 SHA
+
+[代码提交 `e268af7c9972dcd5198c134187bb49879c1531c3`](https://github.com/kunlong-luo/merchivra/commit/e268af7c9972dcd5198c134187bb49879c1531c3) 对应 [完整 A3 #45360965067（run_attempt=1，**7/7 SUCCESS**）](https://github.com/kunlong-luo/merchivra/actions/runs/45360965067)。真 PG18/Spring Boot Job **#138330697669** 在同一 SHA 上打印 `PASS V228 actual Springdoc Owner batch POST matches reviewed Orval operation, input Draft fields, response Source shape, and same-origin session+CSRF contract; no verified profit`，并重复通过 `PASS V222`、`PASS V225`、`PASS V226`、`PASS V227` 的真实来源/租户/ABA/审计回归。Java25/Gradle、React19/Next16/pnpm/Orval 生成与 Zod/Vitest **92 个文件、452 项测试**、Chromium 与 Compose/mock-chain 同轮全部 SUCCESS。
+
+**修复后的差异是真实 Springdoc 模型映射准确性，不是放宽会计安全**：对 V91 嵌套 Java `Draft` 与 `Source` 使用不同且稳定的 `@Schema(name)`，严格核对真实 Springdoc 中 POST 返回数组元素包含 `id`、`marketplaceId`、`sourceKey`、`documentSha256`、`amount`、`currency`、`origin`、`state` 等关键来源字段。静态 OpenAPI 审阅合同与真实 Java 结构已经一致；不同媒体声明 `*/*` 不等于放任错误 DTO。**PG18 只核对本地手工暂存的合同与旧 V226/V227 真 HTTP，未对新的 TSV UI 执行真实人工使用者 E2E 输入/可用性评估，不代表来源已经外部验真或生产批准**。
 
 ## 实际运行中的 Springdoc 合同问题与修复历史（不可删除）
 
 1. [V228A SHA `ccec47d9b0b8`](https://github.com/kunlong-luo/merchivra/commit/ccec47d9b0b8603d7a8a3f51ece3608f3cae3065)、[完整 A3 #45359294822](https://github.com/kunlong-luo/merchivra/actions/runs/45359294822)：**6/7**。真实 V221–V227 PG18/Owner HTTP 通过、Next Orval + Vitest 92 files/452 tests 通过；新增 Springdoc schema 断言在 200 响应采用实际 `*/*` 媒体键而非 `application/json` 时抛 `KeyError`。**未通过**新合同校验；仅修复测试对 HTTP 媒体键的错误假设，未修改生产接口。
 2. [V228B SHA `ecd02b5bd5fc`](https://github.com/kunlong-luo/merchivra/commit/ecd02b5bd5fc0b33b15ee2a1c91f4303ec220c15)、[完整 A3 #45360086678](https://github.com/kunlong-luo/merchivra/actions/runs/45360086678)：**再次 6/7**。`*/*` 已被接受，真正的 `Source[]` 元素 schema 缺少所需的 V91 原始来源属性集合；严格核对失败。**这不能简单改成不检查 Source 以冒充 Springdoc 可信**。
-3. V228C 新增 Java `@Schema(name="ManualCostDraftV228")` 与 `@Schema(name="ManualCostSourceV228")`，以唯一名称避免嵌套 `Draft`/`Source` 与其他 Springdoc 模型名称混淆，另加 Java 回归测试验证该身份；`scripts/check_manual_cost_openapi_v228.py` 在字段缺失时输出实际 schema 引用、可见字段和缺项以便下次诊断。**没有改变 V91 数据表、金额、HTTP JSON 或事务行为**。[V228C 精确代码完整 A3 #45360965067](https://github.com/kunlong-luo/merchivra/actions/runs/45360965067) **尚待最后验收**，不能借前两次的 6/7 宣称完成。
+3. V228C 新增 Java `@Schema(name="ManualCostDraftV228")` 与 `@Schema(name="ManualCostSourceV228")`，以唯一名称避免嵌套 `Draft`/`Source` 与其他 Springdoc 模型名称混淆，另加 Java 回归测试验证该身份；`scripts/check_manual_cost_openapi_v228.py` 在字段缺失时输出实际 schema 引用、可见字段和缺项以便下次诊断。**没有改变 V91 数据表、金额、HTTP JSON 或事务行为**。[V228C 精确代码完整 A3 #45360965067](https://github.com/kunlong-luo/merchivra/actions/runs/45360965067) **已按同 SHA PG18 Job #138330697669 的 `PASS V228` 完整 7/7 验收**；前两次 6/7 是失败记录，不能冒充通过。
 
 ## 为什么现在要做、哪些能力直接复用
 
