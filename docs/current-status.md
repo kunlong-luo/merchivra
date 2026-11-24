@@ -6,6 +6,8 @@
 >
 > **上一阶段完整 A3 为 V193（历史对照，并非最新）**：精确 [`600883236a3669f51b6703229447d93499b271cd`](https://github.com/kunlong-luo/merchivra/commit/600883236a3669f51b6703229447d93499b271cd) 的 [A3 #45012495202（run_attempt=2，SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45012495202)。V194/V105 已在上述新 SHA 完整验收；但这仍然只是隔离合成技术证据，不覆盖本次文档提交，也不验证外部真实性。
 >
+> **现行独立复评分已重新核对为 [73/100（V228 · 2026-11-24）](governance/project-scorecard-v228-2026-11-24.md)，取代 V200 旧 70 分作为现行评分；旧 [70 分报告](governance/project-scorecard-v200-2026-11-22.md) 只作为历史证据保留。** 相同六维量表：架构18/20、功能16/20、真实全成本/利润10/25、安全13/15、前端9/10、测试运营7/10。非利润五项63/75=84%，但真实利润仅10/25=40%；评分提升不代表有真实原始 Amazon/Ads/银行/WMS 成本，`realizedNetProfit=null`，生产 #104 仍 NO-GO。V228B 完整 A3 的运行结论仍须单独核对。
+>
 > **全局安全结论**：pre-alpha，真实 Seller/Ads OAuth、真实平台/银行来源核验、退款 COGS 与 G1/DEC-06/07/08 仍关闭或未批准；`realizedNetProfit=null`，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。文档规范以 [ENG-001](governance/engineering-standards.md) 和 [GOV-001](governance/document-control.md) 为准，不能从合成 CI 推出真实上线。
 
 > **V197（[精确代码 `db9d88b`](https://github.com/kunlong-luo/merchivra/commit/db9d88be81ec326194242f75596661cb950cbea7) 的 [V197 完整 A3 #45020338812（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45020338812) 与 [同 SHA 快 CI #45020338752](https://github.com/kunlong-luo/merchivra/actions/runs/45020338752) 均已通过）**：在现有 V170/V63 退款只读准备度上增加 [逐事件 COGS 冲回阻断原因与跨事务来源一致性核验](finance/v197-refund-cogs-source-consistency-barriers.md)。比对原 Finances 退款事件、人工订单、原币、带符号金额；来源不一致时展示 STALE、隐藏不可信的成本敏感度，不自动回补库存/过账。人工独立审核后仍硬性保留外部真实性、实物收货、G1 会计政策和账务发布 NO-GO。完整 A3 验证合成 PG18/HTTP/Chromium/Compose 整体回归，跨事务漂移隐藏金额由本轮真实 Service 单元测试断言；仍不代表真实 Amazon 退款签证。
