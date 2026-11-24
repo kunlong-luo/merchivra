@@ -2,6 +2,12 @@
 
 **2026-11-24；现行实现已提交 `main`，真实 PostgreSQL 18 与浏览器 A3 需要按精确代码 SHA 完成后才能宣称通过。** 本阶段交付的是 V226 已验证 Owner-only **1–20 条本地 `MANUAL_UNVERIFIED` 费用来源暂存**的可操作入口，不是 Amazon、Ads、银行、货代或税务证据的真伪验证。真实性、G1/DEC 审批、退款 COGS、利润过账、生产 #104 均继续独立阻断。
 
+## 实际运行中的 Springdoc 合同问题与修复历史（不可删除）
+
+1. [V228A SHA `ccec47d9b0b8`](https://github.com/kunlong-luo/merchivra/commit/ccec47d9b0b8603d7a8a3f51ece3608f3cae3065)、[完整 A3 #45359294822](https://github.com/kunlong-luo/merchivra/actions/runs/45359294822)：**6/7**。真实 V221–V227 PG18/Owner HTTP 通过、Next Orval + Vitest 92 files/452 tests 通过；新增 Springdoc schema 断言在 200 响应采用实际 `*/*` 媒体键而非 `application/json` 时抛 `KeyError`。**未通过**新合同校验；仅修复测试对 HTTP 媒体键的错误假设，未修改生产接口。
+2. [V228B SHA `ecd02b5bd5fc`](https://github.com/kunlong-luo/merchivra/commit/ecd02b5bd5fc0b33b15ee2a1c91f4303ec220c15)、[完整 A3 #45360086678](https://github.com/kunlong-luo/merchivra/actions/runs/45360086678)：**再次 6/7**。`*/*` 已被接受，真正的 `Source[]` 元素 schema 缺少所需的 V91 原始来源属性集合；严格核对失败。**这不能简单改成不检查 Source 以冒充 Springdoc 可信**。
+3. V228C 新增 Java `@Schema(name="ManualCostDraftV228")` 与 `@Schema(name="ManualCostSourceV228")`，以唯一名称避免嵌套 `Draft`/`Source` 与其他 Springdoc 模型名称混淆，另加 Java 回归测试验证该身份；`scripts/check_manual_cost_openapi_v228.py` 在字段缺失时输出实际 schema 引用、可见字段和缺项以便下次诊断。**没有改变 V91 数据表、金额、HTTP JSON 或事务行为**。[V228C 精确代码完整 A3 #45360965067](https://github.com/kunlong-luo/merchivra/actions/runs/45360965067) **尚待最后验收**，不能借前两次的 6/7 宣称完成。
+
 ## 为什么现在要做、哪些能力直接复用
 
 [V226](v226-bounded-owner-manual-source-batch.md) 已建立真实 Spring/PG18 POST `/api/v1/finance/marketplaces/{marketplaceId}/cost-sources/batch`，支持 1–20 个同 Marketplace 的费用来源、一笔 Spring 事务、单条来源独立 UUID 和 STAGED audit、完全相同事实重放不写入、不重复审核、旧 key 原始金额/文件摘要/业务日期冲突 HTTP409 整批回滚；[V227](v227-manual-batch-scale-replay-and-lock-evidence.md) 已真实 PG18/Owner HTTP 测量不同规模与重放、同租户跨 Marketplace 版本守恒、行锁等待。**没有理由再造第二套来源录入/归属/审核或手动绕过现有安全请求层。**
