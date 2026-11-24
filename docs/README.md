@@ -88,7 +88,7 @@ V222 [真实 Owner HTTP 在双 RR 中途提交已提交 ABA 的 PG18 409 测试]
 
 现行 [V228 六维重新评分：73/100（旧 V200 70 分保留历史）](governance/project-scorecard-v228-2026-11-24.md)：非利润五项 63/75、真实利润项仍 10/25；新增安全/前端/测试工程证据各 +1，真实 Amazon/Ads/银行成本和 G1/DEC 仍未核证，#104 NO-GO，不能以 GitHub A3 通过代替发布签署。
 
-V228 [Orval 自动生成 + Zod 逐行验证 + Next.js Owner 手工费用批量暂存 UI](finance/v228-manual-cost-orval-batch-ux.md)：只复用 V226 原币 1–20 源的事务与 V227 已证实的跨站点版本守恒，不新增虚假的来源真实性/批量审核/利润数字。可从表格粘贴六列 TSV，错误整批阻断、完整回放不重建来源，服务端返回原 UUID 后还检查币种/身份/声明 SHA/no-store。真 Springdoc/PG18 的精确 A3 测试尚待最终验收，不得把 Orval 生成或 UI 渲染当成真实费用已核证。
+V228 [Orval 自动生成 + Zod 逐行验证 + Next.js Owner 手工费用批量暂存 UI](finance/v228-manual-cost-orval-batch-ux.md)：只复用 V226 原币 1–20 源的事务与 V227 已证实的跨站点版本守恒，不新增虚假的来源真实性/批量审核/利润数字。可从表格粘贴六列 TSV，错误整批阻断、完整回放不重建来源，服务端返回原 UUID 后还检查币种/身份/声明 SHA/no-store。现已由 [精确代码 `e268af7c9972`](https://github.com/kunlong-luo/merchivra/commit/e268af7c9972dcd5198c134187bb49879c1531c3) 的 [真实 PG18 完整 A3 #45360965067（7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45360965067) 验收，Springdoc 输出真实 V91 Draft/Source，前两次 6/7 契约检测失败保留在专项报告；**Orval 生成与 UI 成功仍不等于实际费用核证**。
 
 V227 [真实 PG18 Owner 批次规模、重放与跨 Marketplace 锁等待/性能证据](finance/v227-manual-batch-scale-replay-and-lock-evidence.md)：已由[精确代码 `782c2121c2ce`](https://github.com/kunlong-luo/merchivra/commit/782c2121c2cee8091e9ae1ff5e976d59e4ad346a)、[快速 CI #45328943995 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45328943995) 与 [真实 PG18 完整 A3 #45328944026（7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45328944026) 验收。1/5/20 新+重放全部来源/审计守恒，双站点16批次/80条来源及audit全局+32 epoch，真实 HTTP 锁等待和解锁恢复；短样本 P95/P99 与集群 WAL 区间增量不可冒充生产 SLO。无额外过账和 OAuth。
 
