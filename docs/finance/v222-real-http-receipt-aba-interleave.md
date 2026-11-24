@@ -2,6 +2,10 @@
 
 **2026-11-24 · 真实 Spring Boot 4 / Java 25 / PostgreSQL 18 / Flyway V113。V216 API 与返回字段不变，新增仅隔离 CI 可用的测试同步点。**
 
+## V222 已验收 · 精确执行依据
+
+[V222 精确验收代码 `4070d9f`](https://github.com/kunlong-luo/merchivra/commit/4070d9f5a499ef0cc97537a00083fdd08309b0bb) · [快速 CI #45318993934 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45318993934) · [完整 A3 #45318994059（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45318994059)。PG18 Job #138192661605 原始日志打印 `PASS V222 REAL Spring Owner HTTP ABA`：真正已登录 Owner 的 V216 GET 第一个 RR 已提交、在 ci-v222 专用 advisory xact-lock 上阻塞，另一个数据库连接分两次提交 PO USD→EUR→USD，第二 RR V113 epoch 不同，真实 HTTP409、错误体无旧 plans/actualBatchCogs/realizedNetProfit；新稳定 GET 200/no-store/UNKNOWN，其他 Marketplace 不混入。V219/V220/V221 真实 PG18 回归同轮 PASS。全部仅限 CI 合成数据，正式环境不注册同步 Bean，实际外部 COGS 和净利润未核证。
+
 ## 为什么需要 V222
 
 V221 的 Java 单元测试已验证两份内容相同、提交版本不同的快照会 HTTP 409；PG18 两连接测试已真实执行来源 INSERT/DELETE 以及采购单 USD→EUR→USD 后的新旧 RR 快照。但两项证明仍是**不同执行上下文**，没有在真正**已登录 Owner 的 HTTP 请求**内部，确定性暂停在两个 RR 事务之间并提交 ABA 变动。V222 专门填补这个验证边界，不新建财务写接口，不让用户凭测试金额计算利润。
@@ -34,4 +38,4 @@ V113 租户级提交版本偏保守：同一个租户其他 Marketplace 的写�
 
 ## 验收标准
 
-必须记录**精确 V222 SHA** 的 Java25/Gradle、Node24/pnpm/Next16 快 CI，以及包含真实 PG18/Session、Chromium、Compose 的完整 A3 **7/7 SUCCESS**。PG18 原始日志必须明确打印 `PASS V222 REAL Spring Owner HTTP ABA`，而且测试若无法在限定时间内到达等待锁、无法提交两次真实 PO 修改、未返回真正 409 或错误体含旧金额，必须 FAIL；Java Mock 或 V221 的 DB 两连接 PASS 不能替代。
+**上述标准已满足：** [V222 精确验收代码 `4070d9f`](https://github.com/kunlong-luo/merchivra/commit/4070d9f5a499ef0cc97537a00083fdd08309b0bb) · [快速 CI #45318993934 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45318993934) · [完整 A3 #45318994059（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45318994059)，PG18 实际日志含 `PASS V222 REAL Spring Owner HTTP ABA`。PG18 原始日志必须明确打印 `PASS V222 REAL Spring Owner HTTP ABA`，而且测试若无法在限定时间内到达等待锁、无法提交两次真实 PO 修改、未返回真正 409 或错误体含旧金额，必须 FAIL；Java Mock 或 V221 的 DB 两连接 PASS 不能替代。

@@ -25,6 +25,7 @@
    **V219 真 Spring 角色/租户隔离优先于前端模拟**：新增敏感 GET 必须用真实 Boot Session+CSRF 与 disposable PG18 校验 Owner/非 Owner 的 401/403、跨租户 Marketplace/receipt 的 404、合法同租户 Owner 的 no-store 200 与成本 UNKNOWN≠0。单一用户在 B 有 Owner 不能借该权限读 A 的员工作用域。测试固定仅 CI loopback/一次性 PG18 且不保留外部费用或平台凭证，保留前端会话取消旧 Query 的 AbortSignal；新 A3 真实日志是唯一成功依据。参见 [V219](docs/finance/v219-real-owner-receipt-http-boundary.md)。
    **V220 非空人工成本原币读时门禁**：真实 Spring Owner/PG18 的 V91/V112 来源必须审核、原币 receipt/all receipts 数量守恒；用户声称 SHA 与 V165 同站点碰撞只归为潜在冲突，V92 触发器拒绝同 source 活跃归属，PO 原币改变必须令既有来源 stale。50 个 plan 完整 GET 200，51 个计划 GET 409 不得返回部分账本。不可把已审核内部费用当作已核实外部 landed cost 或利润；记录精确 A3 PG18 成功证据，快 CI SKIPPED 不算通过。见 [V220](docs/finance/v220-receipt-source-population-real-http.md)。
    **V221 事务提交顺序的 ABA 保护**：不能仅因双 RR 读取结果 equals 就假定 source/receipt/V165 在间隔中未变化；V113 tenant committed epoch 覆盖全部直接证据和 V165 本地碰撞输入变更，Java 在每个 RR 同视图检查 scope/plan/flags/epoch。提交 A→B→A 的 epoch 不同必须 HTTP 409，事务回滚不应留痕版本；跨租户隔离；新增 V165 来源要扩展触发器及测试。真实 PG18 两连接并发和 Java 409 单测分开陈述，不得伪称强制 HTTP 请求交错；外部真实财务核证、利润和生产权限仍关闭。见 [V221](docs/finance/v221-receipt-source-committed-epoch-aba-guard.md)。
+   **V222 真 Owner HTTP ABA 409 隔离回归**：只在固定 GitHub Actions main disposable PG18 中以 Spring ci-v222 Profile + 明确开关 + bootstrap/DB/OAuth OFF 多门禁注册 CI 测试组件，正式环境绝不注册。指定合成收货单的真实 Owner Session GET 在第 1 RR commit 后等待，另一 PG18 会话提交 PO USD→EUR→USD，放行第 2 RR 必须 HTTP409，错误体无旧计划/COGS/净利润。不能用 V221 数据库交错或 V220 51 条上限代替真实 HTTP 请求级测试。详见 [V222](docs/finance/v222-real-http-receipt-aba-interleave.md)。
 4. 库存及 WMS 签名不自动证明第三方运营商真实身份或物理实收，不以内部三方 QC 替代外部确认；库存过账与退款回转必须受证据和批准限制。
 5. 不提交或输出任何实际 Seller/Ads、银行、客户或 WMS 凭据、密钥、会话和私有证据。不要关闭 Session/CSRF、绕过 Owner/租户校验或公开 Actuator 来解决本地启动错误。
 
@@ -47,3 +48,5 @@
 [文档导航](docs/README.md) → [当前事实](docs/current-status.md) → [唯一执行计划](docs/roadmap/current-plan.md) → [工程规范](docs/governance/engineering-standards.md) → [文档控制](docs/governance/document-control.md) → [开发指南](docs/development.md) → [CI 规则](docs/testing/ci-policy.md)。
 
 G1/G2/ADR 的 **Proposed** 不等于 **Accepted**；版本归档中的“最新”“未做”仅针对当年提交。**本 Agent 文件不再重复拼贴 100 个版本的历史执行日志。**历史全量内容可用 [本轮整理前的 Git 文件](https://github.com/kunlong-luo/merchivra/blob/2136375590abaae2373c565a1de930aa4ce45483/AGENTS.md) 查看。
+
+- **V222 精确 HTTP ABA 验收**：[完整 A3 #45318994059（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45318994059) 的 PG18 Job #138192661605 真正打印 `PASS V222 REAL Spring Owner HTTP ABA`；仅 disposable CI 同步 Bean，正常环境不注册、不可把合成费用升格真实 COGS。

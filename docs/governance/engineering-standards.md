@@ -78,6 +78,8 @@
 
 - **V221 V113 ABA 版本覆盖规范**：不得仅对两次 V216 RR Source/V165 对象 equals 就宣称已防 ABA。来源/身份/receipt/V92/V165 所有输入的可提交写入须经过版本触发器；每个 PostgreSQL 语句每个租户一次版本增长，回滚不计入，tenant 之间不互相增长。每次 V216 RR 同步读取 tenant/Marketplace/receipt scope、全部计划、碰撞和提交有序 revision；两次版本不一致优先 409，内容不一致也 409。新增 V165 来源类型必须同步迁移触发覆盖与并发测试。租户级合并写入可能增加锁竞争与误拒绝，真实负载测试属于未来生产准入；不能以降低 409 为由回退至忽略 ABA。真实 PG18 双连接 MVCC 与 Java 测试需要分别注明范围；[完整 A3 #45317628690（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45317628690) 已验证两连接真实 ABA 与服务单测，但**没有强制真实 HTTP 请求中途交错**，该负例仍归 V222。见 [V221](../finance/v221-receipt-source-committed-epoch-aba-guard.md)。
 
+- **V222 真实在途 HTTP 测试 Bean 不得进入任何正常环境**：仅 `ci-v222` Profile + 显式 `merchivra.ci.v222.read-boundary` + GitHub Actions 本仓库 main 的固定一次性 localhost PG18 及禁 OAuth 全门禁满足才注册，且只对固定虚构 receipt 启用事务级 advisory-lock 同步。非法环境尝试启用应启动失败；禁止暴露额外调试 Controller、账户或生产可操作开关。真实 HTTP409 必须在第一 RR 已提交后由另一个真实连接提交 USD→EUR→USD 再释放的隔离 A3 验收，不得用 Java Mock 或 51 计划上限 409 冒充。V222 此门禁及真实 HTTP ABA/409 已由 [完整 A3 #45318994059（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45318994059) 7/7 SUCCESS、PG18 Job #138192661605 的 `PASS V222 REAL Spring Owner HTTP ABA` 实际验收。见 [V222](../finance/v222-real-http-receipt-aba-interleave.md)。
+
 ## 6. UX、会话与本地失败处理
 
 - 用 Next.js 16 正式工作区设计；优先复用 Base UI 和现有设计 token。需检查 360px/桌面自适应、键盘焦点、对比度、数据来源、用户动作反馈、空态和错误态。
