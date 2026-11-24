@@ -5,8 +5,9 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -121,6 +122,96 @@ public class CostSourceReviewService {
         if (rows.size()!=1)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         return rows.getFirst();
     }
+    /** V226: exact immutable-fact replay, common to single and batch staging. */
+    private static boolean sameImmutable(Source old,Draft draft,BigDecimal amount) {
+        return old.category().equals(draft.category())
+            && old.documentSha256().equals(draft.documentSha256())
+            && old.businessDate().equals(draft.businessDate().toString())
+            && old.currency().equals(draft.currency())
+            && new BigDecimal(old.amount()).compareTo(amount)==0;
+    }
+    /** Entire batch is atomically staged, or none is. Bounded at 20 original
+     * source facts per request; duplicates within a batch are an error.
+     * Idempotent replays do not regenerate source rows or audit events.
+     * Each inserted source still receives its own STAGED audit identity.
+     * No independent review, external verification or financial posting.
+     */
+    @Transactional
+    public List<Source> createBatch(UUID tenant,UUID mp,UUID actor,
+                                    List<Draft> drafts) {
+        if(actor==null)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        if(drafts==null||drafts.isEmpty()||drafts.size()>20)throw bad();
+        // No database access (or lock) until EVERY candidate is valid.
+        var amounts=new ArrayList<BigDecimal>(drafts.size());
+        var keys=new HashSet<String>();
+        for(var draft:drafts) {
+            BigDecimal amount=validate(draft);
+            if(!keys.add(draft.sourceKind()+"\\u0000"+draft.sourceKey()))
+                throw bad(); // ambiguous repeat within one batch
+            amounts.add(amount);
+        }
+        String currency=marketplaceCurrency(tenant,mp);
+        for(var draft:drafts)
+            if(!currency.equals(draft.currency()))
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Original currency differs from the Marketplace");
+        // Same tenant/Marketplace serialization and idempotent replay
+        // semantics as create(), including races with single-row staging.
+        var locked=jdbc.queryForList("""
+            SELECT id FROM seller_marketplace
+            WHERE tenant_id=? AND id=? FOR UPDATE
+            """,UUID.class,tenant,mp);
+        if(locked.size()!=1)
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+        var ids=new ArrayList<UUID>(drafts.size());
+        var newIds=new ArrayList<UUID>();
+        var values=new ArrayList<Object>();
+        var audits=new ArrayList<Object>();
+        for(int i=0;i<drafts.size();i++) {
+            Draft draft=drafts.get(i);
+            var existing=findByKey(tenant,mp,draft.sourceKind(),draft.sourceKey());
+            if(existing.size()>1)throw conflict();
+            if(!existing.isEmpty()) {
+                Source old=existing.getFirst();
+                if(!sameImmutable(old,draft,amounts.get(i)))throw conflict();
+                ids.add(UUID.fromString(old.id()));
+                continue;
+            }
+            UUID id=UUID.randomUUID();
+            ids.add(id);
+            newIds.add(id);
+            values.addAll(List.of(id,tenant,mp,draft.category(),
+                draft.sourceKind(),draft.sourceKey(),draft.documentSha256(),
+                draft.businessDate(),currency,amounts.get(i),actor));
+            audits.addAll(List.of(UUID.randomUUID(),tenant,id,"STAGED",actor));
+        }
+        if(!newIds.isEmpty()) {
+            // One PostgreSQL INSERT statement across all distinct new V91
+            // rows; V113 advances once for this statement, not per row.
+            jdbc.update("""
+                INSERT INTO finance_cost_source_v91
+                  (id,tenant_id,seller_marketplace_id,category,source_kind,
+                   source_key,source_document_sha256,business_date,
+                   currency_code,amount,created_by)
+                VALUES
+                """+String.join(",",java.util.Collections.nCopies(
+                    newIds.size(),"(?,?,?,?,?,?,?,?,?,?,?)")),
+                values.toArray());
+            // Audit is still PER SOURCE, but inserted in ONE statement.
+            // A rejected source/audit rolls back the entire transaction.
+            jdbc.update("""
+                INSERT INTO finance_cost_source_audit_v91
+                  (id,tenant_id,source_id,action,actor_id)
+                VALUES
+                """+String.join(",",java.util.Collections.nCopies(
+                    newIds.size(),"(?,?,?,?,?)")),
+                audits.toArray());
+        }
+        var result=new ArrayList<Source>(ids.size());
+        for(UUID id:ids)result.add(get(tenant,mp,id,false));
+        return List.copyOf(result);
+    }
+
     private void audit(UUID tenant,UUID id,UUID actor,String action) {
         jdbc.update("""
             INSERT INTO finance_cost_source_audit_v91
@@ -145,12 +236,7 @@ public class CostSourceReviewService {
         var existing=findByKey(tenant,mp,draft.sourceKind(),draft.sourceKey());
         if(!existing.isEmpty()) {
             Source old=existing.getFirst();
-            if(!old.category().equals(draft.category())
-                || !old.documentSha256().equals(draft.documentSha256())
-                || !old.businessDate().equals(draft.businessDate().toString())
-                || !old.currency().equals(draft.currency())
-                || new BigDecimal(old.amount()).compareTo(amount)!=0)
-                throw conflict();
+            if(!sameImmutable(old,draft,amount))throw conflict();
             return old; // same immutable evidence: safe idempotent replay
         }
         UUID id=UUID.randomUUID();
