@@ -30,6 +30,8 @@ ACTIVE_FILES = (
     "docs/governance/engineering-standards.md",
     "docs/development.md",
     "docs/architecture/overview.md",
+    "docs/architecture/deployment.md",
+    "docs/operations/operations.md",
     "docs/architecture/open-source-erp-benchmark-2026-11-08.md",
     "docs/purchasing/local-purchase-workflow.md",
     "docs/purchasing/purchase-order-pages-v110.md",

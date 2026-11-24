@@ -1,6 +1,6 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-24 · V234 的 V116 真 PG18 回归已通过完整 A3 7/7；V235 快速 CI 通过；V236 真 PG18 Java 服务回归待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-24 · V234 的 V116 真 PG18 回归已通过完整 A3 7/7；V235 快速 CI 通过；V236 验收受 CI 阻断；V237 修复工作流与文档引用待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 核心项目状态
 
@@ -41,6 +41,10 @@ Owner start 在任务行锁后复查并锁定 grant/role 版本；授权缺失�
 ## V236 · Java 服务与 PG18 联动（待验收）
 
 在既有 SettlementReportScanServiceTest 内追加仅 GitHub main disposable PG18 可运行的回归，由 A3 调用真实 JdbcTemplate、事务管理器、Seller vault 与 start/step/fenced import；远程 Worker 为合成 mock。覆盖旧缺版本任务暂停、Owner restart、旧 token 清除、grant revision 变化、在途 role revision 变化拒绝入库、重新启动后原始摘要与版本对冻结。未执行真实 Amazon API/真实会计认证。合并 docs/ops 至 docs/operations，保留运维手册，新增旧链接守卫。
+
+## V237 · V236 验收阻断修复（待验收）
+
+V236 首次提交 `9ddce626c205` 的 [CI #45394392278](https://github.com/kunlong-luo/merchivra/actions/runs/45394392278) Java/Next SUCCESS，Compose 文档检查因 architecture/deployment.md 仍引用已移动的 docs/ops/operations.md 失败，PG18 SKIPPED。随后精确 `0988f5f2ed92` 的 [快速 CI #45394458129](https://github.com/kunlong-luo/merchivra/actions/runs/45394458129) 与 [完整 A3 #45394460077](https://github.com/kunlong-luo/merchivra/actions/runs/45394460077) 均 FAILURE 且 API 返回 0 jobs；未取得具体 GitHub 工作流拒绝诊断，不能认定根因。V237 修复剩余旧链接，将 JUnit 非跳过验证移至独立 stdlib Python 脚本，保留原 A3 执行步骤和严格校验，重新触发验收。V236 服务测试尚未获真实 PG18 执行证明。
 
 ## 最近精确验收（切勿混用不同 SHA 的 CI）
 

@@ -45,4 +45,4 @@ flowchart TB
 | Target candidate | 操作员单独配置 TLS/数据库/密钥/备份/告警与审批 | 待独立签署，不能依赖 `compose.production.yaml` 就开放公网 |
 | Production | 只有 G1/G2/G3 和外部证据全部完成才可考虑 | 当前明确 **NO-GO** |
 
-[当前状态](../current-status.md) · [实际 Compose 部署与卸载](../deployment/local-spark-db.md) · [发布门禁](../testing/release-readiness-v68.md) · [运维原则](../ops/operations.md)。
+[当前状态](../current-status.md) · [实际 Compose 部署与卸载](../deployment/local-spark-db.md) · [发布门禁](../testing/release-readiness-v68.md) · [运维原则](../operations/operations.md)。

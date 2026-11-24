@@ -11,7 +11,7 @@
 
 ## Current engineering status
 
-V234 completed the full isolated A3 (7/7), including actual PostgreSQL 18 V116 revision checks. V235 passed quick CI; V236 adds the opt-in actual PG18 Java service regression. Exact SHAs, results and limitations live only in [current status](docs/current-status.md).
+V234 remains the latest successful full A3. V236 service recovery tests are implemented but blocked by CI; V237 repairs the remaining moved-runbook link and extracts the JUnit evidence check. See [current status](docs/current-status.md).
 
 ## What the repository directories actually do
 
