@@ -139,3 +139,12 @@ python3 scripts/check_next_runtime_v122.py
 - `RefundGlobalReceiptCapacityV213Test`：2–3 本地销售订单共享同一收货批次，原 QC 仍足够、不合法跨订单总领取超 QC、历史撤销仍占容量、不同采购价格/币种/接受量快照版本、原单领取超销量、重复/缺失来源、Owner/no-store 和实际 COGS/利润 false/null。
 - `MERCHIVRA_V213_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_global_receipt_capacity_v213.py`：真实 PG18 与 V111 Flyway 前置，使用 Java 真实聚合 SQL 和 TEMP V106 claim/view 影子模拟跨三单共享、USD/EUR、撤销仍占容量、不同租户/价格/ QC 数量漂移，末尾 ROLLBACK。TEMP 视图不是 V106 真触发器或真实采购成本/仓库核证。
 - 同一精确代码 SHA 完整 A3 Java25/Next16/Chromium/PG18/HTTP/Compose 7/7，匿名新 Owner GET 401；快 CI 的 PG18 skipped 不算新数据库专项。避免继续加长已有 YAML，优先用现有脚本。精确代码 SHA A3 7/7 SUCCESS，PG18 Job 实际打印 `PASS V213 PG18 exact global V106 receipt-capacity SQL`，匿名新 GET 401 检查同 SHA 通过。TEMP VIEW 仅用于聚合 SQL 的隔离作用域检查，不能冒称本轮已经用真实外部 WMS/供应商成本或触发器做了核证。
+
+## V218 采购收货费用证据 UI / 新鲜度合成验收
+
+- 每次显式展开、重新核查或重新提交 \`receiptId\`，必须产生新的 TanStack Query \`inspectionRevision\`，复用同一旧数据时不允许短暂显示旧候选原币金额。HTTP 401/403/404/409 均 fail-closed，取消请求需传递 \`AbortSignal\`。
+- 在现有 \`scripts/smoke_browser_layout.mjs\` 里直接使用真实 **Next App Router / Chromium 360px** 和本地合成 API。依次打开采购 V46 收货批次页并选择确切 UUID，财务页先输入无效再输入有效 UUID；仅按需点击后出现一次新的 V216 Owner GET，绝不写入；原币人工候选金额仍不是外部已证 landed cost。
+- 实际浏览器脚本模拟 409/403/404/401 后旧 DOM 金额必须隐藏；切换 Base UI Marketplace 不触发旧收货费用预取，新 Marketplace 无本地来源则显示 UNKNOWN 非零。严格对照请求数量、GET method 和 Scope；仅添加静态/Zod 单测不能代替此浏览器测试。
+- **Mock HTTP 的 403 与 401 只验证前端行为，不证明 Spring Security 实际跨用户/跨租户授权。** 独立 PG18 A3 的实际匿名 401、真实 Tenant/Marketplace SQL Scope 回归另查日志；未来 V219 必须补真实 Owner 与非 Owner 跨租户 HTTP 负例。
+- CJK 字体是截图可读性的 CI 前置依赖；如 Runner apt 下载阻塞/失败，应单独记录为基础设施未验证，不允许把未运行的 Chromium/Next 断言宣称 SUCCESS，更不能修改测试以无条件通过。
+- V218 精确代码/CI/A3 验收结果以本轮工作流完成时间、SHA、7 项 Job 和 Node/PG18 原始日志为准；暂不得借用 V217 的 7/7。
