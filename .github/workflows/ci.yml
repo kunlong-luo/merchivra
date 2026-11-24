@@ -320,6 +320,7 @@ jobs:
           MERCHIVRA_V211_DISPOSABLE_ONLY=true python3 scripts/smoke_period_refund_profit_guard_v211.py
           MERCHIVRA_V212_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_batch_lineage_v212.py
           MERCHIVRA_V213_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_global_receipt_capacity_v213.py
+          MERCHIVRA_V215_DISPOSABLE_ONLY=true python3 scripts/smoke_receipt_cost_allocation_v215.py
           v212_order_base=http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202
           v212_anon=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             ${v212_order_base}/refund-batch-lineage-readiness)

@@ -1,4 +1,4 @@
-# Merchivra · 当前执行计划（2026-11-23 / V214 人工费用来源到原采购收货单身份缺口）
+# Merchivra · 当前执行计划（2026-11-24 / V215 原采购收货单费用分配与 V92 互斥契约）
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
@@ -18,6 +18,12 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 | 最后 | **维护者本地真实 Seller/Ads 只读授权与 API 验收** | Mock Gateway、连接与同步代码 | 用户完成实际授权、合法角色/区域、分页/限流/撤销、凭证/银行真实性和隐私审查之后才可调整访问开关；写入另行审批 |
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
+
+## V215 当前实现 · 精确收货单级人工成本来源身份与双向防重复
+
+[契约与测试范围](../finance/v215-receipt-cost-claim-and-v92-exclusivity.md)：新增 Flyway V112（V91 同源不可变提案，精确 V20 receipt FK，原币单笔与总量上限、≤100 条、一次独立审核、PG 自动追加审计）。对 V92 的活跃 SKU/ORDER/PERIOD 分摊新增双向阻断，不让同一人工来源在新收货维度重复分配；既有 V92 历史迁移保持不变。新增 PG18 真实已安装触发器的 TEMP/ROLLBACK 合成负例脚本并接入完整 CI。**没有**新的对外人工写 API、没有 G1 核准的资本化/FX/期间规则，实际 COGS 和净利润仍 NULL。本轮精确 SHA、快 CI/PG18/A3 结果待执行记录。
+
+**下一阶段 V216**：独立只读核对 V112 最新状态、原币来源和 V92 历史冲突、跨不同 V91 来源的潜在重复发票；复用已有审批而不新增第二套认证。G1/DEC 决策和外部 Amazon/银行/WMS 原始来源未获核证前继续 #104 NO-GO，70/100。
 
 ## V214 已提交 · V91/V92 原币费用到采购收货单身份缺口（[代码 `9de829f`](https://github.com/kunlong-luo/merchivra/commit/9de829fd8d302663e7589c80b3ec5c920a5ea949) · [同 SHA 快 CI #45193406175 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45193406175)；PG18/A3 未执行）
 

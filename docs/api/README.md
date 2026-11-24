@@ -1,3 +1,5 @@
+> **V215 不是新外部写入 API**：V112 仅建立内部采购收货单级人工费用提案与 V92 双向互斥的 PG18 契约，当前没有新的 POST/PATCH 或 Owner 审核路由；现有 V214 只读诊断也不能把 V112 本地提案视为核证成本。接口设计和合成 DB 回归见 [V215](../finance/v215-receipt-cost-claim-and-v92-exclusivity.md)。实际 COGS/净利润仍 NULL。
+
 > **V214 人工费用/采购收货单关联缺证（实际 Springdoc GET，OpenAPI 候选快照未同步）**：Owner/Session/no-store `GET /api/v1/finance/marketplaces/{marketplaceId}/orders/{orderId}/refund-original-receipt-cost-provenance`。复用 V213 原批次全局容量；同 Marketplace 只读 V91/V92 的头程、进口税、支付/汇兑候选元数据与分摊状态（≤1000，漂移 409），**无 receipt FK、无每收货单金额、无真实费用核证**；实际 landed cost/退款 COGS/净利润继续 NULL。尚未接入 Next.js；V214 代码 `9de829f` 的快 CI #45193406175 SUCCESS，PG18 专项 SKIPPED、完整 A3 未执行。[V214](../finance/v214-manual-cost-receipt-provenance-hold.md)。
 
 > **V213 跨订单原采购收货批次全局容量**：新增 Owner/Session/no-store `GET /api/v1/finance/marketplaces/{marketplaceId}/orders/{orderId}/refund-original-receipt-capacity`。完整复用 V212 冻结原退货/批次来源，跨同租户所有本地销售订单的 V106 原始 claim 核对原 QC 接受量、撤销占用、采购单币种/单价/接受量版本及合法共享；超过全量上限或源变更禁止出局部合计。没有外部实际退货逐批次匹配，没有含运费/关税的真实落地成本，也不提供库存/COGS posting；`actualRefundCogsReversal=null`、`realizedNetProfit=null`。见 [V213 财务契约](../finance/v213-global-receipt-capacity-and-landed-cost-hold.md)。

@@ -64,6 +64,8 @@
 
 - **V214 人工费用不能自动落到原采购批次**：V91 人工发票/承运来源和 V92 原币 SKU/ORDER/PERIOD 分摊只属于未核证 Marketplace 元数据；它们没有 `purchase_receipt_id` 身份，也没有已签 G1 分摊会计政策。不得把 V92 `APPROVED_UNVERIFIED`、V20 原采购参考单价或 V213 全订单收货容量重命名成已核证 landed cost；V214 只读候选行检查需租户/Marketplace 限定、最多 1000 行、双读不一致 409，并持续固定实际 COGS/退款冲回/净利润 NULL。参见 [V214 契约](../finance/v214-manual-cost-receipt-provenance-hold.md)。
 
+- **V215 收货单级人工费用计划不等于已核证 landed cost**：V112 单来源终生一份、同租户原采购 receipt 复合 FK、来源原币金额与收货单金额守恒、独立复核、不可变审计；与 V92 活跃分配在 V91 来源行锁下双向互斥。不同 V91 仍可能是相同外部发票，必须检查 V165/V166/V182；币种不一致不得隐式换汇，源状态或采购单币种变化只能阻断，严禁以本地 APPROVED_UNVERIFIED 解锁实际 COGS、退款回转或净利润。V112 没有公共写 API；使用 [V215 契约](../finance/v215-receipt-cost-claim-and-v92-exclusivity.md) 和 PG18 精确 SHA 测试为准。
+
 ## 6. UX、会话与本地失败处理
 
 - 用 Next.js 16 正式工作区设计；优先复用 Base UI 和现有设计 token。需检查 360px/桌面自适应、键盘焦点、对比度、数据来源、用户动作反馈、空态和错误态。
