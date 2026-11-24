@@ -1,21 +1,32 @@
-// Ensure Orval purchasing client exists before any build/test/typecheck,
-// including clean CI and Docker/Next standalone builds. Keep generator output
-// ignored but reproducible from the reviewed OpenAPI contract.
+// Ensure reviewed Orval contracts exist before dev/build/test/typecheck.
+// Purchasing V114 and manual Owner cost batch V228 both use generated clients;
+// outputs are ignored and are NEVER hand-edited.
 import {createHash} from 'node:crypto'
 import {execFileSync} from 'node:child_process'
 import {existsSync,readFileSync,writeFileSync,mkdirSync} from 'node:fs'
 import {join} from 'node:path'
 const root=process.cwd()
-const spec=join(root,'openapi/purchasing-v114.json')
-const client=join(root,'src/generated/purchasing-v114.ts')
-const hashFile=join(root,'src/generated/.purchasing-v114-hash')
-const hash=createHash('sha256').update(readFileSync(spec)).digest('hex')
-const old=existsSync(hashFile)?readFileSync(hashFile,'utf8').trim():''
-if(process.argv.includes('--force')||!existsSync(client)||old!==hash){
- const bin=join(root,'node_modules/.bin/orval'+(process.platform==='win32'?'.cmd':''))
- execFileSync(bin,['--config','orval.purchasing.config.ts'],{
-  cwd:root,stdio:'inherit'
- })
- mkdirSync(join(root,'src/generated'),{recursive:true})
- writeFileSync(hashFile,hash+'\n')
+const specs=[
+ {spec:'openapi/purchasing-v114.json',
+  client:'src/generated/purchasing-v114.ts',
+  hash:'src/generated/.purchasing-v114-hash',
+  config:'orval.purchasing.config.ts'},
+ {spec:'openapi/manual-cost-v228.json',
+  client:'src/generated/manual-cost-v228.ts',
+  hash:'src/generated/.manual-cost-v228-hash',
+  config:'orval.manual-cost.config.ts'}
+]
+for(const item of specs){
+ const bytes=readFileSync(join(root,item.spec))
+ const expected=createHash('sha256').update(bytes).digest('hex')
+ const hashFile=join(root,item.hash)
+ const existing=existsSync(hashFile)?readFileSync(hashFile,'utf8').trim():''
+ if(process.argv.includes('--force')
+    || !existsSync(join(root,item.client)) || existing!==expected){
+  const bin=join(root,'node_modules/.bin/orval'+
+    (process.platform==='win32'?'.cmd':''))
+  execFileSync(bin,['--config',item.config],{cwd:root,stdio:'inherit'})
+  mkdirSync(join(root,'src/generated'),{recursive:true})
+  writeFileSync(hashFile,expected+'\n')
+ }
 }
