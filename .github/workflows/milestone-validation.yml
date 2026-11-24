@@ -1,3 +1,5 @@
+# V218: exact-main Next16 Chromium purchase/finance manual receipt cost GET,
+# restart/refetch stale-data holds, scoped Marketplace and synthetic HTTP 401/403/404/409.
 # V217: exact-main A3 Next.js purchasing/finance V216 receipt-cost UI,
 # tenant/Marketplace boundary and source-exact PG18; no actual COGS posting.
 # V216D: workflow parser recovered by moving anonymous GET 401 from
