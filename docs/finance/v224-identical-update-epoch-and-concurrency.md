@@ -53,7 +53,7 @@ V223 [精确代码与量化结果](v223-tenant-epoch-contention-and-cross-market
 
 ## 验收和后续限制
 
-已由上方**精确代码 SHA** 的快 CI `py_compile`、Gradle/Next/Compose 与完整 A3 真 PG18 Job 输出 `V224_PG18_NOOP`、`V224_FORCED_OWNER_HTTP`、`V224_MIXED_OWNER_HTTP`、`PASS V224`，及 V221/V222/V223 原有回归全部通过才能宣告 V224 的技术验收通过；不能使用旧 V223 7/7 替代。每次文档追记需保留原始 SHA、运行 ID 和具体日志，不将样本合成改说成生产容量。
+**验收已完成**：上方精确代码 SHA 的快 CI 包含 `py_compile`、Gradle/Next/Compose，完整 A3 的 PG18 Job 实际输出 `V224_PG18_NOOP`、`V224_FORCED_OWNER_HTTP`、`V224_MIXED_OWNER_HTTP`、`PASS V224`，并同轮再次通过 V221/V222/V223 原有回归。不能以旧 V223 7/7 替代，不能外推为生产性能准入。每次文档追记需保留原始 SHA、运行 ID 和具体日志，不将样本合成改说成生产容量。
 
 下一步拟继续比较 **保守 13 张来源表** 是否存在可安全优化的高频无变化变更、实测 UPDATE 完整行对比自身的 CPU/堆内存负担，以及跨站点共享 PO/receipt、tenant.status、V165 的完整依赖图。任何后续按 Marketplace/receipt 的版本分层都必须有提交/回滚、跨租户、跨站点、真实费用源 ABA 和真 Owner HTTP409 的独立负例，不能损失安全性来换低 409。
 
