@@ -19,14 +19,17 @@ export default function ReceiptCostIntegrityPanelV217({
  const [input,setInput]=useState('')
  const [selected,setSelected]=useState('')
  const [expanded,setExpanded]=useState(false)
+ // Each explicit inspection has its own cache identity: never reuse a prior
+ // receipt result while a new external/manual-source audit is in flight.
+ const [inspectionRevision,setInspectionRevision]=useState(0)
  useEffect(()=>{
-  setExpanded(false);setSelected('');setInput('')
+  setExpanded(false);setSelected('');setInput('');setInspectionRevision(0)
  },[tenantId,marketplaceId,receiptId])
  const target=receiptId??selected
  const valid=validPurchaseReceiptId(target)
  const q=useQuery({
-  queryKey:['finance',tenantId,marketplaceId,'v217-receipt-cost-integrity',target],
-  queryFn:()=>getReceiptCostIntegrityV217(marketplaceId,target),
+  queryKey:['finance',tenantId,marketplaceId,'v218-receipt-cost-integrity',target,inspectionRevision],
+  queryFn:({signal})=>getReceiptCostIntegrityV217(marketplaceId,target,signal),
   enabled:expanded&&!!marketplaceId&&valid,
   retry:false,refetchOnWindowFocus:false,staleTime:0
  })
@@ -34,7 +37,7 @@ export default function ReceiptCostIntegrityPanelV217({
  const submit=(e:FormEvent)=>{
   e.preventDefault()
   if(validPurchaseReceiptId(input)){
-   setSelected(input.trim());setExpanded(true)
+   setSelected(input.trim());setInspectionRevision(v=>v+1);setExpanded(true)
   }
  }
  return <section className="panel full-panel"
@@ -64,18 +67,19 @@ export default function ReceiptCostIntegrityPanelV217({
   {receiptId&&<div className="sandbox-actions">
    <button className="text-button" type="button" aria-expanded={expanded}
     disabled={!marketplaceId||!valid}
-    onClick={()=>setExpanded(v=>!v)}>
+    onClick={()=>{if(!expanded)setInspectionRevision(v=>v+1);
+     setExpanded(v=>!v)}}>
     {expanded?'收起本地费用证据':'按需核对这笔收货的费用来源'}
    </button>
   </div>}
   {expanded&&<div>
    <div className="sandbox-actions">
     <button type="button" className="refresh-button"
-     disabled={!valid||q.isFetching} onClick={()=>{void q.refetch()}}>
+     disabled={!valid||q.isFetching} onClick={()=>setInspectionRevision(v=>v+1)}>
      重新核对完整来源
     </button>
    </div>
-   {q.isPending?<p className="setup-hint" role="status">
+   {q.isPending||q.isFetching?<p className="setup-hint" role="status">
      正在核对采购收货单原币归属、审核审计与跨来源身份…</p>:
     q.isError?<p className="setup-error" role="alert">
      {String(q.error)}。当前来源不可用，不得使用上次结果或将缺证当成本零。</p>:

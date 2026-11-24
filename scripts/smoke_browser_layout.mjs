@@ -90,6 +90,42 @@ const v180Cost={
  independentReviewAuditComplete:false,
  externallyVerified:false,allowedToDeductFromProfit:false
 }
+// V218: isolated V216/V217 original-receipt read contract. These are
+// synthetic local identities, never Amazon invoices or actual COGS.
+const v218Receipt='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa18'
+const v218Plan='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb18'
+const v218Source='cccccccc-cccc-4ccc-8ccc-cccccccccc18'
+const v218Queries=[]
+let v218ResponseStatus=200
+const v218BaseBlockers=[
+  'V112_LOCAL_MANUAL_PROPOSAL_IS_NOT_EXTERNAL_LANDED_COST',
+  'G1_CAPITALIZATION_FX_AND_REFUND_POLICY_NOT_APPROVED',
+  'PHYSICAL_SALE_RETURN_ORIGINAL_LOT_NOT_EXTERNALLY_VERIFIED',
+  'SOURCE_COLLISION_ABSENCE_DOES_NOT_PROVE_COMPLETE_COVERAGE'
+]
+function v218Response(marketplaceId) {
+  const found=marketplaceId===market
+  return {
+    marketplaceId,purchaseReceiptId:v218Receipt,
+    ruleVersion:'V216_RECEIPT_V112_V91_V92_V165_READ_GATE_V1',
+    sourceBasis:'V112_RECEIPT_EXACT_V91_V92_SOURCE_AND_V165_LOCAL_COLLISION_UNVERIFIED',
+    localPlanCount:found?1:0,
+    plans:found?[{
+      planId:v218Plan,sourceId:v218Source,state:'APPROVED_UNVERIFIED',
+      originalCurrency:'USD',localReceiptCandidateAmount:'40.000000',
+      localAllReceiptsCandidateAmount:'95.000000',globalReceiptCount:2,
+      crossSourceIdentitySignalCount:0,sharedSettlementLineCount:0,
+      integrityState:'LOCAL_RECEIPT_ALLOCATION_INTACT_UNVERIFIED',
+      blockerCodes:[],independentlyVerifiedLandedCost:false,
+      actualLandedCost:null
+    }]:[],
+    blockerCodes:found?v218BaseBlockers:[...v218BaseBlockers,
+      'NO_LOCAL_RECEIPT_COST_PROPOSAL_UNKNOWN_NOT_ZERO'],
+    completeExternalCostCoverage:false,receiptLandedCostVerified:false,
+    actualBatchCogsVerified:false,actualBatchCogs:null,
+    postingAllowed:false,realizedNetProfit:null
+  }
+}
 let mode = 'guest'
 // V104: mutable synthetic local PO for cancel/confirm without live operations.
 const v104Order={
@@ -183,6 +219,19 @@ const server = createServer(async (req, res) => {
   if(url.pathname==='/api/v1/auth/csrf')
     return respond(res,{token:'V104_DISPOSABLE_BROWSER_CSRF_ONLY_12345',
       headerName:'X-CSRF-TOKEN'})
+  // V218 exact Owner GET fixture. A status change is controlled ONLY by
+  // this disposable test, not a real credential or production server.
+  const v218Match=url.pathname.match(/^\/api\/v1\/finance\/marketplaces\/([^/]+)\/purchase-receipts\/([^/]+)\/manual-cost-integrity$/)
+  if(v218Match) {
+    const [,marketplaceId,receiptId]=v218Match
+    v218Queries.push({marketplaceId,receiptId,method:req.method})
+    if(req.method!=='GET')return respond(res,{error:'V218 read only'},405)
+    if(![market,v106OtherMarket].includes(marketplaceId)
+      ||receiptId!==v218Receipt)return respond(res,{error:'V218 scoped not found'},404)
+    if(v218ResponseStatus!==200)
+      return respond(res,{error:'V218 simulated scoped hold'},v218ResponseStatus)
+    return respond(res,v218Response(marketplaceId))
+  }
   // V106 synthetic finance exception scan has a valid read-only response,
   // not a generic [] that falsely renders a Zod parse error on screenshot.
   if([market,v106OtherMarket].some(id=>
@@ -353,6 +402,21 @@ const server = createServer(async (req, res) => {
       (movementType==='ALL'||x.movementType===movementType)&&
        x.internalSku.toUpperCase().includes(search))))
   }
+  // V218: provide a real V46 purchase-receipt page to drive the
+  // purchasing -> V216 Owner cost query from an actual received row.
+  if(url.pathname==='/api/v1/purchasing/receipt-batches/orders/'+v107OtherOrder.id+'/page'
+      && req.method==='GET')
+    return respond(res,emptyCursorPage([{
+      receiptId:v218Receipt,warehouseId:v107WarehouseId,
+      productSkuId:v107SkuId,lotCode:'V218-SYNTHETIC-RECEIPT',
+      receivedQuantity:3,status:'PENDING_QC',
+      inspectionId:null,acceptedQuantity:0,rejectedQuantity:0,
+      inspectedBy:null,releasedBy:null,createdAt:'2026-11-08T00:00:00Z'
+    }]))
+  if(url.pathname==='/api/v1/purchasing/receipt-batches/orders/'+v107OtherOrder.id+'/summary'
+      && req.method==='GET')
+    return respond(res,{pendingReceivedUnits:3,awaitingReleaseAcceptedUnits:0,
+      pendingBatchCount:1,awaitingReleaseBatchCount:0})
   // V110: purchase list status/search are handled by server, not client-side
   // filtering of the first 100 records. Fake fixture is explicitly synthetic.
   if(url.pathname==='/api/v1/purchasing/orders/page' && req.method==='GET'){
@@ -1321,6 +1385,40 @@ async function main() {
           'V179 purchase detail can close without writes')
         assert.equal(v104CancelWrites,1,'V179 detail must not post another mutation')
         await layout(send,width,'v104-confirm-360')
+        // V218: click one exact V46 receipt row in the existing purchasing
+        // workspace. The source-marketplace picker is merely a filter; the
+        // server query still owns all tenant/Marketplace authorization.
+        await evaluate(send,`(() => {const row=[...document.querySelectorAll('[aria-label="采购单列表"] tbody tr')]
+          .find(r=>r.textContent.includes('PO-V107-APPROVED-LOCAL'));
+          const button=[...row.querySelectorAll('button')]
+            .find(b=>b.textContent.trim()==='明细');
+          if(!button)throw Error('V218 purchase detail button absent');button.click()})()`)
+        await waitFor(send,
+          "document.querySelector('section[aria-label=\\\"本地收货批次及独立质检放行\\\"] tbody tr')?.textContent?.includes('V218-SYNTHETIC-RECEIPT')",
+          'V218 V46 exact purchase receipt row loads')
+        assert.equal(v218Queries.length,0,'V218 purchasing must not prefetch cost')
+        await evaluate(send,`(() => {const section=document.querySelector('section[aria-label="本地收货批次及独立质检放行"]');
+          const button=[...section.querySelectorAll('button')]
+            .find(b=>b.textContent.includes('核对本收货单的费用来源'));
+          if(!button)throw Error('V218 purchase receipt audit button absent');button.click()})()`)
+        await waitFor(send,
+          "!!document.querySelector('section[aria-label=\\\"V217 原采购收货单人工费用与跨来源身份核对\\\"] button[aria-expanded=false]')",
+          'V218 purchasing source-scoped receipt inspector mounted')
+        assert.equal(v218Queries.length,0,
+          'V218 selecting a purchase receipt cannot auto-fetch manual cost')
+        await evaluate(send,
+          "document.querySelector('section[aria-label=\\\"V217 原采购收货单人工费用与跨来源身份核对\\\"] button[aria-expanded=false]')?.click()")
+        await waitFor(send,
+          "document.querySelector('section[aria-label=\\\"V217 原采购收货单人工费用与跨来源身份核对\\\"]')?.textContent?.includes('USD 40.000000')",
+          'V218 purchasing V216 exact synthetic local-candidate origin')
+        assert.deepEqual(v218Queries.at(-1),{
+          marketplaceId:market,receiptId:v218Receipt,method:'GET'})
+        await screenshot(send,'v218-purchasing-receipt-cost-unverified-360.png')
+        await evaluate(send,
+          "document.querySelector('.v179-purchase-detail-head button')?.click()")
+        await waitFor(send,
+          "!document.querySelector('section[aria-label=\\\"V217 原采购收货单人工费用与跨来源身份核对\\\"]')",
+          'V218 closing purchasing selection releases cost evidence UI')
         // V106: the finance scope is selected with Base UI, and rows are
         // server-cursor pages. Verify there is no cross-Marketplace mixing.
         mode='finance'
@@ -1330,6 +1428,71 @@ async function main() {
         await waitFor(send,
           "document.querySelectorAll('.v106-finance-events-table tbody tr').length===50",
           'V106 50-row first finance event page')
+        // V218: real Next Chromium click/HTTP validation against the
+        // isolated V216-shaped source-exact finance read, not mere Zod tests.
+        const v218Panel='section[aria-label="V217 原采购收货单人工费用与跨来源身份核对"]'
+        await waitFor(send,
+          "!!document.querySelector('#v217-original-receipt-id')",
+          'V218 finance original receipt input mounted')
+        const v218FinanceStart=v218Queries.length
+        assert.equal(v218FinanceStart,1,
+          'V218 finance starts only after prior purchasing explicit receipt GET')
+        // Browser's native input setter is necessary for React controlled inputs.
+        const v218Enter=async value=>evaluate(send,
+          "(() => {const field=document.querySelector('#v217-original-receipt-id');"+
+          "const setter=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;"+
+          "setter.call(field,"+JSON.stringify(value)+");"+
+          "field.dispatchEvent(new Event('input',{bubbles:true}));"+
+          "field.dispatchEvent(new Event('change',{bubbles:true}));return field.value;})()")
+        await v218Enter('not-a-uuid')
+        await waitFor(send,
+          "document.querySelector('#v217-original-receipt-id')?.getAttribute('aria-invalid')==='true'",
+          'V218 unscoped UUID is rejected without a request')
+        assert.equal(v218Queries.length,v218FinanceStart,'invalid V218 receipt must not emit GET')
+        await v218Enter(v218Receipt)
+        await waitFor(send,
+          "document.querySelector('"+v218Panel+" button[type=submit]')?.disabled===false",
+          'V218 exact receipt enables explicit audit')
+        assert.equal(v218Queries.length,v218FinanceStart,'typing valid UUID must not prefetch audit')
+        await evaluate(send,
+          "document.querySelector('"+v218Panel+" button[type=submit]')?.click()")
+        await waitFor(send,
+          "document.querySelector('"+v218Panel+"')?.textContent?.includes('USD 40.000000')",
+          'V218 approved internal but externally unverified candidate visible')
+        assert.equal(v218Queries.length,v218FinanceStart+1,'V218 only one Owner audit GET after submit')
+        assert.deepEqual(v218Queries.at(-1),{
+          marketplaceId:market,receiptId:v218Receipt,method:'GET'})
+        assert.equal(await evaluate(send,
+          "document.querySelector('"+v218Panel+"')?.textContent?.includes('实际 landed cost、退款 COGS 回转与真实净利润均未核证')"),
+          true,'V218 UI may not claim real COGS or verified profit')
+        await screenshot(send,'v218-finance-source-unverified-360.png')
+        // Explicit reinspection changes the query key: an old success must
+        // NEVER render while the new request fails or remains in flight.
+        for(const [status,words] of [
+          [409,'费用计划超出全量上限'],[403,'Owner 费用审计权限'],
+          [404,'不可访问'],[401,'登录已过期']
+        ]) {
+          v218ResponseStatus=status
+          const prior=v218Queries.length
+          await evaluate(send,
+            "document.querySelector('"+v218Panel+" .refresh-button')?.click()")
+          await waitFor(send,
+            "!!document.querySelector('"+v218Panel+" [role=alert]')?.textContent?.includes("+JSON.stringify(words)+")",
+            'V218 real UI HTTP '+status+' fails closed')
+          assert.equal(v218Queries.length,prior+1,'V218 explicit reinspection requires a new GET')
+          assert.equal(await evaluate(send,
+            "document.querySelector('"+v218Panel+"')?.textContent?.includes('USD 40.000000')"),
+            false,'V218 HTTP '+status+' must hide prior success amount')
+        }
+        // Error -> success is a fresh complete read, not stale remembered data.
+        v218ResponseStatus=200
+        await evaluate(send,
+          "document.querySelector('"+v218Panel+" .refresh-button')?.click()")
+        await waitFor(send,
+          "document.querySelector('"+v218Panel+"')?.textContent?.includes('USD 40.000000')",
+          'V218 reinspection returns current bounded original-currency candidate')
+        assert.ok(v218Queries.every(x=>x.method==='GET'),
+          'V218 all receipt audit interactions must stay read-only')
         // Visual refresh must NOT replace the source-aware finance ledger.
         // Assert real DOM hierarchy & loaded CSS in a Chromium Next route.
         assert.equal(await evaluate(send,
@@ -1487,6 +1650,32 @@ async function main() {
         assert.ok(v106FinanceQueries.some(q=>
           q.marketplaceId===v106OtherMarket&&q.beforeAt===null&&q.beforeId===null),
           'V106 second Marketplace must issue a distinct server request without stale cursor')
+        // V218: switching Marketplace resets explicit selection AND costs.
+        // There must be no new request until the operator submits again.
+        const v218BeforeSwitchRequests=v218Queries.length
+        await waitFor(send,
+          "document.querySelector('#v217-original-receipt-id')?.value===''",
+          'V218 new Marketplace has no selected receipt or old evidence')
+        assert.equal(v218Queries.length,v218BeforeSwitchRequests,
+          'V218 marketplace change must not proactively fetch old receipt')
+        assert.equal(await evaluate(send,
+          "document.querySelector('"+v218Panel+"')?.textContent?.includes('USD 40.000000')"),
+          false,'V218 old Marketplace amount cannot leak across views')
+        await v218Enter(v218Receipt)
+        await waitFor(send,
+          "document.querySelector('"+v218Panel+" button[type=submit]')?.disabled===false",
+          'V218 new Marketplace accepts exact explicit receipt query')
+        await evaluate(send,
+          "document.querySelector('"+v218Panel+" button[type=submit]')?.click()")
+        await waitFor(send,
+          "document.querySelector('"+v218Panel+"')?.textContent?.includes('成本证据未知')",
+          'V218 empty local source is UNKNOWN, not a zero value')
+        assert.deepEqual(v218Queries.at(-1),{
+          marketplaceId:v106OtherMarket,receiptId:v218Receipt,method:'GET'})
+        assert.equal(await evaluate(send,
+          "document.querySelector('"+v218Panel+"')?.textContent?.includes('USD 40.000000')"),
+          false,'V218 original cost cannot appear in different Marketplace')
+        await screenshot(send,'v218-marketplace-source-unknown-360.png')
         await layout(send,width,'v106-finance-360')
         await evaluate(send,
           "document.querySelector('.v106-finance-events-table')?.scrollIntoView({block:'center'})")

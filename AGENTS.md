@@ -21,6 +21,7 @@
    **V215 收货费用归属门禁**：Flyway V112 仅建立 V91→本地 V20 receipt 的单来源一次性原币提案、独立复核、审计和 V92 双向互斥。无真实外部发票签证或 G1 会计批准时，不得开发绕过 V112 唯一归属/数量守恒的写接口，不得把 APPROVED_UNVERIFIED 计为实际 landed COGS/净利润。
    **V216 独立只读财务源门禁**：V112 人工收货级费用需按 tenant+Marketplace 原 V91 来源、全计划 receipt 原币金额、现 PO 币种、V92 冲突、V91/V112 PG 审计重新复算；V165 已有八类来源碰撞复用，不建新审批。上限 50 计划、超限/快照漂移 409，缺来源 UNKNOWN≠0；本地人工复核或 V165 无冲突不能解锁真实 landed cost、COGS 或净利润。
    **V217 Next.js 采购／财务本地费用查验**：复用 V216 Owner GET，必须先由用户选精确原收货 ID 和 V91 来源 Marketplace 再读取；TanStack Query 使用 tenant/Marketplace/receipt 键，使用 no-store/same-origin，切换上下文清空旧证据；Zod 必须拒绝任何 actual COGS/net profit 非 NULL、已核证/已过账 true、重复/超限来源及原币越界。不得从人工分配候选金额推导财务实际利润，不新增平行来源写入接口。具体见 [V217 契约](docs/finance/v217-receipt-cost-evidence-workbench.md)。
+   **V218 审计读取新鲜度/HTTP UI 阻断**：每次用户主动收货费用核查必须创建单独 Query revision，旧成功缓存不可在刷新、错误或跨 Marketplace 视图显示；fetch 需传 TanStack 的 AbortSignal。真实 Chromium 操作采购 V46 行和财务 UUID 表单，模拟 401/403/404/409 均须失败封闭；Mock HTTP 403 不能冒充 Spring Security Owner 授权已验收。复用现有 CDP/Next/PG18 测试，不引入新前端测试工具。见 [V218](docs/finance/v218-receipt-cost-interaction-and-session-fail-closed.md)。
 4. 库存及 WMS 签名不自动证明第三方运营商真实身份或物理实收，不以内部三方 QC 替代外部确认；库存过账与退款回转必须受证据和批准限制。
 5. 不提交或输出任何实际 Seller/Ads、银行、客户或 WMS 凭据、密钥、会话和私有证据。不要关闭 Session/CSRF、绕过 Owner/租户校验或公开 Actuator 来解决本地启动错误。
 

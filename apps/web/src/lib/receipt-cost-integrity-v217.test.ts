@@ -118,6 +118,14 @@ describe('V217 read-only original-receipt costs remain internal metadata',()=>{
    cache:'no-store'})
   expect(url).not.toContain('tenantId')
  })
+ it('forwards React Query abort signal, never escaping session scope',async()=>{
+  const abort=new AbortController()
+  const spy=vi.fn(async (_url:RequestInfo|URL,_opts?:RequestInit)=>
+   new Response(JSON.stringify(base),{status:200}))
+  vi.stubGlobal('fetch',spy)
+  await getReceiptCostIntegrityV217(mp,receipt,abort.signal)
+  expect(spy.mock.calls[0][1]?.signal).toBe(abort.signal)
+ })
  it('rejects data from another Marketplace or receipt',async()=>{
   vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify({
    ...base,purchaseReceiptId:'66666666-6666-4666-8666-666666666666'

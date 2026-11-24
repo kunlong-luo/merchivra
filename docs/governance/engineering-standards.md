@@ -70,6 +70,8 @@
 
 - **V217 前端费用证据组件不允许将未核证人工来源升格**：Zod 对 V216 返回强校验 `actualBatchCogs=null`、`realizedNetProfit=null`、已核证/已过账标志始终 false、最多 50 个唯一 source/plan、UUID 及 six-decimal 原币金额；禁止 JS 浮点跨币种归总。采购 V46 批次页只用精确后端 receipt ID 选择与 Base UI Marketplace 来源过滤；财务中心仅明确 UUID 输入后按需 GET。TanStack Query 必须包括 tenant/Marketplace/receipt 键、no-store/same-origin、关闭自动重试，切换站点与租户清除前次结果；401/403/404/409 不许回退缓存或显示部分成本。见 [V217 UI/测试契约](../finance/v217-receipt-cost-evidence-workbench.md)。
 
+- **V218 活证据不允许旧成功值冒充当前重查**：来源风险、费用归属或原币结果每次手动展开/重新核对必须生成新的唯一读取版本，避免 staleTime=0 或自动 refetch 前短暂渲染缓存。审计查询须传递 TanStack Query 的 AbortSignal，读取和失败时禁止显示旧金额；跨用户/租户/Marketplace 不能携带旧 receipt 选中或请求。必须跑**真实 Next16 Chromium DOM + 本地合成 HTTP 409/403/404/401**；模拟 403 只能验证 UI 错误策略，不能替代真实 Spring Security 的 Owner 拒绝测试。见 [V218](../finance/v218-receipt-cost-interaction-and-session-fail-closed.md)。
+
 ## 6. UX、会话与本地失败处理
 
 - 用 Next.js 16 正式工作区设计；优先复用 Base UI 和现有设计 token。需检查 360px/桌面自适应、键盘焦点、对比度、数据来源、用户动作反馈、空态和错误态。

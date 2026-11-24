@@ -1,4 +1,4 @@
-# Merchivra · 当前执行计划（2026-11-24 / V217 Next.js 采购与财务收货费用证据界面）
+# Merchivra · 当前执行计划（2026-11-24 / V218 Next.js 财务证据独立重查与 Chromium 交互验收）
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
@@ -19,7 +19,13 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
-## V217 本轮实现 · Next.js 收货单级人工费用证据联动（[代码 `a790f1c`](https://github.com/kunlong-luo/merchivra/commit/a790f1c297034e2a13fd66332717c3a67284161e) · [快 CI #45304018584 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45304018584)；[V217 同 SHA 完整 A3 #45304346700（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45304346700)）
+## V218 当前实施 · 证据旧值阻断与真实 Next.js Chromium 交互（等待本轮精确 SHA 验收）
+
+[V218 交互/缓存门禁与浏览器场景](../finance/v218-receipt-cost-interaction-and-session-fail-closed.md)：审计证据不允许在再展开或重新校验时保留旧人工候选金额，新增每次显式检查的 `inspectionRevision`（同时保留 tenant/Marketplace/receipt key）、原生 fetch AbortSignal 透传，读取/刷新阶段不渲染旧数据。沿用现有 Node24 原生 CDP + Next16/Chromium 合成测试，不新建测试框架，实际点击采购 V46 批次及财务 UUID 表单；未点击不请求、全程 GET；HTTP 409/403/404/401 失败后只显示阻断；重新成功要独立请求；切换 Base UI Marketplace 不泄露前站点候选原币，另一站点无提案显示 UNKNOWN≠0。此浏览器脚本模拟的 403/404 只证明 UI 失败处理，**不能**替代后端真实非 Owner 和跨租户授权专项负例。
+
+**下一阶段 V219**：真实 Spring HTTP Owner/非 Owner/跨 tenant/Marketplace/receipt 读权限负例、会话更替时已取消请求不会复活，同时复审 V112 原币及审计证据对真实平台来源是否仍缺证明；不要新增平行费用系统、自动入账或孤立 UI。项目 70/100、`realizedNetProfit=null`、授权 OFF、生产 #104 NO-GO。
+
+## V217 已完成（合成验收） · Next.js 收货单级人工费用证据联动 · Next.js 收货单级人工费用证据联动（[代码 `a790f1c`](https://github.com/kunlong-luo/merchivra/commit/a790f1c297034e2a13fd66332717c3a67284161e) · [快 CI #45304018584 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45304018584)；[V217 同 SHA 完整 A3 #45304346700（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45304346700)）
 
 [V217 界面与字段契约](../finance/v217-receipt-cost-evidence-workbench.md)：财务工作台在成本准备度区新增原采购 receipt UUID 主动查询，采购 V46 批次页新增“核对本收货单的费用来源”入口；选择 V91 来源 Marketplace 后按需执行复用的 V216 Owner GET。严格 Zod 对象在客户端拒绝任何假外部核证、COGS/利润/过账字段、原币超额、来源重复或 incomplete page；所有候选金额仅作为待核证的原币来源，不聚合币种、不产生新账本。TanStack Query 与会话/站点/receipt 分区缓存、只在明确提交后请求、409 显示错误而非局部成本，复用 Base UI 选择器。新增 Vitest 正反例；在代码 SHA `a790f1c` 上 pnpm/Next16 快 CI 已 SUCCESS，PG18 快 CI SKIPPED；`451cfa9` 同代码+文档 [V217 同 SHA 完整 A3 #45304346700（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45304346700) 7/7 SUCCESS，PG18 原始日志确认 V215/V216 合成回归与匿名 Owner 401。V217 专属按钮交互的完整浏览器 E2E 负例仍留到 V218，不能把 A3 基线验收扩大为外部财务核证。
 

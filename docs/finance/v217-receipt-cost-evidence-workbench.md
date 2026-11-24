@@ -18,6 +18,8 @@
 
 ## V218 后续验收重点
 
+V218 已转入 [独立再次读取及浏览器真实点击负例规范](v218-receipt-cost-interaction-and-session-fail-closed.md)：同一来源再展开/刷新时不能短暂显示先前成功金额；新 revision/query abort 与 HTTP/UI 负例按新精确 SHA 单独验收。原 V217 完整合成 A3 7/7 只作为历史基线，不能替代后续更严格交互测试。
+
 优先补充可靠的真实后端 E2E V216 401/403/404/409/Owner 响应负例与视图集成、核对财务 UI 在错误后是否正确清空结果，再考虑如何展示全量费用来源证据；真实外部来源签证和财务口径仍属 G1 阻断。所有本地已审核/合成绿色都不能通过生产 #104。
 
 **评分 70/100，`realizedNetProfit=null`，真实 Amazon Seller/Ads OAuth OFF，生产 #104 NO-GO。**

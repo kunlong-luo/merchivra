@@ -65,12 +65,13 @@ export const receiptCostIntegrityV217=z.object({
 export type ReceiptCostIntegrityV217=z.infer<typeof receiptCostIntegrityV217>
 export const validPurchaseReceiptId=(value:string)=>id.safeParse(value.trim()).success
 
-export async function getReceiptCostIntegrityV217(marketplaceId:string,receiptId:string):
+export async function getReceiptCostIntegrityV217(marketplaceId:string,receiptId:string,
+ signal?:AbortSignal):
  Promise<ReceiptCostIntegrityV217> {
  const mp=id.parse(marketplaceId),receipt=id.parse(receiptId)
  const res=await fetch('/api/v1/finance/marketplaces/'+encodeURIComponent(mp)+
   '/purchase-receipts/'+encodeURIComponent(receipt)+'/manual-cost-integrity',{
-  method:'GET',credentials:'same-origin',cache:'no-store',
+  method:'GET',credentials:'same-origin',cache:'no-store',signal,
   headers:{Accept:'application/json'}
  })
  if(!res.ok){
