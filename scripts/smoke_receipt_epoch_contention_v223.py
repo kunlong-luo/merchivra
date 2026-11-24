@@ -127,7 +127,8 @@ def percentile(values, fraction):
 def worker(tenant, marketplace, repeats, barrier):
     """One persistent psql/backend per independent real transaction writer."""
     proc = subprocess.Popen(PARGS, stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE, text=True, bufsize=1)
+                            stderr=subprocess.PIPE, text=True, bufsize=1,
+                            env={**os.environ, "PGAPPNAME": "merchivra-v223-writer"})
     samples = []
     try:
         proc.stdin.write("SET lock_timeout='12s';\n"
@@ -162,10 +163,28 @@ def worker(tenant, marketplace, repeats, barrier):
 def run_case(name, writers, transactions_per_writer):
     baseline = {t: epoch(t) for t, _ in writers}
     barrier = threading.Barrier(len(writers))
-    with concurrent.futures.ThreadPoolExecutor(max_workers=len(writers)) as pool:
-        futures = [pool.submit(worker, t, m, transactions_per_writer, barrier)
-                   for t, m in writers]
-        samples = [item for future in futures for item in future.result(timeout=100)]
+    done_sampling = threading.Event()
+    lock_observations = []
+
+    def sample_lock_waits():
+        # A sampled proxy for lock contention, not exhaustive wait accounting.
+        # The shared epoch tuple generally appears as a transactionid Lock wait.
+        while not done_sampling.wait(.08):
+            value = int(pg("SELECT count(*) FROM pg_stat_activity "
+                           "WHERE application_name='merchivra-v223-writer' "
+                           "AND wait_event_type='Lock'"))
+            lock_observations.append(value)
+
+    sampler = threading.Thread(target=sample_lock_waits, daemon=True)
+    sampler.start()
+    try:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=len(writers)) as pool:
+            futures = [pool.submit(worker, t, m, transactions_per_writer, barrier)
+                       for t, m in writers]
+            samples = [item for future in futures for item in future.result(timeout=100)]
+    finally:
+        done_sampling.set()
+        sampler.join(timeout=3)
     expected = {t: sum(2 * transactions_per_writer
                        for wt, _ in writers if wt == t) for t in baseline}
     for tenant, count in expected.items():
@@ -182,7 +201,10 @@ def run_case(name, writers, transactions_per_writer):
             "p50_ms": percentile(latencies, .50),
             "p95_ms": percentile(latencies, .95),
             "p99_ms": percentile(latencies, .99),
-            "max_ms": round(max(latencies), 2)}
+            "max_ms": round(max(latencies), 2),
+            "lock_wait_sample_count": len(lock_observations),
+            "lock_wait_positive_samples": sum(v > 0 for v in lock_observations),
+            "lock_wait_max_sessions_observed": max(lock_observations, default=0)}
 
 
 # Same actual V91 immutable-source DML path and per-worker transaction count.
