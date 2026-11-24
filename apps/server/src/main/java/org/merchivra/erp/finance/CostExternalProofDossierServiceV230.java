@@ -3,6 +3,7 @@ package org.merchivra.erp.finance;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -30,8 +31,10 @@ public class CostExternalProofDossierServiceV230 {
         this.attribution=attribution;
     }
 
+    @Schema(name="ExternalCostProofRequirementV230")
     public record Requirement(String code,String description,
         boolean independentlyVerified) {}
+    @Schema(name="ExternalCostProofDossierV230")
     public record Dossier(String sourceId,String marketplaceId,
         String category,String originalCurrency,String sourceReviewState,
         String localAuditStatus,String localAttributionStatus,
