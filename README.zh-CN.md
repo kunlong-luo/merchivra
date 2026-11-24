@@ -5,11 +5,13 @@
 **技术基线（2026-11-24）**：Java 25、Spring Boot 4.1.2、**Gradle**、PostgreSQL 18/Flyway；React 19、**Next.js 16.4.5 App Router**、Node 24、**pnpm 12.20.0（唯一前端包管理器，不用 npm）**。默认使用 Next.js；Vite/Nginx 仅供明确回退与 GitHub Pages **虚构展示**，不得误认为默认正式前端。
 
 - 现行独立成熟度评分：**[V231 76/100](docs/governance/project-scorecard-v231-2026-11-24.md)**（历史 V230 [75/100](docs/governance/project-scorecard-v230-2026-11-24.md)）。该分数不是生产就绪度，也不是真实净利润已核证的比例。
-- [V230B 精确代码完整 A3 7/7 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45368066154)，对应 [`a8e5eba353d5`](https://github.com/kunlong-luo/merchivra/commit/a8e5eba353d501de9761685cdd0d05de1d340982)，覆盖隔离真 PostgreSQL18/Spring Owner HTTP、Java、Next/Orval、Chromium、Compose。此前 [V230 首次 A3 6/7 的浏览器失败](https://github.com/kunlong-luo/merchivra/actions/runs/45367537947) 必须保留。
 - **真实净利润仍不能确认**：`realizedNetProfit=null`；真实 Amazon Seller/Ads OAuth **关闭**，真实银行、货代、关税、独立 WMS、退款实际 COGS 与 G1/DEC 财务口径未核证；生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
-- **V231 已完成隔离工程验收**：用户可在浏览器本地以 SHA-256 将合法持有的文件原始字节与 V91 用户声明摘要对照，**不上传文件**。精确代码 [`9ff02147de17`](https://github.com/kunlong-luo/merchivra/commit/9ff02147de17996d28ec95875a4eaa6445e1c197) 的 [完整 A3 7/7 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45373462870) 和 [同 SHA 快速 CI SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45373462897) 已通过；94文件461个前端测试、文档检查26入口/504链接均通过。**匹配仍不证明第三方签发、真实扣款或可入账**。
 
 [English](README.md) · [当前事实](docs/current-status.md) · [唯一现行 P0 计划](docs/roadmap/current-plan.md) · [文档中心](docs/README.md) · [开发指南](docs/development.md) · [工程规范](docs/governance/engineering-standards.md) · [安全](SECURITY.md)
+
+## 当前工程状态
+
+V232 原始报告授权一致性修复已提交 [`96e6d9750993`](https://github.com/kunlong-luo/merchivra/commit/96e6d97509930c88c85e31f013eb7bd483d90ce9)；[CI #45378894200](https://github.com/kunlong-luo/merchivra/actions/runs/45378894200) Java/前端成功，文档长度门禁失败，PG18 跳过。V233 进度与精确验收见[当前事实](docs/current-status.md)，不复制版本流水账。
 
 ## 一、仓库根目录：保留哪些，分别有什么用？
 
@@ -32,7 +34,7 @@
 | 文档目录 | 用途；当前入口与归档规则 |
 | --- | --- |
 | `docs/roadmap/` | **现行唯一计划**：[current-plan.md](docs/roadmap/current-plan.md)；V108 和历史 A3 计划为旧证据。[docs/roadmap.md](docs/roadmap.md) 是标明“历史归档”的旧版本，**不能作为现行计划** |
-| `docs/governance/` | 文档控制、[工程规范](docs/governance/engineering-standards.md)、G1/DEC 签署状态、分版本评分与历史审计；现行评分见 [V230 75/100](docs/governance/project-scorecard-v230-2026-11-24.md) |
+| `docs/governance/` | 文档控制、[工程规范](docs/governance/engineering-standards.md)、G1/DEC 签署状态、分版本评分与历史审计；现行评分见 [V231 76/100](docs/governance/project-scorecard-v231-2026-11-24.md) |
 | `docs/finance/` | 费用/结算/归属/退款 COGS、外部证据限制与利润核算的 Vxxx 实际证明；[V230 分类费用缺口清单](docs/finance/v230-external-source-proof-dossier-and-owner-workflow.md) |
 | `docs/testing/`、`docs/deployment/`、`docs/api/` | 精确 SHA 的 A3/CI、PG18 部署和备份安全、真实 Springdoc/Orval API 接入规则 |
 | `docs/architecture/`、`docs/requirements/`、`docs/product/` | 架构/ADR、需求验收/业务场景、尚待批准的真实财务业务政策 |
@@ -41,6 +43,10 @@
 | `docs/design/`、`docs/ux/`、`docs/diagrams/`、`docs/processes/`、`docs/templates/`、`docs/ops/` | Next 页面设计、操作旅程、Mermaid 图、业务流程、ADR 模板、运维概要。某些只有一个文件，**但该文件有明确用途，不应为减少目录数就误删** |
 
 **本次清理原则**：真正重复、没有现行用途的文件直接删除；前向 Flyway 迁移、真实 CI 失败历史、版本评分、源账目证明、回退机制与尚未签署的 G1/DEC 文件保留。已删除早期 V120“PR 还在等 CI”的重复短稿，正式[供应商退货历史 V120 文档](docs/purchasing/supplier-followup-return-traces-v120.md) 保留。删除历史仍可从 Git commit 查看。完整文档入口/分类见 [docs/README.md](docs/README.md)，判定依据见 [文档控制规范](docs/governance/document-control.md)。
+
+### V233 目录与去重结果
+
+清理前 Git Tree 共 1,435 个 tracked 文件，未发现内容完全相同的 Markdown 文件对。现有目录均有运行、规则或证据用途，暂不盲删整目录。将 AGENTS 收敛为长期有效规则，根中英文 README 删除重复版本流水账，旧 Demo 文档去除 Maven/Vue/过期命令；保留 V231 已删除的重复别名状态。旧详细记录仍在对应领域文档与 Git 历史，不再复制到现行规则。
 
 ## 三、本地启动（包含 PostgreSQL 18）
 

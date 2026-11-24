@@ -5,11 +5,13 @@
 **Verified baseline (2026-11-24).** Java 25, Spring Boot 4.1.2, **Gradle** (no Maven), PostgreSQL 18/Flyway; React 19, **Next.js 16.4.5** App Router, Node 24 and **pnpm 12.20.0 only** (not npm). Next.js is the default. Vite/Nginx exists **only for explicitly selected rollback and synthetic GitHub Pages**.
 
 - Latest independent engineering/product maturity: **[76/100, V231](docs/governance/project-scorecard-v231-2026-11-24.md)** (prior V230 [75/100](docs/governance/project-scorecard-v230-2026-11-24.md)). This is **not** a production-readiness or verified-net-profit percentage.
-- [V230B exact-code full A3 7/7 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45368066154), code [`a8e5eba353d5`](https://github.com/kunlong-luo/merchivra/commit/a8e5eba353d501de9761685cdd0d05de1d340982): isolated real PostgreSQL18/Spring Owner HTTP, React/Next, Orval, Gradle, Chromium, Compose. Earlier [V230 6/7 browser failure](https://github.com/kunlong-luo/merchivra/actions/runs/45367537947) remains part of the record.
 - **True profit is not verified**: `realizedNetProfit=null`; Amazon Seller/Ads live OAuth is **OFF**; independent bank, freight, customs, WMS and refund COGS evidence plus G1/DEC accounting approval are missing. Production [#104](https://github.com/kunlong-luo/merchivra/issues/104) remains **NO-GO**.
-- **V231 accepted for isolated engineering**: the opt-in browser-local byte SHA-256 comparison checks a *user-claimed V91 digest* without uploading the document. [Exact code `9ff02147de17`](https://github.com/kunlong-luo/merchivra/commit/9ff02147de17996d28ec95875a4eaa6445e1c197) passed [full A3 7/7](https://github.com/kunlong-luo/merchivra/actions/runs/45373462870) and [quick CI](https://github.com/kunlong-luo/merchivra/actions/runs/45373462897). Vitest: 94 files/461 tests, including 5 byte-verification cases; docs guard: 26 authoritative docs/504 links. A match **still does not** authenticate its issuer, charge or accounting eligibility.
 
 [简体中文](README.zh-CN.md) · [Actual status](docs/current-status.md) · [Current P0 plan](docs/roadmap/current-plan.md) · [Documentation index](docs/README.md) · [Development](docs/development.md) · [Contributing](CONTRIBUTING.md) · [Security](SECURITY.md)
+
+## Current engineering status
+
+V232 original-report authorization checks were committed in [`96e6d9750993`](https://github.com/kunlong-luo/merchivra/commit/96e6d97509930c88c85e31f013eb7bd483d90ce9). [CI #45378894200](https://github.com/kunlong-luo/merchivra/actions/runs/45378894200) passed Java and web jobs but failed the AGENTS length guard; PostgreSQL was skipped. See [current status](docs/current-status.md) for exact evidence and remaining V233 gates.
 
 ## What the repository directories actually do
 
@@ -41,6 +43,10 @@ Root-level `.env.example`, `.gitignore`, `.editorconfig` configure safe local de
 | `design/`, `ux/`, `diagrams/`, `processes/`, `templates/`, `ops/` | Next UI references, user flows, Mermaid diagrams, ADR template and operations overview; some contain just one **referenced, useful** file |
 
 **Deletion policy:** remove proven obsolete duplicate drafts and unused aliases; retain deployed code, rollback mechanisms, migration history, policies and version-specific A3/PG18/financial evidence. Git history preserves deleted drafts. The previously duplicated pending-PR V120 supplier note was removed; the canonical [completed V120 supplier trace](docs/purchasing/supplier-followup-return-traces-v120.md) remains. See [the documentation map](docs/README.md) and [document-control rules](docs/governance/document-control.md).
+
+### Directory maintenance (V233)
+
+Tracked-tree audit before V233: 1,435 tracked blobs; no byte-identical Markdown file pairs. The existing root/domain directories still have independent runtime, policy, or evidence purposes. Shortened AGENTS to enduring policy, removed repeated release narratives from both root READMEs, and replaced stale Maven/Vue demo instructions with the current isolated workflow. Keep the V231 deleted aliases deleted; no additional whole file or directory is proven disposable in this pass. Historic evidence remains in the linked domain documents and Git history, not duplicated in current policies.
 
 ## Quick start — isolated local PostgreSQL 18
 

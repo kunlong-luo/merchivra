@@ -24,7 +24,7 @@
 
 ## V232 E1-A · 在途 Amazon 原件授权一致性（待验收）
 
-本轮针对已有 Amazon Reports Worker/Scan Service 收紧 scope 比较，防止检测到刷新凭证/角色/站点变更后仍继续下载、入库或提交分页进度。新增两组 Java 合成回归；尚无本轮精确 CI 与真实授权报告证据。此项只是观察到的授权变化阻断，不能证明未发生 ABA 或真正第三方签发身份。V231 76/100、真实利润10/25、OAuth OFF、`realizedNetProfit=null` 和生产 NO-GO 仍是当前状态。具体任务见[现行计划](roadmap/current-plan.md)。
+本轮针对已有 Amazon Reports Worker/Scan Service 收紧 scope 比较，防止检测到刷新凭证/角色/站点变更后仍继续下载、入库或提交分页进度。新增两组 Java 合成回归；[精确 SHA `96e6d9750993`](https://github.com/kunlong-luo/merchivra/commit/96e6d97509930c88c85e31f013eb7bd483d90ce9) 的 [CI #45378894200](https://github.com/kunlong-luo/merchivra/actions/runs/45378894200) Java25/Gradle 与 React/Next 成功，Compose job 的文档长度守卫失败，PG18 跳过；整轮 FAILURE，未完成 A3，也没有真实授权报告证据。此项只是观察到的授权变化阻断，不能证明未发生 ABA 或真正第三方签发身份。V231 76/100、真实利润10/25、OAuth OFF、`realizedNetProfit=null` 和生产 NO-GO 仍是当前状态。具体任务见[现行计划](roadmap/current-plan.md)。
 
 ## 最近精确验收（切勿混用不同 SHA 的 CI）
 
