@@ -483,6 +483,7 @@ jobs:
           MERCHIVRA_V221_DISPOSABLE_ONLY=true python3 scripts/smoke_receipt_read_epoch_v221.py
           python3 scripts/smoke_receipt_http_aba_v222.py
           MERCHIVRA_V223_DISPOSABLE_ONLY=true python3 scripts/smoke_receipt_epoch_contention_v223.py
+          MERCHIVRA_V224_DISPOSABLE_ONLY=true python3 scripts/smoke_receipt_epoch_noop_v224.py
           echo "PostgreSQL 18 / Flyway / actual finance + FBA OpenAPI and local mock chain verified"
           kill "$app_pid" 2>/dev/null || true
       - name: Preserve V141 disposable disk/WAL/PITR-not-ready metrics (no credentials)
@@ -528,13 +529,14 @@ jobs:
         run: python3 scripts/check_ci_cadence_v108.py
       - name: Verify V109 active documentation links and runtime status
         run: python3 scripts/check_docs_consistency_v109.py
-      - name: V219-V223 real receipt, PG18 ABA and epoch performance smoke syntax
+      - name: V219-V224 real receipt, ABA, contention and identical UPDATE smoke syntax
         run: |
           python3 -m py_compile scripts/smoke_receipt_cost_real_http_v219.py
           python3 -m py_compile scripts/smoke_receipt_cost_actual_http_v220.py
           python3 -m py_compile scripts/smoke_receipt_read_epoch_v221.py
           python3 -m py_compile scripts/smoke_receipt_http_aba_v222.py
           python3 -m py_compile scripts/smoke_receipt_epoch_contention_v223.py
+          python3 -m py_compile scripts/smoke_receipt_epoch_noop_v224.py
       - name: V192 V64 order/SKU conservation smoke syntax
         run: python3 -m py_compile scripts/smoke_v192_profit_sku_conservation.py
       - name: V175-B key-possession synthetic three-Owner smoke syntax
