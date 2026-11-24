@@ -56,7 +56,13 @@ SQL 隔离；未来应加真实 HTTP Owner/非 Owner/跨租户负例，不得将
 
 ## 真实 Chromium Runner 字体可用性：不再无限等待
 
-2026-11-24 首轮 V218 A3 启动后，Java/Next/PG18/Compose/HTTP 已通过，但浏览器任务的 CJK 安装在 `apt-get update` 与下载阶段明显超出历史耗时。此阻塞不能证明 V218 UI 本身成功或失败，也不能无条件跳过字体导致中文截图失真。现修改 [浏览器工作流](../../.github/workflows/browser-layout-smoke.yml)：优先用 Runner 现有 APT 索引安装，失败后仅作有限时间的更新/重试，每个外部命令均明确 `timeout`，整个 CJK 步骤最多 4 分钟；安装后必须确认 `fc-match 'Noto Sans CJK SC'` 真有 Noto CJK 字族，否则 Job 失败。**此调整不降低现有截图中文字可读性和交互安全断言。** 后续精确 SHA 的 A3 必须重新完成 7/7，不能借原先 6/7 自证通过。
+2026-11-24 首轮 V218 A3 启动后，Java/Next/PG18/Compose/HTTP 已通过，但浏览器任务的 CJK 安装在 `apt-get update` 与下载阶段明显超出历史耗时。此阻塞不能证明 V218 UI 本身成功或失败，也不能无条件跳过字体导致中文截图失真。现修改 [浏览器工作流](../../.github/workflows/browser-layout-smoke.yml)：优先用 Runner 现有 APT 索引安装，失败后仅作有限时间的更新/重试，每个外部命令均明确 `timeout`，整个 CJK 步骤最多 4 分钟；安装后必须确认 `fc-match 'Noto Sans CJK SC'` 真有 Noto CJK 字族，否则 Job 失败。**此调整不降低现有截图中文字可读性和交互安全断言。** 新精确 SHA A3 已重新完成 7/7 SUCCESS；旧运行曾经 6/7 运行中，不能冒充当时已验收。
+
+## 精确验收与实测耗时（2026-11-24）
+
+[V218 精确提交 `f89fef2`](https://github.com/kunlong-luo/merchivra/commit/f89fef2d14c0ac52dd11b3dc8ed08035867af337) 的 [完整合成 A3 #45306587159（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45306587159) 已在真实隔离 PG18/HTTP/Chromium/Next/Java/Compose 7/7 通过；Chromium 日志分别包含 Vite 和 Next 的 `Chromium responsive UI smoke PASS (synthetic backend only)`。[V218 CI 优化 `c3f7418`](https://github.com/kunlong-luo/merchivra/commit/c3f74185efc56b37ffb0d67459b3490a085c7de2) · [快速 CI #45307894546 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45307894546) · [完整 A3 #45307894610（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45307894610) 的 browser-layout Job 再次 SUCCESS，CJK 安装从 488 秒降至 9 秒，整个 Chromium Job 从 574 秒降至 88 秒；第二轮同 SHA [A3 #45307894610（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45307894610) 也已在真实 PG18/HTTP/Chromium/Java25/Next16/Compose **7/7 全部通过**，并在 PG18 原始日志打印 V215/V216 原币守恒、V92 互斥和匿名 Owner GET 401。
+
+上述 Chromium V218 专项覆盖采购合成收货按钮 → V216 本地原币候选、财务 UUID 不提交不出站、401/403/404/409 旧值完全隐藏、刷新成功必须重新 GET、Marketplace 切换无预取及 UNKNOWN≠0。成功日志不是外部 Amazon 真伪核证。浏览器截图构件 `merchivra-next16-synthetic-browser-screenshots` 已在 V218 精确 A3 生成，截图用于人审而不是财务凭证。
 
 ## 验收、阻断及后续
 
