@@ -486,6 +486,7 @@ jobs:
           MERCHIVRA_V224_DISPOSABLE_ONLY=true python3 scripts/smoke_receipt_epoch_noop_v224.py
           MERCHIVRA_V225_DISPOSABLE_ONLY=true MERCHIVRA_V224_DISPOSABLE_ONLY=true python3 scripts/smoke_receipt_epoch_bulk_v225.py
           MERCHIVRA_V226_DISPOSABLE_ONLY=true MERCHIVRA_V225_DISPOSABLE_ONLY=true python3 scripts/smoke_cost_source_batch_real_http_v226.py
+          MERCHIVRA_V227_DISPOSABLE_ONLY=true MERCHIVRA_V226_DISPOSABLE_ONLY=true MERCHIVRA_V225_DISPOSABLE_ONLY=true python3 scripts/smoke_cost_source_batch_scale_v227.py
           echo "PostgreSQL 18 / Flyway / actual finance + FBA OpenAPI and local mock chain verified"
           kill "$app_pid" 2>/dev/null || true
       - name: Preserve V141 disposable disk/WAL/PITR-not-ready metrics (no credentials)
@@ -541,6 +542,7 @@ jobs:
           python3 -m py_compile scripts/smoke_receipt_epoch_noop_v224.py
           python3 -m py_compile scripts/smoke_receipt_epoch_bulk_v225.py
           python3 -m py_compile scripts/smoke_cost_source_batch_real_http_v226.py
+          python3 -m py_compile scripts/smoke_cost_source_batch_scale_v227.py
       - name: V192 V64 order/SKU conservation smoke syntax
         run: python3 -m py_compile scripts/smoke_v192_profit_sku_conservation.py
       - name: V175-B key-possession synthetic three-Owner smoke syntax
