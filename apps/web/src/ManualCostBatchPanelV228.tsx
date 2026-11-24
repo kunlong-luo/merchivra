@@ -1,6 +1,7 @@
 import {useMemo,useState,type FormEvent} from 'react'
 import {useMutation,useQueryClient} from '@tanstack/react-query'
 import ManualCostProofDossierPanelV230 from './ManualCostProofDossierPanelV230'
+import LocalDocumentCheckPanelV231 from './LocalDocumentCheckPanelV231'
 import {
  manualCostCategories,manualCostKinds,
  previewManualCostBatch,stageManualCostBatchV228,
@@ -153,10 +154,14 @@ export default function ManualCostBatchPanelV228({
       aria-label={'查看来源 '+r.sourceKey+' 的外部凭证缺口'}>
       查看缺口</button></td>
     </tr>)}</tbody></table></div>
-   {proofSourceId&&results.some(r=>r.id===proofSourceId)&&
-    <ManualCostProofDossierPanelV230 key={proofSourceId}
+   {proofSourceId&&results.some(r=>r.id===proofSourceId)&&<>
+    <ManualCostProofDossierPanelV230 key={'proof-'+proofSourceId}
      tenantId={tenantId} marketplaceId={marketplaceId}
-     sourceId={proofSourceId} currency={currency}/>}
+     sourceId={proofSourceId} currency={currency}/>
+    <LocalDocumentCheckPanelV231 key={'bytes-'+proofSourceId}
+     sourceId={proofSourceId}
+     claimedSha256={results.find(r=>r.id===proofSourceId)?.documentSha256??''}/>
+   </>}
   </section>}
  </section>
 }
