@@ -1,6 +1,6 @@
 # Merchivra · 唯一现行 P0 执行计划
 
-**CURRENT · 2026-11-24 · V230B 真 PG18/Next/Chromium A3 7/7 已验收；V231 浏览器本地源文件重算及仓库文档裁剪进入本轮验收。**
+**CURRENT · 2026-11-24 · V230B 与 V231 均已按各自精确代码 SHA 的完整 A3 7/7 验收；下一阶段 V232 聚焦真正合法独立外部原始费用。**
 
 > **北极星**：对 Amazon Seller ERP 的每笔订单、退款、SKU、采购批次及每个原币费用来源建立可以由独立第三方验证的记录，覆盖全成本/真实库存 COGS，最后在经批准的 G1/DEC 会计政策下生成可审计期间净利润。不能为了显示一个数字填补 UNKNOWN 为0。项目仍为 pre-alpha、`realizedNetProfit=null`，真实 Seller/Ads OAuth OFF，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
 
@@ -16,16 +16,16 @@
 | V229 | [PG18 真 Owner 审计 1/0/2 及 401/404](../finance/v229-source-review-audit-integrity-and-external-proof-hold.md)，[A3 #45363362444（7/7）](https://github.com/kunlong-luo/merchivra/actions/runs/45363362444) | append-only 与 Maker/Checker 仅证明本地审核链 |
 | V230B | [八类原币费用第三方证明缺口 + Next 逐来源查看](../finance/v230-external-source-proof-dossier-and-owner-workflow.md)，[精确 SHA `a8e5eba353d5`](https://github.com/kunlong-luo/merchivra/commit/a8e5eba353d501de9761685cdd0d05de1d340982) 的 [完整 A3 #45368066154（7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45368066154) | 只标出第三方材料缺失并 hold，未新增 VERIFIED 发票、实收和净利润 |
 
-V230 首轮 [#45367537947](https://github.com/kunlong-luo/merchivra/actions/runs/45367537947) 是 **6/7**：PG18 已通过、Chromium/Next 路由重挂载竞态失败；修复后精确 SHA 7/7 才获技术验收，失败历史保留。当前独立评分 [75/100（V230）](../governance/project-scorecard-v230-2026-11-24.md)；V229 74、V228 73 与 V200 70 是对应**历史**评分，不能随意修改。**真实利润真实性仍10/25**，绝不因 UI 或 CI 自然加分。
+V230 首轮 [#45367537947](https://github.com/kunlong-luo/merchivra/actions/runs/45367537947) 是 **6/7**：PG18 已通过、Chromium/Next 路由重挂载竞态失败；修复后精确 SHA 7/7 才获技术验收，失败历史保留。当前独立评分 [76/100（V231）](../governance/project-scorecard-v231-2026-11-24.md)；V230 75、V229 74、V228 73 与 V200 70 均为对应**历史**评分，不能随意修改。**真实利润真实性仍10/25**，绝不因 UI 或 CI 自然加分。
 
-## 当前 V231 · 本地文件字节对照 + 文档/目录收敛
+## V231 已验收 · 本地文件字节对照 + 文档/目录收敛
 
-**实现目标**（当前尚待本轮精确 SHA 快速 CI/完整 A3，未经过验证前保持评分75）：
+**已实现并按精确代码 SHA 验收**：[代码 `9ff02147de17`](https://github.com/kunlong-luo/merchivra/commit/9ff02147de17996d28ec95875a4eaa6445e1c197) 的 [完整 A3 #45373462870（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45373462870) 及同 SHA [快速 CI #45373462897（SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45373462897)。全套 Next/Java/Chromium/Compose/真 PG18 通过，94个 Vitest 文件/461项测试；DOC-196 26入口文档/504相对链接 PASS。
 
 1. **原始字节核对的最小合法能力**：对 V226/V228 手工来源返回的不可变 UUID 与用户声明的 `documentSha256`，允许操作者**自愿选择本地持有文件**。用 Web Crypto SHA-256 在浏览器本地对文件**原始字节**重算，文件大小 1 B–8 MiB，空文件、超限、无加密 API、声明摘要格式错误、不完整字节读均不成功；文件内容/文件名不上传、不保存。匹配仅是 `LOCAL_BYTES_MATCH_USER_CLAIM_ONLY`，不匹配是 `LOCAL_BYTES_MISMATCH_HOLD`，两种状态都**不是独立第三方认证**、不会修改外部核验标志、费用归属、COGS 或 `realizedNetProfit`。
 2. **失败安全与测试**：Vitest 需覆盖已知 SHA-256 正向、不同字节负例、64 位格式/全零摘要、空文件、8 MiB 越限、读长度不一致以及从未调用网络 `fetch`；浏览器更换来源必须清掉历史匹配结果，不得用一个来源摘要套另一个 Marketplace。已存在的 V230 Zod/Orval 跨租户/原币/false-profit 不可被本轮修改。
 3. **文档与仓库整理**：清除确认重复的混合大小写 `Agent.md` 兼容别名和 V120 旧“PR/CI 待验收”重复短稿；保留唯一 `AGENTS.md`、正式 V120 证据、Flyway 迁移、所有 A3 原始失败/复验、历史评分、真实部署/回退脚本。重写根中英文 README、文档索引与当前状态/计划，列出**每个顶层及文档域目录用途**，不能仅因单文件目录而删除有效资料。自动化文档一致性守卫应拒绝旧冗余文件重新出现，检查入口文件的本地链接/现行评分与包管理约束。
-4. **通过标准**：快速 CI 的 pnpm/Next/Vitest、Java/Gradle、Compose/文档链接守卫全绿；在 V231 自身精确 `main` SHA 上执行完整 7/7 A3（包括真实 PG18 与 Chromium/原 V230 业务正反例）。**只有符合的真实运行日志才能标记 V231 已验收和复评分。**
+4. **验收**：`main` 代码 SHA `9ff02147de17` 的 [完整 A3 #45373462870（7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45373462870) 已覆盖 pnpm/Next/Vitest 94文件461项、Gradle、Chromium、Compose/mock-chain、真实 PG18 及前序 V229/V230；[快 CI #45373462897](https://github.com/kunlong-luo/merchivra/actions/runs/45373462897) 也成功，DOC-196 检查504条链接并防止旧别名/草稿回归。仅在此基础上 [复评 76/100](../governance/project-scorecard-v231-2026-11-24.md)（业务完整性+1），**真实利润真实性10/25 不变**。
 
 详情和保留/删除依据集中见 [V231 专项记录](../finance/v231-local-byte-claim-check-and-repository-pruning.md) 和 [README 目录用途](../../README.zh-CN.md)。
 
