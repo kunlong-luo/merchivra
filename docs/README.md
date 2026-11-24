@@ -40,9 +40,9 @@
 
 不存在单纯为了“目录看起来少”而删除活动代码、测试、历史迁移、回退资产或可核查的版本证据的理由。详见根 [README 中文版](../README.zh-CN.md) 和 [英文版](../README.md) 的**仓库目录用途表**。
 
-## 清理与删除结果（V231 / V233）
+## 清理与删除结果（V231 / V233 / V234）
 
-V233：缩短 AGENTS、去除根 README 的历史流水账与 Demo 过期启动说明，纠正中文 README 现行评分。Git Tree 未发现完全相同的 Markdown 文件对；仅保留有独立用途的文件。详细目录职责以根 README 为准。
+V234：移除 A3 工作流冗余历史注释、合并现行计划中的重复已完成版本叙述，执行步骤与原验收证据保留。V233：缩短 AGENTS、去除根 README 的历史流水账与 Demo 过期启动说明，纠正中文 README 现行评分。Git Tree 未发现完全相同的 Markdown 文件对；仅保留有独立用途的文件。详细目录职责以根 README 为准。
 
 - **删除**：根目录大小写重复的 `Agent.md` 兼容别名。它没有独立规则；标准入口是 [AGENTS.md](../AGENTS.md)。历史仍可由 Git log 查看。
 - **删除**：`purchasing/supplier-followup-return-trace-v120.md`（旧英文短稿还停留在“PR/CI 待验收”）。保留信息和范围更完整的 [`supplier-followup-return-traces-v120.md`](purchasing/supplier-followup-return-traces-v120.md)，不重复维护两份“V120”。

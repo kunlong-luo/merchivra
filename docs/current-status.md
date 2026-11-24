@@ -28,7 +28,11 @@
 
 ## V233 · 授权行版本与文档收敛（待验收）
 
-V116 为 Seller grant 与 Finance role 行 INSERT/UPDATE 分配非重用序列 revision；Reports scope、扫描任务和新报告绑定版本对，旧任务缺版本需 Owner 重启，旧报告保持 NULL，禁止历史补证。Worker 比较原请求版本，导入和 checkpoint 重查并锁授权行。覆盖 grant/role 行版本变更，不是全部 tenant/member/Marketplace 资格输入的 ABA 保证。新增 Java 版本差异负例，PG18/完整 A3 尚待独立验证；真实外部原件及会计签署未取得，V231 76/100 不变。
+V116 为 Seller grant 与 Finance role 行 INSERT/UPDATE 分配非重用序列 revision；Reports scope、扫描任务和新报告绑定版本对，旧任务缺版本需 Owner 重启，旧报告保持 NULL，禁止历史补证。Worker 比较原请求版本，导入和 checkpoint 重查并锁授权行。覆盖 grant/role 行版本变更，不是全部 tenant/member/Marketplace 资格输入的 ABA 保证。新增 Java 版本差异负例；[精确 V233 SHA](https://github.com/kunlong-luo/merchivra/commit/e8f2f199e24b2cdd99a3e3719510003f061dad01) 的 [快速 CI #45381222988 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45381222988) Java、Next、Compose 均成功，PG18 SKIPPED；完整 A3 尚待独立验证。真实外部原件及会计签署未取得，V231 76/100 不变。
+
+## V234 · V116 真 PG18 回归（待验收）
+
+新增 `scripts/smoke_reports_auth_revision_v234.py`，仅固定 GitHub main disposable PG18、OAuth OFF 运行。验证真实安装的 grant/role revision、两次独立提交 ABA、rollback、删除重建、跨租户 row lock、旧任务版本不匹配及原报告版本不可改写。SQL 测试不等于实际 Worker HTTP/真实签发验收；精确 V234 A3 尚未取得结果。文档治理移除工作流重复历史注释，保留原始历史于 Git，不缩减执行任务。
 
 ## 最近精确验收（切勿混用不同 SHA 的 CI）
 

@@ -11,7 +11,7 @@
 
 ## Current engineering status
 
-V232 original-report authorization checks were committed in [`96e6d9750993`](https://github.com/kunlong-luo/merchivra/commit/96e6d97509930c88c85e31f013eb7bd483d90ce9). [CI #45378894200](https://github.com/kunlong-luo/merchivra/actions/runs/45378894200) passed Java and web jobs but failed the AGENTS length guard; PostgreSQL was skipped. See [current status](docs/current-status.md) for exact evidence and remaining V233 gates.
+V233 [exact quick CI #45381222988](https://github.com/kunlong-luo/merchivra/actions/runs/45381222988) passed Java, Next and Compose; PG18 was skipped. V234 adds the disposable V116 revision regression to full A3. See [current status](docs/current-status.md) for exact results, including failures; no real external evidence or production approval.
 
 ## What the repository directories actually do
 
@@ -44,9 +44,11 @@ Root-level `.env.example`, `.gitignore`, `.editorconfig` configure safe local de
 
 **Deletion policy:** remove proven obsolete duplicate drafts and unused aliases; retain deployed code, rollback mechanisms, migration history, policies and version-specific A3/PG18/financial evidence. Git history preserves deleted drafts. The previously duplicated pending-PR V120 supplier note was removed; the canonical [completed V120 supplier trace](docs/purchasing/supplier-followup-return-traces-v120.md) remains. See [the documentation map](docs/README.md) and [document-control rules](docs/governance/document-control.md).
 
-### Directory maintenance (V233)
+### Directory maintenance (V233–V234)
 
 Tracked-tree audit before V233: 1,435 tracked blobs; no byte-identical Markdown file pairs. The existing root/domain directories still have independent runtime, policy, or evidence purposes. Shortened AGENTS to enduring policy, removed repeated release narratives from both root READMEs, and replaced stale Maven/Vue demo instructions with the current isolated workflow. Keep the V231 deleted aliases deleted; no additional whole file or directory is proven disposable in this pass. Historic evidence remains in the linked domain documents and Git history, not duplicated in current policies.
+
+V234 additionally removes the historical comment-only preamble in `.github/workflows/milestone-validation.yml` and consolidates past acceptance prose into current-status/domain evidence rather than the active roadmap. Workflow dispatch labels and all prior validation jobs remain; no independently useful directory is deleted.
 
 ## Quick start — isolated local PostgreSQL 18
 
