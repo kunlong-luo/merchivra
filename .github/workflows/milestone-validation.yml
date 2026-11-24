@@ -1,3 +1,5 @@
+# V219C: rerun PG18 after fixing only-one-tenant fixture assumption;
+# validate actual Owner/staff and foreign receipt / Marketplace HTTP.
 # V219B: rerun exact-main PG18 real Spring Owner/staff/cross-tenant
 # receipt-cost HTTP after preserving/checking original CI PG indexes.
 # V219: validate real Spring PG18 owner/staff/tenant/Marketplace V216 GET,
