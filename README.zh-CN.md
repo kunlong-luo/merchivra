@@ -11,7 +11,7 @@
 
 ## 当前工程状态
 
-V234 完整隔离 A3 7/7 通过，包含真实 PostgreSQL18 V116 版本检查；V235 服务层游标恢复待验收。精确 SHA、失败历史与剩余边界统一见[当前事实](docs/current-status.md)。
+V234 完整隔离 A3 7/7 通过，包含真实 PostgreSQL18 V116 版本检查；V235 快速 CI 通过，V236 增加真实 PG18 Java 服务回归。精确 SHA、失败历史与剩余边界统一见[当前事实](docs/current-status.md)。
 
 ## 一、仓库根目录：保留哪些，分别有什么用？
 
@@ -38,15 +38,15 @@ V234 完整隔离 A3 7/7 通过，包含真实 PostgreSQL18 V116 版本检查；
 | `docs/finance/` | 费用/结算/归属/退款 COGS、外部证据限制与利润核算的 Vxxx 实际证明；[V230 分类费用缺口清单](docs/finance/v230-external-source-proof-dossier-and-owner-workflow.md) |
 | `docs/testing/`、`docs/deployment/`、`docs/api/` | 精确 SHA 的 A3/CI、PG18 部署和备份安全、真实 Springdoc/Orval API 接入规则 |
 | `docs/architecture/`、`docs/requirements/`、`docs/product/` | 架构/ADR、需求验收/业务场景、尚待批准的真实财务业务政策 |
-| `docs/purchasing/`、`docs/inventory/`、`docs/catalog/`、`docs/operations/`、`docs/analytics/` | 采购、供应商、FBA、货位、Listing、异常/经营质量的分领域技术与历史证据 |
+| `docs/purchasing/`、`docs/inventory/`、`docs/catalog/`、`docs/operations/`、`docs/analytics/` | 采购、供应商、FBA、货位、Listing、异常/经营质量的分领域技术、运维手册与历史证据 |
 | `docs/security/`、`docs/integrations/` | 租户权限、Session、Amazon SP-API/Ads 安全与授权流程合同 |
-| `docs/design/`、`docs/ux/`、`docs/diagrams/`、`docs/processes/`、`docs/templates/`、`docs/ops/` | Next 页面设计、操作旅程、Mermaid 图、业务流程、ADR 模板、运维概要。某些只有一个文件，**但该文件有明确用途，不应为减少目录数就误删** |
+| `docs/design/`、`docs/ux/`、`docs/diagrams/`、`docs/processes/`、`docs/templates/` | Next 页面设计、操作旅程、Mermaid 图、业务流程、ADR 模板。某些只有一个文件，**但该文件有明确用途，不应为减少目录数就误删** |
 
 **本次清理原则**：真正重复、没有现行用途的文件直接删除；前向 Flyway 迁移、真实 CI 失败历史、版本评分、源账目证明、回退机制与尚未签署的 G1/DEC 文件保留。已删除早期 V120“PR 还在等 CI”的重复短稿，正式[供应商退货历史 V120 文档](docs/purchasing/supplier-followup-return-traces-v120.md) 保留。删除历史仍可从 Git commit 查看。完整文档入口/分类见 [docs/README.md](docs/README.md)，判定依据见 [文档控制规范](docs/governance/document-control.md)。
 
 ### 目录维护与去重
 
-V231 删除重复 Agent 别名与 V120 草稿；V233 精简规则与 Demo 指南，V234 去除过时工作流注释，V235 将 README/文档中心重复状态与验收流水账收敛到当前事实和领域证据。目录保留用途以上表为准；统一删留规则见[文档控制](docs/governance/document-control.md)。不删除历史迁移或真实验收任务。
+V231 删除重复 Agent 别名与 V120 草稿；V233 精简规则与 Demo 指南，V234 去除过时工作流注释，V235 将 README/文档中心重复状态与验收流水账收敛到当前事实和领域证据。目录保留用途以上表为准；统一删留规则见[文档控制](docs/governance/document-control.md)。V236 将单文件目录 `docs/ops/` 并入 `docs/operations/`，保留[运维手册](docs/operations/operations.md)；根 `ops/` 仍为实际运维工具。不删除历史迁移或真实验收任务。
 
 ## 三、本地启动（包含 PostgreSQL 18）
 

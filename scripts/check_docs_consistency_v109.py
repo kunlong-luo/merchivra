@@ -231,6 +231,19 @@ for current in ("docs/current-status.md", "docs/roadmap/current-plan.md",
     if current not in root_readme and current not in zh_readme:
         errors.append(f"Root READMEs omit current reference: {current}")
 
+# V236: consolidate the redundant single-file documentation directory.
+if (ROOT / "docs/ops").exists():
+    errors.append("Retired docs/ops directory reintroduced; use docs/operations")
+if not (ROOT / "docs/operations/operations.md").is_file():
+    errors.append("Canonical operations runbook missing")
+for relative in (ROOT / "docs").rglob("*.md"):
+    for found in INLINE.finditer(relative.read_text(encoding="utf-8")):
+        href = found.group(1).strip().split(' "', 1)[0].strip().strip("<>")
+        parts = urlsplit(href)
+        if not parts.scheme and not parts.netloc and parts.path:
+            if (relative.parent / unquote(parts.path)).resolve() == ROOT / "docs/ops/operations.md":
+                errors.append(f"{relative.relative_to(ROOT)}: stale moved runbook link")
+
 if errors:
     for error in errors:
         print("FAIL DOCS:", error)

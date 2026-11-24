@@ -11,7 +11,7 @@
 
 ## Current engineering status
 
-V234 completed the full isolated A3 (7/7), including actual PostgreSQL 18 V116 revision checks. V235 service-level cursor recovery is pending verification. Exact SHAs, results and limitations live only in [current status](docs/current-status.md).
+V234 completed the full isolated A3 (7/7), including actual PostgreSQL 18 V116 revision checks. V235 passed quick CI; V236 adds the opt-in actual PG18 Java service regression. Exact SHAs, results and limitations live only in [current status](docs/current-status.md).
 
 ## What the repository directories actually do
 
@@ -38,15 +38,15 @@ Root-level `.env.example`, `.gitignore`, `.editorconfig` configure safe local de
 | `finance/` | Original-currency source audits, refund/lot/settlement attribution and actual-profit blockers; [V230 source proof requirements](docs/finance/v230-external-source-proof-dossier-and-owner-workflow.md) |
 | `testing/`, `deployment/`, `api/` | CI/A3 policies, PG18/bootstrap/restore safety, real Springdoc/OpenAPI and Orval interface references |
 | `architecture/`, `requirements/`, `product/` | Architecture/ADRs, business acceptance, still-unsigned financial decisions and scope |
-| `purchasing/`, `inventory/`, `catalog/`, `operations/`, `analytics/` | Domain implementations and exact-version historical receipts, purchasing/FBA, catalog and business-data quality evidence |
+| `purchasing/`, `inventory/`, `catalog/`, `operations/`, `analytics/` | Domain implementations, purchasing/FBA, catalog, operational runbooks and business-data quality evidence |
 | `security/`, `integrations/` | Session/CSRF/tenant security and Seller/Ads/SP-API integration boundary documentation |
-| `design/`, `ux/`, `diagrams/`, `processes/`, `templates/`, `ops/` | Next UI references, user flows, Mermaid diagrams, ADR template and operations overview; some contain just one **referenced, useful** file |
+| `design/`, `ux/`, `diagrams/`, `processes/`, `templates/` | Next UI references, user flows, Mermaid diagrams, ADR template; some contain just one **referenced, useful** file |
 
 **Deletion policy:** remove proven obsolete duplicate drafts and unused aliases; retain deployed code, rollback mechanisms, migration history, policies and version-specific A3/PG18/financial evidence. Git history preserves deleted drafts. The previously duplicated pending-PR V120 supplier note was removed; the canonical [completed V120 supplier trace](docs/purchasing/supplier-followup-return-traces-v120.md) remains. See [the documentation map](docs/README.md) and [document-control rules](docs/governance/document-control.md).
 
 ### Directory maintenance
 
-Retain the functional directories above. V231 removed the obsolete Agent alias and duplicate V120 draft; V233 shortened policy/demo documents, V234 trimmed obsolete workflow comments, and V235 consolidates repeated status/history from README and the documentation index into the current-status and domain evidence. See [document control](docs/governance/document-control.md) for the single maintenance policy. No historical migration or validation task is removed.
+Retain the functional directories above. V231 removed the obsolete Agent alias and duplicate V120 draft; V233 shortened policy/demo documents, V234 trimmed obsolete workflow comments, and V235 consolidates repeated status/history from README and the documentation index into the current-status and domain evidence. See [document control](docs/governance/document-control.md) for the single maintenance policy. V236 merges the single-file `docs/ops/` into `docs/operations/`: [operations runbook](docs/operations/operations.md). Root `ops/` remains executable operational tooling. No historical migration or validation task is removed.
 
 ## Quick start — isolated local PostgreSQL 18
 

@@ -1,6 +1,6 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-24 · V234 的 V116 真 PG18 回归已通过完整 A3 7/7；V235 服务层游标清理待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-24 · V234 的 V116 真 PG18 回归已通过完整 A3 7/7；V235 快速 CI 通过；V236 真 PG18 Java 服务回归待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 核心项目状态
 
@@ -34,9 +34,13 @@ V116 为 Seller grant 与 Finance role 行 INSERT/UPDATE 分配非重用序列 r
 
 新增 `scripts/smoke_reports_auth_revision_v234.py`，仅固定 GitHub main disposable PG18、OAuth OFF 运行。验证真实安装的 grant/role revision、两次独立提交 ABA、rollback、删除重建、跨租户 row lock、旧任务版本不匹配及原报告版本不可改写。SQL 测试不等于实际 Worker HTTP/真实签发验收；精确 [SHA `42ea8c9b4fad`](https://github.com/kunlong-luo/merchivra/commit/42ea8c9b4fadb6bcdb9a1446cb943c5518338e85) 的 [A3 #45386913964](https://github.com/kunlong-luo/merchivra/actions/runs/45386913964)（run_attempt=1，7/7 SUCCESS）及 [CI #45386913906](https://github.com/kunlong-luo/merchivra/actions/runs/45386913906) SUCCESS；PG18 job #138420153895 实际输出 PASS V234 actual PG18 V116 grant/role revisions。快 CI 的 PG18 按策略跳过。文档治理移除工作流重复历史注释，保留原始历史于 Git，不缩减执行任务。
 
-## V235 · Reports 授权失败游标清除（待验收）
+## V235 · Reports 授权失败游标清除（快速 CI 已验收）
 
-Owner start 在任务行锁后复查并锁定 grant/role 版本；授权缺失、版本不符或远程 401/403/本地 SecurityException 暂停时清除旧 token/offset，禁止自动重试授权错误；一般网络错误保留游标供有界重试，失效分页重启。新增 Java 分类负例；实际 Owner restart/跨进程服务验收仍需完成。仅本地工程证据，不提高外部真实性评分。
+Owner start 在任务行锁后复查并锁定 grant/role 版本；授权缺失、版本不符或远程 401/403/本地 SecurityException 暂停时清除旧 token/offset，禁止自动重试授权错误；一般网络错误保留游标供有界重试，失效分页重启。新增 Java 分类负例；[精确 SHA bbdeed878892](https://github.com/kunlong-luo/merchivra/commit/bbdeed878892db67c40dc737972235d443c60078) 的 [CI #45392374653](https://github.com/kunlong-luo/merchivra/actions/runs/45392374653) SUCCESS；实际 Owner restart/跨进程服务验收仍需完成。仅本地工程证据，不提高外部真实性评分。
+
+## V236 · Java 服务与 PG18 联动（待验收）
+
+在既有 SettlementReportScanServiceTest 内追加仅 GitHub main disposable PG18 可运行的回归，由 A3 调用真实 JdbcTemplate、事务管理器、Seller vault 与 start/step/fenced import；远程 Worker 为合成 mock。覆盖旧缺版本任务暂停、Owner restart、旧 token 清除、grant revision 变化、在途 role revision 变化拒绝入库、重新启动后原始摘要与版本对冻结。未执行真实 Amazon API/真实会计认证。合并 docs/ops 至 docs/operations，保留运维手册，新增旧链接守卫。
 
 ## 最近精确验收（切勿混用不同 SHA 的 CI）
 
