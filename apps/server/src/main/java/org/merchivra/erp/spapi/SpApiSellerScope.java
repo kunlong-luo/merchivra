@@ -10,7 +10,18 @@ import java.util.UUID;
  */
 public record SpApiSellerScope(UUID tenantId, UUID sellerAccountId,
         String sellerId, String marketplaceId, SpApiRegion region,
-        String refreshToken, Set<String> approvedRoles) {
+        String refreshToken, Set<String> approvedRoles,
+        Long grantRevision, Long financeRoleRevision) {
+    public SpApiSellerScope(UUID tenantId,UUID sellerAccountId,String sellerId,
+        String marketplaceId,SpApiRegion region,String refreshToken,Set<String> approvedRoles) {
+        this(tenantId,sellerAccountId,sellerId,marketplaceId,region,refreshToken,
+            approvedRoles,null,null);
+    }
+    public boolean hasReportsRevisions() {
+        return grantRevision!=null && grantRevision>0
+            && financeRoleRevision!=null && financeRoleRevision>0
+            && approvedRoles.contains("Finance and Accounting");
+    }
     @Override public String toString() {
         return "SpApiSellerScope[tenantId=" + tenantId + ",sellerAccountId=" + sellerAccountId
             + ",sellerId=<redacted>,marketplaceId=" + marketplaceId

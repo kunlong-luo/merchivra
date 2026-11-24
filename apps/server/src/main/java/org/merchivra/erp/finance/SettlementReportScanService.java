@@ -49,7 +49,7 @@ public class SettlementReportScanService {
     private record Market(UUID account,String site) {}
     private record Job(UUID id,String state,Instant from,Instant until,String token,
         Instant tokenAt,int offset,int page,int generation,int imported,int attempts,
-        long epoch,UUID owner,Instant lease,Instant retry,Instant updated) {}
+        long epoch,UUID owner,Instant lease,Instant retry,Instant updated,Long grantRevision,Long roleRevision) {}
     private record Claim(UUID tenant,UUID marketplace,Market market,Job job,
         UUID owner,long epoch,SpApiSellerScope scope) {}
 
@@ -74,13 +74,15 @@ public class SettlementReportScanService {
     }
     private SpApiSellerScope approved(UUID tenant,Market market) {
         return vault.loadFinancesApproved(tenant,market.account(),market.site())
+            .filter(SpApiSellerScope::hasReportsRevisions)
             .orElseThrow(()->new SecurityException("Finance Seller permission absent"));
     }
     private Job job(UUID tenant,UUID mp,boolean lock) {
         return jdbc.query("""
             SELECT id,state,window_after,window_before,next_token,token_issued_at,
                    row_offset,page_index,generation,imported_count,retry_count,
-                   lease_epoch,lease_owner,lease_expires_at,retry_at,updated_at
+                   lease_epoch,lease_owner,lease_expires_at,retry_at,updated_at,
+                   report_grant_revision,report_role_revision
             FROM spapi_settlement_scan_job
             WHERE tenant_id=? AND seller_marketplace_id=?
             """+(lock?" FOR UPDATE":""),
@@ -91,7 +93,8 @@ public class SettlementReportScanService {
                 r.getInt("generation"),r.getInt("imported_count"),
                 r.getInt("retry_count"),r.getLong("lease_epoch"),
                 r.getObject("lease_owner",UUID.class),time(r,"lease_expires_at"),
-                time(r,"retry_at"),time(r,"updated_at")),tenant,mp)
+                time(r,"retry_at"),time(r,"updated_at"),
+                r.getObject("report_grant_revision",Long.class),r.getObject("report_role_revision",Long.class)),tenant,mp)
             .stream().findFirst().orElse(null);
     }
     private Status view(UUID tenant,Job j) {
@@ -114,17 +117,17 @@ public class SettlementReportScanService {
         if(actor==null)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
         return tx.execute(t->{
             Market m=market(tenant,mp);
-            approved(tenant,m);
+            var scope=approved(tenant,m);
             Instant until=clock.instant().minus(Duration.ofHours(48));
             Instant from=until.minus(Duration.ofDays(14));
             UUID id=UUID.randomUUID();
             jdbc.update("""
                 INSERT INTO spapi_settlement_scan_job
                   (id,tenant_id,seller_marketplace_id,seller_account_id,created_by,
-                   window_after,window_before)
-                VALUES (?,?,?,?,?,?,?)
+                   window_after,window_before,report_grant_revision,report_role_revision)
+                VALUES (?,?,?,?,?,?,?,?,?)
                 ON CONFLICT (tenant_id,seller_marketplace_id) DO NOTHING
-                """,id,tenant,mp,m.account(),actor,db(from),db(until));
+                """,id,tenant,mp,m.account(),actor,db(from),db(until),scope.grantRevision(),scope.financeRoleRevision());
             Job previous=job(tenant,mp,true);
             if(previous==null)throw new IllegalStateException("Report job missing");
             if("RUNNING".equals(previous.state())
@@ -133,13 +136,14 @@ public class SettlementReportScanService {
             if(!previous.id().equals(id))jdbc.update("""
                 UPDATE spapi_settlement_scan_job
                 SET state='READY',window_after=?,window_before=?,
+                    report_grant_revision=?,report_role_revision=?,
                     next_token=NULL,token_issued_at=NULL,row_offset=0,
                     page_index=0,generation=generation+1,
                     lease_owner=NULL,lease_expires_at=NULL,retry_at=NULL,
                     retry_count=0,last_failure_code=NULL,imported_count=0,
                     completed_at=NULL,updated_at=now()
                 WHERE tenant_id=? AND id=?
-                """,db(from),db(until),tenant,previous.id());
+                """,db(from),db(until),scope.grantRevision(),scope.financeRoleRevision(),tenant,previous.id());
             return view(tenant,job(tenant,mp,false));
         });
     }
@@ -172,6 +176,16 @@ public class SettlementReportScanService {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,"Report lease active");
             if(j.retry()!=null&&j.retry().isAfter(now))
                 throw new ResponseStatusException(HttpStatus.CONFLICT,"Report retry not due");
+            if(!revisionsMatch(scope,j.grantRevision(),j.roleRevision())) {
+                jdbc.update("""
+                    UPDATE spapi_settlement_scan_job
+                    SET state='PAUSED',last_failure_code='AUTHORIZATION_REVISION_CHANGED',
+                        next_token=NULL,token_issued_at=NULL,row_offset=0,
+                        lease_owner=NULL,lease_expires_at=NULL,updated_at=now()
+                    WHERE tenant_id=? AND id=?
+                    """,tenant,j.id());
+                return null;
+            }
             // Conservative cursor lifetime with overlapping-window replay.
             if((j.token()!=null&&(j.tokenAt()==null
                 ||j.tokenAt().plus(Duration.ofMinutes(15)).isBefore(now)))
@@ -197,7 +211,7 @@ public class SettlementReportScanService {
         });
         if(c==null)return status(tenant,mp);
         try {
-            var part=worker.scanPage(c.tenant(),c.market().account(),c.market().site(),
+            var part=worker.scanPage(c.scope(),c.tenant(),c.market().account(),c.market().site(),
                 db(c.job().from()),db(c.job().until()),c.job().token(),
                 c.job().offset(),2,(scope,reportId,documentId,bytes,gzip)->
                     importFenced(c,scope,reportId,documentId,bytes,gzip));
@@ -207,6 +221,7 @@ public class SettlementReportScanService {
             return tx.execute(t->{
                 Job j=assertLease(c);
                 sameScope(c.scope(),approved(tenant,c.market()));
+                lockRevisions(c.scope());
                 int changed=jdbc.update("""
                     UPDATE spapi_settlement_scan_job
                     SET state=?,next_token=?,token_issued_at=?,row_offset=?,
@@ -243,6 +258,25 @@ public class SettlementReportScanService {
                 live,reportId,documentId,bytes,gzip);
         });
     }
+    static boolean revisionsMatch(SpApiSellerScope scope,Long grant,Long role) {
+        return scope!=null && scope.hasReportsRevisions()
+            && Objects.equals(scope.grantRevision(),grant)
+            && Objects.equals(scope.financeRoleRevision(),role);
+    }
+    private void lockRevisions(SpApiSellerScope scope) {
+        var rows=jdbc.query("""
+            SELECT g.report_auth_revision FROM spapi_seller_authorization g
+            JOIN spapi_finances_role_evidence re
+              ON re.tenant_id=g.tenant_id AND re.seller_account_id=g.seller_account_id
+            WHERE g.tenant_id=? AND g.seller_account_id=?
+              AND g.report_auth_revision=? AND re.report_auth_revision=?
+              AND g.status='VERIFIED' AND re.revoked_at IS NULL
+              AND re.expires_at>now() AND re.grant_verified_at=g.verified_at
+            FOR SHARE OF g,re
+            """,(rs,n)->rs.getLong(1),scope.tenantId(),scope.sellerAccountId(),
+            scope.grantRevision(),scope.financeRoleRevision());
+        if(rows.size()!=1)throw new SecurityException("Finance grant changed during report read");
+    }
     private static void sameScope(SpApiSellerScope expected,SpApiSellerScope live) {
         SpApiSettlementReportsWorker.requireUnchangedFinanceScope(expected,live);
     }
@@ -250,6 +284,7 @@ public class SettlementReportScanService {
         Job j=job(c.tenant(),c.marketplace(),true);
         if(j==null || !"RUNNING".equals(j.state()) || j.epoch()!=c.epoch()
             || !c.owner().equals(j.owner())
+            || !revisionsMatch(c.scope(),j.grantRevision(),j.roleRevision())
             || j.lease()==null||!j.lease().isAfter(clock.instant()))
             throw new SecurityException("Stale Reports worker lease");
         return j;

@@ -26,6 +26,10 @@
 
 本轮针对已有 Amazon Reports Worker/Scan Service 收紧 scope 比较，防止检测到刷新凭证/角色/站点变更后仍继续下载、入库或提交分页进度。新增两组 Java 合成回归；[精确 SHA `96e6d9750993`](https://github.com/kunlong-luo/merchivra/commit/96e6d97509930c88c85e31f013eb7bd483d90ce9) 的 [CI #45378894200](https://github.com/kunlong-luo/merchivra/actions/runs/45378894200) Java25/Gradle 与 React/Next 成功，Compose job 的文档长度守卫失败，PG18 跳过；整轮 FAILURE，未完成 A3，也没有真实授权报告证据。此项只是观察到的授权变化阻断，不能证明未发生 ABA 或真正第三方签发身份。V231 76/100、真实利润10/25、OAuth OFF、`realizedNetProfit=null` 和生产 NO-GO 仍是当前状态。具体任务见[现行计划](roadmap/current-plan.md)。
 
+## V233 · 授权行版本与文档收敛（待验收）
+
+V116 为 Seller grant 与 Finance role 行 INSERT/UPDATE 分配非重用序列 revision；Reports scope、扫描任务和新报告绑定版本对，旧任务缺版本需 Owner 重启，旧报告保持 NULL，禁止历史补证。Worker 比较原请求版本，导入和 checkpoint 重查并锁授权行。覆盖 grant/role 行版本变更，不是全部 tenant/member/Marketplace 资格输入的 ABA 保证。新增 Java 版本差异负例，PG18/完整 A3 尚待独立验证；真实外部原件及会计签署未取得，V231 76/100 不变。
+
 ## 最近精确验收（切勿混用不同 SHA 的 CI）
 
 | 阶段 | 精确代码 / 测试 | 技术证明边界 |

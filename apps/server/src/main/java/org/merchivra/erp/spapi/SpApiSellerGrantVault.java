@@ -22,9 +22,9 @@ public final class SpApiSellerGrantVault {
     public Optional<SpApiSellerScope> loadVerified(UUID tenant, UUID account, String marketplaceId) {
         if (tenant == null || account == null || marketplaceId == null || marketplaceId.isBlank())
             throw new IllegalArgumentException("Server-side Seller scope required");
-        record Grant(String seller, String region, byte[] cipherText, byte[] nonce, int version) {}
+        record Grant(String seller, String region, byte[] cipherText, byte[] nonce, int version, long revision) {}
         List<Grant> result=jdbc.query("""
-            SELECT g.seller_id,g.region,g.ciphertext,g.nonce,g.key_version
+            SELECT g.seller_id,g.region,g.ciphertext,g.nonce,g.key_version,g.report_auth_revision
             FROM spapi_seller_authorization g
             JOIN seller_account sa ON sa.tenant_id=g.tenant_id
               AND sa.id=g.seller_account_id
@@ -44,14 +44,14 @@ public final class SpApiSellerGrantVault {
                   AND v.verified_at > now() - interval '24 hours'
               )
             """, (rs,n)->new Grant(rs.getString("seller_id"),rs.getString("region"),
-                rs.getBytes("ciphertext"),rs.getBytes("nonce"),rs.getInt("key_version")),
+                rs.getBytes("ciphertext"),rs.getBytes("nonce"),rs.getInt("key_version"),rs.getLong("report_auth_revision")),
             tenant,account,marketplaceId);
-        if (result.isEmpty()) return Optional.empty();
+        if (result.size()!=1) return Optional.empty();
         Grant g=result.getFirst();
         String refresh=cipher.decrypt(tenant,account,g.seller(),
             new SellerTokenCipher.Sealed(g.cipherText(),g.nonce(),g.version()));
         return Optional.of(new SpApiSellerScope(tenant,account,g.seller(),marketplaceId,
-            SpApiRegion.valueOf(g.region()),refresh,Set.of()));
+            SpApiRegion.valueOf(g.region()),refresh,Set.of(),g.revision(),null));
     }
 
     /**
@@ -92,7 +92,7 @@ public final class SpApiSellerGrantVault {
         return Optional.of(new SpApiSellerScope(
             scope.tenantId(),scope.sellerAccountId(),scope.sellerId(),
             scope.marketplaceId(),scope.region(),scope.refreshToken(),
-            Set.of("Inventory and Order Tracking")));
+            Set.of("Inventory and Order Tracking"),scope.grantRevision(),null));
     }
     /**
      * Independent, expiring Finance and Accounting role review. Orders approval
@@ -103,8 +103,8 @@ public final class SpApiSellerGrantVault {
         Optional<SpApiSellerScope> base=loadVerified(tenant,account,marketplaceId);
         if(base.isEmpty())return Optional.empty();
         SpApiSellerScope scope=base.get();
-        List<String> roles=jdbc.query("""
-            SELECT e.role_code FROM spapi_finances_role_evidence e
+        List<Long> roles=jdbc.query("""
+            SELECT e.report_auth_revision FROM spapi_finances_role_evidence e
             JOIN spapi_seller_authorization g
               ON g.tenant_id=e.tenant_id AND g.seller_account_id=e.seller_account_id
             WHERE e.tenant_id=? AND e.seller_account_id=?
@@ -113,6 +113,7 @@ public final class SpApiSellerGrantVault {
               AND e.revoked_at IS NULL AND e.expires_at>now()
               AND e.grant_verified_at=g.verified_at
               AND g.status='VERIFIED' AND g.seller_id=? AND g.region=?
+              AND g.report_auth_revision=?
               AND EXISTS (
                 SELECT 1 FROM membership m JOIN app_user u ON u.id=m.user_id
                 JOIN role_binding rb ON rb.tenant_id=m.tenant_id AND rb.user_id=m.user_id
@@ -124,12 +125,12 @@ public final class SpApiSellerGrantVault {
                     AND owner.role_code='OWNER' AND owner.seller_account_id IS NULL)
                   AND (rb.seller_account_id IS NULL OR rb.seller_account_id=e.seller_account_id)
               )
-            """,(rs,n)->rs.getString(1),tenant,account,scope.sellerId(),
-            scope.region().name());
-        if(!roles.contains("Finance and Accounting"))return Optional.empty();
+            """,(rs,n)->rs.getLong(1),tenant,account,scope.sellerId(),
+            scope.region().name(),scope.grantRevision());
+        if(roles.size()!=1 || roles.getFirst()<=0)return Optional.empty();
         return Optional.of(new SpApiSellerScope(scope.tenantId(),scope.sellerAccountId(),
             scope.sellerId(),scope.marketplaceId(),scope.region(),scope.refreshToken(),
-            Set.of("Finance and Accounting")));
+            Set.of("Finance and Accounting"),scope.grantRevision(),roles.getFirst()));
     }
 
 }

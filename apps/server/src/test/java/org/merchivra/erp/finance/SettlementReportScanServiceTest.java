@@ -54,15 +54,15 @@ class SettlementReportScanServiceTest {
         String site="ATVPDKIKX0DER";
         var roles=Set.of("Finance and Accounting");
         var original=new SpApiSellerScope(tenant,account,"A1TESTSELLER",site,
-            SpApiRegion.NA,"synthetic-old-grant",roles);
+            SpApiRegion.NA,"synthetic-old-grant",roles,1L,2L);
         var unchanged=new SpApiSellerScope(tenant,account,"A1TESTSELLER",site,
-            SpApiRegion.NA,"synthetic-old-grant",roles);
+            SpApiRegion.NA,"synthetic-old-grant",roles,1L,2L);
         var rotated=new SpApiSellerScope(tenant,account,"A1TESTSELLER",site,
-            SpApiRegion.NA,"synthetic-new-grant",roles);
+            SpApiRegion.NA,"synthetic-new-grant",roles,3L,2L);
         var otherSite=new SpApiSellerScope(tenant,account,"A1TESTSELLER","A1OTHER",
-            SpApiRegion.NA,"synthetic-old-grant",roles);
+            SpApiRegion.NA,"synthetic-old-grant",roles,1L,2L);
         var noFinance=new SpApiSellerScope(tenant,account,"A1TESTSELLER",site,
-            SpApiRegion.NA,"synthetic-old-grant",Set.of());
+            SpApiRegion.NA,"synthetic-old-grant",Set.of(),1L,2L);
         assertDoesNotThrow(()->SpApiSettlementReportsWorker.requireUnchangedFinanceScope(original,unchanged));
         var rejected=assertThrows(SecurityException.class,
             ()->SpApiSettlementReportsWorker.requireUnchangedFinanceScope(original,rotated));
@@ -75,6 +75,18 @@ class SettlementReportScanServiceTest {
             ()->SpApiSettlementReportsWorker.requireUnchangedFinanceScope(noFinance,noFinance));
         assertThrows(SecurityException.class,
             ()->SpApiSettlementReportsWorker.requireUnchangedFinanceScope(original,null));
+        var aba=new SpApiSellerScope(tenant,account,"A1TESTSELLER",site,
+            SpApiRegion.NA,"synthetic-old-grant",roles,4L,2L);
+        var roleAba=new SpApiSellerScope(tenant,account,"A1TESTSELLER",site,
+            SpApiRegion.NA,"synthetic-old-grant",roles,1L,5L);
+        assertThrows(SecurityException.class,
+            ()->SpApiSettlementReportsWorker.requireUnchangedFinanceScope(original,aba));
+        assertThrows(SecurityException.class,
+            ()->SpApiSettlementReportsWorker.requireUnchangedFinanceScope(original,roleAba));
+        assertTrue(SettlementReportScanService.revisionsMatch(original,1L,2L));
+        assertFalse(SettlementReportScanService.revisionsMatch(original,null,null));
+        assertFalse(SettlementReportScanService.revisionsMatch(aba,1L,2L));
+        assertFalse(SettlementReportScanService.revisionsMatch(roleAba,1L,2L));
     }
 
     @Test
@@ -83,9 +95,9 @@ class SettlementReportScanServiceTest {
         String site="ATVPDKIKX0DER";
         var roles=Set.of("Finance and Accounting");
         var original=new SpApiSellerScope(tenant,account,"A1TESTSELLER",site,
-            SpApiRegion.NA,"synthetic-old-grant",roles);
+            SpApiRegion.NA,"synthetic-old-grant",roles,1L,2L);
         var rotated=new SpApiSellerScope(tenant,account,"A1TESTSELLER",site,
-            SpApiRegion.NA,"synthetic-new-grant",roles);
+            SpApiRegion.NA,"synthetic-new-grant",roles,3L,2L);
         var vault=mock(SpApiSellerGrantVault.class);
         var sdk=mock(SpApiOfficialSdkFactory.class);
         var downloader=mock(SignedReportDocumentDownloader.class);
@@ -96,7 +108,7 @@ class SettlementReportScanServiceTest {
         var worker=new SpApiSettlementReportsWorker(sdk,vault,downloader,importer);
         OffsetDateTime now=OffsetDateTime.now();
         // SDK mocked; guard must run before even interpreting the list response.
-        assertThrows(SecurityException.class,()->worker.scanPage(tenant,account,site,
+        assertThrows(SecurityException.class,()->worker.scanPage(original,tenant,account,site,
             now.minusDays(1),now,null,0,2,persist));
         verify(sdk).executeObservedRead(eq(original),eq(SpApiOperation.GET_REPORTS),
             eq(ReportsApi.class),any());
@@ -108,15 +120,15 @@ class SettlementReportScanServiceTest {
     void reportWorkerPageValidatesUnboundedInputWithoutNetworkOrDb(){
         var worker=new SpApiSettlementReportsWorker(null,null,null,null);
         assertThrows(IllegalArgumentException.class,()->worker.scanPage(
-            UUID.randomUUID(),UUID.randomUUID(),"ATVPDKIKX0DER",
+            null,UUID.randomUUID(),UUID.randomUUID(),"ATVPDKIKX0DER",
             java.time.OffsetDateTime.now().minusDays(15),java.time.OffsetDateTime.now(),
             null,0,2,(scope,report,doc,body,gzip)->{}));
         assertThrows(IllegalArgumentException.class,()->worker.scanPage(
-            UUID.randomUUID(),UUID.randomUUID(),"ATVPDKIKX0DER",
+            null,UUID.randomUUID(),UUID.randomUUID(),"ATVPDKIKX0DER",
             java.time.OffsetDateTime.now().minusDays(1),java.time.OffsetDateTime.now(),
             null,1001,2,(scope,report,doc,body,gzip)->{}));
         assertThrows(IllegalArgumentException.class,()->worker.scanPage(
-            UUID.randomUUID(),UUID.randomUUID(),"ATVPDKIKX0DER",
+            null,UUID.randomUUID(),UUID.randomUUID(),"ATVPDKIKX0DER",
             java.time.OffsetDateTime.now().minusDays(1),java.time.OffsetDateTime.now(),
             null,0,3,(scope,report,doc,body,gzip)->{}));
     }

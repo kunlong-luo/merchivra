@@ -48,7 +48,7 @@ public class SpApiSettlementReportsWorker {
      * documents commit. If a worker dies first, safe replay skips identical
      * immutable report IDs. Old pagination tokens are reset by the coordinator.
      */
-    public Page scanPage(UUID tenant,UUID account,String marketplace,
+    public Page scanPage(SpApiSellerScope expected,UUID tenant,UUID account,String marketplace,
         OffsetDateTime from,OffsetDateTime until,String token,int offset,int maxNew,
         FencedImport fencedImport) throws Exception {
         if(tenant==null || account==null || marketplace==null || from==null || until==null
@@ -58,6 +58,7 @@ public class SpApiSettlementReportsWorker {
             || (token!=null && (token.isBlank() || token.length()>8192)))
             throw new IllegalArgumentException("Invalid bounded Reports page scope");
         var seller=approved(tenant,account,marketplace);
+        requireUnchangedFinanceScope(expected,seller);
         var result=sdk.executeObservedRead(seller,SpApiOperation.GET_REPORTS,
             ReportsApi.class,api->token==null
                 ? api.getReportsWithHttpInfo(
@@ -126,11 +127,11 @@ public class SpApiSettlementReportsWorker {
      * Never re-label an in-flight original response with another Seller grant.
      * Record equality includes the refresh credential, not just public scope.
      * No token/hash is exposed or persisted by this check. This is an
-     * observed-scope guard, not a committed grant-epoch/ABA guarantee.
+     * grant/role revision guard, not an exhaustive ABA guard for all eligibility inputs.
      */
     static void requireUnchangedFinanceScope(SpApiSellerScope expected,SpApiSellerScope live) {
         if(expected==null || live==null
-            || !expected.approvedRoles().contains("Finance and Accounting")
+            || !expected.hasReportsRevisions()
             || !expected.equals(live))
             throw new SecurityException("Finance grant changed during report read");
     }

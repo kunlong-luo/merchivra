@@ -42,7 +42,7 @@ public class SettlementReportImportService {
     @Transactional
     public Imported importDocument(SpApiSellerScope approved,String amazonReportId,
         String reportDocumentId,byte[] body,boolean gzip) {
-        if(approved==null || !approved.approvedRoles().contains("Finance and Accounting"))
+        if(approved==null || !approved.hasReportsRevisions())
             throw new SecurityException("Verified Finance Seller scope required");
         if(!safeId(amazonReportId,160) || !safeId(reportDocumentId,256))
             throw new IllegalArgumentException("Invalid Amazon Reports identifiers");
@@ -59,6 +59,7 @@ public class SettlementReportImportService {
               AND re.seller_account_id=g.seller_account_id
             WHERE m.tenant_id=? AND a.id=? AND m.marketplace_id=?
               AND a.seller_id=? AND a.region=? AND a.connection_status='CONNECTED'
+              AND g.report_auth_revision=? AND re.report_auth_revision=?
               AND g.status='VERIFIED' AND g.seller_id=a.seller_id
               AND g.region=a.region AND re.role_code='Finance and Accounting'
               AND re.evidence_kind='EXTERNAL_APP_ROLE_REVIEW'
@@ -87,7 +88,8 @@ public class SettlementReportImportService {
             """,(rs,n)->new Market(rs.getObject(1,UUID.class),
                 rs.getString(2).trim()),
             approved.tenantId(),approved.sellerAccountId(),approved.marketplaceId(),
-            approved.sellerId(),approved.region().name());
+            approved.sellerId(),approved.region().name(),
+            approved.grantRevision(),approved.financeRoleRevision());
         if(allowed.size()!=1)
             throw new SecurityException("Current Seller Finance scope no longer approved");
         Market market=allowed.getFirst();
@@ -102,13 +104,14 @@ public class SettlementReportImportService {
                   (id,tenant_id,seller_marketplace_id,amazon_report_id,
                    report_document_id,report_type,state,source_origin,
                    document_sha256,settlement_reference,statement_currency,
-                   declared_net,line_count)
-                VALUES (?,?,?,?,?,?,'IMPORTED','LIVE',?,?,?,?,?)
+                   declared_net,line_count,report_grant_revision,report_role_revision)
+                VALUES (?,?,?,?,?,?,'IMPORTED','LIVE',?,?,?,?,?,?,?)
                 ON CONFLICT (tenant_id,seller_marketplace_id,amazon_report_id)
                   DO NOTHING
                 """,id,approved.tenantId(),market.id(),amazonReportId,
                 reportDocumentId,TYPE,hash,parsed.settlementId(),
-                parsed.currency(),parsed.declaredNet(),parsed.lines().size());
+                parsed.currency(),parsed.declaredNet(),parsed.lines().size(),
+                approved.grantRevision(),approved.financeRoleRevision());
             if(inserted==1) {
                 for(var line:parsed.lines()) {
                     jdbc.update("""
@@ -162,7 +165,7 @@ public class SettlementReportImportService {
      */
     public boolean alreadyImported(SpApiSellerScope approved,String amazonReportId,
         String documentId) {
-        if(approved==null || !approved.approvedRoles().contains("Finance and Accounting")
+        if(approved==null || !approved.hasReportsRevisions()
             || !safeId(amazonReportId,160) || !safeId(documentId,256))
             throw new SecurityException("Finance report scope required");
         List<String> found=jdbc.query("""

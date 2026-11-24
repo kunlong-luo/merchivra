@@ -17,7 +17,7 @@ class SettlementReportImportServiceTest {
 
     private SpApiSellerScope scope(Set<String> roles) {
         return new SpApiSellerScope(UUID.randomUUID(),UUID.randomUUID(),
-            "A1REALSELLER","ATVPDKIKX0DER",SpApiRegion.NA,"SECRET-GRANT",roles);
+            "A1REALSELLER","ATVPDKIKX0DER",SpApiRegion.NA,"SECRET-GRANT",roles,1L,2L);
     }
 
     @Test
@@ -39,7 +39,7 @@ class SettlementReportImportServiceTest {
         assertThrows(SecurityException.class,()->
             service.importDocument(finance,"RPT-12345678","DOC-12345678",report,false));
         verify(jdbc).query(contains("spapi_finances_role_evidence"),any(
-            org.springframework.jdbc.core.RowMapper.class),any(),any(),any(),any(),any());
+            org.springframework.jdbc.core.RowMapper.class),any(),any(),any(),any(),any(),eq(1L),eq(2L));
         verify(jdbc,never()).update(anyString(),any(Object[].class));
     }
 

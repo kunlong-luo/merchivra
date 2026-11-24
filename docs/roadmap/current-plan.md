@@ -64,6 +64,10 @@ V230 首轮 [#45367537947](https://github.com/kunlong-luo/merchivra/actions/runs
 - 新增合成 Java 负例：同 Seller/Marketplace 刷新凭证变化、角色缺失、站点变化、空 scope，以及列表返回后凭证轮换时不得触发文档下载或入库。[精确 SHA `96e6d9750993`](https://github.com/kunlong-luo/merchivra/commit/96e6d97509930c88c85e31f013eb7bd483d90ce9) 的 [CI #45378894200](https://github.com/kunlong-luo/merchivra/actions/runs/45378894200) Java/Next 成功、文档长度守卫失败，PG18 跳过；不得宣称整轮或 A3 成功。
 - 局限：这是观察到的 scope 变化阻断，不是持久化 grant generation/ABA 防护；现有 SQL 授权复核、分页跨任务版本绑定、凭证撤销与真实外部报告的身份/完整性仍需分别验收。未取得真实材料或 G1 签署，不得将技术成功归为 E1 已完成或加分。
 
+### V233 · 授权行 revision 持久化与旧任务隔离（待验收）
+
+V116 的 grant/Finance role 行每次 INSERT/UPDATE 获得新 revision，保守地包括密钥重包及无变化 UPDATE；旧 scope/游标不可跨版本继续。新报告冻结版本对，历史报告 NULL 不回填。待真 PG18 两连接提交 A→B→A、回滚、删除重建、授权行锁、旧任务重启与跨租户测试；其他资格输入 ABA 尚未覆盖。不得将本地授权版本当作第三方签发认证；Seller/Ads OAuth OFF、G1/DEC 未签、利润 NULL、#104 NO-GO。
+
 ## 文档清理规则
 
 - 现行入口只保留 [当前状态](../current-status.md)、本计划、[工程规范](../governance/engineering-standards.md)、[AGENTS](../../AGENTS.md)、[文档控制](../governance/document-control.md)及具体运行指引。旧历史计划 [`docs/roadmap.md`](../roadmap.md)、[V108](mvp-freeze-release-v108.md)标记 ARCHIVE，**不再重用其“下一步”**。
