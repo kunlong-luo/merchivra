@@ -60,6 +60,36 @@ class CostSourceReviewServiceTest {
                 SHA,LocalDate.of(2026,11,10),"-2","USD"))).getStatusCode());
         verifyNoInteractions(jdbc);
     }
+    @Test void batchRejectsMissingActorBoundsDuplicatesAndInvalidDraftBeforeDatabase() {
+        var jdbc=mock(JdbcTemplate.class);
+        var service=new CostSourceReviewService(jdbc);
+        UUID tenant=UUID.randomUUID(),mp=UUID.randomUUID(),actor=UUID.randomUUID();
+        assertEquals(HttpStatus.UNAUTHORIZED,assertThrows(
+            ResponseStatusException.class,
+            ()->service.createBatch(tenant,mp,null,List.of(draft()))).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(
+            ResponseStatusException.class,
+            ()->service.createBatch(tenant,mp,actor,List.of())).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(
+            ResponseStatusException.class,
+            ()->service.createBatch(tenant,mp,actor,null)).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(
+            ResponseStatusException.class,
+            ()->service.createBatch(tenant,mp,actor,
+                java.util.Collections.nCopies(21,draft()))).getStatusCode());
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(
+            ResponseStatusException.class,
+            ()->service.createBatch(tenant,mp,actor,
+                List.of(draft(),draft()))).getStatusCode());
+        var invalid=new CostSourceReviewService.Draft("INBOUND_FREIGHT",
+            "MANUAL_INVOICE","INVOICE-2026-0002",
+            "0".repeat(64),LocalDate.of(2026,11,10),"12.340000","USD");
+        assertEquals(HttpStatus.BAD_REQUEST,assertThrows(
+            ResponseStatusException.class,
+            ()->service.createBatch(tenant,mp,actor,
+                List.of(draft(),invalid))).getStatusCode());
+        verifyNoInteractions(jdbc);
+    }
     @Test void reviewerMustBeIndependentAndDecisionMustHaveAuditableReason() {
         UUID maker=UUID.randomUUID(),checker=UUID.randomUUID();
         CostSourceReviewService.independent(maker,checker,
@@ -94,6 +124,9 @@ class CostSourceReviewServiceTest {
         assertTrue(controller.create(auth,req,mp,draft()).getHeaders()
             .getCacheControl().contains("no-store"));
         verify(s).create(tenant,mp,maker,draft());
+        assertTrue(controller.createBatch(auth,req,mp,List.of(draft())).getHeaders()
+            .getCacheControl().contains("no-store"));
+        verify(s).createBatch(tenant,mp,maker,List.of(draft()));
         assertTrue(controller.list(auth,req,mp).getHeaders()
             .getCacheControl().contains("no-store"));
         verify(s).list(tenant,mp);
@@ -105,7 +138,7 @@ class CostSourceReviewServiceTest {
         assertTrue(controller.audit(auth,req,mp,source).getHeaders()
             .getCacheControl().contains("no-store"));
         verify(s).history(tenant,mp,source);
-        verify(access,times(4)).currentTenant(auth,req);
+        verify(access,times(5)).currentTenant(auth,req);
     }
     @Test void schemaHasImmutableSourceMetadataAndReviewerSeparation() throws Exception {
         var path=java.nio.file.Path.of(
