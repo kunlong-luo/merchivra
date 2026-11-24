@@ -1,4 +1,4 @@
-# Merchivra · 当前执行计划（2026-11-24 / V222 真 HTTP ABA 已验收，V223 并发/跨 Marketplace 409 诊断脚本待独立 A3 性能证据）
+# Merchivra · 当前执行计划（2026-11-24 / V223 真实 PG18 租户版本性能/跨 Marketplace 409 已验收，V224 细粒度优化安全审计待推进）
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
@@ -19,17 +19,17 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
-## V223 进行中 · V113 租户级版本行锁争用与额外 409 定量对照（专项代码待精确 A3）
+## V223 已验收 · 租户版本性能测量与跨 Marketplace 强制 HTTP409（[精确代码 `9cae5abb7`](https://github.com/kunlong-luo/merchivra/commit/9cae5abb78aff944454351a8d9b0dde9df6dc87c) · [快 CI #45320774625 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45320774625) · [完整 A3 #45320774622（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45320774622)）
 
-[V223 性能/安全测量契约](../finance/v223-tenant-epoch-contention-and-cross-marketplace-409.md) 已添加真实 PG18 V91 触发器写入负载：单写入者、8 并发同 Marketplace、8 并发同租户双 Marketplace、8 并发双租户，各自输出 TPS、p50/p95/p99、Lock 等待**采样**和 V113 tick 提交守恒。另利用 V222 **仅 CI** 的真 Owner HTTP 双 RR 边界，做无写入、异租户写入、同租户其他 Marketplace 写入、同 Marketplace 写入的 4×4 强制交错，度量条件化 409 以及 409 返回体不泄露费用/利润。**强制交错的百分比不能解释成自然生产 409 率**，跑次前不公布 TPS 或瓶颈结论。只在 `main` 的 PG18 完整 A3 中运行，保留原 Flyway V113 与 V216 409 fail-closed、源数据不变性和真实授权禁用。缺精确 SHA 的 PG18 日志时 V223 的性能验收结论仍为**待验证**。
+[V223 真实 PG18 吞吐/锁等待/HTTP409 的数值与安全边界](../finance/v223-tenant-epoch-contention-and-cross-marketplace-409.md)：实际 760 个 V91 INSERT→DELETE 已提交事务及对应 1520 次租户版本 tick，4 组单写入/8 并发同站点/同租户双站点/双租户对照。8 workers 同租户双站点 **433.43 TPS / P95 65.00ms**，跨双租户 **636.54 TPS / P95 28.82ms**，出现同租户最多 7 会话 Lock 等待采样。真实 Spring Owner 通过 V222 CI-only 双 RR 暂停：无写入/异租户各 **0/4 HTTP409**，同租户异站点/本机站点各 **4/4 HTTP409**，409 不泄漏旧计划、COGS 或净利润。以上全是 GitHub disposable PG18 的**条件化/合成**数值，不是生产吞吐限制或正常负载 409 比率；本轮诊断已验收但性能**优化尚未完成**。保留既有 V113 事务提交序列与 V216 ABA 409 硬保护，不引入新财务来源和 OAuth。
 
-**后续基于测量而不是推测优化**：观察同租户双站点负载与双租户对照的延迟/吞吐差异，确定是否需要应用级批量化、减少无意义状态更新、缩短业务事务，或在证明 receipt/PO/V165 共有来源不会漏读后新增更细粒度事务版本（必须另起 Flyway 迁移与重复 V221/V222 真 HTTP ABA）。上线前仍需代表性自然读写混合压测及约定 409 / p95 / p99 SLO，不得以降低额外 409 为由直接去掉租户 epoch。项目 70/100、realizedNetProfit=null、真实 Seller/Ads OAuth OFF、生产 #104 NO-GO。
+**下一阶段 V224**：先测量已存在的 UPDATE 无实际业务变化时是否产生不必要的版本 tick，摸清 15 张触发器在多语句导入和长事务中对同租户锁的放大效应；梳理共享 PO/receipt、tenant.status 和 V165 交叉来源后，才允许提出 Marketplace/receipt 层级的安全版本收窄，并以真实 PG18 ABA 及真 Owner HTTP409 正反例证实**绝无漏检**。在此之前扩展接近生产的匿名合成混合写入/读出负载，明确自然 409、吞吐和 P95/P99 的可批准 SLO；不得用强制交错 100% 代替自然流量基线。业务 P0-A/B/C 仍由外部合法来源、G1/DEC 会计批准推动，评分 70/100、realizedNetProfit=null、真实 Seller/Ads OAuth OFF、#104 NO-GO。
 
 ## V222 已验收 · 真 HTTP 双 RR ABA 409（[V222 精确验收代码 `4070d9f`](https://github.com/kunlong-luo/merchivra/commit/4070d9f5a499ef0cc97537a00083fdd08309b0bb) · [快速 CI #45318993934 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45318993934) · [完整 A3 #45318994059（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45318994059)）
 
 [V222 HTTP ABA 与 CI 专用同步门禁](../finance/v222-real-http-receipt-aba-interleave.md)：V221 的真 PostgreSQL 两连接 MVCC + Java 409 是两个独立测试，不是同一条真实 HTTP 请求被暂停。V222 在 V216 的第一 RR 已提交、第二 RR 未开始时增加**仅 disposable CI 双门禁启用**的测试同步点（ci-v222 Profile、显式属性、本仓库 main GitHub Actions 固定 localhost PG18 环境核验；无生产 Bean/新财务写路由），只影响一个固定合成收货 UUID。真实 Owner Cookie + CSRF 发起 GET，由 pg_locks 未授予锁证明请求已停在边界，另一个 PG18 会话两次提交 PO USD→EUR→USD，放行后必须返回真正 HTTP409，不能附带截断计划/旧 COGS，随后同会话新 GET 200 no-store UNKNOWN。V220 51 来源 409 不得冒充本场景；真实财务证据仍未核证。**实际验收：** [V222 精确验收代码 `4070d9f`](https://github.com/kunlong-luo/merchivra/commit/4070d9f5a499ef0cc97537a00083fdd08309b0bb) · [快速 CI #45318993934 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45318993934) · [完整 A3 #45318994059（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45318994059)。PG18 Job #138192661605 原始日志打印 `PASS V222 REAL Spring Owner HTTP ABA`：真正已登录 Owner 的 V216 GET 第一个 RR 已提交、在 ci-v222 专用 advisory xact-lock 上阻塞，另一个数据库连接分两次提交 PO USD→EUR→USD，第二 RR V113 epoch 不同，真实 HTTP409、错误体无旧 plans/actualBatchCogs/realizedNetProfit；新稳定 GET 200/no-store/UNKNOWN，其他 Marketplace 不混入。V219/V220/V221 真实 PG18 回归同轮 PASS。全部仅限 CI 合成数据，正式环境不注册同步 Bean，实际外部 COGS 和净利润未核证。
 
-**V223 现状**：诊断脚本与完整 A3 测量路径见上方，尚未取得属于该精确提交的 PG18 指标及安全结果；外部 Amazon/Ads/银行/海关/物流原件和 G1/DEC 仍优先于界面堆叠。评分70/100、realizedNetProfit=null、OAuth OFF、#104 NO-GO。
+**V223 现状**：已以精确代码提交的真实 PG18 A3 7/7 完成并发与强制 409 定量证据；自然生产 409 比率与安全的进一步优化留 V224。外部 Amazon/Ads/银行/海关/物流原件和 G1/DEC 仍优先于界面堆叠。评分70/100、realizedNetProfit=null、OAuth OFF、#104 NO-GO。
 
 ## V221 已实现并验收 · V113 已提交来源版本与 V216 ABA fail-closed（[V221 精确 A3 提交 `57c6083`](https://github.com/kunlong-luo/merchivra/commit/57c6083391ce3a8186b95b8453cfe53b24096da2) · [快速 CI #45317628784 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45317628784) · [完整 A3 #45317628690（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45317628690)）
 
