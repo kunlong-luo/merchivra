@@ -168,7 +168,8 @@ def deletes(rows, batch):
                    f"WHERE id='{uid}';\n" for uid in ids)
 
 
-def write_sources(tenant, marketplace, n=20, batched=True):
+def write_sources(tenant, marketplace, n=20, batched=True,
+                  exact_epoch_delta=True):
     rows = [source_row(tenant, marketplace) for _ in range(n)]
     before = version(tenant)
     start = time.perf_counter()
@@ -176,8 +177,16 @@ def write_sources(tenant, marketplace, n=20, batched=True):
         "COMMIT;\n", timeout=40)
     elapsed_ms = (time.perf_counter() - start) * 1000
     expected = 2 if batched else 2 * n
-    assert version(tenant) == before + expected, (
-        "tenant epoch conservation", batched, n, expected)
+    # Exact per-worker delta is ONLY meaningful without concurrent writers.
+    # When two workers share a tenant, their legitimate epoch ticks overlap
+    # this measurement window; validate >= here and exact total once globally.
+    observed = version(tenant)
+    if exact_epoch_delta:
+        assert observed == before + expected, (
+            "tenant epoch conservation", batched, n, expected, observed-before)
+    else:
+        assert observed >= before + expected, (
+            "individual writer lost its committed epoch ticks", observed-before)
     assert number("SELECT count(*) FROM finance_cost_source_v91 "
                   "WHERE id IN (" +
                   ",".join("'" + uid + "'" for uid, _ in rows) + ")") == 0
@@ -445,9 +454,14 @@ print("V225_FORCED_V91_HTTP " + json.dumps({
 # Report the raw sample without asserting a positive 409 minimum or SLO.
 def writer_bursts():
     for _ in range(16):
-        write_sources(TENANT_A, MP_A2, n=10, batched=True)
+        write_sources(TENANT_A, MP_A2, n=10, batched=True,
+                      exact_epoch_delta=False)
 
 
+# 2 writers * 16 transactions * 2 statement-level ticks each. All worker
+# sessions share the SAME tenant epoch, so exactness is a case-wide invariant,
+# never an isolated per-thread snapshot invariant.
+mixed_start_revision = version(TENANT_A)
 latencies = []
 statuses = []
 with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
@@ -460,6 +474,9 @@ with concurrent.futures.ThreadPoolExecutor(max_workers=3) as pool:
         job.result(timeout=120)
 values = sorted(latencies)
 assert len(statuses) == 80
+assert version(TENANT_A) - mixed_start_revision == 64, (
+    "all 32 concurrent bulk transactions must conserve exactly 64 ticks",
+    version(TENANT_A) - mixed_start_revision)
 p95 = round(values[math.ceil(.95 * len(values)) - 1], 2)
 p99 = round(values[math.ceil(.99 * len(values)) - 1], 2)
 print("V225_UNFORCED_MIXED_HTTP " + json.dumps({
