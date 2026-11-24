@@ -1,8 +1,8 @@
-# Merchivra · 当前执行计划（2026-11-24 / V224B / Flyway V114+V115 真 PG18 安全验收 7/7 已完成，V225B 批量来源/真 HTTP ABA PG18 A3 7/7 完成，V226 Owner 有限批量暂存 API 已通过真 PG18 A3 attempt2 7/7，V227 真 PG18 A3 7/7 完成，V228C Orval/Next Owner 手工来源批量 UX 真实 PG18/Springdoc A3 7/7 完成，下一阶段 V229）
+# Merchivra · 当前执行计划（2026-11-24 / V224B / Flyway V114+V115 真 PG18 安全验收 7/7 已完成，V225B 批量来源/真 HTTP ABA PG18 A3 7/7 完成，V226 Owner 有限批量暂存 API 已通过真 PG18 A3 attempt2 7/7，V227 真 PG18 A3 7/7 完成，V228C Orval/Next 费用批次 A3 7/7，V229 V91 原审计守恒真实 PG18 Owner HTTP A3 7/7，下一阶段 V230）
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
-**最新复评分为 [73/100](../governance/project-scorecard-v228-2026-11-24.md)，不是旧的 V200 70 分**。保留同一六维、不给真实利润项虚假加分：架构18/20、功能16/20、真实成本与利润10/25、安全13/15、前端9/10、测试运营7/10。旧版本规划段落出现的70分都属于对应历史阶段；当前版本以本段与最新评分文档为准。真正影响下一次较大评分提升的 P0 任务仍是合法第三方费用/退货 COGS/会计口径和 G1/G2/G3 生产审批，而不是再造报表 UI。
+**最新独立复评分为 [74/100（V229）](../governance/project-scorecard-v229-2026-11-24.md)，而不是旧 V228 的 [73/100](../governance/project-scorecard-v228-2026-11-24.md) 或 V200 70 分**。六维满分/权重完全不变：架构18/20、功能16/20、真实成本与利润**10/25**、安全14/15、前端9/10、测试运营7/10。旧版本规划段落出现的70分都属于对应历史阶段；当前版本以本段与最新评分文档为准。真正影响下一次较大评分提升的 P0 任务仍是合法第三方费用/退货 COGS/会计口径和 G1/G2/G3 生产审批，而不是再造报表 UI。
 
 ## 北极星与边界
 
@@ -21,11 +21,11 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
-## V229 实现待完整 A3 · 先守住 V91 来源审计与真实费用之间的边界
+## V229 已验收 · 真 PG18 Owner 来源审计完整性守恒、外部真实性仍阻断
 
 [新 V229 后端 + PG18 真 Owner HTTP 技术合同](../finance/v229-source-review-audit-integrity-and-external-proof-hold.md) 只复用既有 V91/V92 手工原币来源+append-only 审计，不重复已有 V182/V183/V187 结算归属系统。单一 REPEATABLE_READ 读快照审查：STAGED 的 maker 初始 audit 必须 **1/1**，REVIEWED_UNVERIFIED/REJECTED 的 maker STAGED + 独立 checker 一次相应 decision 必须 **2/2**；额外 audit、缺失 audit、自审或当前状态不匹配均 `V91_SOURCE_AUDIT_INCONSISTENT`，不可无声认定可信。Session 租户/Marketplace/来源 UUID 严格限定，GET no-store，没有任何数据库写入。所有返回即便本地审计完整，必须保留 `claimedDocumentBytesVerified=false`、`independentExternalIssuerVerified=false`、`externalChargeVerified=false`、`actualCogsVerified=false`、`realizedNetProfit=null`。
 
-**验收**：真实 PG18/Owner HTTP 创建正确 STAGED 源，再直接在 disposable PG18 中构造无初始审计/重复初始审计的负例，审计计数 1/0/2 和匿名401/跨 Marketplace404、不变性/无真实入账必须通过，同时重新跑 V221–V228；[V229 精确代码 A3 #45363362444](https://github.com/kunlong-luo/merchivra/actions/runs/45363362444) 尚未有最终结果。在确切 7/7 前**保持现行独立评分 73/100**；若全部通过，可以按原六维仔细复评安全/审计项，**真实财务真实性分始终不能靠合成数据加分**。
+**验收**：真实 PG18/Owner HTTP 创建正确 STAGED 源，再直接在 disposable PG18 中构造无初始审计/重复初始审计的负例，审计计数 1/0/2 和匿名401/跨 Marketplace404、不变性/无真实入账必须通过，同时重新跑 V221–V228；[V229 精确代码 SHA `3c857c788b6e`](https://github.com/kunlong-luo/merchivra/commit/3c857c788b6eeac5db8fa770caff14b7a253ab0a) 的 [完整 A3 #45363362444（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45363362444) 已通过：PG18 Job #138338765615 原始日志的 `V229_REAL_OWNER_AUDIT` / `PASS V229` 严格证明 1/0/2 条 STAGED audit 对应正确/缺失/重复，HTTP401/404、GET tenant revision 不增长，且原 V222/V225–V228 回归仍通过。独立复评分 [74/100](../governance/project-scorecard-v229-2026-11-24.md) **仅安全与可信数据 +1**；真实全成本与利润 10/25 保持未核证，绝不因为 7/7 自动变成生产许可。
 
 **V230 候选**：收紧合法外部文件/签发主体/报告行的独立来源核证与 COGS 真实成本守恒材料；没有真实 Seller/Ads/银行/WMS 授权，依然先实施 fail-closed 合同，不增加虚假 VERIFIED 写入 API 或利润卡片。生产 #104 NO-GO。
 
