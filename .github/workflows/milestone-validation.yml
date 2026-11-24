@@ -1,3 +1,5 @@
+# V230B: preserve first 6/7 browser DOM remount failure, retry exact
+# selected Core panel table while keeping source/row/column expectations.
 # V230: original issuer/source/category evidence requirements composed from
 # V229 V91 audit + V182 settlement/V165 local attribution in ONE RR snapshot.
 # Never enable real Amazon/Ads OAuth, actual COGS or realized profit.
@@ -281,7 +283,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V230-A3-external-source-proof-dossier-and-Orval-UX' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V230B-A3-external-proof-and-Next-browser-remount-fix' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
