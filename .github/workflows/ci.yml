@@ -492,6 +492,14 @@ jobs:
           MERCHIVRA_V230_DISPOSABLE_ONLY=true MERCHIVRA_V229_DISPOSABLE_ONLY=true MERCHIVRA_V226_DISPOSABLE_ONLY=true MERCHIVRA_V225_DISPOSABLE_ONLY=true python3 scripts/smoke_external_cost_proof_dossier_v230.py
           MERCHIVRA_V234_DISPOSABLE_ONLY=true python3 scripts/smoke_reports_auth_revision_v234.py
           MERCHIVRA_V236_DISPOSABLE_ONLY=true ./apps/server/gradlew -p apps/server --no-daemon --console plain test --tests 'org.merchivra.erp.finance.SettlementReportScanServiceTest.actualPg18OwnerRestartAndFencedImportRejectStaleAuthorization'
+          python3 - <<'PY'
+          import xml.etree.ElementTree as ET
+          result = ET.parse('apps/server/build/test-results/test/TEST-org.merchivra.erp.finance.SettlementReportScanServiceTest.xml').getroot()
+          cases = result.findall('testcase')
+          assert len(cases) == 1 and cases[0].get('name','').startswith('actualPg18OwnerRestartAndFencedImportRejectStaleAuthorization')
+          assert all(cases[0].find(tag) is None for tag in ('skipped','failure','error')), 'V236 must execute, not skip'
+          print('PASS V236 actual PG18 Java service test executed (not skipped); remote worker synthetic')
+          PY
           echo "PostgreSQL 18 / Flyway / actual finance + FBA OpenAPI and local mock chain verified"
           kill "$app_pid" 2>/dev/null || true
       - name: Preserve V141 disposable disk/WAL/PITR-not-ready metrics (no credentials)
