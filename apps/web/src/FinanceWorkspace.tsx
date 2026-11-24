@@ -11,6 +11,7 @@ import SettlementReportsPanel from './SettlementReportsPanel'
 import SkuProfitPanel from './SkuProfitPanel'
 import PeriodProfitReportPanel from './PeriodProfitReportPanel'
 import CostProfitReadinessPanel from './CostProfitReadinessPanel'
+import ManualCostBatchPanelV228 from './ManualCostBatchPanelV228'
 import RefundCostReadinessPanel from './RefundCostReadinessPanel'
 import ReceiptCostIntegrityPanelV217 from './ReceiptCostIntegrityPanelV217'
 import ItemAllocationPanel from './ItemAllocationPanel'
@@ -48,6 +49,7 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
   queryFn:fetchCoreMarketplaces,retry:false})
  const currentId=markets.data?.some(m=>m.id===marketplaceId)?marketplaceId:
   (markets.data?.[0]?.id??'')
+ const currentMarketplace=markets.data?.find(m=>m.id===currentId)
  const events=useQuery({queryKey:['finance','events',tenantId,currentId,cursor],
   queryFn:()=>fetchFinanceEvents(currentId,cursor),enabled:!!currentId,retry:false})
  const buckets=useQuery({queryKey:['finance','buckets',tenantId,currentId],
@@ -141,6 +143,9 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
   {currentId&&<PeriodProfitReportPanel key={currentId} tenantId={tenantId} marketplaceId={currentId}/>}
   {currentId&&<CostProfitReadinessPanel key={'cost-readiness-'+currentId}
    tenantId={tenantId} marketplaceId={currentId}/>}
+  {currentMarketplace&&<ManualCostBatchPanelV228
+   key={'manual-cost-batch-'+currentId} tenantId={tenantId}
+   marketplaceId={currentId} currency={currentMarketplace.currency}/>}
   {currentId&&<ReceiptCostIntegrityPanelV217 key={'receipt-cost-'+currentId}
    tenantId={tenantId} marketplaceId={currentId}/>}
   {currentId&&<RefundCostReadinessPanel key={'refund-cost-readiness-'+currentId}
