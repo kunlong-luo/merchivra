@@ -1,6 +1,7 @@
 package org.merchivra.erp.finance;
 
 import java.math.BigDecimal;
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDate;
@@ -25,8 +26,10 @@ public class CostSourceReviewService {
     private final JdbcTemplate jdbc;
     public CostSourceReviewService(JdbcTemplate jdbc) { this.jdbc = jdbc; }
 
+    @Schema(name="ManualCostDraftV228", description="V91 local manual fee claim; NOT verified invoice")
     public record Draft(String category, String sourceKind, String sourceKey,
         String documentSha256, LocalDate businessDate, String amount, String currency) {}
+    @Schema(name="ManualCostSourceV228", description="V91 local manual fee source; external verification unavailable")
     public record Source(String id,String marketplaceId,String category,
         String sourceKind,String sourceKey,String documentSha256,
         String businessDate,String amount,String currency,String origin,
