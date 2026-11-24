@@ -86,9 +86,11 @@ V221 [V113 按租户提交有序证据版本、V216 RR ABA 防护与 PG18 两连
 
 V222 [真实 Owner HTTP 在双 RR 中途提交已提交 ABA 的 PG18 409 测试](finance/v222-real-http-receipt-aba-interleave.md)：固定虚构 receipt、CI 双门禁 profile、pg_locks 未授予锁、真实 Session GET + 两次 PG18 提交，要求 409 无旧计划/成本；稳定 GET 仍 UNKNOWN。已由 [V222 精确验收代码 `4070d9f`](https://github.com/kunlong-luo/merchivra/commit/4070d9f5a499ef0cc97537a00083fdd08309b0bb) · [快速 CI #45318993934 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45318993934) · [完整 A3 #45318994059（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45318994059) 真 PG18 HTTP 409 回归 7/7 SUCCESS，正式环境无测试同步 Bean；财务未核证、#104 NO-GO。
 
-现行 [V228 六维重新评分：73/100（旧 V200 70 分保留历史）](governance/project-scorecard-v228-2026-11-24.md)：非利润五项 63/75、真实利润项仍 10/25；新增安全/前端/测试工程证据各 +1，真实 Amazon/Ads/银行成本和 G1/DEC 仍未核证，#104 NO-GO，不能以 GitHub A3 通过代替发布签署。
+历史 [V228 六维复评：73/100（旧 V200 70 分保留历史）](governance/project-scorecard-v228-2026-11-24.md)：非利润五项 63/75、真实利润项仍 10/25；新增安全/前端/测试工程证据各 +1，真实 Amazon/Ads/银行成本和 G1/DEC 仍未核证，#104 NO-GO，不能以 GitHub A3 通过代替发布签署。
 
-V229 [V91 来源初始 STAGED + 独立复核审计完整性、缺审计/重复审计阻断与外部原始费用真实性边界](finance/v229-source-review-audit-integrity-and-external-proof-hold.md)：只读服务单快照独立核验原审计事件数、maker/reviewer身份/状态匹配，真实 Owner HTTP + PostgreSQL18 1/0/2 事件测试待完整 A3 #45363362444 验收。全部本地审计正确仍 `externalChargeVerified=false`、真实 COGS 和净利润 null；不会因为已人工审核就开启 Amazon 授权或生产过账。
+**现行最新独立评分：[V229 74/100（2026-11-24）](governance/project-scorecard-v229-2026-11-24.md)**，较 V228 73 分增加 1 分，仅来自真 PG18 证明的 V91 来源审计缺失/重复可独立检测；真实全成本与利润依旧 10/25，外部签发方/银行/实物 COGS 和 G1/DEC 未核证、生产 #104 NO-GO。V228 73、V200 70 均为历史，不追溯篡改。
+
+V229 [V91 来源初始 STAGED + 独立复核审计完整性、缺审计/重复审计阻断与外部原始费用真实性边界](finance/v229-source-review-audit-integrity-and-external-proof-hold.md)：[代码 SHA `3c857c788b6e`](https://github.com/kunlong-luo/merchivra/commit/3c857c788b6eeac5db8fa770caff14b7a253ab0a) 已在 [完整 A3 #45363362444（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45363362444) 真 PG18 Job #138338765615 打印 `PASS V229`；Owner HTTP/SQL 1/0/2 条审计分别完整/缺失/重复，匿名401、跨 Marketplace404、GET 0 版本写入。所有本地审计完整仍 `externalChargeVerified=false`、真实 COGS 和净利润 null；不会因为已人工审核就开启 Amazon 授权或生产过账。
 
 V228 [Orval 自动生成 + Zod 逐行验证 + Next.js Owner 手工费用批量暂存 UI](finance/v228-manual-cost-orval-batch-ux.md)：只复用 V226 原币 1–20 源的事务与 V227 已证实的跨站点版本守恒，不新增虚假的来源真实性/批量审核/利润数字。可从表格粘贴六列 TSV，错误整批阻断、完整回放不重建来源，服务端返回原 UUID 后还检查币种/身份/声明 SHA/no-store。现已由 [精确代码 `e268af7c9972`](https://github.com/kunlong-luo/merchivra/commit/e268af7c9972dcd5198c134187bb49879c1531c3) 的 [真实 PG18 完整 A3 #45360965067（7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45360965067) 验收，Springdoc 输出真实 V91 Draft/Source，前两次 6/7 契约检测失败保留在专项报告；**Orval 生成与 UI 成功仍不等于实际费用核证**。
 
