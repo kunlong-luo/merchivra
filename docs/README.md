@@ -7,7 +7,7 @@
 | 你的问题 | **唯一现行入口** |
 | --- | --- |
 | 这套系统到底已经有什么、什么仍未知？ | [当前事实与验证范围](current-status.md) |
-| 现在项目成熟度是多少、为什么这样评分？ | [最新 V200 复评分：70/100](governance/project-scorecard-v200-2026-11-22.md) · [原 68/100 基线](governance/project-scorecard-2026-11-22.md) |
+| 现在项目成熟度是多少、为什么这样评分？ | **[现行 V230 复评分：75/100](governance/project-scorecard-v230-2026-11-24.md)** · [V229 历史74分](governance/project-scorecard-v229-2026-11-24.md) · [V200 历史70分](governance/project-scorecard-v200-2026-11-22.md) |
 | 接下来先做哪些业务和证据？ | [唯一 P0 开发计划](roadmap/current-plan.md) |
 | 必须遵守哪些开发/安全规范？ | [AGENTS.md](../AGENTS.md) · [ENG-001 工程实施规范](governance/engineering-standards.md) |
 | 文档怎么更新、什么时候才叫 Accepted/Verified？ | [GOV-001 文档控制](governance/document-control.md) · [DOC-196 查漏补缺](governance/docs-audit-2026-11-22.md) |
