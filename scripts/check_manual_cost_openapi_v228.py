@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""V228 verify reviewed Orval request/response against actual running Springdoc.
+
+Build-time snapshot can be static; acceptance checks live Controller mapping,
+operation ID and schema fields instead of trusting a proposed API route.
+No production OAuth/session/finance writes.
+"""
+import json
+import sys
+import urllib.request
+from pathlib import Path
+
+PATH = "/api/v1/finance/marketplaces/{marketplaceId}/cost-sources/batch"
+SNAPSHOT = "apps/web/openapi/manual-cost-v228.json"
+expected = json.loads(Path(SNAPSHOT).read_text())
+assert expected["paths"][PATH]["post"]["operationId"] == "stageManualCostSourceBatch"
+assert expected["paths"][PATH]["post"]["requestBody"]["content"]["application/json"]["schema"]["maxItems"] == 20
+draft = expected["components"]["schemas"]["ManualCostDraftV228"]
+source = expected["components"]["schemas"]["ManualCostSourceV228"]
+fields = {"category", "sourceKind", "sourceKey", "documentSha256",
+          "businessDate", "amount", "currency"}
+assert set(draft["required"]) == fields
+assert set(source["properties"]) >= (fields | {"id", "origin", "state", "marketplaceId"})
+assert expected["paths"][PATH]["post"]["security"] == [
+    {"sessionCookie": [], "csrfHeader": []}]
+try:
+    with urllib.request.urlopen(
+        "http://127.0.0.1:8080/v3/api-docs", timeout=15) as response:
+        live = json.loads(response.read())
+except Exception as err:
+    raise AssertionError("V228 requires reachable actual Springdoc") from err
+operation = live["paths"][PATH]["post"]
+assert operation["operationId"] == "stageManualCostSourceBatch"
+assert any(p.get("name") == "marketplaceId" and
+           p.get("in") == "path" and p.get("required")
+           for p in operation["parameters"])
+assert "application/json" in operation["requestBody"]["content"]
+assert "200" in operation["responses"]
+# Springdoc may render request bodies as array of $ref or inline Draft schemas.
+def deref(schema):
+    while "$ref" in schema:
+        parts = schema["$ref"].split("/")
+        assert parts[:3] == ["#", "components", "schemas"]
+        schema = live["components"]["schemas"][parts[-1]]
+    return schema
+body = deref(operation["requestBody"]["content"]["application/json"]["schema"])
+assert body["type"] == "array" and set(deref(body["items"]).get("properties",{})) >= fields
+result = deref(operation["responses"]["200"]["content"]["application/json"]["schema"])
+assert result["type"] == "array"
+assert set(deref(result["items"]).get("properties",{})) >= {
+    "id", "marketplaceId", "sourceKey", "documentSha256", "amount", "currency",
+    "origin", "state"}
+print("PASS V228 actual Springdoc Owner batch POST matches reviewed Orval "
+      "operation, input Draft fields, response Source shape, and same-origin "
+      "session+CSRF contract; no verified profit")
