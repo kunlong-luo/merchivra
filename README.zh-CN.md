@@ -1,66 +1,80 @@
-# Merchivra ERP（麦奇维拉）
+# Merchivra · 开源 Amazon Seller ERP
 
-**面向 Amazon Seller 的开源、自托管 ERP，以可追溯的全成本与利润核算为核心目标。**
+以**可审计的订单、SKU、期间全成本与真实净利润**为核心目标的自托管 ERP，目前属于 **pre-alpha**，仅可在本地/隔离测试环境使用，**尚未批准生产上线**。
 
-> **当前版本基线：2026-11-22 / V195 会话体验、V194 财务证据。** 项目仍为 **pre-alpha**，只供本地/隔离环境开发测试。Java 25 / Spring Boot 4.1.2 / Gradle / PostgreSQL 18、React 19 / **Next.js 16.4.5** / Node 24、**pnpm 12.20.0（唯一前端包管理器）**。默认 Web 已是 Next.js；Vite 只用于受控回退与 GitHub Pages 虚构静态展示。
->
-> **技术验收 ≠ 生产批准。** 最近一次独立 [V193 完整 A3 #45012495202](https://github.com/kunlong-luo/merchivra/actions/runs/45012495202) 针对精确 [`6008832`](https://github.com/kunlong-luo/merchivra/commit/600883236a3669f51b6703229447d93499b271cd) 成功；更新的 V195 [快速 CI #45016097852](https://github.com/kunlong-luo/merchivra/actions/runs/45016097852) 已通过，但**V194 仍需在含新代码的精确 SHA 上完整运行 PG18/A3**。真实 Seller/Ads OAuth、真实平台与银行核验均未授权；[生产门禁 #104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
+**技术基线（2026-11-24）**：Java 25、Spring Boot 4.1.2、**Gradle**、PostgreSQL 18/Flyway；React 19、**Next.js 16.4.5 App Router**、Node 24、**pnpm 12.20.0（唯一前端包管理器，不用 npm）**。默认使用 Next.js；Vite/Nginx 仅供明确回退与 GitHub Pages **虚构展示**，不得误认为默认正式前端。
 
-[English](README.md) · [当前状态](docs/current-status.md) · [现行开发计划](docs/roadmap/current-plan.md) · [文档中心](docs/README.md) · [工程规范](docs/governance/engineering-standards.md) · [部署指南](docs/deployment/local-spark-db.md) · [开发指南](docs/development.md) · [安全说明](SECURITY.md)
+- 现行独立成熟度评分：**[V230 75/100](docs/governance/project-scorecard-v230-2026-11-24.md)**。该分数不是生产就绪度，也不是真实净利润已核证的比例。
+- [V230B 精确代码完整 A3 7/7 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45368066154)，对应 [`a8e5eba353d5`](https://github.com/kunlong-luo/merchivra/commit/a8e5eba353d501de9761685cdd0d05de1d340982)，覆盖隔离真 PostgreSQL18/Spring Owner HTTP、Java、Next/Orval、Chromium、Compose。此前 [V230 首次 A3 6/7 的浏览器失败](https://github.com/kunlong-luo/merchivra/actions/runs/45367537947) 必须保留。
+- **真实净利润仍不能确认**：`realizedNetProfit=null`；真实 Amazon Seller/Ads OAuth **关闭**，真实银行、货代、关税、独立 WMS、退款实际 COGS 与 G1/DEC 财务口径未核证；生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
+- **V231 开发中**：已有浏览器本地 SHA-256 原文件字节和 V91 用户声明摘要的对照功能，**不上传文件**；匹配不代表真实第三方签发、扣款或可入账。验收状态以[当前项目状态](docs/current-status.md)为准。
 
-## 当前真正能做什么
+[English](README.md) · [当前事实](docs/current-status.md) · [唯一现行 P0 计划](docs/roadmap/current-plan.md) · [文档中心](docs/README.md) · [开发指南](docs/development.md) · [工程规范](docs/governance/engineering-standards.md) · [安全](SECURITY.md)
 
-已实现本地店铺/租户、SKU/订单、采购/FBA、库存批次/异常、会话及审计等业务链路，提供 Next.js 多工作台、Spring API、PostgreSQL 持久化与模拟接口。财务已实现 V64 冻结的**已知范围贡献**和 V91–V104、V162–V194 的人工成本存证、分摊守恒、结算身份、整期阻断、唯一归属与原币瀑布**只读预览**。
+## 一、仓库根目录：保留哪些，分别有什么用？
 
-**尚未实现可信的全成本净利润结论**：独立外部 Amazon/Ads/银行真实性核验、退货 COGS 回转、跨币种 FX/税费政策、外仓实体签收/库存入账和财务 G1/DEC-06/07/08 审批仍不完整。人工 `APPROVED_UNVERIFIED` 不是已证实成本，`realizedNetProfit=null` 不能伪装为零或已确认利润。见 [事实基线](docs/current-status.md) 和 [V188 利润瀑布](docs/finance/v188-period-profit-cost-waterfall-preview.md)。
+以下目录经盘点都包含实际可执行代码、测试/运维配置或审计材料，不要因文件名含旧 Vxxx 就误删。**只有确认无引用、无保留义务的冗余文件才删除。**
 
-## 一、本地启动（内置 PostgreSQL 18）
+| 目录 | 实际作用、保留原因 | 是否可删除 |
+| --- | --- | --- |
+| `apps/server/` | Spring Boot API、领域/财务/库存服务、Session/CSRF、**Gradle Wrapper**、不可重写的 Flyway Vxxx 迁移、Java 测试 | **运行必需**；禁止删历史迁移，绝不换 Maven |
+| `apps/web/` | 正式 **Next.js** App Router、React 工作台、Zod、TanStack、Orval 合同/生成客户端、Vitest、唯一 `pnpm-lock.yaml` | **运行必需**；其中 `index.html`、`vite.config.ts`、部分 Nginx/Dockerfile 是明确回退/静态模拟测试资产，保留但**默认不运行 Vite** |
+| `deploy/` | PostgreSQL18 + Spring + Next 本地 Compose、独立 `spark-db` 方案、生产参考和隔离 TLS 验收叠加 | **部署/验证必需**；两套基础 Compose 不可合并启动，不误删数据卷 |
+| `ops/` | 监控、发布/运维脚本与证据检查 | **运维必需**；不能因不是 Web 源码而删除 |
+| `scripts/` | 数据库/HTTP/浏览器/文档/Orval 合同校验、受控合成 A3、只在临时环境执行的安全负例 | **验证必需**；严禁在真实客户库运行一次性破坏性测试 |
+| `.github/` | GitHub Actions 快速 CI、完整 A3、Chromium、Pages、依赖管理 | **自动化必需**，并非无用分支残留 |
+| `docs/` | 现行事实、唯一计划、规范、业务决策与 Vxxx 真实 CI/PG18 证据归档 | **审计必需**；按下表区别“现行”与“历史”，不是每篇历史稿都应当作开发指令 |
 
-需要 Docker Engine 与 Compose v2。从仓库根目录：
+根目录的 `.env.example`、`.gitignore`、`.editorconfig` 是开发配置；**`AGENTS.md` 是唯一 Agent 规则**；`DESIGN.md` 为前端设计约束，`SECURITY.md` 为安全/报告渠道，`CONTRIBUTING.md` 为贡献规则，`LICENSE` 为授权条款。旧大小写重复别名 **`Agent.md` 已从 `main` 删除**，禁止再恢复第二份规范。
+
+## 二、`docs/` 子目录都有什么用途？
+
+| 文档目录 | 用途；当前入口与归档规则 |
+| --- | --- |
+| `docs/roadmap/` | **现行唯一计划**：[current-plan.md](docs/roadmap/current-plan.md)；V108 和历史 A3 计划为旧证据。[docs/roadmap.md](docs/roadmap.md) 是标明“历史归档”的旧版本，**不能作为现行计划** |
+| `docs/governance/` | 文档控制、[工程规范](docs/governance/engineering-standards.md)、G1/DEC 签署状态、分版本评分与历史审计；现行评分见 [V230 75/100](docs/governance/project-scorecard-v230-2026-11-24.md) |
+| `docs/finance/` | 费用/结算/归属/退款 COGS、外部证据限制与利润核算的 Vxxx 实际证明；[V230 分类费用缺口清单](docs/finance/v230-external-source-proof-dossier-and-owner-workflow.md) |
+| `docs/testing/`、`docs/deployment/`、`docs/api/` | 精确 SHA 的 A3/CI、PG18 部署和备份安全、真实 Springdoc/Orval API 接入规则 |
+| `docs/architecture/`、`docs/requirements/`、`docs/product/` | 架构/ADR、需求验收/业务场景、尚待批准的真实财务业务政策 |
+| `docs/purchasing/`、`docs/inventory/`、`docs/catalog/`、`docs/operations/`、`docs/analytics/` | 采购、供应商、FBA、货位、Listing、异常/经营质量的分领域技术与历史证据 |
+| `docs/security/`、`docs/integrations/` | 租户权限、Session、Amazon SP-API/Ads 安全与授权流程合同 |
+| `docs/design/`、`docs/ux/`、`docs/diagrams/`、`docs/processes/`、`docs/templates/`、`docs/ops/` | Next 页面设计、操作旅程、Mermaid 图、业务流程、ADR 模板、运维概要。某些只有一个文件，**但该文件有明确用途，不应为减少目录数就误删** |
+
+**本次清理原则**：真正重复、没有现行用途的文件直接删除；前向 Flyway 迁移、真实 CI 失败历史、版本评分、源账目证明、回退机制与尚未签署的 G1/DEC 文件保留。已删除早期 V120“PR 还在等 CI”的重复短稿，正式[供应商退货历史 V120 文档](docs/purchasing/supplier-followup-return-traces-v120.md) 保留。删除历史仍可从 Git commit 查看。完整文档入口/分类见 [docs/README.md](docs/README.md)，判定依据见 [文档控制规范](docs/governance/document-control.md)。
+
+## 三、本地启动（包含 PostgreSQL 18）
+
+需要 Docker Engine / Compose v2。在仓库根目录执行：
 
 ```bash
 git clone https://github.com/kunlong-luo/merchivra.git
 cd merchivra
 cp .env.example .env
-# 在 .env 填写 MERCHIVRA_DB_PASSWORD
-# 并设置 MERCHIVRA_BOOTSTRAP_USERNAME 与至少 16 位的强密码
+# 手工设置 MERCHIVRA_DB_PASSWORD 专有强密码
+# 设置 MERCHIVRA_BOOTSTRAP_USERNAME 和不少于 16 位的独立管理员密码
 docker compose --env-file .env -f deploy/compose.yaml config -q
 docker compose --env-file .env -f deploy/compose.yaml up -d --build
 ```
 
-默认三项服务为 `postgres`、`server`、`web`（Next.js Node），浏览器访问 **http://127.0.0.1:3000**，API 健康检查 **http://127.0.0.1:8080/api/v1/ping**。所有宿主端口仅绑定回环地址；本地服务不是公网生产部署。
+本地 Next 页面：**http://127.0.0.1:3000**；Spring API 健康检查：**http://127.0.0.1:8080/api/v1/ping**。本地运行不代表生产上线。若已有独立 PostgreSQL18 的 `spark-db`，必须先按[单独角色/库初始化指南](docs/deployment/local-spark-db.md)处理，再**仅用** `deploy/compose.spark-db.yaml`；不要混用两套基础 Compose，也不要对要保留的数据执行 `down -v`。
 
-已有单独管理的 spark-db PostgreSQL 18，可选**只启动** Merchivra `server + web`，不触碰现有 `iot_farm` 数据库或数据卷。必须先按 [现有库的独立角色/数据库初始化步骤](docs/deployment/local-spark-db.md) 处理，然后运行：
+## 四、代码开发、测试与安全边界
 
-```bash
-docker compose --env-file .env -f deploy/compose.spark-db.yaml config -q
-docker compose --env-file .env -f deploy/compose.spark-db.yaml up -d --build
-```
-
-不要同时叠加两种基础 Compose 文件，也不要执行 `docker compose down -v` 误删数据。
-
-## 二、源码开发：只用 pnpm
-
-需要 Java 25、Node 24、pnpm **12.20.0**、可访问的 PostgreSQL 18 与本地 Spring API。先让后端在 **8080** 运行，再启动 Next：
+先运行 PostgreSQL18 和本地 Spring API（`127.0.0.1:8080`），再执行：
 
 ```bash
 cd apps/web
 corepack enable
 pnpm install --frozen-lockfile
-pnpm dev
+pnpm dev        # 正式 Next.js 16，不是 Vite
+pnpm api:check  # Orval 合同一致性
+pnpm typecheck
+pnpm test
+pnpm build
 ```
 
-- **`pnpm dev` / `pnpm build`**：默认 Next.js 16，开发端口 3000。
-- **`pnpm api:check`、`pnpm typecheck`、`pnpm test`**：合同生成校验、类型检查和单测。
-- **`pnpm dev:vite` / `pnpm build:vite`**：仅在明确回退或测试静态展示时使用；普通本地 Compose 不会自动启动 `vite-web`。
-- 唯一前端锁文件为 `apps/web/pnpm-lock.yaml`，不得恢复第二份依赖锁。
+Java 测试为 `./apps/server/gradlew -p apps/server --no-daemon test`；文档和目录检查为 `python3 scripts/check_docs_consistency_v109.py`、`python3 scripts/check_ci_cadence_v108.py`。隔离 A3 中的 PostgreSQL 负例**只允许** GitHub 临时数据库，禁止在实际业务库执行。
 
-完整环境变量、spark-db 低权限初始化、Redis 可选配置、备份与卸载见 [部署指南](docs/deployment/local-spark-db.md)，OpenAPI/Orval 协议约束见 [API 文档](docs/api/README.md)。
+普通开发**直接提交 `main`**，不为常规开发新建 PR/分支；资金/身份/数据库边界仍必须基于精确 SHA 的真实 PG18/HTTP/Chromium 等验证。合成 CI 全通过既不等于真实 Amazon/Ads/银行核证，也不能替代财务和生产签署。
 
-## 三、质量门禁与开发方向
-
-日常修改直接提交 **`main`**，不为常规开发创建分支/PR；每次推送跑快速 CI。资金、库存、权限、Flyway 等高风险变更仍需专项测试，必要时重新运行精确 SHA 的完整 PG18/HTTP/Chromium/Compose A3。详见 [CI 策略](docs/testing/ci-policy.md)。最新优先级是独立费用真实性、全成本/退款 COGS、**真实可审计利润报表**和外仓可信证据；参见 [现行计划](docs/roadmap/current-plan.md)。
-
-[公开 GitHub Pages](https://kunlong-luo.github.io/merchivra/) **只有虚构的静态演示**：无真实登录、数据库、Seller OAuth、银行或业务写入，不能作为线上 ERP。
-
-**License**：见 [LICENSE](LICENSE)。
+[公开 GitHub Pages 演示](https://kunlong-luo.github.io/merchivra/)仅为虚构数据，不提供正式 ERP 登录、银行或真实成本入账。
