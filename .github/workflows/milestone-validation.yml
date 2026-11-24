@@ -1,3 +1,6 @@
+# V228C: disambiguate CostSourceReviewService nested Draft/Source
+# schema names after true Springdoc response failed full-field check;
+# do NOT suppress or downgrade the required response schema proof.
 # V228B: actual Springdoc V226 POST 200 response is declared */*,
 # not application/json; require JSON-compatible array Source without overfitting media.
 # V228: live Springdoc/Orval bounded manual Owner source staging,
@@ -273,7 +276,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V228B-A3-live-Springdoc-wildcard-source-schema' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V228C-A3-unique-manual-cost-DTO-Springdoc-schema' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
