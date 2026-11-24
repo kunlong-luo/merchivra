@@ -1,4 +1,4 @@
-# Merchivra · 当前执行计划（2026-11-24 / V224B / Flyway V114+V115 真 PG18 安全验收 7/7 已完成，V225B 批量来源/真 HTTP ABA PG18 A3 7/7 完成，V226 Owner 有限批量暂存 API 已通过真 PG18 A3 attempt2 7/7，V227 批量尺度/重放与并发真 PG18 诊断待完整 A3 验收）
+# Merchivra · 当前执行计划（2026-11-24 / V224B / Flyway V114+V115 真 PG18 安全验收 7/7 已完成，V225B 批量来源/真 HTTP ABA PG18 A3 7/7 完成，V226 Owner 有限批量暂存 API 已通过真 PG18 A3 attempt2 7/7，V227 尺度/重放/并发真 PG18 A3 7/7 完成，下一阶段 V228）
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
@@ -19,11 +19,13 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
-## V227 实现待验收 · Owner 费用批量接口压力与并发安全契约
+## V227 已验收 · 有上限 Owner 批量压力/重放/跨 Marketplace 行锁（[精确 SHA `782c2121c2ce`](https://github.com/kunlong-luo/merchivra/commit/782c2121c2cee8091e9ae1ff5e976d59e4ad346a) · [快 CI #45328943995 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45328943995) · [完整 A3 #45328944026（7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45328944026)）
 
-[详细 V227 PG18/HTTP 试验与 WAL 非归因说明](../finance/v227-manual-batch-scale-replay-and-lock-evidence.md) 已写入：仅本仓库 main disposable PG18，复用 V226 已验收 Owner/CSRF API 和同一事务集合 SQL，不新增 Flyway/写路由。针对批次 1/5/20 全新与全量 replay 各 4 次、固定 20 条的 0/50/100% replay、双 Owner Session 分别在同租户两 Marketplace 并发 16×5 新来源、真实 Marketplace 行锁等待 + 解锁，量化全局 V113 版本守恒、逐源 STAGED 审计 1:1、HTTP P95/P99、区间全局 PostgreSQL WAL bytes。**预期**每个有新来源的批次 +2 tick、完全重放 +0、16 个跨站点并发批次全局 +32；不可将每线程瞬时差当局部计数，也不可把全局 WAL 归因于某请求。该阶段**尚未完成精确 SHA 的真 PG18 A3**，不得按 V226 7/7 宣称 V227 通过。
+[真实 PG18/Owner HTTP、全局 WAL/重放的精确测量与限制](../finance/v227-manual-batch-scale-replay-and-lock-evidence.md)：保留原 V226 Owner Session/CSRF 1–20 条暂存路由和 V113 46 触发器，**没有**新增 Flyway、财务过账或未核验来源的自动独立审核。PG18 Job #138225178055 打印 `PASS V227` 并重复 V225/V226 成功：1/5/20 条每个 4 次新/完整重放，HTTP 中位分别 **8.06/6.10ms、9.85/7.14ms、15.95/12.19ms**；新来源任意1–20条都是 V91 source+audit 两个 statement **+2 tick**，纯 replay **+0**。20 条固定重放 0/50/100% 均没有重复 STAGED 审计，各增量 +2/+2/+0；两个不同 Owner Session 并发同租户不同 Marketplace 16 批×5 来源，**80 条独立来源/80 audit、全局严格 +32**，合成客户端 P95/P99 各 30.14ms。真 PG18 的 `seller_marketplace FOR UPDATE` 行锁造成真实 Owner HTTP 等待，释放后正常创建且 epoch+2，V216 COGS/净利润仍 null。
 
-**下一阶段 V228 候选**：若 V227 样本证明安全和容量足以支撑用户使用，再审查 API OpenAPI/Orval 客户端与 20 条上限、无部分成功、冲突回放提示、无外部认证的手工费用导入 UI。任何路径都不得生成实际净利润或绕过独立审核。项目评分70/100，`realizedNetProfit=null`，真实 Seller/Ads OAuth OFF，生产 #104 NO-GO。
+本轮也记录 LSN 采样区间总 WAL 中位数（1/5/20 新批次 1,728/6,672/33,844 bytes，全部 replay 各 96 bytes）；**这是 PostgreSQL 集群 WAL 指针的全局差而非每笔请求可归因 WAL**，含其他活动，4次短样本不代表生产 CPU/WAL 预算或业务 SLA。无法从当前条件化/非强制合成请求推得生产自然 HTTP409 比率，未批准更细粒度 tenant epoch。
+
+**下一阶段 V228**：检查现有真实 OpenAPI/Springdoc 暴露情况，优先复用 Orval 客户端、Zod Schema 与 TanStack Query，在现有 Next.js 财务页面增加有限、可恢复、**明确 MANUAL_UNVERIFIED** 的 1–20 条批量费用暂存入口；每行合法性、冲突标识、无部分成功、Session/CSRF、隔离租户、只有 Owner 可写、手工源不可直接计入 V64/COGS/净利润均需自动测试。继续将真实 Amazon/Ads/银行/货代/WMS 的原始身份来源和 G1/DEC 会计核准置于 P0 优先级，评分 **70/100**，`realizedNetProfit=null`，Seller/Ads OAuth OFF，生产 #104 **NO-GO**。
 
 ## V226 已验收 · 有上限 Owner 原币手工费用批量暂存、逐源审计与真实 PG18（[代码 `81ea17187dd`](https://github.com/kunlong-luo/merchivra/commit/81ea17187dd693da3c12344aa5e6a6da49c7cf7e) · [快 CI #45326774290 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45326774290) · [完整 A3 #45326774310（run_attempt=2，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45326774310)）
 
