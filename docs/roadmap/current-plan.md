@@ -1,4 +1,4 @@
-# Merchivra · 当前执行计划（2026-11-24 / V224B / Flyway V114+V115 真 PG18 安全验收 7/7 已完成，V225B 批量来源/真 HTTP ABA PG18 A3 7/7 完成，V226 Owner 有限批量暂存 API 已提交，真 PG18 A3 待验收）
+# Merchivra · 当前执行计划（2026-11-24 / V224B / Flyway V114+V115 真 PG18 安全验收 7/7 已完成，V225B 批量来源/真 HTTP ABA PG18 A3 7/7 完成，V226 Owner 有限批量暂存 API 已通过真 PG18 A3 attempt2 7/7，下一阶段 V227）
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
@@ -19,13 +19,15 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
-## V226 实现待验收 · V91 手工来源有上限批量暂存与原币可审计身份
+## V226 已验收 · 有上限 Owner 原币手工费用批量暂存、逐源审计与真实 PG18（[代码 `81ea17187dd`](https://github.com/kunlong-luo/merchivra/commit/81ea17187dd693da3c12344aa5e6a6da49c7cf7e) · [快 CI #45326774290 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45326774290) · [完整 A3 #45326774310（run_attempt=2，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45326774310)）
 
-按 [V226 业务/审计/权限/性能边界](../finance/v226-bounded-owner-manual-source-batch.md)，已在原有 `CostSourceReviewService`、`CostSourceReviewController` 上新增 Owner + Session/CSRF 的 `POST /api/v1/finance/marketplaces/{marketplaceId}/cost-sources/batch`：最多 20 条原有 Draft，一笔 `@Transactional` 内完整校验、复用每 Marketplace 的现有 `FOR UPDATE` 锁及严格 `(tenant,marketplace,sourceKind,sourceKey)` 幂等重放；重复来源同 immutable facts 返回原 UUID，绝不新增审核/审计/epoch，事实不同则整批 409；新费用一条集合 V91 INSERT + 对每来源独立 STAGED audit 的一条集合 audit INSERT，按语句分别推进 V113 epoch；所有写入保持 `MANUAL_UNVERIFIED`，**不会认证 Amazon/Ads/银行账单、不会放行 COGS/利润/退款成本**。保留单来源路由和既有 46 个触发器。
+[V226 批量来源安全合同及原始验收/失败记录](../finance/v226-bounded-owner-manual-source-batch.md)：新增 Owner Session+CSRF `POST /api/v1/finance/marketplaces/{marketplaceId}/cost-sources/batch`（1–20 个旧 `Draft`，返回完整有序 `Source[]`），严格保留 Marketplace `FOR UPDATE`、来源 key 及所有不可变原币金额/claim SHA 比对，重复事实无新增 row/audit/epoch，冲突与非法内容整批 409/400；新事实使用一条集合 V91 INSERT，另一条集合来源逐条独立 STAGED audit INSERT，同一 Spring 事务保护。**没有**新增生产 Flyway、削弱 V113/V115 epoch/409、批量独立审核或过账、真实 Amazon/Ads OAuth。
 
-真实 CI 新增 `scripts/smoke_cost_source_batch_real_http_v226.py`，仅 disposable PG18/Owner Session/CSRF + V219–V225 fixture 运行：20 新源 +20 独立 audit 预计 epoch +2；全部同键原样重放和单条路由重放 +0；5 旧+3 新 +2；合法候选混入冲突来源应全批 409/没有部分写入；空批/21条/无效 claimed SHA/重复键应 HTTP400 且版本不变；匿名 401、缺 CSRF 403、当前 Owner 对他租 Marketplace 404、READ 操作者不能成功写入；真实 V216 GET `realizedNetProfit=null` / `actualBatchCogs=null` / `postingAllowed=false`。这些检查必须全部由**当前精确 SHA** 的快 CI 与完整 A3 **7/7** 真实 PG18 HTTP 验证，不能借用 V225B 旧 A3 绿灯。**现阶段暂记“实现、待验收”**。
+真 PG18 Job #138218184069 的真实 Spring Owner HTTP：20 源+20 独立 audit **2 tick**；20 同源完整重放 **0 tick/0 重复 audit**；旧单条路由回放同 UUID；5旧+3新 **2 tick**；先合法新来源再冲突旧来源 HTTP409 全批回滚；4组非法/空/超限/重复 batch HTTP400 且版本 +0；匿名401/缺CSRF403/跨租户404/非Owner不能写；原币源仍 STAGED/MANUAL_UNVERIFIED，V216 COGS/净利润字段为 `null`、postingAllowed=false。同轮还打印 `PASS V225` 与 V221–V224 的真 PG18/ABA/409 回归。
 
-**下一阶段 V227 候选**：针对 1/5/20 条、多重放比例、同/异 Marketplace 长事务和 V165 相似来源碰撞，补有代表性的 WAL/锁/线程占用、真 Owner GET P95/P99 与端到端延迟基线；再根据结果评估导入 UI、Orval 契约和已批准的自然 409/SLO。不得把批量暂存视为批量审核、批量真实过账或缩窄 V113 tenant epoch 的理由。优先 P0 外部发票/结算/银行/WMS 实物来源真实性、退款 COGS 及 G1/DEC 会计口径，评分仍 **70/100**、`realizedNetProfit=null`、真实 Seller/Ads OAuth OFF、生产 #104 **NO-GO**。
+首次 [完整 A3 #45326774310 run_attempt=1](https://github.com/kunlong-luo/merchivra/actions/runs/45326774310) 只有 **6/7**：PG18 专项 PASS，**Docker/mock-chain 因 Maven Central HTTP429 连续三次有界重试失败**，不是编译或数据库证据回归；之后对同 SHA 仅重跑失败 Job #138219684488 通过，最终 **run_attempt=2，7/7 SUCCESS**。原失败历史保留，不将 PG18 成功冒充整轮成功。
+
+**下一阶段 V227**：优先验证批量规模 1/5/20、已存在来源 replay 比例（0/50/100%）、混合跨 Marketplace 与多租户写入、长事务锁/WAL/PG CPU、不同 V165 来源碰撞密度及真实 Owner GET P95/P99。根据证据完善 OpenAPI/Orval 自动生成客户端、有限批量导入 UI 和可恢复的冲突逐行反馈；**不**自动批量批准来源、不取消强制独立审核、不解除 #104。外部原始 Amazon/Ads/银行/物流/WMS 凭据及 G1/DEC 审批仍为 P0 真净利润准入。项目 **70/100**、`realizedNetProfit=null`、真实 Seller/Ads OAuth OFF、生产 #104 **NO-GO**。
 
 ## V225B 已验收 · 15 表来源版本覆盖、批量写入和 V91 来源 ABA（[精确代码 `e360e74be8`](https://github.com/kunlong-luo/merchivra/commit/e360e74be8177d472434723b3516fd6340e918c0) · [快 CI #45325472769 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45325472769) · [完整 A3 #45325472831（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45325472831)）
 
