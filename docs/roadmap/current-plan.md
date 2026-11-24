@@ -23,7 +23,7 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 [专项测试与 15 表读取依赖矩阵](../finance/v225-epoch-bulk-write-long-transaction-and-source-aba.md) 已提交：延续 V113/V114/V115 的 46 个生产触发器且**不新增 Flyway/不变更任何财务过账**，在仅 main/disposable PG18 的 V219–V224 真 Spring Owner 环境核对 15 表各 3 个 transition triggers；将同样 20 条 V91 来源 INSERT→DELETE 分别作为 2 条集合 SQL（预期 2 次 tenant revision）与 40 条逐行 SQL（预期 40 次 revision），每种重复 4 次、记录客户端中位数/P95/原始延迟；审查 V91 staged 的不合法无变化审核 UPDATE 是否被拒绝且不递增；在 A1 长事务持有源版本锁时证明同租户 A2 必须等待、另租户 B 独立提交；真实 Spring Owner 两 RR 中插入同租户异站点 V91 两次分别提交的 INSERT→DELETE ABA 必须返回 409（异租户和无写入返回 200）；非强制 80 GET/32 批量写事务记录观察 409 和客户端 P95/P99，**不当成生产自然 409 率**。
 
-本轮优先让多行真实 SQL 语句的成本/版本守恒有可复核结果，**不先修改剩余 13 张来源表的 UPDATE 保护、不擅自拆分租户版本**。必须等**当前精确 SHA** 的快速 CI 与完整 A3 PG18 Job 打印 V225 结构化结果和 PASS，且 V221–V224 完整回归均通过，方可在文档记录实际数值并标记技术通过。当前 **尚待验收**，不能借用 V224 SHA 的 7/7。
+本轮优先让多行真实 SQL 语句的成本/版本守恒有可复核结果，**不先修改剩余 13 张来源表的 UPDATE 保护、不擅自拆分租户版本**。必须等**当前精确 SHA** 的快速 CI 与完整 A3 PG18 Job 打印 V225 结构化结果和 PASS，且 V221–V224 完整回归均通过，方可在文档记录实际数值并标记技术通过。**首轮 [A3 #45324675583](https://github.com/kunlong-luo/merchivra/actions/runs/45324675583) 为 6/7 SUCCESS，PG18 FAIL**：前五组实际 PASS，20 条 V91 来源批量2 tick/中位63.19ms、逐行40 tick/中位78.22ms，非法无变化审核 DB 拒绝、同租户跨站点真实 Lock 与真 V91 ABA HTTP409；最后非强制 2 writer 混合时将**共享租户 epoch 的全局版本**误作每线程独立计数导致测试断言失败。已将线程断言改为≥预期，并以全组32事务总+64做严格守恒；**新精确 SHA A3 待验收**，不能借用首轮6/7或 V224 7/7。
 
 **下一阶段 V226 候选**：在 V225 真实数据基础上，针对真实业务服务找出可安全组合为同一 SQL 的批量来源写入（保留原始审计日志和来源不可变性），测量多租户多 Marketplace 代表性 P95/P99、锁/WAL/读写混合分布；只有共享 PO/receipt、tenant.status、V165 的全部依赖独立核证且真 Owner ABA 仍能拦截时，才评估更细版本。P0 真实外部账单、退款 COGS 与 G1/DEC 政策签署继续优先。维持 **70/100**、`realizedNetProfit=null`、真实 Seller/Ads OAuth OFF、生产 #104 **NO-GO**。
 
