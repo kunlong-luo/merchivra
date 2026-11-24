@@ -1,3 +1,5 @@
+# V227: exact-main PG18 real Owner batch 1/5/20, replay-ratio,
+# cross-marketplace concurrent epoch and HTTP FOR UPDATE lock evidence.
 # V226: actual Spring Owner/CSRF bounded V91 batch INSERT plus independent
 # STAGED audits, exactly two V113 statement ticks and atomic 400/409 rollback.
 # V225B: correct concurrent epoch conservation by asserting 2*32 ticks
@@ -267,7 +269,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V226-A3-bounded-Owner-cost-source-batch-and-epoch' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V227-A3-bounded-Owner-cost-source-batch-and-epoch' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
