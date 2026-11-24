@@ -1,3 +1,5 @@
+# V217: exact-main A3 Next.js purchasing/finance V216 receipt-cost UI,
+# tenant/Marketplace boundary and source-exact PG18; no actual COGS posting.
 # V216D: workflow parser recovered by moving anonymous GET 401 from
 # oversized inline PG18 shell to the V216 source-exact Python smoke script.
 # V216C: validate workflow scheduler before introducing read-time finance smoke.

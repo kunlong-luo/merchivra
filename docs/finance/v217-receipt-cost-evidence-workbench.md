@@ -1,6 +1,6 @@
 # V217 · 采购收货费用证据在 Next.js 采购与财务工作台的按需核对
 
-**2026-11-24 / 前端只读集成，零新数据库迁移与财务写入。** V217 复用已经在 [V216 精确 SHA `64b7dd5`](https://github.com/kunlong-luo/merchivra/commit/64b7dd51cee3944888a31f34bdd6373c627c3847) 通过的只读接口。该版本 [A3 #45302466911（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45302466911) 真实 PG18 日志含 `PASS V216 PG18 exact receipt/V91/V92 evidence SQL` 和 `PASS V216 anonymous Owner GET 401`；只验证**隔离合成数据**，不表示可计算真实 COGS。V217 本身的 CI/A3 需单独核对精确代码 SHA。
+**2026-11-24 / 前端只读集成，零新数据库迁移与财务写入。** V217 复用已经在 [V216 精确 SHA `64b7dd5`](https://github.com/kunlong-luo/merchivra/commit/64b7dd51cee3944888a31f34bdd6373c627c3847) 通过的只读接口。该版本 [A3 #45302466911（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45302466911) 真实 PG18 日志含 `PASS V216 PG18 exact receipt/V91/V92 evidence SQL` 和 `PASS V216 anonymous Owner GET 401`；只验证**隔离合成数据**，不表示可计算真实 COGS。V217 [精确代码 `a790f1c`](https://github.com/kunlong-luo/merchivra/commit/a790f1c297034e2a13fd66332717c3a67284161e) · [同 SHA 快速 CI #45304018584 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45304018584)；其中 PostgreSQL 18 为 SKIPPED，不能视为 V217 完整 A3 成功。完整 PG18/浏览器/HTTP A3 正在按单独工作流申请验证，结果将在日志完成后更新。
 
 ## 入口与交互
 
