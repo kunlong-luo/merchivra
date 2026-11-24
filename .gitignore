@@ -37,3 +37,8 @@ coverage/
 apps/web/src/generated/purchasing-v114.ts
 apps/web/src/generated/purchasing-models/
 apps/web/src/generated/.purchasing-v114-hash
+
+# V228: Orval generated manual-source-only contract, rebuilt from reviewed snapshot
+apps/web/src/generated/manual-cost-v228.ts
+apps/web/src/generated/manual-cost-models/
+apps/web/src/generated/.manual-cost-v228-hash
