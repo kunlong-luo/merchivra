@@ -2,6 +2,8 @@
 
 **2026-11-24 · 真实 Java25/Spring Session/PostgreSQL18 + Flyway V91/V92/V112/V165，复用 V216 Owner-only GET；不新增财务 API、生产权限、会计写入、Flyway 或新的费率算法。**
 
+**V220 实际验收（2026-11-24）**：[V220 精确验收代码 `b821ecb`](https://github.com/kunlong-luo/merchivra/commit/b821ecbf0be925f4073c80cff0e146fbaf4b43f0)： [快速 CI #45314064511 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45314064511)，[完整 A3 #45314064469（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45314064469)。PG18 Job #138176547718 原始日志明确打印 PASS V220 real Spring/PG18 V112 nonempty Owner HTTP，验证 40/90 USD 原币全收货金额、V165 同站点潜在碰撞/跨站点隔离、真实 V92 trigger 排斥、PO 币种变化导致读时 HOLD、50 完整 HTTP200 与 51 HTTP409 不回退局部数据，以及 A 非 Owner403/B 跨租户404/匿名401。全部仅为一次性 PG18 合成手工数据，不是外部 landed cost 核证。
+
 V219 已使用真实 Spring/PG18 多租户/混合角色 Session 验证 401/403/404/200，但其合法 Owner 返回的是**零份** V112 收货费用计划：这能证明权限，却不能证明真实后端对**非空已审核人工提案**的原币金额、独立审核、来源碰撞、同一来源不可重复归属、读时失效及全量上限的 HTTP 行为。V220 补的是这部分遗漏，不复制一套 V91/V92/V112 财务来源。
 
 ## 范围及程序
@@ -21,7 +23,7 @@ V219 已使用真实 Spring/PG18 多租户/混合角色 Session 验证 401/403/4
 ## 验收与禁止扩大结论
 
 - 将 PG18 V219、V220 测试顺序固定在全套财务/备份/PITR 专项之后；快 CI 对新增 Python 脚本做语法门禁，沿用 Java/Gradle、Node24/pnpm、React19/Next16 与已通过的 V218 Chromium。
-- 只有实际 GitHub Actions **精确 SHA** 的 PostgreSQL18 Job 打出 PASS V220 real Spring/PG18 V112 nonempty Owner HTTP，以及完整 A3 七项全部 SUCCESS，才能标记 V220 验收。此前 V219 7/7 不能替代本次非空计划测试。
+- **已满足验收**：[V220 精确验收代码 `b821ecb`](https://github.com/kunlong-luo/merchivra/commit/b821ecbf0be925f4073c80cff0e146fbaf4b43f0) 的 [完整 A3 #45314064469（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45314064469) 7/7 SUCCESS，且 PG18 Job #138176547718 原始日志打印 PASS V220 real Spring/PG18 V112 nonempty Owner HTTP；此前 V219 7/7 不能代替本次非空 V112 实表验证。
 - V220 所有 V91 文档摘要、来源号、供应商/仓库/收货、审核人与金额都是**合成当地记录**，没有 Amazon Seller/Ads、Finances/Settlement 报告原件、第三方仓库签名、货代/关税、银行凭证、汇率/税务/资本化政策 G1/DEC-06/07/08。即使本地原币守恒、账户权限和重复归属拒绝全部通过，也只表明内部数据契约正确，**不是已发生的 COGS、退款 COGS 回转或可确认净利润**。
 - 该合成顺序不会验证实时并发触发的双 repeatable-read 快照 ABA 漂移 409；并发/快照稳定性应由下一阶段 V221 继续独立验证，不能用 51 项人口上限的 409 冒充 ABA。
 

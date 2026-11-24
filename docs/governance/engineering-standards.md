@@ -74,7 +74,7 @@
 
 - **V219 必须区分真实 Owner 授权与 Mock 状态**：对费用来源和收货证据权限验收，至少使用 Spring Boot 真实登录、独立 JSESSIONID/CSRF、一个员工 A/Owner B 的混合角色用户与另一个 A Owner，实际 PG18 两租户/同租户多 Marketplace/独立 V20 receipts。禁止凭前端 Mock 403 声称安全；检验 A 员工 403，A Owner B 来源 404，跨租户 receipt 404，合法 Owner 200+no-store 并且缺成本 UNKNOWN≠0。测试记录必须仅在严格限定的一次性 CI DB 创建且禁止外部授权；V219 已由 [完整 A3 #45311583643（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45311583643) 的真 PG18/Session 200/401/403/404 验收，仍不得把人工来源升格真实外部核证。参考 [V219](../finance/v219-real-owner-receipt-http-boundary.md)。
 
-- **V220 非空 V112 本地审核来源不能解锁真实 COGS**：真 PG18+Spring Owner GET 要核验原币 40/90、V91/V112 双独立审核、V165 同站点 claimed SHA 仅 potential collision、其他 Marketplace 来源不混合、V92 trigger 禁止重复归属、PO 币种变更让旧批准读时失效；恰好 50 份必须全部 200、51 份必须 409 且无旧金额或部分结果。真实 COGS/netProfit 全程 null，任何 Mock/TEMP/快 CI PG18 skipped 都不能冒充实际安全验收。见 [V220](../finance/v220-receipt-source-population-real-http.md)。
+- **V220 非空 V112 本地审核来源不能解锁真实 COGS**：真 PG18+Spring Owner GET 要核验原币 40/90、V91/V112 双独立审核、V165 同站点 claimed SHA 仅 potential collision、其他 Marketplace 来源不混合、V92 trigger 禁止重复归属、PO 币种变更让旧批准读时失效；恰好 50 份必须全部 200、51 份必须 409 且无旧金额或部分结果。真实 COGS/netProfit 全程 null，任何 Mock/TEMP/快 CI PG18 skipped 都不能冒充实际安全验收。上述非空本地原币/来源/全量合同已由 [完整 A3 #45314064469（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45314064469) 的真 PG18 Job #138176547718 独立通过；不代表真实外部账单、COGS 或利润核证。见 [V220](../finance/v220-receipt-source-population-real-http.md)。
 
 ## 6. UX、会话与本地失败处理
 
