@@ -10,7 +10,7 @@
 
 | ID | 严重度 | 原有设计缺口 | 处理文档 | 当前状态 | 关闭条件 |
 |---|---|---|---|---|---|
-| REV-01 | Blocker | 将 Refunded 当作订单履约状态 | [DOM-001](../architecture/domain-state-model.md), [BIZ-001](../processes/core-flows.md) | 方案已修订 | 业务认可状态定义；AC-18 |
+| REV-01 | Blocker | 将 Refunded 当作订单履约状态 | [DOM-001](../architecture/domain-state-model.md), [BIZ-001](../product/core-flows.md) | 方案已修订 | 业务认可状态定义；AC-18 |
 | REV-02 | Blocker | 订单金额与财务流水可能双重计入 | [DATA-002](../architecture/source-reconciliation.md), [FIN-001](../architecture/finance-model.md) | 方案已修订 | 财务确认收入/费用分类；AC-22/24 |
 | REV-03 | High | Sync checkpoint 绑定单一运行任务 | [SYNC-002](../architecture/sync-stream-contract.md) | 方案已修订 | stream/run/attempt 物理模型获批；AC-23/25 |
 | REV-04 | High | 未映射 SKU 会阻断订单/库存原始事实 | [DOM-001](../architecture/domain-state-model.md), [DATA-001](../architecture/data-model.md) | 方案已修订 | 无映射场景可落库；AC-19 |

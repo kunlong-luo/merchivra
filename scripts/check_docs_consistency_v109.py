@@ -32,7 +32,11 @@ ACTIVE_FILES = (
     "docs/architecture/overview.md",
     "docs/architecture/deployment.md",
     "docs/design/navigation-and-page-states.md",
-    "docs/diagrams/index.md",
+    "docs/architecture/diagram-index.md",
+    "docs/product/core-flows.md",
+    "docs/architecture/adrs/template.md",
+    "docs/governance/g2-review-2026-10-30.md",
+    "docs/governance/review-report-2026-10-30.md",
     "docs/operations/operations.md",
     "docs/architecture/open-source-erp-benchmark-2026-11-08.md",
     "docs/purchasing/local-purchase-workflow.md",
@@ -235,32 +239,39 @@ for current in ("docs/current-status.md", "docs/roadmap/current-plan.md",
     if current not in root_readme and current not in zh_readme:
         errors.append(f"Root READMEs omit current reference: {current}")
 
-# V236: consolidate the redundant single-file documentation directory.
-if (ROOT / "docs/ops").exists():
-    errors.append("Retired docs/ops directory reintroduced; use docs/operations")
-if not (ROOT / "docs/operations/operations.md").is_file():
-    errors.append("Canonical operations runbook missing")
-for relative in (ROOT / "docs").rglob("*.md"):
-    for found in INLINE.finditer(relative.read_text(encoding="utf-8")):
-        href = found.group(1).strip().split(' "', 1)[0].strip().strip("<>")
-        parts = urlsplit(href)
-        if not parts.scheme and not parts.netloc and parts.path:
-            if (relative.parent / unquote(parts.path)).resolve() == ROOT / "docs/ops/operations.md":
-                errors.append(f"{relative.relative_to(ROOT)}: stale moved runbook link")
-
-# V238: one design directory; old UX files must not return.
-if (ROOT / "docs/ux").exists():
-    errors.append("Retired UX directory reintroduced; use docs/design")
-if not (ROOT / "docs/design/navigation-and-page-states.md").is_file():
-    errors.append("Canonical navigation and page-state reference missing")
+# Directory governance: keep a single retired-path mapping and one link scan.
+RETIRED_DOC_DIRS = {
+    "docs/ops": "docs/operations/operations.md",
+    "docs/ux": "docs/design/navigation-and-page-states.md",
+    "docs/diagrams": "docs/architecture/diagram-index.md",
+    "docs/processes": "docs/product/core-flows.md",
+    "docs/templates": "docs/architecture/adrs/template.md",
+}
+for old, new in RETIRED_DOC_DIRS.items():
+    if (ROOT / old).exists():
+        errors.append(f"Retired documentation directory reintroduced: {old}")
+    if not (ROOT / new).is_file():
+        errors.append(f"Canonical documentation missing: {new}")
 for relative in [*ROOT.glob("*.md"), *(ROOT / "docs").rglob("*.md")]:
     for found in INLINE.finditer(relative.read_text(encoding="utf-8")):
         href = found.group(1).strip().split(' "', 1)[0].strip().strip("<>")
         parts = urlsplit(href)
-        if not parts.scheme and not parts.netloc and parts.path:
-            resolved = (relative.parent / unquote(parts.path)).resolve()
-            if resolved.is_relative_to(ROOT / "docs/ux"):
-                errors.append(f"{relative.relative_to(ROOT)}: stale UX reference: {href}")
+        if parts.scheme or parts.netloc or not parts.path:
+            continue
+        resolved = (relative.parent / unquote(parts.path)).resolve()
+        for old in RETIRED_DOC_DIRS:
+            if resolved.is_relative_to(ROOT / old):
+                errors.append(f"{relative.relative_to(ROOT)}: stale retired path: {href}")
+
+# All actual first-level docs domains must be named in the directory tables.
+for folder in sorted((ROOT / "docs").iterdir()):
+    if not folder.is_dir() or folder.name.startswith("."):
+        continue
+    for name, content in (("README.md", root_readme),
+                          ("README.zh-CN.md", zh_readme), ("docs/README.md", hub)):
+        rows = "\n".join(line for line in content.splitlines() if line.startswith("|"))
+        if f"`{folder.name}/`" not in rows and f"`docs/{folder.name}/`" not in rows:
+            errors.append(f"{name}: missing documentation directory role: {folder.name}/")
 
 if errors:
     for error in errors:

@@ -1,6 +1,6 @@
 # Merchivra 文档中心 · 唯一现行入口
 
-> **CURRENT · 2026-11-24 / V234 完整 A3 7/7；V235 快速 CI 通过；V237 快速 CI 通过、A3 待结果；V238 设计目录合并；现行六维评分76/100。** Java 25/Spring Boot 4.1.2/**Gradle**/PostgreSQL 18、React19/**Next.js 16.4.5**/Node24/**pnpm 12.20.0 唯一包管理器**。本仓库仍是 **pre-alpha**；真实 Seller/Ads OAuth 关闭，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**；`realizedNetProfit=null`。所有现行代码和文档直接维护在 `main`，本入口不把本地手工账单或模拟 CI 冒充真实净利润。
+> **CURRENT · 2026-11-24 / V237 完整 A3 7/7；V238 快速 CI 通过；V239 目录收敛；现行六维评分76/100。** Java 25/Spring Boot 4.1.2/**Gradle**/PostgreSQL 18、React19/**Next.js 16.4.5**/Node24/**pnpm 12.20.0 唯一包管理器**。本仓库仍是 **pre-alpha**；真实 Seller/Ads OAuth 关闭，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**；`realizedNetProfit=null`。所有现行代码和文档直接维护在 `main`，本入口不把本地手工账单或模拟 CI 冒充真实净利润。
 
 ## 先读这些权威文档
 
@@ -27,15 +27,13 @@
 | `testing/` | 真 PostgreSQL18、Flyway、Chrome、合成 HTTP/安全边界与首次失败保留 | [ci-policy.md](testing/ci-policy.md) |
 | `deployment/` | Compose、spark-db PostgreSQL18、备份、只读公开展示、隔离部署验证 | [local-spark-db.md](deployment/local-spark-db.md) |
 | `api/` | 实际 Springdoc/OpenAPI/Orval 合同与本地 Seller API 操作 | [api/README.md](api/README.md) |
-| `architecture/` | Spring/Next/PG18 领域划分与 ADR、历史技术选型取舍 | [架构总览](architecture/overview.md) · [十年演进基线与模块](architecture/modules.md) |
+| `architecture/` | Spring/Next/PG18 架构、Mermaid 图纸、ADR 与模板、历史技术取舍 | [架构总览](architecture/overview.md) · [图纸索引](architecture/diagram-index.md) · [ADR 模板](architecture/adrs/template.md) |
 | `requirements/` | 功能、非功能、业务验收与双向追踪 | [需求与实现追踪](requirements/traceability.md) |
-| `product/` | 经营范围、Sku、财务 G1 规则、竞品和场景 | [利润会计规则（待批准）](product/finance-rulebook.md) |
+| `product/` | 经营范围、SKU、核心业务流程、G1 规则、竞品与场景 | [业务流程](product/core-flows.md) · [利润会计规则（待批准）](product/finance-rulebook.md) |
 | `purchasing/`, `inventory/`, `catalog/` | 供应商/采购、实物入库、批次、Listing/SKU 的实现与历史合成证据 | [正式供应商退货 V120](purchasing/supplier-followup-return-traces-v120.md) |
 | `operations/`, `analytics/` | 经营来源质量、异常工单、运维手册与运营证据 | [运维手册](operations/operations.md) · [V89 经营来源质量](analytics/business-source-quality-v89.md) |
 | `security/`, `integrations/` | Session/CSRF/tenant、Seller OAuth、SP-API/Ads 限流与访问边界 | [授权设计](security/seller-oauth.md) · [SP-API](integrations/amazon-sp-api.md) |
 | `design/` | Next16 页面设计、导航与页面状态参考（旧 UX 目录已合并） | [导航与状态](design/navigation-and-page-states.md) |
-| `diagrams/`, `processes/` | Mermaid C4/业务流程、同步/费用/采购链路 | [图纸目录](diagrams/index.md) · [主业务流程](processes/core-flows.md) |
-| `templates/` | 标准 ADR 模板；单文件目录仍有复用价值 | [ADR 模板](templates/adr-template.md) |
 
 不存在单纯为了“目录看起来少”而删除活动代码、测试、历史迁移、回退资产或可核查的版本证据的理由。详见根 [README 中文版](../README.zh-CN.md) 和 [英文版](../README.md) 的**仓库目录用途表**。
 
