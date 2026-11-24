@@ -45,7 +45,14 @@ def deref(schema):
     return schema
 body = deref(operation["requestBody"]["content"]["application/json"]["schema"])
 assert body["type"] == "array" and set(deref(body["items"]).get("properties",{})) >= fields
-result = deref(operation["responses"]["200"]["content"]["application/json"]["schema"])
+# Springdoc emits */* for this @PostMapping without an explicit produces.
+# Content negotiation still returns JSON to the actual Owner client; enforce
+# a real list Source schema instead of assuming the media key spelling.
+responses = operation["responses"]["200"].get("content", {})
+produces = next((key for key in ("application/json", "*/*",
+                                 "application/*+json") if key in responses), None)
+assert produces is not None, "V228 missing declared JSON-compatible 200 schema"
+result = deref(responses[produces]["schema"])
 assert result["type"] == "array"
 assert set(deref(result["items"]).get("properties",{})) >= {
     "id", "marketplaceId", "sourceKey", "documentSha256", "amount", "currency",
