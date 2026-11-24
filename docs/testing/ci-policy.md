@@ -156,4 +156,4 @@ python3 scripts/check_next_runtime_v122.py
 - 前端使用既有 V144 purgeBusinessSessionCache 移除业务 Query，同时保证 V216 fetch 使用 TanStack AbortSignal，在身份更替中取消未结束请求、无旧缓存复活；不引入第二套 QueryClient。
 - **Mock Chromium 的 403/404 不是真实后端 403/404**。V219 完整 A3 的 PG18 HTTP 实际执行才允许在文档记为真正授权负例；V215/V216 TEMP SQL 已覆盖的仍仅是合成独立归属与本地规则。未有真实外部费用/批次会计凭据前，actualBatchCogs/netProfit 继续 NULL。
 
-- **V219 首次调度（不可作为测试证据）**：增加真实 Session/PG18 脚本后，初始 V219 SHA 的 CI/A3 返回 0 jobs/failure，Java、PostgreSQL 和新增 HTTP 脚本根本未执行。维护时改写 YAML 重复的 Flyway 84–90 七项、九项现有 index 和一项 constraint 为逐项 for 循环，必须保证原有测试未减少，然后使用**新精确 SHA** 重新触发。不要把 0 jobs 当作 SQL 业务结论，也不要臆测未获 GitHub 公开确认的 YAML 字节硬限制。
+- **V219 首次调度和首次 PG18 前置失败（均不可作为真实权限通过证据）**：增加真实 Session/PG18 脚本后，初始 V219 SHA 的 CI/A3 返回 0 jobs/failure，Java、PostgreSQL 和新增 HTTP 脚本根本未执行。维护时改写 YAML 重复的 Flyway 84–90 七项、九项现有 index 和一项 constraint 为逐项 for 循环，必须保证原有测试未减少，然后使用**新精确 SHA** 重新触发。不要把 0 jobs 当作 SQL 业务结论，也不要臆测未获 GitHub 公开确认的 YAML 字节硬限制。调度恢复后完整 7 Job 已创建，但 PG18 的 V219 数据准备在检查全局 tenant/credential 数量时失败：这是脚本与此前已有合成租户的假设冲突，尚未进入 Owner/Staff HTTP 核查。修正为仅校验 CI 固定环境、唯一 Bootstrap Owner 与固定测试 ID 未占用，并将该脚本移至 PG18 全套测试最后，快 CI 单独 py_compile；重跑精确 SHA 7/7 之前仍保持 NOT ACCEPTED。

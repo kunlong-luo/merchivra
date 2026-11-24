@@ -322,7 +322,6 @@ jobs:
           MERCHIVRA_V213_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_global_receipt_capacity_v213.py
           MERCHIVRA_V215_DISPOSABLE_ONLY=true python3 scripts/smoke_receipt_cost_allocation_v215.py
           MERCHIVRA_V216_DISPOSABLE_ONLY=true python3 scripts/smoke_receipt_cost_integrity_v216.py
-          MERCHIVRA_V219_DISPOSABLE_ONLY=true python3 scripts/smoke_receipt_cost_real_http_v219.py
           v212_order_base=http://127.0.0.1:8080/api/v1/finance/marketplaces/00000000-0000-4000-8000-000000000204/orders/00000000-0000-4000-8000-000000000202
           v212_anon=$(curl --silent --output /dev/null --write-out '%{http_code}' \
             ${v212_order_base}/refund-batch-lineage-readiness)
@@ -474,6 +473,7 @@ jobs:
           assert a['productionApproved'] is False
           print('PASS V142 A3: real local PG18 timestamp PITR + internal Alertmanager delivery; production blocked')
           PY
+          MERCHIVRA_V219_DISPOSABLE_ONLY=true python3 scripts/smoke_receipt_cost_real_http_v219.py
           echo "PostgreSQL 18 / Flyway / actual finance + FBA OpenAPI and local mock chain verified"
           kill "$app_pid" 2>/dev/null || true
       - name: Preserve V141 disposable disk/WAL/PITR-not-ready metrics (no credentials)
@@ -519,6 +519,8 @@ jobs:
         run: python3 scripts/check_ci_cadence_v108.py
       - name: Verify V109 active documentation links and runtime status
         run: python3 scripts/check_docs_consistency_v109.py
+      - name: V219 real Session / Owner HTTP smoke Python syntax
+        run: python3 -m py_compile scripts/smoke_receipt_cost_real_http_v219.py
       - name: V192 V64 order/SKU conservation smoke syntax
         run: python3 -m py_compile scripts/smoke_v192_profit_sku_conservation.py
       - name: V175-B key-possession synthetic three-Owner smoke syntax

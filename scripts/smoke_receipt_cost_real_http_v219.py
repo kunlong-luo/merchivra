@@ -16,6 +16,9 @@ from uuid import UUID
 
 BASE = "http://127.0.0.1:8080"
 assert os.environ.get("MERCHIVRA_V219_DISPOSABLE_ONLY") == "true"
+assert os.environ.get('GITHUB_ACTIONS') == 'true'
+assert os.environ.get('GITHUB_REPOSITORY') == 'kunlong-luo/merchivra'
+assert os.environ.get('GITHUB_REF') == 'refs/heads/main'
 assert os.environ.get("MERCHIVRA_SPAPI_ENABLED") == "false"
 assert os.environ.get("MERCHIVRA_SPAPI_OAUTH_ENABLED") == "false"
 # Not just "disposable flag": require the *exact* isolated CI database and
@@ -71,9 +74,12 @@ BEGIN
  WHERE c.login_name='v65-ci-owner'
    AND rb.role_code='OWNER' AND rb.seller_account_id IS NULL
    AND m.status='ACTIVE';
- IF (SELECT count(*) FROM tenant) <> 1
-    OR (SELECT count(*) FROM local_credential) <> 1 THEN
-    RAISE EXCEPTION 'V219 only operates in a newly bootstrapped disposable CI cluster';
+ IF EXISTS (SELECT 1 FROM tenant WHERE id='{tenant_b}')
+    OR EXISTS (SELECT 1 FROM app_user WHERE id='{staff_id}')
+    OR EXISTS (SELECT 1 FROM local_credential WHERE login_name='{staff_login}')
+    OR EXISTS (SELECT 1 FROM seller_marketplace WHERE id IN ('{mp_a}','{mp_b}'))
+    OR EXISTS (SELECT 1 FROM erp_purchase_receipt WHERE id IN ('{receipt_a}','{receipt_b}')) THEN
+    RAISE EXCEPTION 'V219 disposable identity or receipt fixture collision';
  END IF;
  INSERT INTO tenant(id,name) VALUES
   ('{tenant_b}','V219 DISPOSABLE FOREIGN TENANT');

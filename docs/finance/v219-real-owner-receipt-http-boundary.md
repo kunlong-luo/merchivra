@@ -27,7 +27,7 @@ V218 已通过 Next16/Chromium 合成界面的 401/403/404/409 与旧值隔离�
 
 ## CI 调度修复记录
 
-首次 V219 提交后，GitHub Actions 在当前工作流上出现 **completed/failure 但 0 jobs**，表示业务/权限 SQL 根本未运行，不能标为测试失败也不能标为验收成功。为恢复可验证性，将 CI YAML 中 **7 条 Flyway 版本检查 + 9 条 PostgreSQL index 检查 + 1 条 constraint 检查** 归并为显式列表循环，仍对每个原有版本、索引和约束逐一判定 count=1，并保留全部其他验收任务。此变更只压缩工作流重复文本，不放宽或跳过检查。重跑新的精确 SHA Job 后才能判断 V219 实际 HTTP 成功与否。
+首次 V219 提交后，GitHub Actions 在当前工作流上出现 **completed/failure 但 0 jobs**，表示业务/权限 SQL 根本未运行，不能标为测试失败也不能标为验收成功。为恢复可验证性，将 CI YAML 中 **7 条 Flyway 版本检查 + 9 条 PostgreSQL index 检查 + 1 条 constraint 检查** 归并为显式列表循环，仍对每个原有版本、索引和约束逐一判定 count=1，并保留全部其他验收任务。此变更只压缩工作流重复文本，不放宽或跳过检查。重跑的新精确 SHA 已成功创建 7 个 Job，但 PG18 实际执行首先揭示了原脚本错误地要求数据库全局只有 1 个租户/credential；先前其它隔离脚本已经创建合成账户，因此其安全前置门禁主动失败，**未执行 V219 角色 HTTP 负例**。V219 现在改为仅允许正式仓库 main GitHub Actions + CI localhost 固定 DB/临时 bootstrap，并且要求 bootstrap Owner 唯一、V219 测试 UUID 和登录名未占用。为不影响既有 PG18/PITR/Session 计划，真实 V219 HTTP 测试移至 PG18 full suite 所有其他检查之后；快 CI 增加 Python 语法检查。需在新 SHA 再跑一次 A3 才能确认真正 HTTP 成功。
 
 ## 验收依据与后续
 
