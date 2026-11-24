@@ -1,0 +1,253 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Merchivra V228 bounded manual cost source staging",
+    "version": "228.0.0",
+    "description": "Contract from CostSourceReviewController.stageManualCostSourceBatch (V226). MANUAL_UNVERIFIED local facts only; never verified COGS or realized profit."
+  },
+  "servers": [
+    {
+      "url": ""
+    }
+  ],
+  "security": [
+    {
+      "sessionCookie": []
+    }
+  ],
+  "paths": {
+    "/api/v1/finance/marketplaces/{marketplaceId}/cost-sources/batch": {
+      "post": {
+        "tags": [
+          "cost-source-review"
+        ],
+        "operationId": "stageManualCostSourceBatch",
+        "summary": "Owner-only manual cost source staging (1-20 rows; atomic)",
+        "parameters": [
+          {
+            "name": "marketplaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": [],
+            "csrfHeader": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 20,
+                "items": {
+                  "$ref": "#/components/schemas/ManualCostDraftV228"
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Original source identities, including exact idempotent replays. Never accounting approval.",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ManualCostSourceV228"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid batch or duplicate keys within the request"
+          },
+          "401": {
+            "description": "Authentication required"
+          },
+          "403": {
+            "description": "CSRF or Owner permission required"
+          },
+          "404": {
+            "description": "Marketplace unavailable within current session tenant"
+          },
+          "409": {
+            "description": "Immutable source key conflict or incorrect original currency; entire batch rolled back"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "JSESSIONID"
+      },
+      "csrfHeader": {
+        "type": "apiKey",
+        "in": "header",
+        "name": "X-CSRF-TOKEN"
+      }
+    },
+    "schemas": {
+      "ManualCostDraftV228": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "category",
+          "sourceKind",
+          "sourceKey",
+          "documentSha256",
+          "businessDate",
+          "amount",
+          "currency"
+        ],
+        "properties": {
+          "category": {
+            "type": "string",
+            "enum": [
+              "ADS_SPEND",
+              "INBOUND_FREIGHT",
+              "FBA_STORAGE",
+              "FBM_SHIPPING",
+              "RETURN_HANDLING",
+              "IMPORT_DUTY",
+              "PAYMENT_AND_FX",
+              "OTHER_OPERATING"
+            ]
+          },
+          "sourceKind": {
+            "type": "string",
+            "enum": [
+              "MANUAL_INVOICE",
+              "MANUAL_CARRIER",
+              "MANUAL_OTHER"
+            ]
+          },
+          "sourceKey": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._:/-]{7,127}$",
+            "maxLength": 128
+          },
+          "documentSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "description": "User claimed digest, not verified external invoice proof"
+          },
+          "businessDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "amount": {
+            "type": "string",
+            "pattern": "^[0-9]{1,14}(?:[.][0-9]{1,6})?$",
+            "description": "Positive original currency, maximum six decimals; no FX conversion"
+          },
+          "currency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          }
+        }
+      },
+      "ManualCostSourceV228": {
+        "type": "object",
+        "required": [
+          "id",
+          "marketplaceId",
+          "category",
+          "sourceKind",
+          "sourceKey",
+          "documentSha256",
+          "businessDate",
+          "amount",
+          "currency",
+          "origin",
+          "state",
+          "createdBy",
+          "reviewedBy",
+          "reviewedAt"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "marketplaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "category": {
+            "type": "string"
+          },
+          "sourceKind": {
+            "type": "string"
+          },
+          "sourceKey": {
+            "type": "string"
+          },
+          "documentSha256": {
+            "type": "string"
+          },
+          "businessDate": {
+            "type": "string",
+            "format": "date"
+          },
+          "amount": {
+            "type": "string"
+          },
+          "currency": {
+            "type": "string"
+          },
+          "origin": {
+            "type": "string",
+            "enum": [
+              "MANUAL_UNVERIFIED"
+            ]
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "STAGED",
+              "REVIEWED_UNVERIFIED",
+              "REJECTED"
+            ]
+          },
+          "createdBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reviewedBy": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "reviewedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      }
+    }
+  }
+}
