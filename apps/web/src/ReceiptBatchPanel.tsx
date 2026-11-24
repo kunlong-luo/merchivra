@@ -5,6 +5,9 @@ import type {LocalWarehouse} from './lib/purchasing'
 import {fetchReceiptBatchesPage,fetchReceiptBatchSummary,relabelReceiptBatch,
  releaseReceiptBatch,fetchReceiptBatchEventsPage} from './lib/receipt-batches'
 import CursorPageControls from './CursorPageControls'
+import {fetchCoreMarketplaces} from './lib/core'
+import FinanceMarketplaceFilter from './components/FinanceMarketplaceFilter'
+import ReceiptCostIntegrityPanelV217 from './ReceiptCostIntegrityPanelV217'
 
 const stateLabels:Record<string,string>={
  PENDING_QC:'待质量检验（不可用）',
@@ -20,14 +23,23 @@ export default function ReceiptBatchPanel({tenantId,orderId,currentUserId,wareho
  const [lotCode,setLotCode]=useState('')
  const [reason,setReason]=useState('')
  const [auditId,setAuditId]=useState('')
+ const [costReceiptId,setCostReceiptId]=useState('')
+ const [costMarketplaceId,setCostMarketplaceId]=useState('')
  const [message,setMessage]=useState(''),[failure,setFailure]=useState('')
  const root=['purchasing',tenantId]
+ const costMarkets=useQuery({
+  queryKey:['finance','marketplaces',tenantId],
+  queryFn:fetchCoreMarketplaces,enabled:!!orderId,retry:false
+ })
+ const activeCostMarketplace=costMarkets.data?.some(m=>m.id===costMarketplaceId)
+  ?costMarketplaceId:(costMarkets.data?.[0]?.id??'')
  const [batchCursors,setBatchCursors]=useState<(string|null)[]>([null])
  const [auditCursors,setAuditCursors]=useState<(string|null)[]>([null])
  const batchCursor=batchCursors.at(-1)??null
  const auditCursor=auditCursors.at(-1)??null
  useEffect(()=>{setBatchCursors([null]);setAuditCursors([null])
-  setEditId('');setAuditId('')},[orderId])
+  setEditId('');setAuditId('');setCostReceiptId('');setCostMarketplaceId('')
+ },[orderId,tenantId])
  const batches=useQuery({queryKey:[...root,'receipt-batches-page',orderId,batchCursor],
   queryFn:()=>fetchReceiptBatchesPage(orderId,batchCursor),enabled:!!orderId,retry:false})
  const summary=useQuery({queryKey:[...root,'receipt-batch-summary',orderId],
@@ -96,6 +108,11 @@ export default function ReceiptBatchPanel({tenantId,orderId,currentUserId,wareho
         {b.status==='INSPECTED'&&b.inspectedBy===currentUserId&&
          <span className="setup-hint">质检员不可自审</span>}
         <button type="button" className="text-button"
+         aria-pressed={costReceiptId===b.receiptId}
+         onClick={()=>setCostReceiptId(v=>v===b.receiptId?'':b.receiptId)}>
+         {costReceiptId===b.receiptId?'收起费用证据':'核对本收货单的费用来源'}
+        </button>
+        <button type="button" className="text-button"
          onClick={()=>{setAuditCursors([null]);setAuditId(v=>v===b.receiptId?'':b.receiptId)}}>
          {auditId===b.receiptId?'收起来源事件':'批次审计'}</button>
        </div></td>
@@ -106,6 +123,25 @@ export default function ReceiptBatchPanel({tenantId,orderId,currentUserId,wareho
     busy={batches.isFetching}
     onPrev={()=>{setBatchCursors(v=>v.length>1?v.slice(0,-1):v);clearPageSelection()}}
     onNext={v=>{setBatchCursors(h=>[...h,v]);clearPageSelection()}}/>}
+   {!!costReceiptId&&<div className="core-tools"
+      aria-label="当前采购收货原币费用来源范围">
+    <h3>本地收货 {costReceiptId.slice(0,8)}… · 精确费用证据复核</h3>
+    <p className="setup-hint">请选择要检查的费用来源 Marketplace。
+     采购收货单属于租户，不属于该站点独占；当前批次页只是选择入口，
+     后端仍会重算此收货单相关的全部本地费用计划。</p>
+    {costMarkets.isError?<p className="setup-error" role="alert">
+     费用来源 Marketplace 加载失败：{String(costMarkets.error)}，不能核对。</p>:
+     !costMarkets.data?.length?<p className="setup-hint">
+      当前租户没有可选择的本地 Marketplace，不能核对来源。</p>:
+     <>
+      <FinanceMarketplaceFilter options={costMarkets.data}
+       value={activeCostMarketplace} onChange={setCostMarketplaceId}/>
+      <ReceiptCostIntegrityPanelV217
+       key={tenantId+'-'+activeCostMarketplace+'-'+costReceiptId}
+       tenantId={tenantId} marketplaceId={activeCostMarketplace}
+       receiptId={costReceiptId}/>
+     </>}
+   </div>}
    {!!editId&&<form className="team-invite-form" onSubmit={submit}>
     <h3>修改待检批次编码（原编码保留审计）</h3>
     <label htmlFor="batch-lot-code">新的批次编码</label>

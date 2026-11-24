@@ -1,4 +1,4 @@
-# Merchivra · 当前执行计划（2026-11-24 / V216 收货单人工费用跨来源独立审计）
+# Merchivra · 当前执行计划（2026-11-24 / V217 Next.js 采购与财务收货费用证据界面）
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
@@ -19,11 +19,17 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
-## V216 本轮实现 · V112 收货单费用证据读时失效与 V165 跨来源碰撞（待精确 SHA CI/A3 验收）
+## V217 本轮实现 · Next.js 收货单级人工费用证据联动（精确 SHA CI/A3 待验收）
 
-[V216 契约](../finance/v216-receipt-local-cost-integrity-read-gate.md)：复用 V215 已落地的 V112 数据库提案及 V165 已有八类身份碰撞/共享结算报告行探测，新增 owner/no-store `GET /api/v1/finance/marketplaces/{marketplaceId}/purchase-receipts/{receiptId}/manual-cost-integrity`；每次读取按原源币、全 plan 的 receipt 分摊、来源版本、V92 互斥、PG 审计和 V165 潜在重叠独立双 RR 复算。最多 50 项，超额 HTTP409；**V20 receipt 只属于 tenant，Marketplace 限定的是 V91 费用源，不能误称 receipt 专属店铺**。新增 Java 守卫及真实 PG18 TEMP 原 SQL 合成回归，匿名新 GET 401。没有任何 V112 创建/修改 API 或凭证出站，局部候选金额不能参与真实 landed cost/净利润。精确代码 SHA 的 CI/A3 结果须实际回填。
+[V217 界面与字段契约](../finance/v217-receipt-cost-evidence-workbench.md)：财务工作台在成本准备度区新增原采购 receipt UUID 主动查询，采购 V46 批次页新增“核对本收货单的费用来源”入口；选择 V91 来源 Marketplace 后按需执行复用的 V216 Owner GET。严格 Zod 对象在客户端拒绝任何假外部核证、COGS/利润/过账字段、原币超额、来源重复或 incomplete page；所有候选金额仅作为待核证的原币来源，不聚合币种、不产生新账本。TanStack Query 与会话/站点/receipt 分区缓存、只在明确提交后请求、409 显示错误而非局部成本，复用 Base UI 选择器。新增 Vitest 正反例（精确 SHA 的 pnpm/Next 和 A3 结果仍须核对）。
 
-**下一阶段 V217**：在 Next.js 采购/财务区域按需展示 V216 受控的本地证据缺口及冲突，优先复用原 TanStack/Orval/Zod，不堆孤立利润卡；仍需外部真实发票和采购资本化、汇率、跨期及退款归属 G1 审核才可讨论真实成本。评分 70/100、`realizedNetProfit=null`、OAuth OFF、生产 #104 NO-GO。
+**下一阶段 V218**：对 V216 Owner 权限与 GET 错误界面做真正 HTTP/browser 回归，核查本地财务来源失效后 stale UI 清空与跨租户/站点只读保护；G1 资本化/FX/退款口径与外部真实账单身份未完成以前，不讨论实际利润解锁。70/100、`realizedNetProfit=null`、OAuth OFF、生产 #104 NO-GO。
+
+## V216 已验收 · V112 收货单费用证据读时失效与 V165 跨来源碰撞（[V216 精确代码 `64b7dd5`](https://github.com/kunlong-luo/merchivra/commit/64b7dd51cee3944888a31f34bdd6373c627c3847) · [同 SHA 快速 CI #45302466898 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45302466898) · [A3 #45302466911（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45302466911)）
+
+[V216 契约](../finance/v216-receipt-local-cost-integrity-read-gate.md)：复用 V215 已落地的 V112 数据库提案及 V165 已有八类身份碰撞/共享结算报告行探测，新增 owner/no-store `GET /api/v1/finance/marketplaces/{marketplaceId}/purchase-receipts/{receiptId}/manual-cost-integrity`；每次读取按原源币、全 plan 的 receipt 分摊、来源版本、V92 互斥、PG 审计和 V165 潜在重叠独立双 RR 复算。最多 50 项，超额 HTTP409；**V20 receipt 只属于 tenant，Marketplace 限定的是 V91 费用源，不能误称 receipt 专属店铺**。新增 Java 守卫及真实 PG18 TEMP 原 SQL 合成回归，匿名新 GET 401。没有任何 V112 创建/修改 API 或凭证出站，局部候选金额不能参与真实 landed cost/净利润。精确 SHA 的 PG18 原始日志含 `PASS V216 PG18 exact receipt/V91/V92 evidence SQL` 和 `PASS V216 anonymous Owner GET 401`；真实合成 A3 7/7 SUCCESS，不证明外部费用真实性。
+
+**V217 已转入上方当前开发项**；V216 留存为后端已通过的合成基线，真实外部单据及 G1 审核仍缺，不得转记已核证成本。
 
 ## V215 已交付 · 精确收货单级人工成本来源身份与双向防重复（[代码 `709fbd0`](https://github.com/kunlong-luo/merchivra/commit/709fbd0bd702af2694d9f351b6e0cbb367b7a6c1) · [快 CI #45295653983 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45295653983) · [完整 A3 #45295654148（7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45295654148)）
 

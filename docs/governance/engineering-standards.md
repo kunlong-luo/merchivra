@@ -68,6 +68,8 @@
 
 - **V216 费用读取要复核完整计划与跨来源身份**：按同 tenant+Marketplace 的 V91 费用和 V20 receipt 精确主键限定，不能从采购 SKU、时间或页面前 50 行推断全量；V112 每 plan 全 receipt 分配/PO 现币种/来源快照/V92 活跃冲突和 V91/V112 审计需读时重算，最多 50 份计划，超限/独立快照漂移返回 409。复用 V165 八类潜在身份和共享结算行信号，不造重复审批或自证真实双扣；本地 `LOCAL_RECEIPT_ALLOCATION_INTACT_UNVERIFIED` 不能产生 landed COGS 或净利润。参见 [V216](../finance/v216-receipt-local-cost-integrity-read-gate.md)。
 
+- **V217 前端费用证据组件不允许将未核证人工来源升格**：Zod 对 V216 返回强校验 `actualBatchCogs=null`、`realizedNetProfit=null`、已核证/已过账标志始终 false、最多 50 个唯一 source/plan、UUID 及 six-decimal 原币金额；禁止 JS 浮点跨币种归总。采购 V46 批次页只用精确后端 receipt ID 选择与 Base UI Marketplace 来源过滤；财务中心仅明确 UUID 输入后按需 GET。TanStack Query 必须包括 tenant/Marketplace/receipt 键、no-store/same-origin、关闭自动重试，切换站点与租户清除前次结果；401/403/404/409 不许回退缓存或显示部分成本。见 [V217 UI/测试契约](../finance/v217-receipt-cost-evidence-workbench.md)。
+
 ## 6. UX、会话与本地失败处理
 
 - 用 Next.js 16 正式工作区设计；优先复用 Base UI 和现有设计 token。需检查 360px/桌面自适应、键盘焦点、对比度、数据来源、用户动作反馈、空态和错误态。
