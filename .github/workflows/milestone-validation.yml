@@ -1,3 +1,5 @@
+# V222: real Spring Owner HTTP interrupted between independent RR snapshots,
+# disposable PG18 PO USD->EUR->USD, V113 committed-epoch HTTP 409.
 # V221C: exact-main repeat full A3 after Docker Gradle bounded
 # Maven Central 429 retry; V113 PG18 committed epoch already PASS.
 # V221B: exact-main A3 after explicit pg_advisory_unlock on live
