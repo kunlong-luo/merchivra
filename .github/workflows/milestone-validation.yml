@@ -1,3 +1,5 @@
+# V224: exact-main V114 no-op shared scope epoch guard + real PG18
+# cross-Marketplace in-flight Owner HTTP ABA + mixed 409 diagnostic.
 # V223: exact-main PG18 V113 tenant-epoch write contention, sampled locks,
 # cross-Marketplace forced Owner HTTP409; no production SLA/GO claim.
 # V222: real Spring Owner HTTP interrupted between independent RR snapshots,
@@ -257,7 +259,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V223-A3-tenant-epoch-contention-and-cross-marketplace-409' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V224-A3-noop-epoch-and-cross-marketplace-ABA' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
