@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""V224: actual PG18 Flyway V114 no-op epoch + ABA / real Owner HTTP proof.
+"""V224: actual PG18 Flyway V114+V115 no-op epoch + ABA / real Owner HTTP proof.
 
 Disposable main A3 only. Uses V219-V223 synthetic fixtures and CI-only V222
 after-first-RR gate. All business changes remain local/unverified; this does
@@ -90,7 +90,7 @@ DO $v224$
 BEGIN
  IF current_setting('server_version_num')::int < 180000
    OR NOT EXISTS (SELECT 1 FROM flyway_schema_history
-                 WHERE version='114' AND success)
+                 WHERE version='115' AND success)
    OR (SELECT count(*) FROM pg_trigger
        WHERE NOT tgisinternal AND tgname LIKE '%_epoch_%_v113') <> 46
    OR (SELECT count(*) FROM erp_purchase_order
@@ -104,9 +104,25 @@ BEGIN
 END $v224$;
 """)
 assert timezone(MP_A) == timezone(MP_A2) == "Etc/UTC"
+# V115 must also preserve INSERT and DELETE on a monitored table with
+# UPDATE-only old/new transition relations; V114 A3 initially failed here.
+insert_baseline = epoch()
+temporary_mp = str(uuid4())
+pg(f"""INSERT INTO seller_marketplace
+  (id,tenant_id,seller_account_id,marketplace_id,currency_code,timezone)
+  SELECT '{temporary_mp}',tenant_id,seller_account_id,
+         'V224-SYNTHETIC-TEMP-' || substring('{temporary_mp}' FROM 1 FOR 8),
+         currency_code,timezone
+  FROM seller_marketplace
+  WHERE tenant_id='{TENANT}' AND id='{MP_A}';""")
+assert epoch() == insert_baseline + 1
+pg(f"DELETE FROM seller_marketplace "
+   f"WHERE tenant_id='{TENANT}' AND id='{temporary_mp}';")
+assert epoch() == insert_baseline + 2
+assert num(f"SELECT count(*) FROM seller_marketplace WHERE id='{temporary_mp}'") == 0
 base = epoch()
 
-# V114: old/new transition row MULTISETS are identical for these two tables.
+# V115: old/new transition row MULTISETS are identical for these two tables.
 pg(f"UPDATE erp_purchase_order SET currency_code=currency_code "
    f"WHERE tenant_id='{TENANT}' AND id='{PO}';")
 pg(f"UPDATE seller_marketplace SET timezone=timezone "
@@ -189,6 +205,7 @@ assert epoch() == base + 6 and currency() == "USD"
 assert timezone(MP_A2) == "Etc/UTC"
 print("V224_PG18_NOOP " + json.dumps({
     "identical_update_ticks": 0, "zero_row_update_ticks": 0,
+    "temporary_marketplace_insert_delete_ticks": 2,
     "committed_aba_ticks": 2, "rolled_back_ticks": 0,
     "different_business_rows_same_tenant_lock_wait": wait_seen,
     "original_epoch": base, "final_epoch": epoch()}, sort_keys=True), flush=True)
@@ -368,6 +385,6 @@ print("V224_MIXED_OWNER_HTTP " + json.dumps(
      "synthetic_ci_not_production_409_rate": True}, sort_keys=True),
     flush=True)
 assert currency() == "USD" and timezone(MP_A2) == "Etc/UTC"
-print("PASS V224 PG18 V114 identical UPDATE suppression, real-ABA committed "
+print("PASS V224 PG18 V114/V115 INSERT-safe identical UPDATE suppression, real-ABA committed "
       "epoch, two-business-row Lock wait, genuine Owner HTTP 200/409 and "
       "mixed load diagnostic; no real COGS/profit or production approval")
