@@ -159,3 +159,10 @@ python3 scripts/check_next_runtime_v122.py
 - **V219 首次调度和首次 PG18 前置失败（均不可作为真实权限通过证据）**：增加真实 Session/PG18 脚本后，初始 V219 SHA 的 CI/A3 返回 0 jobs/failure，Java、PostgreSQL 和新增 HTTP 脚本根本未执行。维护时改写 YAML 重复的 Flyway 84–90 七项、九项现有 index 和一项 constraint 为逐项 for 循环，必须保证原有测试未减少，然后使用**新精确 SHA** 重新触发。不要把 0 jobs 当作 SQL 业务结论，也不要臆测未获 GitHub 公开确认的 YAML 字节硬限制。调度恢复后完整 7 Job 已创建，但 PG18 的 V219 数据准备在检查全局 tenant/credential 数量时失败：这是脚本与此前已有合成租户的假设冲突，尚未进入 Owner/Staff HTTP 核查。修正为仅校验 CI 固定环境、唯一 Bootstrap Owner 与固定测试 ID 未占用，并将该脚本移至 PG18 全套测试最后，快 CI 单独 py_compile；修复后最终精确代码 SHA `e3c8b27` 已由 [完整 A3 #45311583643（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45311583643) 7/7 SUCCESS、PG18 Job #138168390609 的 `PASS V219 real Spring/PG18 HTTP` 验收，之前失败属于历史排错而不是现行状态。
 
 - **V219 真正权限验收证据**：[快 CI #45311583687 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45311583687) · [完整 A3 #45311583643（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45311583643)，原始 PG18 日志确认独立 JSESSIONID、合法 Owner 200+no-store+UNKNOWN、员工 A（B Owner）403、跨租户/Marketplace 404、租户切换 CSRF 和注销后 401。与 V218 的浏览器 Mock 403 是不同级别的验收，不能因此推导真实 COGS。
+
+## V220 非空 V112 真 Spring/PG18 Owner HTTP 证据
+
+- V219 真 Session/跨租户权限测试成功之后，scripts/smoke_receipt_cost_actual_http_v220.py 在**同一** PG18 disposable 全套末尾运行；强制 GitHub Actions 本仓库 main、固定 loopback 数据库与 CI 密码、PG18 Flyway112 和既有 V219 合成身份。快速 CI py_compile 只是语法检查，不替代实际 PG18。
+- 实表 V91/V112 原触发器生成经独立审核但没有真实外部认证的两条费用提案：一个 USD 100/两个收货原币 40+50=90；另一个 USD 30/本收货原币 10。V165 同一 Marketplace claimed digest 仅潜在重叠，另一 Marketplace 同 SHA 不可混入；同来源活跃 V92 提案必须被数据库触发器阻断。
+- PO 当前币种 USD→EUR 后，真 Owner GET 必须显示 LOCAL_RECEIPT_EVIDENCE_STALE_OR_UNAUDITED 和原币失效 blocker；恢复后新 GET 恢复内部本地守恒、却仍未外部核证。刚好 50 份 unique source/plan 必须 200、完整返回不分页；第 51 份必须返回 HTTP409，不得在错误响应附带前 50 条计划/实际 COGS。员工 403、外租户 404、匿名 401 继续保持。
+- **精确验收**：完整 A3 7 Job 成功且 PG18 原始日志出现 PASS V220 real Spring/PG18 V112 nonempty Owner HTTP 方可宣布 V220 通过。所有业务源为一次性合成，实际 landed cost、refund COGS 与 realizedNetProfit 继续 null，生产 #104 NO-GO。

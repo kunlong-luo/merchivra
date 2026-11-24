@@ -1,4 +1,4 @@
-# Merchivra · 当前执行计划（2026-11-24 / V219 已验收、下一阶段 V220 原币费用非空计划 HTTP）
+# Merchivra · 当前执行计划（2026-11-24 / V220 非空 V112 费用计划真实 HTTP 与 51 份全量上限）
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
@@ -18,6 +18,12 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 | 最后 | **维护者本地真实 Seller/Ads 只读授权与 API 验收** | Mock Gateway、连接与同步代码 | 用户完成实际授权、合法角色/区域、分页/限流/撤销、凭证/银行真实性和隐私审查之后才可调整访问开关；写入另行审批 |
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
+
+## V220 当前实施 · V112 非空本地人工费用、审核、双重归属、读时失效和 51 项全量上限（精确 SHA/A3 待本轮验收）
+
+[V220 原币非空费用来源的真 Spring/PG18 HTTP 验收契约](../finance/v220-receipt-source-population-real-http.md)：使用已有 V216 Owner/no-store GET 与真实 V91/V112 表、真实 PG18 triggers，在既有 V219 A Owner/员工-B Owner 的一次性隔离库中做两条已独立审核但外部未核实的人工原币候选：USD 100 source/current receipt 40、两个 receipt total 90；另一 USD 30/current 10。V165 同站点 claimed 文档摘要重叠产生潜在冲突 HOLD，不同站点相同摘要不能合并；V92 对活跃 V112 source 的重复归属由 DB 拒绝；PO 当前币种变更让既有审批读时过期。再将同一 receipt 从 2 扩充到 50 份计划并完整 200，51 份必须 409 不得返回截断。跨租户/Marketplace/Staff 权限沿用 V219 真实 HTTP，不新加财务过账或报表展示。不允许将本地提案升格为真实 landed cost、COGS 或 realized profit。待本轮精确 SHA 真实 PG18/A3 日志验收。
+
+**下一阶段 V221**：真实双 repeatable-read 快照读时 source/receipt population 并发变更、ABA 与 409 fail-closed 的独立验收；外部结算/发票/银行/货代证明及 G1/DEC 会计口径仍是实际净利润门槛。维持评分 70/100、realizedNetProfit=null、真实 Seller/Ads OAuth OFF、生产 #104 NO-GO。
 
 ## V219 已验收 · Spring Owner/Staff 与跨租户 Marketplace GET（[V219 代码 `6bec3c4`](https://github.com/kunlong-luo/merchivra/commit/6bec3c4b59f1e904a25c5512d0054a13ad9ca1d0) · [快 CI #45311583687 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45311583687) · [完整 A3 #45311583643（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45311583643)）
 
