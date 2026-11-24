@@ -145,6 +145,11 @@ jobs:
       MERCHIVRA_BOOTSTRAP_USERNAME: 'v65-ci-owner'
       MERCHIVRA_BOOTSTRAP_PASSWORD: 'ci-disposable-v65-only-secret-0000'
       MERCHIVRA_CONTRACT_EXPORT_ENABLED: 'true'
+      # Double gate, available only in isolated PG18 full-suite job.
+      # Never set these in local/prod Compose or quick CI.
+      SPRING_PROFILES_ACTIVE: ci-v222
+      MERCHIVRA_CI_V222_READ_BOUNDARY: 'true'
+      MERCHIVRA_V222_DISPOSABLE_ONLY: 'true'
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-java@v6
@@ -476,6 +481,7 @@ jobs:
           MERCHIVRA_V219_DISPOSABLE_ONLY=true python3 scripts/smoke_receipt_cost_real_http_v219.py
           MERCHIVRA_V220_DISPOSABLE_ONLY=true python3 scripts/smoke_receipt_cost_actual_http_v220.py
           MERCHIVRA_V221_DISPOSABLE_ONLY=true python3 scripts/smoke_receipt_read_epoch_v221.py
+          python3 scripts/smoke_receipt_http_aba_v222.py
           echo "PostgreSQL 18 / Flyway / actual finance + FBA OpenAPI and local mock chain verified"
           kill "$app_pid" 2>/dev/null || true
       - name: Preserve V141 disposable disk/WAL/PITR-not-ready metrics (no credentials)
@@ -521,11 +527,12 @@ jobs:
         run: python3 scripts/check_ci_cadence_v108.py
       - name: Verify V109 active documentation links and runtime status
         run: python3 scripts/check_docs_consistency_v109.py
-      - name: V219-V221 real Owner receipt and PG18 ABA smoke Python syntax
+      - name: V219-V222 real receipt and PG18 ABA smoke Python syntax
         run: |
           python3 -m py_compile scripts/smoke_receipt_cost_real_http_v219.py
           python3 -m py_compile scripts/smoke_receipt_cost_actual_http_v220.py
           python3 -m py_compile scripts/smoke_receipt_read_epoch_v221.py
+          python3 -m py_compile scripts/smoke_receipt_http_aba_v222.py
       - name: V192 V64 order/SKU conservation smoke syntax
         run: python3 -m py_compile scripts/smoke_v192_profit_sku_conservation.py
       - name: V175-B key-possession synthetic three-Owner smoke syntax

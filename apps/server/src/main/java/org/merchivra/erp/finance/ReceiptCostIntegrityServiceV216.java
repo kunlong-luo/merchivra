@@ -3,6 +3,7 @@ package org.merchivra.erp.finance;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
@@ -66,6 +67,9 @@ public class ReceiptCostIntegrityServiceV216 {
     private final JdbcTemplate jdbc;
     private final CostIdentityReconciliationService reconciliation;
     private final TransactionTemplate tx;
+    // Null in every normal deployment. Double-gated bean only in disposable CI.
+    @Autowired(required=false)
+    private ReceiptCostIntegrityCiBoundaryV222 ciReadBoundary;
 
     public ReceiptCostIntegrityServiceV216(JdbcTemplate jdbc,
         CostIdentityReconciliationService reconciliation,
@@ -141,6 +145,10 @@ public class ReceiptCostIntegrityServiceV216 {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "Tenant, marketplace and receipt required");
         var before=snapshot(tenant,marketplace,receipt);
+        // V222: no-op unless BOTH ci-v222 profile + explicit property
+        // activate the test-only bean in disposable GitHub Actions PG18.
+        // In production there is no I/O, hook or additional cost mutation.
+        if(ciReadBoundary!=null)ciReadBoundary.afterFirstSnapshot(receipt);
         var after=snapshot(tenant,marketplace,receipt);
         // The V113 tenant epoch catches a committed A->B->A change whose
         // two readable source/collision populations are otherwise IDENTICAL.
