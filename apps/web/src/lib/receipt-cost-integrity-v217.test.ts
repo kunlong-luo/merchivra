@@ -1,4 +1,6 @@
 import {afterEach,describe,expect,it,vi} from 'vitest'
+import {QueryClient} from '@tanstack/react-query'
+import {purgeBusinessSessionCache} from './session-query-cache'
 import {getReceiptCostIntegrityV217,receiptCostIntegrityV217,
  validPurchaseReceiptId} from './receipt-cost-integrity-v217'
 
@@ -125,6 +127,29 @@ describe('V217 read-only original-receipt costs remain internal metadata',()=>{
   vi.stubGlobal('fetch',spy)
   await getReceiptCostIntegrityV217(mp,receipt,abort.signal)
   expect(spy.mock.calls[0][1]?.signal).toBe(abort.signal)
+ })
+ it('V219 aborts V216 GET and erases in-flight finance evidence at Session boundary',async()=>{
+  const client=new QueryClient({defaultOptions:{queries:{retry:false}}})
+  const queryKey=['finance','tenant-A',mp,'v218-receipt-cost-integrity',receipt,1]
+  const onAbort=vi.fn()
+  const request=vi.fn((_url:RequestInfo|URL,init?:RequestInit)=>
+   new Promise<Response>((_resolve,reject)=>{
+    init?.signal?.addEventListener('abort',()=>{
+     onAbort()
+     reject(new DOMException('Request aborted on identity boundary','AbortError'))
+    },{once:true})
+   }))
+  vi.stubGlobal('fetch',request)
+  const pending=client.fetchQuery({queryKey,
+   queryFn:({signal})=>getReceiptCostIntegrityV217(mp,receipt,signal)})
+  await Promise.resolve()
+  expect(request).toHaveBeenCalledOnce()
+  await purgeBusinessSessionCache(client)
+  await pending.catch(()=>{})
+  expect(onAbort).toHaveBeenCalledOnce()
+  expect(client.getQueryData(queryKey)).toBeUndefined()
+  expect(client.getQueryCache().find({queryKey})).toBeUndefined()
+  client.clear()
  })
  it('rejects data from another Marketplace or receipt',async()=>{
   vi.stubGlobal('fetch',vi.fn(async()=>new Response(JSON.stringify({

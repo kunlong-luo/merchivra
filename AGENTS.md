@@ -22,6 +22,7 @@
    **V216 独立只读财务源门禁**：V112 人工收货级费用需按 tenant+Marketplace 原 V91 来源、全计划 receipt 原币金额、现 PO 币种、V92 冲突、V91/V112 PG 审计重新复算；V165 已有八类来源碰撞复用，不建新审批。上限 50 计划、超限/快照漂移 409，缺来源 UNKNOWN≠0；本地人工复核或 V165 无冲突不能解锁真实 landed cost、COGS 或净利润。
    **V217 Next.js 采购／财务本地费用查验**：复用 V216 Owner GET，必须先由用户选精确原收货 ID 和 V91 来源 Marketplace 再读取；TanStack Query 使用 tenant/Marketplace/receipt 键，使用 no-store/same-origin，切换上下文清空旧证据；Zod 必须拒绝任何 actual COGS/net profit 非 NULL、已核证/已过账 true、重复/超限来源及原币越界。不得从人工分配候选金额推导财务实际利润，不新增平行来源写入接口。具体见 [V217 契约](docs/finance/v217-receipt-cost-evidence-workbench.md)。
    **V218 审计读取新鲜度/HTTP UI 阻断**：每次用户主动收货费用核查必须创建单独 Query revision，旧成功缓存不可在刷新、错误或跨 Marketplace 视图显示；fetch 需传 TanStack 的 AbortSignal。真实 Chromium 操作采购 V46 行和财务 UUID 表单，模拟 401/403/404/409 均须失败封闭；Mock HTTP 403 不能冒充 Spring Security Owner 授权已验收。复用现有 CDP/Next/PG18 测试，不引入新前端测试工具。见 [V218](docs/finance/v218-receipt-cost-interaction-and-session-fail-closed.md)。
+   **V219 真 Spring 角色/租户隔离优先于前端模拟**：新增敏感 GET 必须用真实 Boot Session+CSRF 与 disposable PG18 校验 Owner/非 Owner 的 401/403、跨租户 Marketplace/receipt 的 404、合法同租户 Owner 的 no-store 200 与成本 UNKNOWN≠0。单一用户在 B 有 Owner 不能借该权限读 A 的员工作用域。测试固定仅 CI loopback/一次性 PG18 且不保留外部费用或平台凭证，保留前端会话取消旧 Query 的 AbortSignal；新 A3 真实日志是唯一成功依据。参见 [V219](docs/finance/v219-real-owner-receipt-http-boundary.md)。
 4. 库存及 WMS 签名不自动证明第三方运营商真实身份或物理实收，不以内部三方 QC 替代外部确认；库存过账与退款回转必须受证据和批准限制。
 5. 不提交或输出任何实际 Seller/Ads、银行、客户或 WMS 凭据、密钥、会话和私有证据。不要关闭 Session/CSRF、绕过 Owner/租户校验或公开 Actuator 来解决本地启动错误。
 

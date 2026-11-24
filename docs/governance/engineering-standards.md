@@ -72,6 +72,8 @@
 
 - **V218 活证据不允许旧成功值冒充当前重查**：来源风险、费用归属或原币结果每次手动展开/重新核对必须生成新的唯一读取版本，避免 staleTime=0 或自动 refetch 前短暂渲染缓存。审计查询须传递 TanStack Query 的 AbortSignal，读取和失败时禁止显示旧金额；跨用户/租户/Marketplace 不能携带旧 receipt 选中或请求。必须跑**真实 Next16 Chromium DOM + 本地合成 HTTP 409/403/404/401**；模拟 403 只能验证 UI 错误策略，不能替代真实 Spring Security 的 Owner 拒绝测试。见 [V218](../finance/v218-receipt-cost-interaction-and-session-fail-closed.md)。
 
+- **V219 必须区分真实 Owner 授权与 Mock 状态**：对费用来源和收货证据权限验收，至少使用 Spring Boot 真实登录、独立 JSESSIONID/CSRF、一个员工 A/Owner B 的混合角色用户与另一个 A Owner，实际 PG18 两租户/同租户多 Marketplace/独立 V20 receipts。禁止凭前端 Mock 403 声称安全；检验 A 员工 403，A Owner B 来源 404，跨租户 receipt 404，合法 Owner 200+no-store 并且缺成本 UNKNOWN≠0。测试记录必须仅在严格限定的一次性 CI DB 创建且禁止外部授权；未验收不得扩大结果。参考 [V219](../finance/v219-real-owner-receipt-http-boundary.md)。
+
 ## 6. UX、会话与本地失败处理
 
 - 用 Next.js 16 正式工作区设计；优先复用 Base UI 和现有设计 token。需检查 360px/桌面自适应、键盘焦点、对比度、数据来源、用户动作反馈、空态和错误态。
