@@ -1,6 +1,6 @@
 # V231 · 浏览器原始文件字节 SHA-256 对照与仓库文档清理
 
-**2026-11-24 / IMPLEMENTED，尚待 V231 自身精确代码 SHA 的 Java/Next/Vitest/Chromium/PG18 A3 完整验收。** 上一轮 [V230B A3 7/7](https://github.com/kunlong-luo/merchivra/actions/runs/45368066154) 只覆盖已验收的外部材料**缺口分类**；不能继承上轮结果声称本轮浏览器字节核对或仓库清理已经通过。
+**2026-11-24 / V231 精确代码 SHA `9ff02147de17` 的 Java/Next/Vitest/Chromium/PG18 完整 A3 7/7 SUCCESS 已验收；本地 SHA 比对始终不代表第三方原始费用真实性。** 上一轮 [V230B A3 7/7](https://github.com/kunlong-luo/merchivra/actions/runs/45368066154) 只覆盖已验收的外部材料**缺口分类**；不能继承上轮结果声称本轮浏览器字节核对或仓库清理已经通过。
 
 ## 直接解决的实际问题
 
@@ -13,6 +13,14 @@ V91 存有 `source_document_sha256`，但它此前是**操作者输入的声明*
 - `apps/web/src/LocalDocumentCheckPanelV231.tsx` 由 V228 批量费用结果中已选 source UUID 启动；只读当前 source 的原始声明摘要，不修改后端/数据库，不写 cookies、localStorage、IndexedDB，不传文件名/内容，不调用 `fetch`，不依赖远程哈希 API。换来源将丢弃旧比对结果；竞态中的旧异步结果通过 request ref 丢弃。用户选择的文件不会存入 React state。
 - `ManualCostBatchPanelV228` 在 V230 仍展示外部材料清单和 false/null 真实性旁新增本地比对；相符不改变 V230 清单，不提供“认证/入账”按钮。**V91 自述 SHA 固定不变，文件改变必须重新选择、重新比对。**
 - 只读操作没有后端新 API，没有 Flyway，不更改原币金额、Session/CSRF、Owner 独立 reviewer、V182/V229、COGS、V64 或 Seller/Ads OAuth；无法处理 8MiB 以上文件时提示限制，不假装散列已算。
+
+## 精确代码与可复核验收
+
+- V231 代码及文档清理接受 SHA [`9ff02147de17996d28ec95875a4eaa6445e1c197`](https://github.com/kunlong-luo/merchivra/commit/9ff02147de17996d28ec95875a4eaa6445e1c197)：[完整 A3 #45373462870，run_attempt=1，**7/7 SUCCESS**](https://github.com/kunlong-luo/merchivra/actions/runs/45373462870)，同 SHA [快速 CI #45373462897 **SUCCESS**](https://github.com/kunlong-luo/merchivra/actions/runs/45373462897)。
+- Next/pnpm/Vitest：**94 个测试文件、461 项通过**，其中 V231 新 5 项涵盖标准 SHA256 原始字节匹配/不匹配、无效摘要/空文件/超限、读长度不一致、缓冲清除和无 `fetch`；合成数据不是第三方来源证明。Java/Gradle、Chromium、Compose、mock-chain 与真 PG18 全部成功。
+- 真 Spring Boot / PostgreSQL18 Job #138373426010 再次通过 V229 V91 1/0/2 审计负例和 V230 费用类别清单/候选碰撞/401/404/零次写版本。V231 **没有**对新文件原件进行真 PG18 上传或外部签发者鉴权，故不能从本轮 PG18 PASS 推断真实平台账单已证实。
+- 该 A3 Compose Job #138373425952 执行 `python3 scripts/check_docs_consistency_v109.py`，实际输出 **`PASS DOC-196 documentation: 26 entry docs; 504 relative local links; current runtime/release boundaries`**，证明已删别名/旧 V120 不再是必需文档，现行目录/README 路径仍可导航。另对十份权威核心文档的 **214** 条本地链接进行独立查询，无缺失。
+- 后续仅修改文档的 `main` 提交属于新的 SHA，只可报告其自身快速 CI；上面精确代码的 7/7 不自动为不同 SHA 背书。
 
 ## 测试验收矩阵
 
@@ -38,6 +46,6 @@ V91 存有 `source_document_sha256`，但它此前是**操作者输入的声明*
 
 ## 下一步与评分
 
-**V231 新功能在完整7/7和根文档快速CI通过前不得宣布验收/加分**。若真验收通过，可以按原六维评估本地可操作原文件内容比较/一致性检查的业务完整性 +1，当前 V230 [75/100](../governance/project-scorecard-v230-2026-11-24.md) 仍为最后已证实分数。**真实全成本与净利润真实性必须保持 10/25**，因为独立第三方签发者/银行付款/退货实收与 G1/DEC 并未发生真实核证。
+**V231 新功能已由精确代码 SHA 的完整 7/7 和同 SHA 快速 CI 验收，可以按保留原六维后的实际可操作字节比对能力复评**。**现行独立成熟度评分为 [V231 76/100](../governance/project-scorecard-v231-2026-11-24.md)**，相对历史 [V230 75/100](../governance/project-scorecard-v230-2026-11-24.md) 仅在业务功能完整性增加1分（17→18），未因文档数量/内部模拟重复加分。**真实全成本与净利润真实性必须保持 10/25**，因为独立第三方签发者/银行付款/退货实收与 G1/DEC 并未发生真实核证。
 
 V232 重点应转向合法取得的真实原始文件、签发主体与交易行认证、版本与撤销、重复归属、退款已实收的批次 COGS 和会计签署。需要维护者本地真实 Amazon/Ads 授权时不得擅自启用；`realizedNetProfit=null`、生产 #104 **NO-GO**。
