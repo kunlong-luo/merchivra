@@ -1,4 +1,4 @@
-# Merchivra · 当前执行计划（2026-11-24 / V219 Spring HTTP 权限与收货证据隔离）
+# Merchivra · 当前执行计划（2026-11-24 / V219 已验收、下一阶段 V220 原币费用非空计划 HTTP）
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
@@ -19,17 +19,17 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
-## V219 当前实施 · 实际 Spring 登录 Owner/Staff 与跨租户 / Marketplace GET（精确 SHA/CI/A3 待验收）
+## V219 已验收 · Spring Owner/Staff 与跨租户 Marketplace GET（[V219 代码 `6bec3c4`](https://github.com/kunlong-luo/merchivra/commit/6bec3c4b59f1e904a25c5512d0054a13ad9ca1d0) · [快 CI #45311583687 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45311583687) · [完整 A3 #45311583643（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45311583643)）
 
-[V219 权限与 Session 真实 HTTP 契约](../finance/v219-real-owner-receipt-http-boundary.md)：复用 V216 GET 与已存在的 V15/V16 用户角色、Spring Security Filter、PG18 V20 receipt。CI 一次性库插入两套合成租户/商店/receipt 与 A 员工-B Owner 混合身份，用不同 JSESSIONID + CSRF 进行真实登录/切租户/HTTP。检验匿名 401、A 非 Owner 403、未授权 tenant 切换 403、跨租户/Marketplace/receipt 404、合法 Owner 200+no-store+UNKNOWN 非零，以及另一 Session 不受本会话注销影响。源码与 CI 仅新添测试文件及一行 PG18 脚本调用；不改变财务写路由、Flyway 和安全授权政策。前端对 Session QueryClient 清理增加具体 V216 GET AbortSignal 的 Vitest 回归。
+[V219 权限与 Session 真实 HTTP 契约](../finance/v219-real-owner-receipt-http-boundary.md)：复用 V216 GET 与已存在的 V15/V16 用户角色、Spring Security Filter、PG18 V20 receipt。CI 一次性库插入两套合成租户/商店/receipt 与 A 员工-B Owner 混合身份，用不同 JSESSIONID + CSRF 进行真实登录/切租户/HTTP。检验匿名 401、A 非 Owner 403、未授权 tenant 切换 403、跨租户/Marketplace/receipt 404、合法 Owner 200+no-store+UNKNOWN 非零，以及另一 Session 不受本会话注销影响。源码与 CI 仅新添测试文件及一行 PG18 脚本调用；不改变财务写路由、Flyway 和安全授权政策。前端对 Session QueryClient 清理增加具体 V216 GET AbortSignal 的 Vitest 回归。**实际本轮权限专项通过**：[完整 A3 #45311583643（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45311583643)；PG18 原始日志包含 `PASS V219 real Spring/PG18 HTTP`，证明不是浏览器 Mock 403，且没有真实外部费用核证。
 
-**下一阶段 V220**：在通过精确 A3 之后，从内部 V112 非空计划的完整读时证据、多源碰撞和 50+ 409 实际 HTTP 负例推进；不能以手工 V112 提案冒充真实外部 landed cost。真实 Amazon/银行/物流/关税证明与 G1/DEC 仍优先。评分 70/100、realizedNetProfit=null、真实 OAuth OFF、生产 #104 NO-GO。
+**下一阶段 V220**：在 V219 精确 A3 已 7/7 之后，从内部 V112 非空计划的完整读时证据、多源碰撞和 50+ 409 实际 HTTP 负例推进；不能以手工 V112 提案冒充真实外部 landed cost。真实 Amazon/银行/物流/关税证明与 G1/DEC 仍优先。评分 70/100、realizedNetProfit=null、真实 OAuth OFF、生产 #104 NO-GO。
 
 ## V218 已实现并验收（[V218 精确提交 `f89fef2`](https://github.com/kunlong-luo/merchivra/commit/f89fef2d14c0ac52dd11b3dc8ed08035867af337) 的 [完整合成 A3 #45306587159（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45306587159)；另有 [V218 CI 优化 `c3f7418`](https://github.com/kunlong-luo/merchivra/commit/c3f74185efc56b37ffb0d67459b3490a085c7de2) · [快速 CI #45307894546 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45307894546) · [完整 A3 #45307894610（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45307894610)）
 
 [V218 交互/缓存门禁与浏览器场景](../finance/v218-receipt-cost-interaction-and-session-fail-closed.md)：审计证据不允许在再展开或重新校验时保留旧人工候选金额，新增每次显式检查的 `inspectionRevision`（同时保留 tenant/Marketplace/receipt key）、原生 fetch AbortSignal 透传，读取/刷新阶段不渲染旧数据。沿用现有 Node24 原生 CDP + Next16/Chromium 合成测试，不新建测试框架，实际点击采购 V46 批次及财务 UUID 表单；未点击不请求、全程 GET；HTTP 409/403/404/401 失败后只显示阻断；重新成功要独立请求；切换 Base UI Marketplace 不泄露前站点候选原币，另一站点无提案显示 UNKNOWN≠0。此浏览器脚本模拟的 403/404 只证明 UI 失败处理，**不能**替代后端真实非 Owner 和跨租户授权专项负例。[V218 精确提交 `f89fef2`](https://github.com/kunlong-luo/merchivra/commit/f89fef2d14c0ac52dd11b3dc8ed08035867af337) 的 [完整合成 A3 #45306587159（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45306587159) 已在真实隔离 PG18/HTTP/Chromium/Next/Java/Compose 7/7 通过；Chromium 日志分别包含 Vite 和 Next 的 `Chromium responsive UI smoke PASS (synthetic backend only)`。[V218 CI 优化 `c3f7418`](https://github.com/kunlong-luo/merchivra/commit/c3f74185efc56b37ffb0d67459b3490a085c7de2) · [快速 CI #45307894546 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45307894546) · [完整 A3 #45307894610（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45307894610) 的 browser-layout Job 再次 SUCCESS，CJK 安装从 488 秒降至 9 秒，整个 Chromium Job 从 574 秒降至 88 秒；第二轮同 SHA [A3 #45307894610（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45307894610) 也已在真实 PG18/HTTP/Chromium/Java25/Next16/Compose **7/7 全部通过**，并在 PG18 原始日志打印 V215/V216 原币守恒、V92 互斥和匿名 Owner GET 401。
 
-**V219 已升级为上方当前实施项**：下一阶段 V220 要围绕真正 V112 非空数据和全量上限的实际读时一致性推进，不让浏览器合成负例替代真实角色/租户鉴权。
+**V219 在上方已按精确 A3 验收**：下一阶段 V220 要围绕真正 V112 非空数据和全量上限的实际读时一致性推进，不让浏览器合成负例替代真实角色/租户鉴权。
 
 ## V217 已完成（合成验收） · Next.js 收货单级人工费用证据联动 · Next.js 收货单级人工费用证据联动（[代码 `a790f1c`](https://github.com/kunlong-luo/merchivra/commit/a790f1c297034e2a13fd66332717c3a67284161e) · [快 CI #45304018584 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45304018584)；[V217 同 SHA 完整 A3 #45304346700（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45304346700)）
 

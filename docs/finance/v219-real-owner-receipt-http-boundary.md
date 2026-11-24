@@ -2,13 +2,15 @@
 
 **2026-11-24 · 对既有 V216 GET 增加真实 Java25/Spring Session/PostgreSQL18 角色与租户 HTTP 验证；不新增财务 API、Flyway、业务表或外部授权。**
 
+**V219 验收：** [V219 代码 `6bec3c4`](https://github.com/kunlong-luo/merchivra/commit/6bec3c4b59f1e904a25c5512d0054a13ad9ca1d0)；同代码的 [精确 A3 SHA `e3c8b27`](https://github.com/kunlong-luo/merchivra/commit/e3c8b27112c34e0b20d9cfc63f3139b1099a42fd) · [快 CI #45311583687 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45311583687) · [完整 A3 #45311583643（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45311583643)。PG18 Job #138168390609 原始日志出现 `PASS V219 real Spring/PG18 HTTP`。这是两份真实登录 Session 的隔离合成权限验证，不是外部费用认证。
+
 V218 已通过 Next16/Chromium 合成界面的 401/403/404/409 与旧值隔离，但**浏览器本地 mock 返回的 403 不等于真实 Spring Security 的非 Owner 身份验证**。V219 的优先级是填补真实进程安全证据缺口，避免将前端错误展示误写成后端授权已经验收。复用 TenantAccessService.currentTenant、ReadOnlyStaffGuardFilter、V216 50 计划/双 RR 快照及 V215 V112 原币分配独立核对，不另建第二套系统。
 
 ## 新增实际测试链路
 
 在**真正运行的 Spring Boot + Flyway V112 + PostgreSQL18** 上执行：
 
-- scripts/smoke_receipt_cost_real_http_v219.py：由完整 A3 的 .github/workflows/ci.yml PG18 作业执行。强制 MERCHIVRA_V219_DISPOSABLE_ONLY=true，校验 CI 固定 localhost 数据库地址/端口/名称/用户/密码、临时 Bootstrap 用户和密码、Amazon Seller/Ads 开关 OFF；必须是 PG18/V112 且**仅一个初始 Bootstrap 租户/账号**。否则在写入任何测试记录前停止。绝不允许用该脚本连接真实数据库。
+- scripts/smoke_receipt_cost_real_http_v219.py：由完整 A3 的 .github/workflows/ci.yml PG18 作业执行。强制 MERCHIVRA_V219_DISPOSABLE_ONLY=true，校验 CI 固定 localhost 数据库地址/端口/名称/用户/密码、临时 Bootstrap 用户和密码、Amazon Seller/Ads 开关 OFF；必须是 PG18/V112、本仓库 main 的 GitHub Actions，且唯一 Bootstrap Owner 可读取、V219 固定 UUID/登录名未占用（允许此前专项产生的合成租户）。否则在写入任何测试记录前停止。绝不允许用该脚本连接真实数据库。
 - 在 CI **独立一次性数据库中提交**两套**合成** local seller_account/Marketplace、供应商、SKU、采购单/行/receipt 和一个非 Owner 用户；所有行具有真实 FK，不提交任何 V112/V91/V92 费用金额或外部凭证。容器销毁时数据消失。OPERATOR_READ 用户在租户 A 限定卖家账号，同时在租户 B 有 OWNER，用于验证**同一身份拥有某处 Owner 不代表任一租户都可 Owner 操作**。合成账号复用 CI 临时 Bootstrap 的单向密码 hash。
 - 使用独立的真实 CookieJar/JSESSIONID 和 CSRF，在真实 /auth/login 分别登录；用 /auth/me 验证当前租户与 Owner 属性，用带 CSRF 的 /auth/active-tenant POST 测试切换（**不是**新增财务写入）。
 - **Owner A**：本租户 Marketplace A1 + receipt A 返回 200、no-store 和 UNKNOWN≠0；另一同租户 Marketplace A2 + 同一 receipt A 返回 200 UNKNOWN，证明 V20 receipt 不绑定单一 Marketplace；附带 ?tenantId=B 仍按服务器会话返回 A；B Marketplace/receipt、A Marketplace+B receipt、虚构 receipt 均 404；切换 B 被真实 HTTP **403** 拒绝，A 当前租户不变。
@@ -27,11 +29,11 @@ V218 已通过 Next16/Chromium 合成界面的 401/403/404/409 与旧值隔离�
 
 ## CI 调度修复记录
 
-首次 V219 提交后，GitHub Actions 在当前工作流上出现 **completed/failure 但 0 jobs**，表示业务/权限 SQL 根本未运行，不能标为测试失败也不能标为验收成功。为恢复可验证性，将 CI YAML 中 **7 条 Flyway 版本检查 + 9 条 PostgreSQL index 检查 + 1 条 constraint 检查** 归并为显式列表循环，仍对每个原有版本、索引和约束逐一判定 count=1，并保留全部其他验收任务。此变更只压缩工作流重复文本，不放宽或跳过检查。重跑的新精确 SHA 已成功创建 7 个 Job，但 PG18 实际执行首先揭示了原脚本错误地要求数据库全局只有 1 个租户/credential；先前其它隔离脚本已经创建合成账户，因此其安全前置门禁主动失败，**未执行 V219 角色 HTTP 负例**。V219 现在改为仅允许正式仓库 main GitHub Actions + CI localhost 固定 DB/临时 bootstrap，并且要求 bootstrap Owner 唯一、V219 测试 UUID 和登录名未占用。为不影响既有 PG18/PITR/Session 计划，真实 V219 HTTP 测试移至 PG18 full suite 所有其他检查之后；快 CI 增加 Python 语法检查。需在新 SHA 再跑一次 A3 才能确认真正 HTTP 成功。
+首次 V219 提交后，GitHub Actions 在当前工作流上出现 **completed/failure 但 0 jobs**，表示业务/权限 SQL 根本未运行，不能标为测试失败也不能标为验收成功。为恢复可验证性，将 CI YAML 中 **7 条 Flyway 版本检查 + 9 条 PostgreSQL index 检查 + 1 条 constraint 检查** 归并为显式列表循环，仍对每个原有版本、索引和约束逐一判定 count=1，并保留全部其他验收任务。此变更只压缩工作流重复文本，不放宽或跳过检查。重跑的新精确 SHA 已成功创建 7 个 Job，但 PG18 实际执行首先揭示了原脚本错误地要求数据库全局只有 1 个租户/credential；先前其它隔离脚本已经创建合成账户，因此其安全前置门禁主动失败，**未执行 V219 角色 HTTP 负例**。V219 现在改为仅允许正式仓库 main GitHub Actions + CI localhost 固定 DB/临时 bootstrap，并且要求 bootstrap Owner 唯一、V219 测试 UUID 和登录名未占用。为不影响既有 PG18/PITR/Session 计划，真实 V219 HTTP 测试移至 PG18 full suite 所有其他检查之后；快 CI 增加 Python 语法检查。最终新 SHA [完整 A3 #45311583643（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45311583643) 已在真实 Session/PG18 下 7/7 SUCCESS；前两次失败只作历史排错，不能代替本次成功。
 
 ## 验收依据与后续
 
-必须记录**精确 V219 代码 SHA**、pnpm/Vitest/Next16 快 CI，以及包含 PostgreSQL18、真实 Spring Session 权限脚本、Chromium、Compose 的完整 A3 7/7；PG18 原始日志须出现 PASS V219 real Spring/PG18 HTTP。任何真实 SQL 或权限失败须修复，不允许用 V218 绿色冒充 V219 验收。
+**实际通过依据**：[V219 代码 `6bec3c4`](https://github.com/kunlong-luo/merchivra/commit/6bec3c4b59f1e904a25c5512d0054a13ad9ca1d0)、[快 CI #45311583687 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45311583687)、[完整 A3 #45311583643（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45311583643)；PG18 实际输出 `PASS V219 real Spring/PG18 HTTP`，覆盖已登录员工 A/B Owner 混合身份的 403、A Owner/B 来源 404、合法 Owner 200、隔离注销后 401。不得将真实权限回归扩大为真实 Amazon/物流/银行收费验证。
 
 V220 优先推进实际 V112 **非空** 人工费用提案 Owner GET、跨来源碰撞和 50+ 上限的真实 HTTP/409 验收，进一步检查同会话突变和双 RR 快照，但人工提案始终不能转成真实 landed cost。先解决外部证据和 G1 政策，不堆孤立财务卡片。
 
