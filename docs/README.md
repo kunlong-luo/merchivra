@@ -1,6 +1,6 @@
 # Merchivra · 当前文档中心
 
-> **CURRENT / 2026-11-23 · DOC-196。** 从这里进入现行规范；不要因为旧 Vxxx 文件包含“当前/最新”就按它启动工作。实际工程为 Java25/Spring Boot4.1.2/Gradle/PG18、React19/**Next.js 16.4.5 默认**、Node24/**pnpm 12.20.0 唯一包管理**；项目 pre-alpha，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
+> **CURRENT / 2026-11-24 · DOC-196。** 从这里进入现行规范；不要因为旧 Vxxx 文件包含“当前/最新”就按它启动工作。实际工程为 Java25/Spring Boot4.1.2/Gradle/PG18、React19/**Next.js 16.4.5 默认**、Node24/**pnpm 12.20.0 唯一包管理**；项目 pre-alpha，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
 
 ## 先看哪份文档
 
@@ -71,3 +71,5 @@ V213 [原采购收货跨订单全局容量与真实落地成本缺证](finance/v
 V214 [原币人工费用对采购收货单的缺失身份与落地成本阻断](finance/v214-manual-cost-receipt-provenance-hold.md)：V91/V92 目前只有人工费用元数据与 SKU/ORDER/PERIOD 分摊，没有直接 receipt 身份；新增受 Owner 保护的只读后端候选元数据覆盖诊断，无实际采购批次金额或财务过账。V214 精确代码 `9de829f` 的 [快 CI #45193406175 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45193406175)，PG18 专项 SKIPPED、完整 A3 未执行；70/100，真实 OAuth OFF，`realizedNetProfit=null`、生产 #104 NO-GO。
 
 V215 [采购收货单级费用提案身份、原币守恒与 V92 双向互斥](finance/v215-receipt-cost-claim-and-v92-exclusivity.md)：Flyway V112 / PG18 专项负例，内部未核证来源、独立复核及只读视图，无对外写 API、实际 landed COGS 或净利润。[V215 精确代码 `709fbd0`](https://github.com/kunlong-luo/merchivra/commit/709fbd0bd702af2694d9f351b6e0cbb367b7a6c1) · [同 SHA 快速 CI #45295653983 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45295653983) · [完整 A3 #45295654148（7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45295654148)，PG18 原始 V112 触发器 TEMP/ROLLBACK 合成回归；70/100、真实 OAuth OFF、生产 #104 NO-GO。
+
+V216 [收货单 V112 人工费用原币守恒、来源漂移与 V165 跨来源潜在重叠只读核查](finance/v216-receipt-local-cost-integrity-read-gate.md)：新增受 Owner 保护 GET，复用已建 V112/V165 并 fail-closed，最多 50 份本地人工计划，绝不升格外部成本或利润。完整合成 CI/A3 需按本轮精确 SHA 另行记录；70/100、真实 OAuth OFF、生产 #104 NO-GO。

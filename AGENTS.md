@@ -1,6 +1,6 @@
 # Merchivra · 现行 Agent 与开发守则
 
-> **CURRENT · 2026-11-22 / DOC-196。唯一生效的 Agent 指令入口。** 旧 `Agent.md` 只是跳转；V1–V195 版本说明和 Git 历史是证据，不是叠加的永续指令。发生冲突先核对实际代码、当前决策和精确 SHA 的测试，按[文档控制规则](docs/governance/document-control.md)处理。此文件规定执行边界；具体实践见[工程规范](docs/governance/engineering-standards.md)。
+> **CURRENT · 2026-11-24 / DOC-196。唯一生效的 Agent 指令入口。** 旧 `Agent.md` 只是跳转；V1–V195 版本说明和 Git 历史是证据，不是叠加的永续指令。发生冲突先核对实际代码、当前决策和精确 SHA 的测试，按[文档控制规则](docs/governance/document-control.md)处理。此文件规定执行边界；具体实践见[工程规范](docs/governance/engineering-standards.md)。
 
 ## 必须遵守的工程基线
 
@@ -19,6 +19,7 @@
    **V213 原采购收货跨订单容量**：不能只看一个退款订单就假设本地采购收货无其他订单领用；沿用 V106 不可变 claim/历史撤销的全局容量约束独立复核，原 PO 采购单价非已核证含运费/进口税/FX 的最终 landed cost，内部共享原收货单不等于会计重复入账。
    **V214 人工采购费用限制**：V91/V92 的运费/进口税/汇兑人工来源只按 Marketplace 原币和 SKU/ORDER/PERIOD 关联，缺原采购收货单 FK；V214 只能读候选元数据及费用分摊状态，不得按相同 SKU/日期自动嫁接 receipt，不得推导实际落地 COGS 或可入账利润。证据缺失/漂移按 UNKNOWN/409 阻断。
    **V215 收货费用归属门禁**：Flyway V112 仅建立 V91→本地 V20 receipt 的单来源一次性原币提案、独立复核、审计和 V92 双向互斥。无真实外部发票签证或 G1 会计批准时，不得开发绕过 V112 唯一归属/数量守恒的写接口，不得把 APPROVED_UNVERIFIED 计为实际 landed COGS/净利润。
+   **V216 独立只读财务源门禁**：V112 人工收货级费用需按 tenant+Marketplace 原 V91 来源、全计划 receipt 原币金额、现 PO 币种、V92 冲突、V91/V112 PG 审计重新复算；V165 已有八类来源碰撞复用，不建新审批。上限 50 计划、超限/快照漂移 409，缺来源 UNKNOWN≠0；本地人工复核或 V165 无冲突不能解锁真实 landed cost、COGS 或净利润。
 4. 库存及 WMS 签名不自动证明第三方运营商真实身份或物理实收，不以内部三方 QC 替代外部确认；库存过账与退款回转必须受证据和批准限制。
 5. 不提交或输出任何实际 Seller/Ads、银行、客户或 WMS 凭据、密钥、会话和私有证据。不要关闭 Session/CSRF、绕过 Owner/租户校验或公开 Actuator 来解决本地启动错误。
 
