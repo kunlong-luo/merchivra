@@ -1,4 +1,4 @@
-# Merchivra · 当前执行计划（2026-11-24 / V221 V113 committed tenant epoch 与双 RR ABA 防护验证）
+# Merchivra · 当前执行计划（2026-11-24 / V221 已验收 7/7，V222 真 HTTP 并发与写入争用待开发）
 
 **状态：现行 P0 任务顺序，不是自动上线授权。** 以 [当前事实基线](../current-status.md)、[ENG-001 实施规范](../governance/engineering-standards.md)、[V194/V105 最终代码 SHA `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`](https://github.com/kunlong-luo/merchivra/commit/9cdb9268020bdc9ae0c743e09d5d5775c377ce69) 的 [完整 A3 #45018945885（run_attempt=1，7/7 核心 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885)；同一 SHA [快速 CI #45018945926 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) 为依据；早期 [V108 MVP 计划](mvp-freeze-release-v108.md) 与 [PLAN-001 长路线图](../roadmap.md) 保留为历史迭代记录。
 
@@ -19,9 +19,9 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
-## V221 当前实施 · V113 已提交来源版本与 V216 ABA fail-closed（精确 SHA/A3 待验收）
+## V221 已实现并验收 · V113 已提交来源版本与 V216 ABA fail-closed（[V221 精确 A3 提交 `57c6083`](https://github.com/kunlong-luo/merchivra/commit/57c6083391ce3a8186b95b8453cfe53b24096da2) · [快速 CI #45317628784 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45317628784) · [完整 A3 #45317628690（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45317628690)）
 
-[V221 并发快照/ABA 契约](../finance/v221-receipt-source-committed-epoch-aba-guard.md)：既有 V216 两次独立 RR 只比较读取内容，已提交的 A→B→A 仍可能恢复完全相同内容。新增 Flyway V113 tenant 级提交顺序一致的 epoch，语句级监听 V91/V92/V112、采购单/收货/Marketplace、V165 所有本地来源输入（45 个 transition trigger + 1 个 tenant 状态触发器）。V216 将租户/Marketplace/receipt 活性校验移进每次 RR，同行证据与 epoch 读取共享 MVCC；两个 epoch 不同必须 409，再检查内容变动。Java 服务专项验证相同内容不同版本、空内容 ABA、无版本仍 UNKNOWN、scope 变化 404；实际 PG18 双连接 advisory lock 对 PO USD→EUR→USD 做确定性时序，旧 RR 仍原版本，新 RR 必须更高，回滚与其他 tenant 写入不影响。**PG18 并发证明与 Java 单测分别验证能力，不冒充真实 HTTP 请求中途强制交错**。第二轮 PG18 Job 已由 [A3 #45316961822](https://github.com/kunlong-luo/merchivra/actions/runs/45316961822) 原始 `PASS V221 PG18 committed tenant epoch` 验收，**完整 A3 仍因独立 Compose Maven Central 429 而不是 7/7**；已在 Dockerfile 对明确的下载限流做 3 次有界重试，等新精确 SHA 的 full A3 才结束 V221。
+[V221 并发快照/ABA 契约](../finance/v221-receipt-source-committed-epoch-aba-guard.md)：既有 V216 两次独立 RR 只比较读取内容，已提交的 A→B→A 仍可能恢复完全相同内容。新增 Flyway V113 tenant 级提交顺序一致的 epoch，语句级监听 V91/V92/V112、采购单/收货/Marketplace、V165 所有本地来源输入（45 个 transition trigger + 1 个 tenant 状态触发器）。V216 将租户/Marketplace/receipt 活性校验移进每次 RR，同行证据与 epoch 读取共享 MVCC；两个 epoch 不同必须 409，再检查内容变动。Java 服务专项验证相同内容不同版本、空内容 ABA、无版本仍 UNKNOWN、scope 变化 404；实际 PG18 双连接 advisory lock 对 PO USD→EUR→USD 做确定性时序，旧 RR 仍原版本，新 RR 必须更高，回滚与其他 tenant 写入不影响。**PG18 并发证明与 Java 单测分别验证能力，不冒充真实 HTTP 请求中途强制交错**。第二轮 PG18 Job 已由 [A3 #45316961822](https://github.com/kunlong-luo/merchivra/actions/runs/45316961822) 原始 `PASS V221 PG18 committed tenant epoch` 验收，**完整 A3 仍因独立 Compose Maven Central 429 而不是 7/7**；已在 Dockerfile 对明确的下载限流做 3 次有界重试，最终 [完整 A3 #45317628690（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45317628690) 的 7 项全部 SUCCESS，PG18 Job #138188220198 原始日志 `PASS V221 PG18 committed tenant epoch`；独立 Compose HTTP/CSRF/TLS 亦通过。本轮是数据库双连接交错和 Java 409 服务断言，并**非**真实 HTTP 中途锁住 V216 的请求 409；V222 处理该遗留与大租户锁竞争。
 
 **下一阶段 V222**：真实请求级读边界交错 / 高写入租户性能与 409 比率验证、必要时以业务来源约束收窄版本范围；同时优先推进可信外部账单原件及 G1/DEC 财务政策。继续 70/100、realizedNetProfit=null、真实 Amazon Seller/Ads OAuth OFF、生产 #104 NO-GO。
 
@@ -29,7 +29,7 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 [V220 原币非空费用来源的真 Spring/PG18 HTTP 验收契约](../finance/v220-receipt-source-population-real-http.md)：使用已有 V216 Owner/no-store GET 与真实 V91/V112 表、真实 PG18 triggers，在既有 V219 A Owner/员工-B Owner 的一次性隔离库中做两条已独立审核但外部未核实的人工原币候选：USD 100 source/current receipt 40、两个 receipt total 90；另一 USD 30/current 10。V165 同站点 claimed 文档摘要重叠产生潜在冲突 HOLD，不同站点相同摘要不能合并；V92 对活跃 V112 source 的重复归属由 DB 拒绝；PO 当前币种变更让既有审批读时过期。再将同一 receipt 从 2 扩充到 50 份计划并完整 200，51 份必须 409 不得返回截断。跨租户/Marketplace/Staff 权限沿用 V219 真实 HTTP，不新加财务过账或报表展示。不允许将本地提案升格为真实 landed cost、COGS 或 realized profit。**实际已验收**：[V220 精确验收代码 `b821ecb`](https://github.com/kunlong-luo/merchivra/commit/b821ecbf0be925f4073c80cff0e146fbaf4b43f0)： [快速 CI #45314064511 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45314064511)，[完整 A3 #45314064469（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45314064469)。PG18 Job #138176547718 原始日志明确打印 PASS V220 real Spring/PG18 V112 nonempty Owner HTTP，验证 40/90 USD 原币全收货金额、V165 同站点潜在碰撞/跨站点隔离、真实 V92 trigger 排斥、PO 币种变化导致读时 HOLD、50 完整 HTTP200 与 51 HTTP409 不回退局部数据，以及 A 非 Owner403/B 跨租户404/匿名401。全部仅为一次性 PG18 合成手工数据，不是外部 landed cost 核证。
 
-**下一阶段 V221**：真实双 repeatable-read 快照读时 source/receipt population 并发变更、ABA 与 409 fail-closed 的独立验收；外部结算/发票/银行/货代证明及 G1/DEC 会计口径仍是实际净利润门槛。维持评分 70/100、realizedNetProfit=null、真实 Seller/Ads OAuth OFF、生产 #104 NO-GO。
+**V221 现已实现并完成上述精确 PG18 A3 验收**；外部结算/发票/银行/货代证明及 G1/DEC 会计口径仍是实际净利润门槛。维持评分 70/100、realizedNetProfit=null、真实 Seller/Ads OAuth OFF、生产 #104 NO-GO。
 
 ## V219 已验收 · Spring Owner/Staff 与跨租户 Marketplace GET（[V219 代码 `6bec3c4`](https://github.com/kunlong-luo/merchivra/commit/6bec3c4b59f1e904a25c5512d0054a13ad9ca1d0) · [快 CI #45311583687 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45311583687) · [完整 A3 #45311583643（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45311583643)）
 

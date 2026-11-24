@@ -2,6 +2,12 @@
 
 **2026-11-24 · Flyway V113 + Spring V216 双快照读取增强 / 真实 PG18 事务交错回归。无新 HTTP 财务写接口、无真实 Amazon 授权、无实际 COGS 或利润解锁。**
 
+## V221 最终验收 · 2026-11-24
+
+[V221 精确 A3 提交 `57c6083`](https://github.com/kunlong-luo/merchivra/commit/57c6083391ce3a8186b95b8453cfe53b24096da2)：[快速 CI #45317628784 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45317628784)，[完整 A3 #45317628690（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45317628690)。真实 PG18 Job #138188220198 日志明确打印 `PASS V221 PG18 committed tenant epoch`，包含 **46 个 V113 触发器、事务回滚不增长、租户隔离、V91 INSERT/DELETE ABA 后版本递增、两条 PostgreSQL 连接在 PO USD→EUR→USD 下旧/新 RR 版本不同**；V219/V220 真实 Spring Session/Owner HTTP 同轮再次 PASS。Compose HTTP/CSRF/TLS、Chromium、Java25、Next16 都 SUCCESS。**真实 in-flight HTTP 中途暂停/409 尚未实际交错验证，留 V222；不代表外部 landed cost/COGS/利润或生产 GO。**
+
+前两次 A3 未完成的原因分别是**测试 advisory lock 未显式释放**和**外部 Maven Central HTTP 429 限流**，均保留在下方历史排障记录；最终验收采用新的精确 SHA 和第三轮真实 A3，不将失败跑次粉饰为成功。
+
 ## 已发现的具体缺口
 
 原 V216 的一次 Owner GET 在两个独立 PostgreSQL `REPEATABLE READ` 事务中分别读取 V112 收货费用和 V165 身份碰撞结果，然后比较两份 Java `Snapshot`。这可以拦截两次读到**不同结果**的变化，但无法观察两次读取之间**先 A→B、随后 B→A，且两次提交后业务行恢复原值**的变化。此时来源金额、批次人数、币种和 V165 状态的 Java `equals` 可能相同，旧实现就没有可靠理由触发 409。
@@ -48,4 +54,4 @@ V221 既保留 V216 对**结果本身**的独立比较，又给每一个证据�
 
 ## 验收判定
 
-只有该**精确 V221 代码 SHA** 的快 CI Java25+Gradle、Node24+pnpm/Next16 和真实 PG18/Chromium/Compose 完整 A3 **7/7 SUCCESS**，且 PG18 原始日志包含 `PASS V221 PG18 committed tenant epoch`，才将 V221 标为通过；任何未运行、0 jobs、SQL 错误、并发等待超时都必须按未验收如实记录。
+**本轮已满足这一验收标准。** 规则保持：只有该**精确 V221 代码 SHA** 的快 CI Java25+Gradle、Node24+pnpm/Next16 和真实 PG18/Chromium/Compose 完整 A3 **7/7 SUCCESS**，且 PG18 原始日志包含 `PASS V221 PG18 committed tenant epoch`，才将 V221 标为通过；任何未运行、0 jobs、SQL 错误、并发等待超时都必须按未验收如实记录。
