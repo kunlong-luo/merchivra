@@ -232,7 +232,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V216-A3-receipt-local-cost-integrity-read-gate' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V213-A3-cross-order-receipt-capacity-and-landed-cost-hold' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
