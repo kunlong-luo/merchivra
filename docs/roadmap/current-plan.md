@@ -19,9 +19,9 @@ Merchivra 最重要的核心能力是**汇集订单/SKU/店铺/期间所有有�
 
 工作原则：先复用既有表、服务、Orval 客户端和差异审计；不新建重复“真实性系统”，不修改历史 Flyway；后端审计优先于增加展示卡片。
 
-## V215 当前实现 · 精确收货单级人工成本来源身份与双向防重复
+## V215 已交付 · 精确收货单级人工成本来源身份与双向防重复（[代码 `709fbd0`](https://github.com/kunlong-luo/merchivra/commit/709fbd0bd702af2694d9f351b6e0cbb367b7a6c1) · [快 CI #45295653983 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45295653983) · [完整 A3 #45295654148（7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45295654148)）
 
-[契约与测试范围](../finance/v215-receipt-cost-claim-and-v92-exclusivity.md)：新增 Flyway V112（V91 同源不可变提案，精确 V20 receipt FK，原币单笔与总量上限、≤100 条、一次独立审核、PG 自动追加审计）。对 V92 的活跃 SKU/ORDER/PERIOD 分摊新增双向阻断，不让同一人工来源在新收货维度重复分配；既有 V92 历史迁移保持不变。新增 PG18 真实已安装触发器的 TEMP/ROLLBACK 合成负例脚本并接入完整 CI。**没有**新的对外人工写 API、没有 G1 核准的资本化/FX/期间规则，实际 COGS 和净利润仍 NULL。本轮精确 SHA、快 CI/PG18/A3 结果待执行记录。
+[契约与测试范围](../finance/v215-receipt-cost-claim-and-v92-exclusivity.md)：新增 Flyway V112（V91 同源不可变提案，精确 V20 receipt FK，原币单笔与总量上限、≤100 条、一次独立审核、PG 自动追加审计）。对 V92 的活跃 SKU/ORDER/PERIOD 分摊新增双向阻断，不让同一人工来源在新收货维度重复分配；既有 V92 历史迁移保持不变。新增 PG18 真实已安装触发器的 TEMP/ROLLBACK 合成负例脚本并接入完整 CI。**没有**新的对外人工写 API、没有 G1 核准的资本化/FX/期间规则，实际 COGS 和净利润仍 NULL。精确 SHA `709fbd0` 已完成 Java25/Next16/PG18/HTTP/Chromium/Compose 合成 A3 7/7；PG18 原日志含 `PASS V215 PG18 exact V112 triggers`。首次 A3 #45295153716 因 V91 合成 reviewed_by/reviewed_at/review_reason 缺失而失败，已在新 SHA 修正测试夹具并重测，不降低任何约束。
 
 **下一阶段 V216**：独立只读核对 V112 最新状态、原币来源和 V92 历史冲突、跨不同 V91 来源的潜在重复发票；复用已有审批而不新增第二套认证。G1/DEC 决策和外部 Amazon/银行/WMS 原始来源未获核证前继续 #104 NO-GO，70/100。
 

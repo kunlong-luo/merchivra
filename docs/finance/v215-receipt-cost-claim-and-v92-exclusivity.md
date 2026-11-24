@@ -1,6 +1,6 @@
 # Merchivra V215 · 原采购收货单级人工费用归属契约
 
-**2026-11-24 · Flyway V112 / 本地人工提案、无公开写入 API、无真实财务过账。** V215 只把 V91 原币人工费用提案绑定本地采购收货 ID，并显式阻止 V92 的重复归属，未核证任何真实 landed cost。精确 SHA/PG18/A3 结果将在运行后单独确认。
+**2026-11-24 · Flyway V112 / 本地人工提案、无公开写入 API、无真实财务过账。** V215 只把 V91 原币人工费用提案绑定本地采购收货 ID，并显式阻止 V92 的重复归属，未核证任何真实 landed cost。[精确代码 `709fbd0`](https://github.com/kunlong-luo/merchivra/commit/709fbd0bd702af2694d9f351b6e0cbb367b7a6c1) · [同 SHA 快速 CI #45295653983 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45295653983) · [同 SHA 完整 A3 #45295654148（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45295654148)。PG18 日志通过 V112 真实已安装触发器的 TEMP/ROLLBACK 合成回归，不等于外部真实成本核证。
 
 ## 已有来源与证据等级
 
