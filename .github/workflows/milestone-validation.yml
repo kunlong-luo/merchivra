@@ -1,3 +1,6 @@
+# V231: bounded browser-only original bytes -> claimed V91 SHA-256,
+# fail closed on file mismatches/limits, never promote issuer/COGS/profit.
+# Canonical docs/dir cleanup removes obsolete alias/duplicate only, with link guard.
 # V230B: preserve first 6/7 browser DOM remount failure, retry exact
 # selected Core panel table while keeping source/row/column expectations.
 # V230: original issuer/source/category evidence requirements composed from
@@ -283,7 +286,7 @@
 # This contains ONLY existing synthetic/PG18/Compose suites and never
 # requests real Amazon Seller, Ads, bank credentials or production databases.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V230B-A3-external-proof-and-Next-browser-remount-fix' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V231-A3-local-byte-claim-integrity-and-repository-cleanup' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
