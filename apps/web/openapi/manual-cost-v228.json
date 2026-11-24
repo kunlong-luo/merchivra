@@ -2,8 +2,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Merchivra V228 bounded manual cost source staging",
-    "version": "228.0.0",
-    "description": "Contract from CostSourceReviewController.stageManualCostSourceBatch (V226). MANUAL_UNVERIFIED local facts only; never verified COGS or realized profit."
+    "version": "230.0.0",
+    "description": "Contract from CostSourceReviewController.stageManualCostSourceBatch (V226). MANUAL_UNVERIFIED local facts only; never verified COGS or realized profit. V230 adds read-only source-specific third-party proof requirements; all external verification signals remain false."
   },
   "servers": [
     {
@@ -91,6 +91,72 @@
           },
           "409": {
             "description": "Immutable source key conflict or incorrect original currency; entire batch rolled back"
+          }
+        }
+      }
+    },
+    "/api/v1/finance/marketplaces/{marketplaceId}/cost-sources/{sourceId}/external-proof-dossier": {
+      "get": {
+        "tags": [
+          "cost-external-proof"
+        ],
+        "operationId": "getManualCostExternalProofDossierV230",
+        "summary": "Read-only Owner source proof checklist, no external authentication",
+        "parameters": [
+          {
+            "name": "marketplaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "sourceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Safe V91/V229/V182 status and missing external proof requirements, never verified accounting.",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExternalCostProofDossierV230"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Owner permission required"
+          },
+          "404": {
+            "description": "Not found within Session tenant and Marketplace"
+          },
+          "409": {
+            "description": "Conflicting source or evidence snapshot"
           }
         }
       }
@@ -245,6 +311,154 @@
             "type": "string",
             "format": "date-time",
             "nullable": true
+          }
+        }
+      },
+      "ExternalCostProofRequirementV230": {
+        "type": "object",
+        "required": [
+          "code",
+          "description",
+          "independentlyVerified"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "independentlyVerified": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          }
+        }
+      },
+      "ExternalCostProofDossierV230": {
+        "type": "object",
+        "required": [
+          "sourceId",
+          "marketplaceId",
+          "category",
+          "originalCurrency",
+          "sourceReviewState",
+          "localAuditStatus",
+          "localAttributionStatus",
+          "localCollisionHeld",
+          "localSourceAuditComplete",
+          "independentMetadataReviewComplete",
+          "localDossierStatus",
+          "blockerCodes",
+          "requiredExternalProof",
+          "originalBytesVerified",
+          "issuerIdentityVerified",
+          "originalChargeVerified",
+          "duplicateDebitExcluded",
+          "settlementOrPaymentReconciled",
+          "actualLandedOrRefundCogsVerified",
+          "accountingPolicyApproved",
+          "eligibleForRealizedProfit",
+          "realizedNetProfit"
+        ],
+        "properties": {
+          "sourceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "marketplaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "category": {
+            "type": "string"
+          },
+          "originalCurrency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "sourceReviewState": {
+            "type": "string",
+            "enum": [
+              "STAGED",
+              "REVIEWED_UNVERIFIED",
+              "REJECTED"
+            ]
+          },
+          "localAuditStatus": {
+            "type": "string",
+            "enum": [
+              "LOCAL_AUDIT_COMPLETE",
+              "LOCAL_AUDIT_INCONSISTENT"
+            ]
+          },
+          "localAttributionStatus": {
+            "type": "string",
+            "enum": [
+              "CONFLICT_EVIDENCE",
+              "SUPPORTING_LOCAL_METADATA_UNVERIFIED",
+              "UNPROVEN"
+            ]
+          },
+          "localDossierStatus": {
+            "type": "string",
+            "enum": [
+              "LOCAL_AUDIT_INCONSISTENT_HOLD",
+              "LOCAL_SOURCE_REJECTED",
+              "LOCAL_METADATA_REVIEW_PENDING",
+              "LOCAL_CROSS_SOURCE_CONFLICT_HOLD",
+              "LOCAL_REVIEW_COMPLETE_EXTERNAL_UNVERIFIED"
+            ]
+          },
+          "blockerCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requiredExternalProof": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExternalCostProofRequirementV230"
+            }
+          },
+          "realizedNetProfit": {
+            "type": "string",
+            "nullable": true
+          },
+          "localCollisionHeld": {
+            "type": "boolean"
+          },
+          "localSourceAuditComplete": {
+            "type": "boolean"
+          },
+          "independentMetadataReviewComplete": {
+            "type": "boolean"
+          },
+          "originalBytesVerified": {
+            "type": "boolean"
+          },
+          "issuerIdentityVerified": {
+            "type": "boolean"
+          },
+          "originalChargeVerified": {
+            "type": "boolean"
+          },
+          "duplicateDebitExcluded": {
+            "type": "boolean"
+          },
+          "settlementOrPaymentReconciled": {
+            "type": "boolean"
+          },
+          "actualLandedOrRefundCogsVerified": {
+            "type": "boolean"
+          },
+          "accountingPolicyApproved": {
+            "type": "boolean"
+          },
+          "eligibleForRealizedProfit": {
+            "type": "boolean"
           }
         }
       }
