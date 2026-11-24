@@ -2,6 +2,22 @@
 
 **2026-11-24 · 性能评估及可复现测试工具；此文不代表性能结果已验收、生产负载已满足、实际 COGS 或净利润已核实。**
 
+## V223 精确提交最终合成验收（已完成，非生产容量证明）
+
+- **精确代码 SHA**：[`9cae5abb78aff944454351a8d9b0dde9df6dc87c`](https://github.com/kunlong-luo/merchivra/commit/9cae5abb78aff944454351a8d9b0dde9df6dc87c)。[同 SHA 快速 CI #45320774625 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45320774625)；[同 SHA 完整 A3 #45320774622（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45320774622)。真实 PostgreSQL 18 Job **#138198529460 SUCCESS**，原始日志明确包含 `V223_PG18_CONTENTION`、`V223_FORCED_HTTP409` 和 `PASS V223 PG18 V113 real-trigger contention and forced cross-Marketplace Owner HTTP409`，与 V219–V222 真 Spring/PG18 来源/ABA 回归同轮通过；Chromium、Next16、Java25、Compose 各任务成功。
+- 4 组写入对照都完成提交版本守恒：单 worker 40 个事务 / 80 ticks；其余每组 8 worker × 30 = 240 个事务 / 480 ticks。全部 760 个事务来自真实 V91 INSERT/DELETE 语句触发器，来源行在事务结束时不存在。
+
+| A3 真实合成场景 | 事务 TPS | P50 / P95 / P99（ms） | Lock 等待样本（命中/总数，最大等锁会话） |
+| --- | ---: | ---: | --- |
+| 1 worker、A1 | 402.44 | 2.07 / 2.65 / 17.03 | 0/1，0 |
+| 8 workers、全 A1 | 452.98 | 6.33 / 66.56 / 114.45 | 4/4，7 |
+| 8 workers、同租户 A1/A2 | 433.43 | 6.11 / 65.00 / 125.61 | 4/4，7 |
+| 8 workers、tenant A/B | 636.54 | 8.53 / 28.82 / 75.69 | 3/3，5 |
+
+**本次观察**：相同 8 workers，相比同租户双站点 433.43 TPS，跨两个租户 636.54 TPS（约 +46.9%）；P95 从 65.00ms 降至 28.82ms（约 -55.7%）。同租户双站点与同租户单站点都出现 p95≈65ms 和最多 7 个 Lock waiter，支持**租户版本热点可实测**，但不能排除同一 CI 主机资源、测试调度、索引/FK 等共因，不能把全部差异归结成一个版本行。80ms 采样点仅 1–4 个，不是持续锁等待率/直方图，也不能外推生产 TPS。
+- **真实 Spring Owner 条件化双 RR 409**：无写入 **0/4**；异租户 V91 写入 **0/4**；同租户其他 Marketplace V91 INSERT→DELETE **4/4**；目标 Marketplace 自身写入 **4/4**。409 的响应不含 plans/COGS/net profit，正常 200 仍为 UNKNOWN/NULL。**该 100% 是人工强制命中 RR1 与 RR2 之间写入的条件比例，不是自然生产额外 409 率**。
+- **决策**：V223 完成技术诊断及 A3 证据；暂时**不修改**已验证的 V113 提交有序防 ABA、V216 fail-closed 或生产门禁。下一步 V224 应复核无变化 UPDATE/批量写入导致的多余 tick，以及 PO/receipt/tenant.status/V165 跨站点依赖，再用代表性混合并发负载设定正常 HTTP409 和 P95/P99 SLO。没有真实平台/会计证据时 `realizedNetProfit=null`，评分仍 70/100，#104 NO-GO。
+
 ## 问题与设计审计
 
 V221 / Flyway V113 在 15 个 V216 / V165 来源输入表上使用 **45 个语句级 transition-table 触发器**，另有一个 `tenant.status` 变更触发器。一次 SQL 语句对每个受影响 tenant 调用 `finance_receipt_read_epoch_touch_v113`，事务内对 `finance_receipt_read_epoch_v113(tenant_id PRIMARY KEY)` 执行 `INSERT .. ON CONFLICT DO UPDATE revision=revision+1`。这是**事务提交有序**的本地版本，而非数据库 sequence/外部凭证。V216 的两个 RR 事务分别读同一快照中的来源、冲突、范围和 epoch；值变更或版本变更均 fail-closed HTTP409。
