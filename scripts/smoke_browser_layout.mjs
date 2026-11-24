@@ -816,8 +816,20 @@ async function select(send, name) {
   await waitFor(send,
     "document.querySelectorAll('#"+panel+" .core-data-scroll tbody tr').length===1",
     name+' rows')
-  const cols = await evaluate(send, "(() => {const t=document.querySelector('.core-data-scroll table');" +
-    "return [t.querySelectorAll('thead th').length,t.querySelectorAll('tbody tr:first-child td').length]})()")
+  // Next App Router may replace the selected table after the row wait above.
+  // Retry the *exact requested panel*, not an unscoped/stale Core table.
+  // This fixes a DOM-remount race without weakening fixture/route assertions.
+  let cols = null
+  for(let attempt=0; attempt<90 && cols===null; attempt++){
+    cols = await evaluate(send,
+      "(() => {const t=document.querySelector('#"+panel+" .core-data-scroll table');" +
+      "if(!t||t.querySelectorAll('tbody tr').length!==1)return null;" +
+      "const h=t.querySelectorAll('thead th').length;" +
+      "const d=t.querySelectorAll('tbody tr:first-child td').length;" +
+      "return h>0&&d>0?[h,d]:null})()")
+    if(cols===null)await sleep(140)
+  }
+  assert.ok(cols, name+' selected Core table stayed mounted long enough to inspect')
   assert.equal(cols[0], cols[1], name+' header/data columns')
 }
 async function main() {
