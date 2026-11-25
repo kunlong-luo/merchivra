@@ -1,6 +1,6 @@
 # Merchivra 文档中心 · 唯一现行入口
 
-> **CURRENT · 2026-11-25 / V237 完整 A3 7/7；V238–V240 快 CI 通过；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 PG18 步骤失败；V244 验收修复待验收；现行六维评分76/100。** Java 25/Spring Boot 4.1.2/**Gradle**/PostgreSQL 18、React19/**Next.js 16.4.5**/Node24/**pnpm 12.20.0 唯一包管理器**。本仓库仍是 **pre-alpha**；真实 Seller/Ads OAuth 关闭，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**；`realizedNetProfit=null`。所有现行代码和文档直接维护在 `main`，本入口不把本地手工账单或模拟 CI 冒充真实净利润。
+> **CURRENT · 2026-11-25 / V237 完整 A3 7/7；V238–V240 快 CI 通过；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 PG18 步骤失败；V244 完整 A3 7/7；V245 历史 COGS 输入门禁待验收；现行六维评分76/100。** Java 25/Spring Boot 4.1.2/**Gradle**/PostgreSQL 18、React19/**Next.js 16.4.5**/Node24/**pnpm 12.20.0 唯一包管理器**。本仓库仍是 **pre-alpha**；真实 Seller/Ads OAuth 关闭，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**；`realizedNetProfit=null`。所有现行代码和文档直接维护在 `main`，本入口不把本地手工账单或模拟 CI 冒充真实净利润。
 
 ## 先读这些权威文档
 

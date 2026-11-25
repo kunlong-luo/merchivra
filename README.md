@@ -11,7 +11,7 @@
 
 ## Current engineering status
 
-V237 full isolated A3 passed (7/7), including the actual PostgreSQL 18 Java Reports service test with a synthetic remote worker. V238–V240 quick CI passed. V241 full A3 passed (7/7); V242 full A3 passed (7/7). V243 quick CI passed but PG18 had a failed step; V244 repairs the SQL fixture and adds real Owner HTTP audit rejection coverage, pending full A3. See [current status](docs/current-status.md).
+V237 full isolated A3 passed (7/7), including the actual PostgreSQL 18 Java Reports service test with a synthetic remote worker. V238–V240 quick CI passed. V241 full A3 passed (7/7); V242 full A3 passed (7/7). V243 quick CI passed but PG18 had a failed step; V244 full A3 passed (7/7), including real Owner HTTP audit rejection. V245 strengthens historical COGS inputs and standalone read consistency; quick CI pending. See [current status](docs/current-status.md).
 
 ## What the repository directories actually do
 

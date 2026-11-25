@@ -83,6 +83,49 @@ class OrderCostEngineTest {
             p.items().getFirst().issue());
         assertNull(p.provisionalCost());
     }
+    @Test void zeroCandidateCountsCannotAuthorizePopulatedValues() {
+        var zeroMapping=new OrderCostEngine.Item("ITEM-M","SELLER-SKU-A",2,
+            "LIVE","INTERNAL-A",new BigDecimal("4"),"USD",0L,1L);
+        var zeroCost=new OrderCostEngine.Item("ITEM-C","SELLER-SKU-A",2,
+            "LIVE","INTERNAL-A",new BigDecimal("4"),"USD",1L,0L);
+        var p=OrderCostEngine.evaluate(true,true,WHEN,"USD",List.of(zeroMapping,zeroCost));
+        assertEquals("INCOMPLETE",p.readiness());
+        assertEquals("MAPPING_MISSING_AS_OF_DATE",p.items().get(0).issue());
+        assertEquals("UNIT_COST_MISSING_AS_OF_DATE",p.items().get(1).issue());
+        assertNull(p.provisionalCost());
+        assertEquals(0,p.coveredItems());
+    }
+    @Test void invalidUnitPriceCannotReduceOrInventProvisionalCogs() {
+        for(String cost:List.of("-1.00","0.0000001","100000000000000")) {
+            var p=OrderCostEngine.evaluate(true,true,WHEN,"USD",
+                List.of(item("ITEM-1",2,cost,"USD")));
+            assertEquals("INCOMPLETE",p.readiness());
+            assertEquals("UNIT_COST_INVALID",p.items().getFirst().issue());
+            assertNull(p.provisionalCost());
+            assertNull(p.items().getFirst().extendedCost());
+        }
+        var zero=OrderCostEngine.evaluate(true,true,WHEN,"USD",
+            List.of(item("ITEM-1",2,"0.000000","USD")));
+        assertEquals("COGS_READY_PREVIEW",zero.readiness());
+        assertEquals(0,new BigDecimal(zero.provisionalCost()).signum());
+    }
+    @Test void duplicateCurrentItemIdentityCannotDoubleCountCost() {
+        assertThrows(IllegalArgumentException.class,()->OrderCostEngine.evaluate(
+            true,true,WHEN,"USD",List.of(item("ITEM-1",2,"4","USD"),
+                item("ITEM-1",2,"4","USD"))));
+        assertThrows(IllegalArgumentException.class,()->OrderCostEngine.evaluate(
+            true,true,WHEN,"USD",List.of(item(" ",2,"4","USD"))));
+    }
+    @Test void standaloneCostPreviewUsesOneReadOnlyRepeatableReadTransaction() throws Exception {
+        var method=OrderCostReadinessService.class.getMethod("preview",
+            java.util.UUID.class,java.util.UUID.class,java.util.UUID.class);
+        var transaction=method.getAnnotation(
+            org.springframework.transaction.annotation.Transactional.class);
+        assertNotNull(transaction);
+        assertTrue(transaction.readOnly());
+        assertEquals(org.springframework.transaction.annotation.Isolation.REPEATABLE_READ,
+            transaction.isolation());
+    }
     @Test void mappingGapsCannotUseOtherSkuHistory() {
         var i=new OrderCostEngine.Item("ITEM-1","SELLER-SKU-A",1,
             "LIVE",null,new BigDecimal("4.00"),"USD");

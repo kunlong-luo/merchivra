@@ -31,11 +31,13 @@ public final class OrderCostEngine {
         Objects.requireNonNull(items);
         if(items.size()>1000)throw new IllegalArgumentException("Order has too many items");
         var rows=new ArrayList<Line>();
+        var seenItems=new java.util.HashSet<String>();
         int covered=0;
         BigDecimal sum=BigDecimal.ZERO;
         for(Item item:items) {
-            if(item==null||item.itemId()==null)
-                throw new IllegalArgumentException("Invalid order item");
+            if(item==null||item.itemId()==null||item.itemId().isBlank()
+                ||!seenItems.add(item.itemId()))
+                throw new IllegalArgumentException("Invalid or duplicated current order item");
             String issue=!orderLive?"ORDER_NOT_LIVE":
                 !itemsObserved?"ITEMS_NOT_OBSERVED":
                 orderCreatedAt==null?"ORDER_DATE_UNKNOWN":
@@ -46,9 +48,13 @@ public final class OrderCostEngine {
                     ||item.costVersionCandidateCount()==null
                     ||item.costVersionCandidateCount()<0?"COST_EVIDENCE_COUNT_UNKNOWN":
                 item.mappingCandidateCount()>1?"MAPPING_AMBIGUOUS_AS_OF_DATE":
-                item.internalSku()==null?"MAPPING_MISSING_AS_OF_DATE":
+                item.mappingCandidateCount()==0||item.internalSku()==null
+                    ||item.internalSku().isBlank()?"MAPPING_MISSING_AS_OF_DATE":
                 item.costVersionCandidateCount()>1?"UNIT_COST_VERSION_OVERLAP_AS_OF_DATE":
-                item.unitCost()==null?"UNIT_COST_MISSING_AS_OF_DATE":
+                item.costVersionCandidateCount()==0||item.unitCost()==null?"UNIT_COST_MISSING_AS_OF_DATE":
+                item.unitCost().signum()<0||item.unitCost().stripTrailingZeros().scale()>6
+                    ||item.unitCost().compareTo(new BigDecimal("100000000000000"))>=0
+                    ?"UNIT_COST_INVALID":
                 !currency.equals(item.unitCurrency())?"CURRENCY_MISMATCH":"READY";
             String extended=null;
             if("READY".equals(issue)) {

@@ -11,6 +11,8 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
@@ -31,6 +33,7 @@ public class OrderCostReadinessService {
         return t==null?null:t.toInstant();
     }
 
+    @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public OrderCostEngine.Preview preview(UUID tenant,UUID marketplace,UUID order) {
         List<Header> header=jdbc.query("""
             SELECT o.data_origin,o.items_observation,o.order_time,
@@ -109,7 +112,12 @@ public class OrderCostReadinessService {
             localDate==null?null:Date.valueOf(localDate),
             localDate==null?null:Date.valueOf(localDate),
             tenant,marketplace,order);
-        return OrderCostEngine.evaluate("LIVE".equals(h.dataOrigin()),
-            "OBSERVED".equals(h.observation()),h.createdAt(),h.currency(),items);
+        try {
+            return OrderCostEngine.evaluate("LIVE".equals(h.dataOrigin()),
+                "OBSERVED".equals(h.observation()),h.createdAt(),h.currency(),items);
+        } catch(IllegalArgumentException inconsistent) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Current order item identity or cost population inconsistent");
+        }
     }
 }
