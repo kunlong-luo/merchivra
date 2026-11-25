@@ -194,6 +194,7 @@ class ReceiptCostCompositionPg18V250Test {
         var second=new ReceiptCostCompositionPg18V250Test();
         second.db=db;second.write=write;second.service=service;second.recovery=recovery;
         second.crossClaimRace();
+        System.out.println("PASS V264 actual PG18 current global Owner and audited revocation gates, stale pending reopen");
         System.out.println("PASS V263 actual PG18 immutable reservation quantity version capture and ABA permanent hold");
         System.out.println("PASS V262 actual PG18 nonreusable refund evidence revisions, ABA, recreation, no-op and rollback");
         System.out.println("PASS V261 actual PG18 V63 review required, stale revision, author independence and duplicate audit hold");
@@ -348,6 +349,49 @@ class ReceiptCostCompositionPg18V250Test {
         assertFalse(first.refundCogsReversalAllowed());
         assertNull(first.actualRefundCogsReversal());
         assertNull(first.realizedNetProfit());
+        // V264: current Owner eligibility and audited revocation are not
+        // inferred from the old review digest or the existence of membership.
+        assertEquals(403,assertThrows(ResponseStatusException.class,()->write.executeWithoutResult(
+            ignored->recovery.request(tenant,market,event,reviewer,"V264 non Owner request"))).getStatusCode().value());
+        db.update("UPDATE app_user SET status='DISABLED' WHERE id=?",approver);
+        assertIndependentHold();
+        db.update("UPDATE app_user SET status='ACTIVE' WHERE id=?",approver);
+        db.update("DELETE FROM role_binding WHERE tenant_id=? AND user_id=? AND role_code='OWNER'",tenant,approver);
+        assertIndependentHold();
+        db.update("""
+            INSERT INTO role_binding(id,tenant_id,user_id,role_code,seller_account_id)
+            VALUES (?,?,?,'OWNER',?)
+            """,UUID.randomUUID(),tenant,approver,account);
+        assertIndependentHold(); // account-scoped role is not a global Owner
+        db.update("DELETE FROM role_binding WHERE tenant_id=? AND user_id=? AND role_code='OWNER'",tenant,approver);
+        db.update("INSERT INTO role_binding(id,tenant_id,user_id,role_code) VALUES (?,?,?,'OWNER')",
+            UUID.randomUUID(),tenant,approver);
+        // Reproduce the audited local-team revoke in the disposable fixture.
+        write.executeWithoutResult(ignored->{
+            db.update("UPDATE membership SET status='REVOKED' WHERE tenant_id=? AND user_id=?",tenant,approver);
+            db.update("""
+                INSERT INTO local_team_audit(id,tenant_id,actor_user_id,subject_user_id,event_code)
+                VALUES (?,?,?,?,'OWNER_REVOKED')
+                """,UUID.randomUUID(),tenant,maker,approver);
+        });
+        assertIndependentHold();
+        write.executeWithoutResult(ignored->recovery.request(tenant,market,event,maker,"V264 replacement request"));
+        assertEquals(403,assertThrows(ResponseStatusException.class,()->write.executeWithoutResult(
+            ignored->recovery.decide(tenant,market,event,approver,true,"V264 revoked decision"))).getStatusCode().value());
+        db.update("UPDATE membership SET status='ACTIVE' WHERE tenant_id=? AND user_id=?",tenant,approver);
+        // Audited requestor revoke while pending, even after reactivation.
+        write.executeWithoutResult(ignored->{
+            db.update("UPDATE membership SET status='REVOKED' WHERE tenant_id=? AND user_id=?",tenant,maker);
+            db.update("""
+                INSERT INTO local_team_audit(id,tenant_id,actor_user_id,subject_user_id,event_code)
+                VALUES (?,?,?,?,'OWNER_REVOKED')
+                """,UUID.randomUUID(),tenant,approver,maker);
+        });
+        db.update("UPDATE membership SET status='ACTIVE' WHERE tenant_id=? AND user_id=?",tenant,maker);
+        assertEquals(409,assertThrows(ResponseStatusException.class,()->write.executeWithoutResult(
+            ignored->recovery.decide(tenant,market,event,approver,true,"V264 revoked maker decision"))).getStatusCode().value());
+        approveRefund(event);
+        assertEquals(first.currencies(),service.readWholeOrderRefundReservations(tenant,market,sale).currencies());
         // V260: an independently cost-ready, but different, historical SKU
         // must not authorize use of the old receipt's cost basis.
         UUID differentSku=UUID.randomUUID();
@@ -664,8 +708,9 @@ class ReceiptCostCompositionPg18V250Test {
             INSERT INTO local_credential(user_id,login_name,password_hash)
             SELECT ?,?,password_hash FROM local_credential WHERE login_name='v65-ci-owner'
             """,maker,loginName()));
-        db.update("INSERT INTO role_binding(id,tenant_id,user_id,role_code) VALUES (?,?,?,'OWNER')",
-            UUID.randomUUID(),tenant,maker);
+        for(UUID owner:List.of(maker,approver))
+            db.update("INSERT INTO role_binding(id,tenant_id,user_id,role_code) VALUES (?,?,?,'OWNER')",
+                UUID.randomUUID(),tenant,owner);
         db.update("INSERT INTO seller_account(id,tenant_id,seller_id,region) VALUES (?,?,?,'NA')",
             account,tenant,"V250-SYNTHETIC-"+account);
         for(UUID m:List.of(market,market2))

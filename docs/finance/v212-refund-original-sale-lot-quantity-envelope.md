@@ -117,3 +117,10 @@ V261 [代码 e76e520fe904](https://github.com/kunlong-luo/merchivra/commit/e76e5
 ## V263 · V119 预留与 V34 证据版本（待验收）
 
 V263：Flyway V122 追加 V119 不可变预留的 V34 evidence_revision_v121 捕获列。V119 原有 READ COMMITTED 订单行锁与源/审核行共享锁继续有效，按触发器名字顺序在既有捕获后核实身份并覆盖调用者版本；同 event/item 旧/不同版本 peer 阻断新预留。读取同 RR 比较捕获版本和当前 V34 版本及 peer，旧 NULL 一律 HOLD、不回填、不释放区间。V34 ABA 即使 V63 新复审也不能恢复原预留；V35 更新仍由 V63 重审处理，不绑定到早于 V35 的 V119 捕获。V250 PG18 增加版本匹配和永久 HOLD 回归，保留其他正例与竞争测试；新 marker 强制，待 A3。无撤销/替换协议，历史预留可能需后续经批准的补偿契约；不覆盖源/SKU/成本/授权 ABA，现行 Owner 资格待补，真实外部原件/返仓/G1 缺失。无新 API/UI、旧迁移不改，actualRefundCogsReversal/realizedNetProfit=null。
+
+
+V261 [代码 e76e520fe904](https://github.com/kunlong-luo/merchivra/commit/e76e520fe904ec8b2e630b83447eef5a1196f151) [A3 #45576590955 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45576590955) 已完成；同 SHA 快 CI 取消。V263 [代码 4f1fcc7f999a](https://github.com/kunlong-luo/merchivra/commit/4f1fcc7f999aeb4d22a60ec53600d95efa8b3531) [快 CI #45577315150 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45577315150)，[A3 #45577315191](https://github.com/kunlong-luo/merchivra/actions/runs/45577315191) 尚未完成；V262 A3 尚未确认。
+
+## V264 · 当前 Owner 与撤销审计门禁（待验收）
+
+V264：V63 request/decide 复用 TenantAccessService 同等 active tenant/user/membership + 全局 OWNER 资格条件；decide 重核请求人当前资格与 request 后 OWNER_REVOKED 审计，历史失效 pending 可重新发起；全订单 read 在原 RR 内同时核查两位 Owner 与各自 request/decision 之后的撤销记录。V250 PG18 合成夹具扩展非 Owner、禁用用户、撤销角色、仅 seller-scoped Owner、membership revoke、待审请求人撤销后恢复及重新审核，强制 JUnit marker，待 A3。没有新 API/UI/迁移；不是全域授权版本或并发撤销线性化保证，未审计的直接数据库 ABA 尚未封闭。V119 stale/legacy 预留继续不可释放，缺乏经批准的补偿规则不开放替换/释放，下一步须明确补偿权限、幂等、不可重复归属及原始区间守恒后再实施；真实外部原件/返仓/G1 缺失，实际回转/realizedNetProfit=null。

@@ -162,6 +162,23 @@ public class RefundRecoveryService {
         Evidence src=evidence(tenant,mp,event);
         return display(event,src,stored(tenant,mp,event,false));
     }
+    // V264: mirror TenantAccessService's active, tenant-wide Owner predicate.
+    // This is a point-in-snapshot authorization check, not an external identity
+    // certificate or a complete authorization revision/locking protocol.
+    private void requireCurrentOwner(UUID tenant,UUID actor) {
+        if(!Boolean.TRUE.equals(jdbc.queryForObject("""
+            SELECT EXISTS(
+              SELECT 1 FROM membership m
+              JOIN tenant t ON t.id=m.tenant_id AND t.status='ACTIVE'
+              JOIN app_user u ON u.id=m.user_id AND u.status='ACTIVE'
+              JOIN role_binding b ON b.tenant_id=m.tenant_id AND b.user_id=m.user_id
+              WHERE m.tenant_id=? AND m.user_id=? AND m.status='ACTIVE'
+                AND b.role_code='OWNER' AND b.seller_account_id IS NULL
+            )
+            """,Boolean.class,tenant,actor)))
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,"Active tenant Owner required");
+    }
+
     // V261: called within the whole-order RR after preview independently
     // recalculates the V63 evidence digest. Check the exact current revision's
     // request/decision audit pair and current V34/V35 author independence.
@@ -177,6 +194,17 @@ public class RefundRecoveryService {
                 AND r.sales_order_id=? AND r.state='REVIEWED' AND r.revision=?
                 AND r.requested_by=? AND r.decided_by=? AND r.requested_by<>r.decided_by
                 AND r.decided_at>=r.requested_at
+                AND 2=(SELECT count(DISTINCT m.user_id) FROM membership m
+                  JOIN tenant t ON t.id=m.tenant_id AND t.status='ACTIVE'
+                  JOIN app_user u ON u.id=m.user_id AND u.status='ACTIVE'
+                  JOIN role_binding b ON b.tenant_id=m.tenant_id AND b.user_id=m.user_id
+                  WHERE m.tenant_id=r.tenant_id AND m.status='ACTIVE'
+                    AND m.user_id IN (r.requested_by,r.decided_by)
+                    AND b.role_code='OWNER' AND b.seller_account_id IS NULL)
+                AND NOT EXISTS(SELECT 1 FROM local_team_audit a
+                  WHERE a.tenant_id=r.tenant_id AND a.event_code='OWNER_REVOKED'
+                    AND ((a.subject_user_id=r.requested_by AND a.occurred_at>=r.requested_at)
+                      OR (a.subject_user_id=r.decided_by AND a.occurred_at>=r.decided_at)))
                 AND NOT EXISTS(SELECT 1 FROM finance_refund_item_review v
                   WHERE v.tenant_id=r.tenant_id AND v.event_id=r.event_id AND v.reviewed_by=r.decided_by)
                 AND NOT EXISTS(SELECT 1 FROM finance_refund_amount_allocation v
@@ -235,6 +263,7 @@ public class RefundRecoveryService {
     @Transactional(isolation=Isolation.REPEATABLE_READ)
     public Status request(UUID tenant,UUID mp,UUID event,UUID actor,String reason) {
         if(actor==null)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        requireCurrentOwner(tenant,actor);
         String note=reason(reason);
         var before=evidence(tenant,mp,event);
         requireBalanced(before.preview());
@@ -246,7 +275,19 @@ public class RefundRecoveryService {
                 "Refund event was reassigned");
         Stored old=stored(tenant,mp,event,true);
         if(old!=null&&"PENDING".equals(old.state())
-            &&old.digest().equals(current.digest()))
+            &&old.digest().equals(current.digest())
+            &&Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS(SELECT 1 FROM finance_refund_recovery_review r
+                  JOIN membership m ON m.tenant_id=r.tenant_id AND m.user_id=r.requested_by
+                    AND m.status='ACTIVE'
+                  JOIN app_user u ON u.id=m.user_id AND u.status='ACTIVE'
+                  JOIN role_binding b ON b.tenant_id=m.tenant_id AND b.user_id=m.user_id
+                    AND b.role_code='OWNER' AND b.seller_account_id IS NULL
+                  WHERE r.tenant_id=? AND r.seller_marketplace_id=? AND r.event_id=?
+                    AND NOT EXISTS(SELECT 1 FROM local_team_audit a
+                      WHERE a.tenant_id=r.tenant_id AND a.subject_user_id=r.requested_by
+                        AND a.event_code='OWNER_REVOKED' AND a.occurred_at>=r.requested_at))
+                """,Boolean.class,tenant,mp,event)))
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "Existing review awaits an independent Owner");
         int revision=old==null?1:old.revision()+1;
@@ -284,6 +325,7 @@ public class RefundRecoveryService {
     public Status decide(UUID tenant,UUID mp,UUID event,UUID actor,
         boolean approve,String reason) {
         if(actor==null)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        requireCurrentOwner(tenant,actor);
         String note=reason(reason);
         var before=evidence(tenant,mp,event);
         lockOrderAndEvent(tenant,mp,event,before.orderId());
@@ -292,6 +334,16 @@ public class RefundRecoveryService {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "No pending return-cost evidence review");
         requireIndependent(old.requestedBy(),actor);
+        requireCurrentOwner(tenant,old.requestedBy());
+        if(Boolean.TRUE.equals(jdbc.queryForObject("""
+            SELECT EXISTS(SELECT 1 FROM finance_refund_recovery_review r
+              JOIN local_team_audit a ON a.tenant_id=r.tenant_id
+                AND a.subject_user_id=r.requested_by AND a.event_code='OWNER_REVOKED'
+                AND a.occurred_at>=r.requested_at
+              WHERE r.tenant_id=? AND r.seller_marketplace_id=? AND r.event_id=?)
+            """,Boolean.class,tenant,mp,event)))
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Requesting Owner was revoked after the request");
         var current=evidence(tenant,mp,event);
         requireBalanced(current.preview());
         if(!old.orderId().equals(current.orderId())
