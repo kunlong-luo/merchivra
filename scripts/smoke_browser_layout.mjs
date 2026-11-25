@@ -96,6 +96,32 @@ const v218Receipt='aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa18'
 const v218Plan='bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb18'
 const v218Source='cccccccc-cccc-4ccc-8ccc-cccccccccc18'
 const v218Queries=[]
+const v254Queries=[]
+let v254Status=200
+function v254Candidate(marketplaceId) {
+ const found=marketplaceId===market
+ const source=(category,sourceId,total,allocated,remaining)=>({
+  category,sourceId,originalCurrency:'USD',basisQuantity:3,allocatedQuantity:2,unallocatedQuantity:1,
+  receiptCandidateAmount:total,allocatedCandidateAmount:allocated,unallocatedCandidateAmount:remaining
+ })
+ return {
+  marketplaceId,purchaseReceiptId:v218Receipt,
+  state:found?'LOCAL_PO_FREIGHT_DUTY_CANDIDATE_UNVERIFIED':'LOCAL_COST_COMPOSITION_HOLD',
+  originalCurrency:found?'USD':null,receiptCandidateCost:found?'45.000000':null,
+  allocatedCandidateCost:found?'30.000000':null,unallocatedCandidateCost:found?'15.000000':null,
+  components:found?[
+   source('PURCHASE_PO_REFERENCE',null,'30.000000','20.000000','10.000000'),
+   source('INBOUND_FREIGHT',v218Source,'10.000000','6.666667','3.333333'),
+   source('IMPORT_DUTY',v218Plan,'5.000000','3.333333','1.666667')
+  ]:[],
+  saleShares:found?[{claimId:v218Plan,candidateCost:'14.999999'},
+   {claimId:v218Source,candidateCost:'15.000001'}]:[],
+  blockerCodes:found?['EXTERNAL_COST_COVERAGE_UNPROVEN','QC_DENOMINATOR_AND_G1_UNAPPROVED']:
+   ['CROSS_MARKETPLACE_RECEIPT_SCOPE_UNRESOLVED','EXTERNAL_COST_AND_G1_UNAPPROVED'],
+  completeExternalCostCoverage:false,actualBatchCogsVerified:false,actualBatchCogs:null,
+  postingAllowed:false,realizedNetProfit:null
+ }
+}
 let v218ResponseStatus=200
 const v218BaseBlockers=[
   'V112_LOCAL_MANUAL_PROPOSAL_IS_NOT_EXTERNAL_LANDED_COST',
@@ -219,6 +245,17 @@ const server = createServer(async (req, res) => {
   if(url.pathname==='/api/v1/auth/csrf')
     return respond(res,{token:'V104_DISPOSABLE_BROWSER_CSRF_ONLY_12345',
       headerName:'X-CSRF-TOKEN'})
+  // V254 synthetic browser-only contract; no actual external costs.
+  const v254Match=url.pathname.match(/^\/api\/v1\/finance\/marketplaces\/([^/]+)\/purchase-receipts\/([^/]+)\/cost-composition-candidate$/)
+  if(v254Match){
+    const [,marketplaceId,receiptId]=v254Match
+    v254Queries.push({marketplaceId,receiptId,method:req.method})
+    if(req.method!=='GET')return respond(res,{error:'V254 read only'},405)
+    if(![market,v106OtherMarket].includes(marketplaceId)||receiptId!==v218Receipt)
+      return respond(res,{error:'V254 scope mismatch'},404)
+    if(v254Status!==200)return respond(res,{error:'V254 synthetic failure'},v254Status)
+    return respond(res,v254Candidate(marketplaceId))
+  }
   // V218 exact Owner GET fixture. A status change is controlled ONLY by
   // this disposable test, not a real credential or production server.
   const v218Match=url.pathname.match(/^\/api\/v1\/finance\/marketplaces\/([^/]+)\/purchase-receipts\/([^/]+)\/manual-cost-integrity$/)
@@ -1478,6 +1515,32 @@ async function main() {
           "document.querySelector('"+v218Panel+"')?.textContent?.includes('实际 landed cost、退款 COGS 回转与真实净利润均未核证')"),
           true,'V218 UI may not claim real COGS or verified profit')
         await screenshot(send,'v218-finance-source-unverified-360.png')
+        // V254: the V253 panel must fetch only on explicit request.
+        const v254Panel='section[aria-label="采购批次成本组合候选"]'
+        const v254Start=v254Queries.length
+        assert.equal(v254Start,0,'V254 no automatic candidate GET on receipt selection')
+        const v254Click=()=>evaluate(send,"document.querySelector('"+v254Panel+" button.refresh-button')?.click()")
+        const v254Has=words=>"document.querySelector('"+v254Panel+"')?.textContent?.includes("+JSON.stringify(words)+")"
+        await waitFor(send,"!!document.querySelector('"+v254Panel+" button.refresh-button')",'V254 shared panel mounted')
+        await v254Click()
+        await waitFor(send,v254Has('USD 45.000000'),'V254 exact batch candidate shown')
+        assert.ok(await evaluate(send,v254Has('USD 30.000000')))
+        assert.ok(await evaluate(send,v254Has('USD 15.000000')))
+        assert.ok(await evaluate(send,v254Has('实际 COGS 和真实净利润未核证')))
+        assert.deepEqual(v254Queries.at(-1),{marketplaceId:market,receiptId:v218Receipt,method:'GET'})
+        await evaluate(send,"document.querySelector('"+v254Panel+" details summary')?.click()")
+        assert.ok(await evaluate(send,v254Has('14.999999')))
+        assert.ok(await evaluate(send,v254Has('15.000001')))
+        await evaluate(send,"document.querySelector('"+v254Panel+"')?.scrollIntoView({block:'start'})")
+        await screenshot(send,'v254-receipt-composition-candidate-360.png')
+        v254Status=409
+        await v254Click()
+        await waitFor(send,"!!document.querySelector('"+v254Panel+" [role=alert]')",'V254 conflict hides old result')
+        assert.equal(await evaluate(send,v254Has('USD 45.000000')),false)
+        v254Status=200
+        await v254Click()
+        await waitFor(send,v254Has('USD 45.000000'),'V254 fresh retry succeeds')
+        assert.equal(v254Queries.length,v254Start+3)
         // Explicit reinspection changes the query key: an old success must
         // NEVER render while the new request fails or remains in flight.
         for(const [status,words] of [
@@ -1688,6 +1751,15 @@ async function main() {
           "document.querySelector('"+v218Panel+"')?.textContent?.includes('USD 40.000000')"),
           false,'V218 original cost cannot appear in different Marketplace')
         await screenshot(send,'v218-marketplace-source-unknown-360.png')
+        assert.equal(v254Queries.length,v254Start+3,'V254 scope change cannot auto-fetch')
+        assert.equal(await evaluate(send,v254Has('USD 45.000000')),false)
+        await v254Click()
+        await waitFor(send,v254Has('成本未知 · 未生成候选金额，不等于零'),'V254 new Marketplace HOLD')
+        assert.deepEqual(v254Queries.at(-1),{marketplaceId:v106OtherMarket,receiptId:v218Receipt,method:'GET'})
+        assert.equal(await evaluate(send,v254Has('USD 45.000000')),false)
+        assert.ok(v254Queries.every(x=>x.method==='GET'))
+        await screenshot(send,'v254-receipt-composition-hold-360.png')
+        console.log('PASS V254 Next Chromium candidate: explicit GET, 45/30/15, exact shares, conflict/retry, Marketplace HOLD')
         await layout(send,width,'v106-finance-360')
         await evaluate(send,
           "document.querySelector('.v106-finance-events-table')?.scrollIntoView({block:'center'})")

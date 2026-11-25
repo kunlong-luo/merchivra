@@ -55,3 +55,7 @@ V252 精确 [SHA 65128ba2eb93](https://github.com/kunlong-luo/merchivra/commit/6
 ## V253 · 既有收货面板的 Orval 成本候选读取（待验收）
 
 扩展原 `apps/web/openapi/manual-cost-v228.json` 与既有 Orval 生成流程（生成文件不手改、不提交），V217 收货单面板内按精确租户/Marketplace/receipt 及检查 revision 挂载 V253，独立按需 GET、取消请求、无旧值展示。Zod + BigInt 微单位核对来源唯一、原币、数量和来源/整批/销售金额守恒，HOLD null 不显示部分金额，禁止 verified/posting/net profit。复用现有样式与 Session transport；采购与财务共享 V217 的位置均可访问。不增加新路由或并行 HTTP 客户端。扩展既有 Springdoc 检查及 Vitest 运输/守恒负例，待 CI 生成及 A3；真实非空 HTTP 和 Chromium 新面板专属流程未完成，仍无实际外部证据、退款过账或正式成本版本。
+
+## V254 · 非空真实 Owner HTTP 与 Next Chromium 轨迹（待验收）
+
+V253 [快 CI #45568099720](https://github.com/kunlong-luo/merchivra/actions/runs/45568099720) SUCCESS，完整 [A3 #45568099866](https://github.com/kunlong-luo/merchivra/actions/runs/45568099866) 本轮初查 5/7 成功、2 项运行中。V254 扩展原 V250 一次性夹具：复制仅 CI bootstrap hash 建立独立合成 Owner，真实 loopback HTTP Cookie/CSRF 登录，验证缺关税 HOLD、45/30/15 原币候选与 claim 尾差、价格漂移/恢复、跨站点 HOLD、匿名/退出 401、no-store 及禁止核证字段；原服务回归保留且 JUnit 必须含 V254 marker。扩展既有 Next Chromium 360px 合成 fixture：显式 GET、金额及认领明细、409 清空旧值、重试、切站点不自动读、HOLD 不显示旧金额，保存截图。浏览器是合成 HTTP fixture，不是同一真实 PG18 浏览器会话；两者均待新 SHA A3，不新增 API、依赖、会计成本版本或退款回转。下一步以已确认原始成本区间与独立退款物理证据为基础设计回转。

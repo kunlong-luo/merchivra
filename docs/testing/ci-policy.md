@@ -71,3 +71,5 @@ python3 scripts/check_next_runtime_v122.py
 V252：GitHub 表达式必须留在 YAML（`PG18_SERVICE_CONTAINER_ID` env），Bash 静态禁止 `${{`，保留原验收命令。V219 真实 Session HTTP 增成本候选 GET 空状态、401/403/404；V250 非空 PG18 Java 回归仍必须实际执行。
 
 V253：复用 `check_manual_cost_openapi_v228.py` 检查实际 V252 GET/嵌套 DTO，与既有 Orval 生成、Vitest BigInt 守恒及 no-store/scope 回归；真实非空 HTTP 和专属浏览器场景尚待执行，不以编译代替验收。
+
+V254：V250 同一真实 PG18 合成夹具内发起独立 Owner Cookie/CSRF HTTP，JUnit XML 必须含 V254 非空完成标记；既有 Chromium 合成轨迹额外核对 V253 面板和截图。真实 HTTP 与浏览器合成 fixture 不可混为同一外部业务验收；新 A3 待确认。

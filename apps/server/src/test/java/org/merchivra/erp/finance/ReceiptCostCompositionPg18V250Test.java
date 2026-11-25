@@ -1,6 +1,17 @@
 package org.merchivra.erp.finance;
 
 import java.math.BigDecimal;
+import java.net.CookieManager;
+import java.net.CookiePolicy;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -29,7 +40,7 @@ class ReceiptCostCompositionPg18V250Test {
 
     @Test
     @EnabledIfEnvironmentVariable(named="MERCHIVRA_V250_DISPOSABLE_ONLY",matches="true")
-    void actualPg18ReceiptCostsAndSaleRangesConserveAmounts() {
+    void actualPg18ReceiptCostsAndSaleRangesConserveAmounts() throws Exception {
         Map.ofEntries(
             Map.entry("GITHUB_ACTIONS","true"),
             Map.entry("GITHUB_REPOSITORY","kunlong-luo/merchivra"),
@@ -39,7 +50,8 @@ class ReceiptCostCompositionPg18V250Test {
             Map.entry("DB_HOST","127.0.0.1"),Map.entry("DB_PORT","5432"),
             Map.entry("DB_NAME","merchivra"),Map.entry("DB_USER","merchivra"),
             Map.entry("DB_PASSWORD","ci_disposable_database_password"),
-            Map.entry("MERCHIVRA_BOOTSTRAP_USERNAME","v65-ci-owner")
+            Map.entry("MERCHIVRA_BOOTSTRAP_USERNAME","v65-ci-owner"),
+            Map.entry("MERCHIVRA_BOOTSTRAP_PASSWORD","ci-disposable-v65-only-secret-0000")
         ).forEach((k,v)->assertEquals(v,System.getenv(k),"Disposable CI required: "+k));
         assertTrue(System.getenv().getOrDefault("GITHUB_RUN_ID","").matches("[0-9]+"));
         var ds=new DriverManagerDataSource("jdbc:postgresql://127.0.0.1:5432/merchivra",
@@ -57,11 +69,13 @@ class ReceiptCostCompositionPg18V250Test {
             new ReceiptCostIntegrityServiceV216(db,new CostIdentityReconciliationService(db),manager),
             manager);
         write.executeWithoutResult(ignored->seed());
+        var client=loginFixtureOwner();
         expense(market,"INBOUND_FREIGHT","20","10","a");
         bind(claimA,0,1);
         hold("ORIGINAL_CLAIM_OR_RANGE_INCOMPLETE_OR_STALE");
         bind(claimB,2,3);
         hold("FREIGHT_OR_DUTY_EVIDENCE_UNKNOWN_NOT_ZERO");
+        assertHttpHold(client,"FREIGHT_OR_DUTY_EVIDENCE_UNKNOWN_NOT_ZERO");
         expense(market,"IMPORT_DUTY","10","5","b");
         var result=service.preview(tenant,market,receipt);
         assertEquals("LOCAL_PO_FREIGHT_DUTY_CANDIDATE_UNVERIFIED",result.state());
@@ -83,13 +97,17 @@ class ReceiptCostCompositionPg18V250Test {
         assertFalse(result.actualBatchCogsVerified());
         assertNull(result.actualBatchCogs());
         assertNull(result.realizedNetProfit());
+        assertHttpCandidate(client);
+        assertEquals(401,http(HttpClient.newHttpClient(),candidatePath(),null,null).statusCode());
         // An independent current read cannot borrow foreign tenant receipts.
         assertEquals(404,assertThrows(ResponseStatusException.class,
             ()->service.preview(UUID.randomUUID(),market,receipt)).getStatusCode().value());
         db.update("UPDATE erp_purchase_order_line SET unit_cost=11 WHERE tenant_id=? AND id=?",tenant,pol);
         hold("ORIGINAL_CLAIM_OR_RANGE_INCOMPLETE_OR_STALE");
+        assertHttpHold(client,"ORIGINAL_CLAIM_OR_RANGE_INCOMPLETE_OR_STALE");
         db.update("UPDATE erp_purchase_order_line SET unit_cost=10 WHERE tenant_id=? AND id=?",tenant,pol);
         assertEquals(result,service.preview(tenant,market,receipt));
+        assertHttpCandidate(client);
         // A real local retraction leaves the persisted range reserved and
         // prevents a misleading total. The foreign-source hold has priority,
         // so it can be tested after the committed append-only retraction.
@@ -103,7 +121,90 @@ class ReceiptCostCompositionPg18V250Test {
             """,Integer.class,tenant,receipt));
         expense(market2,"INBOUND_FREIGHT","7","2","c");
         hold("CROSS_MARKETPLACE_RECEIPT_SCOPE_UNRESOLVED");
+        assertHttpHold(client,"CROSS_MARKETPLACE_RECEIPT_SCOPE_UNRESOLVED");
+        var csrf=readJson(http(client,"/api/v1/auth/csrf",null,null));
+        assertEquals(204,http(client,"/api/v1/auth/logout","",csrf.path("token").asText()).statusCode());
+        assertEquals(401,http(client,candidatePath(),null,null).statusCode());
+        System.out.println("PASS V254 actual Owner HTTP nonempty receipt candidate 45/30/15, exact shares, drift/recovery, hold and logout");
         System.out.println("PASS V250 actual PG18 V249 composition: PO freight duty 45/30/15, original source shares, missing range/duty, drift, retraction and cross-marketplace hold");
+    }
+
+    // Reuse the actual running Spring server and a dedicated synthetic Owner.
+    // The bootstrap hash is copied ONLY into the disposable CI database.
+    private final JsonMapper json=JsonMapper.builder().build();
+    private String loginName(){return "v254-"+maker;}
+    private String candidatePath(){
+        return "/api/v1/finance/marketplaces/"+market+"/purchase-receipts/"+receipt
+            +"/cost-composition-candidate";
+    }
+    private HttpResponse<String> http(HttpClient client,String path,String body,String csrf)
+            throws Exception {
+        var request=HttpRequest.newBuilder(URI.create("http://127.0.0.1:8080"+path))
+            .timeout(Duration.ofSeconds(15)).header("Accept","application/json");
+        if(body==null)request.GET();
+        else request.header("Content-Type","application/x-www-form-urlencoded")
+            .header("X-CSRF-TOKEN",csrf).POST(HttpRequest.BodyPublishers.ofString(body));
+        return client.send(request.build(),HttpResponse.BodyHandlers.ofString());
+    }
+    private JsonNode readJson(HttpResponse<String> response) throws Exception {
+        assertEquals(200,response.statusCode(),"actual HTTP status");
+        assertTrue(response.headers().firstValue("Cache-Control").orElse("").contains("no-store"));
+        return json.readTree(response.body());
+    }
+    private HttpClient loginFixtureOwner() throws Exception {
+        var client=HttpClient.newBuilder()
+            .cookieHandler(new CookieManager(null,CookiePolicy.ACCEPT_ALL))
+            .connectTimeout(Duration.ofSeconds(5)).build();
+        var csrf=readJson(http(client,"/api/v1/auth/csrf",null,null));
+        assertEquals("X-CSRF-TOKEN",csrf.path("headerName").asText());
+        String body="username="+URLEncoder.encode(loginName(),StandardCharsets.UTF_8)
+            +"&password="+URLEncoder.encode(System.getenv("MERCHIVRA_BOOTSTRAP_PASSWORD"),StandardCharsets.UTF_8);
+        assertEquals(200,http(client,"/api/v1/auth/login",body,csrf.path("token").asText()).statusCode());
+        var viewer=readJson(http(client,"/api/v1/auth/me",null,null));
+        assertTrue(viewer.path("isOwner").asBoolean());
+        assertEquals(tenant.toString(),viewer.path("activeTenantId").asText());
+        return client;
+    }
+    private JsonNode httpCandidate(HttpClient client) throws Exception {
+        var d=readJson(http(client,candidatePath(),null,null));
+        assertEquals(market.toString(),d.path("marketplaceId").asText());
+        assertEquals(receipt.toString(),d.path("purchaseReceiptId").asText());
+        for(String key:List.of("completeExternalCostCoverage","actualBatchCogsVerified","postingAllowed"))
+            assertTrue(d.path(key).isBoolean()&&!d.path(key).asBoolean(),key);
+        for(String key:List.of("actualBatchCogs","realizedNetProfit"))
+            assertTrue(d.path(key).isNull(),key);
+        return d;
+    }
+    private void assertHttpCandidate(HttpClient client) throws Exception {
+        var d=httpCandidate(client);
+        assertEquals("LOCAL_PO_FREIGHT_DUTY_CANDIDATE_UNVERIFIED",d.path("state").asText());
+        assertEquals("USD",d.path("originalCurrency").asText());
+        assertEquals("45.000000",d.path("receiptCandidateCost").asText());
+        assertEquals("30.000000",d.path("allocatedCandidateCost").asText());
+        assertEquals("15.000000",d.path("unallocatedCandidateCost").asText());
+        assertEquals(3,d.path("components").size());
+        var shares=d.path("saleShares");
+        assertEquals(2,shares.size());
+        assertEquals(claimA.toString(),shares.get(0).path("claimId").asText());
+        assertEquals("14.999999",shares.get(0).path("candidateCost").asText());
+        assertEquals(claimB.toString(),shares.get(1).path("claimId").asText());
+        assertEquals("15.000001",shares.get(1).path("candidateCost").asText());
+        for(var c:d.path("components")){
+            assertEquals("USD",c.path("originalCurrency").asText());
+            assertEquals(3,c.path("basisQuantity").asInt());
+            assertEquals(2,c.path("allocatedQuantity").asInt());
+            assertEquals(1,c.path("unallocatedQuantity").asInt());
+            assertFalse(c.has("shares"),"HTTP must not repeat the expanded per-source ranges");
+        }
+    }
+    private void assertHttpHold(HttpClient client,String reason) throws Exception {
+        var d=httpCandidate(client);
+        assertEquals("LOCAL_COST_COMPOSITION_HOLD",d.path("state").asText());
+        assertTrue(d.path("blockerCodes").toString().contains(reason));
+        for(String key:List.of("originalCurrency","receiptCandidateCost","allocatedCandidateCost","unallocatedCandidateCost"))
+            assertTrue(d.path(key).isNull(),key);
+        for(String key:List.of("components","saleShares"))
+            assertTrue(d.path(key).isArray()&&d.path(key).isEmpty(),key);
     }
 
     private void hold(String reason) {
@@ -169,6 +270,12 @@ class ReceiptCostCompositionPg18V250Test {
             db.update("INSERT INTO app_user(id,identity_ref) VALUES (?,?)",user,"local:v250:"+user);
             db.update("INSERT INTO membership(tenant_id,user_id) VALUES (?,?)",tenant,user);
         }
+        assertEquals(1,db.update("""
+            INSERT INTO local_credential(user_id,login_name,password_hash)
+            SELECT ?,?,password_hash FROM local_credential WHERE login_name='v65-ci-owner'
+            """,maker,loginName()));
+        db.update("INSERT INTO role_binding(id,tenant_id,user_id,role_code) VALUES (?,?,?,'OWNER')",
+            UUID.randomUUID(),tenant,maker);
         db.update("INSERT INTO seller_account(id,tenant_id,seller_id,region) VALUES (?,?,?,'NA')",
             account,tenant,"V250-SYNTHETIC-"+account);
         for(UUID m:List.of(market,market2))

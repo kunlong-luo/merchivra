@@ -2,7 +2,7 @@
 # Historic milestone commentary is retained in Git and domain evidence documents.
 # Current validation scope: docs/current-status.md and docs/testing/ci-policy.md.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V253-A3-receipt-cost-orval-ui' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V254-A3-receipt-cost-http-browser' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -116,6 +116,7 @@ on:
           - V251-A3-externalized-pg18-ci
           - V252-A3-receipt-cost-read-api
           - V253-A3-receipt-cost-orval-ui
+          - V254-A3-receipt-cost-http-browser
 
 permissions:
   contents: read
