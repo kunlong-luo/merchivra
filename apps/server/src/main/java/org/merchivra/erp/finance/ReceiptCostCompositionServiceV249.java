@@ -213,6 +213,129 @@ public class ReceiptCostCompositionServiceV249 {
             List.of(reason,"EXTERNAL_PHYSICAL_RETURN_AND_G1_UNVERIFIED"),null);
     }
 
+    // V265: internal DRY RUN for a same-coordinate re-attestation, NOT a
+    // reversal or replacement. The old immutable reservation remains active
+    // as a capacity fence and stale as cost evidence. No release/write path.
+    record CompensationSource(UUID order,String externalItem,int reviewedQuantity,
+        long version,String currency,BigDecimal amount) {}
+    record CompensationPeer(UUID claim,UUID receipt,UUID marketplace,UUID order,
+        String externalItem,String basisDigest,String payload,int from,int to,
+        Long oldVersion,int oldQuantity) {}
+    record CompensationCoordinate(String claimId,String receiptId,String basisSha256,
+        int fromInclusive,int toExclusive,long previousEvidenceVersion,String currency,
+        String candidateAmount) {}
+    record CompensationPreview(String state,String proposalSha256,String eventId,
+        String orderItemId,long currentEvidenceVersion,int reviewRevision,
+        List<CompensationCoordinate> coordinates,List<String> blockers,
+        boolean releaseAllowed,boolean replacementAllowed,String actualRefundCogsReversal,
+        String realizedNetProfit) {}
+    private static ResponseStatusException compensationConflict() {
+        return new ResponseStatusException(HttpStatus.CONFLICT,
+            "Same-coordinate refund re-attestation unavailable");
+    }
+    CompensationPreview previewRefundCompensation(UUID tenant,UUID marketplace,
+        UUID event,UUID orderItem) {
+        if(tenant==null||marketplace==null||event==null||orderItem==null)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        return read.execute(ignored->{
+            var sources=jdbc.query("""
+                SELECT o.id,i.external_item_id,r.reviewed_quantity,r.evidence_revision_v121,
+                  f.currency_code,f.amount
+                FROM order_item i
+                JOIN sales_order o ON o.tenant_id=i.tenant_id AND o.id=i.sales_order_id
+                JOIN tenant t ON t.id=o.tenant_id AND t.status='ACTIVE'
+                JOIN finance_refund_item_review r ON r.tenant_id=i.tenant_id
+                  AND r.sales_order_id=o.id AND r.external_item_id=i.external_item_id
+                JOIN finance_source_event f ON f.tenant_id=r.tenant_id AND f.id=r.event_id
+                JOIN finance_event_link_review l ON l.tenant_id=f.tenant_id AND l.event_id=f.id
+                WHERE i.tenant_id=? AND i.id=? AND f.id=? AND o.seller_marketplace_id=?
+                  AND f.seller_marketplace_id=o.seller_marketplace_id AND o.data_origin='LIVE'
+                  AND i.data_origin='LIVE' AND i.is_current=true AND i.quantity>=r.reviewed_quantity
+                  AND r.disposition='RESTOCKED_CLAIMED' AND f.source_family='SPAPI_FINANCES'
+                  AND f.data_origin='LIVE' AND f.category='PRODUCT_REFUND' AND f.amount<0
+                  AND l.state='MATCHED' AND l.order_id=o.id
+                  AND (f.external_order_id IS NULL OR f.external_order_id=o.external_order_id)
+                """,(rs,n)->new CompensationSource(rs.getObject(1,UUID.class),rs.getString(2),
+                    rs.getInt(3),rs.getLong(4),rs.getString(5).trim(),rs.getBigDecimal(6)),
+                    tenant,orderItem,event,marketplace);
+            if(sources.size()!=1)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            var source=sources.getFirst();
+            var peers=jdbc.query("""
+                SELECT c.id,c.receipt_id,c.marketplace_id,c.sales_order_id,
+                  c.snapshot_external_item_id,btrim(s.basis_sha256),b.canonical_payload,
+                  s.unit_from,s.unit_to,s.review_evidence_revision_v122,s.review_quantity
+                FROM finance_refund_cost_slice_v119 s
+                JOIN finance_sale_lot_claim_v106 c ON c.tenant_id=s.tenant_id AND c.id=s.claim_id
+                JOIN finance_original_cost_basis_v119 b ON b.tenant_id=s.tenant_id AND b.claim_id=s.claim_id
+                  AND b.basis_sha256=s.basis_sha256
+                WHERE s.tenant_id=? AND s.refund_event_id=? AND s.order_item_id=?
+                ORDER BY c.id LIMIT 51
+                """,(rs,n)->new CompensationPeer(rs.getObject(1,UUID.class),rs.getObject(2,UUID.class),
+                    rs.getObject(3,UUID.class),rs.getObject(4,UUID.class),rs.getString(5),
+                    rs.getString(6),rs.getString(7),rs.getInt(8),rs.getInt(9),
+                    rs.getObject(10,Long.class),rs.getInt(11)),tenant,event,orderItem);
+            if(peers.isEmpty()||peers.size()>50||
+                peers.stream().map(CompensationPeer::receipt).distinct().count()>20)
+                throw compensationConflict();
+            long units=0;
+            var oldVersion=peers.getFirst().oldVersion();
+            if(oldVersion==null||oldVersion<=0||oldVersion>=source.version())throw compensationConflict();
+            var seen=new HashSet<UUID>();
+            for(var peer:peers) {
+                if(!seen.add(peer.claim())||!marketplace.equals(peer.marketplace())||
+                    !source.order().equals(peer.order())||!source.externalItem().equals(peer.externalItem())||
+                    !oldVersion.equals(peer.oldVersion())||peer.oldQuantity()!=source.reviewedQuantity()||
+                    peer.from()<0||peer.to()<=peer.from())throw compensationConflict();
+                units+=(long)peer.to()-peer.from();
+            }
+            if(units!=source.reviewedQuantity())throw compensationConflict();
+            var review=recovery.preview(tenant,marketplace,event);
+            if(!RefundCogsReversalGateV197.assess(event,review,source.order(),
+                    source.currency(),source.amount()).sourceSnapshotConsistent()||
+                !recovery.currentIndependentAudit(tenant,marketplace,event,review)||
+                review.exposure()==null||!"MANUAL_EVIDENCE_BALANCED_UNVERIFIED".equals(review.exposure().status())||
+                review.exposure().items().stream().filter(i->source.externalItem().equals(i.itemId())
+                    &&i.refundedQuantity()==source.reviewedQuantity()
+                    &&"RESTOCKED_CLAIMED".equals(i.disposition())).count()!=1)
+                throw compensationConflict();
+            var lineage=orderLots.preview(tenant,marketplace,source.order());
+            if(!"COGS_READY_PREVIEW".equals(lineage.orderCostReadiness()))throw compensationConflict();
+            var cache=new HashMap<UUID,Candidate>();
+            var coordinates=new ArrayList<CompensationCoordinate>();
+            for(var peer:peers) {
+                if(lineage.claims().stream().filter(l->peer.claim().toString().equals(l.claimId())
+                    &&peer.receipt().toString().equals(l.purchaseReceiptId())
+                    &&source.externalItem().equals(l.externalItemId())
+                    &&"LOCAL_LINK_INTACT_UNVERIFIED".equals(l.integrityState())).count()!=1)
+                    throw compensationConflict();
+                var basis=captureBasis(tenant,marketplace,peer.receipt(),peer.claim(),
+                    cache.computeIfAbsent(peer.receipt(),key->readCandidate(tenant,marketplace,key)));
+                if(!orderItem.equals(basis.identity().orderItemId())||
+                    !peer.basisDigest().equals(basis.sha256())||
+                    !peer.payload().equals(RefundOriginalCostSliceEngineV255.canonicalPayload(basis)))
+                    throw compensationConflict();
+                var replay=RefundOriginalCostSliceEngineV255.replay(basis.identity(),basis.sha256(),basis,
+                    List.of(new RefundOriginalCostSliceEngineV255.Slice(event,orderItem,peer.from(),peer.to(),
+                        peer.to()-peer.from(),"RESTOCKED_CLAIMED")));
+                coordinates.add(new CompensationCoordinate(peer.claim().toString(),peer.receipt().toString(),
+                    peer.basisDigest(),peer.from(),peer.to(),oldVersion,basis.currency(),replay.refundCandidateAmount()));
+            }
+            // Deterministic content ID only, not an approval or write token.
+            var canonical=new StringBuilder("V265_SAME_COORDINATE_DRY_RUN|").append(tenant).append('|')
+                .append(marketplace).append('|').append(source.order()).append('|').append(event).append('|')
+                .append(orderItem).append('|').append(source.version()).append('|').append(review.revision());
+            for(var c:coordinates)canonical.append('|').append(c.claimId()).append('|').append(c.receiptId())
+                .append('|').append(c.basisSha256()).append('|').append(c.fromInclusive()).append('|')
+                .append(c.toExclusive()).append('|').append(c.previousEvidenceVersion()).append('|')
+                .append(c.currency()).append('|').append(c.candidateAmount());
+            return new CompensationPreview("LOCAL_SAME_COORDINATE_COMPENSATION_PROPOSAL_UNVERIFIED",
+                RefundRecoveryService.hash(canonical.toString()),event.toString(),orderItem.toString(),
+                source.version(),review.revision(),List.copyOf(coordinates),
+                List.of("COMPENSATION_APPROVAL_AND_ACTIVATION_NOT_IMPLEMENTED",
+                    "EXTERNAL_PHYSICAL_RETURN_AND_G1_UNVERIFIED"),false,false,null,null);
+        });
+    }
+
     record OrderItem(UUID id,String externalId,Integer quantity) {}
     record OrderClaim(UUID id,UUID item,UUID receipt,UUID marketplace,int quantity) {}
     record OrderRefundEvent(UUID id,UUID marketplace,UUID linkedOrder,String linkState,

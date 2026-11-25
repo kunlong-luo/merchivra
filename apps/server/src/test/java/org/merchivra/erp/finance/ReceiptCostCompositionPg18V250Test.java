@@ -194,6 +194,7 @@ class ReceiptCostCompositionPg18V250Test {
         var second=new ReceiptCostCompositionPg18V250Test();
         second.db=db;second.write=write;second.service=service;second.recovery=recovery;
         second.crossClaimRace();
+        System.out.println("PASS V265 actual PG18 same-coordinate compensation dry run, deterministic identity and no release");
         System.out.println("PASS V264 actual PG18 current global Owner and audited revocation gates, stale pending reopen");
         System.out.println("PASS V263 actual PG18 immutable reservation quantity version capture and ABA permanent hold");
         System.out.println("PASS V262 actual PG18 nonreusable refund evidence revisions, ABA, recreation, no-op and rollback");
@@ -512,13 +513,39 @@ class ReceiptCostCompositionPg18V250Test {
               AND v.event_id=s.refund_event_id AND v.external_item_id=c.snapshot_external_item_id
             WHERE s.tenant_id=? AND s.review_evidence_revision_v122=v.evidence_revision_v121
             """,Integer.class,tenant));
+        // V265: a current reservation is not a compensation candidate.
+        assertEquals(409,assertThrows(ResponseStatusException.class,
+            ()->service.previewRefundCompensation(tenant,market,event,itemA)).getStatusCode().value());
         // V34 ABA invalidates both V63 review and permanently reserved slice.
         db.update("UPDATE finance_refund_item_review SET reviewed_quantity=2 WHERE tenant_id=? AND event_id=?",tenant,event);
         db.update("UPDATE finance_refund_item_review SET reviewed_quantity=1 WHERE tenant_id=? AND event_id=?",tenant,event);
         assertEquals("STALE",recovery.preview(tenant,market,event).state());
         assertReservationHold("REFUND_REVIEW_OR_LINK_STALE");
+        assertEquals(409,assertThrows(ResponseStatusException.class,
+            ()->service.previewRefundCompensation(tenant,market,event,itemA)).getStatusCode().value());
         approveRefund(event);
         assertEquals("REVIEWED",recovery.preview(tenant,market,event).state());
+        var proposal=service.previewRefundCompensation(tenant,market,event,itemA);
+        assertEquals("LOCAL_SAME_COORDINATE_COMPENSATION_PROPOSAL_UNVERIFIED",proposal.state());
+        assertEquals(1,proposal.coordinates().size());
+        var coordinate=proposal.coordinates().getFirst();
+        assertEquals(claimA.toString(),coordinate.claimId());
+        assertEquals(receipt.toString(),coordinate.receiptId());
+        assertEquals(a.sha256(),coordinate.basisSha256());
+        assertEquals(0,coordinate.fromInclusive());
+        assertEquals(1,coordinate.toExclusive());
+        assertEquals("14.999999",coordinate.candidateAmount());
+        assertTrue(proposal.currentEvidenceVersion()>coordinate.previousEvidenceVersion());
+        assertFalse(proposal.releaseAllowed());
+        assertFalse(proposal.replacementAllowed());
+        assertNull(proposal.actualRefundCogsReversal());
+        assertNull(proposal.realizedNetProfit());
+        assertEquals(proposal,service.previewRefundCompensation(tenant,market,event,itemA));
+        assertEquals(404,assertThrows(ResponseStatusException.class,
+            ()->service.previewRefundCompensation(UUID.randomUUID(),market,event,itemA)).getStatusCode().value());
+        approveRefund(event);
+        assertNotEquals(proposal.proposalSha256(),
+            service.previewRefundCompensation(tenant,market,event,itemA).proposalSha256());
         var abaHold=service.readWholeOrderRefundReservations(tenant,market,sale);
         assertTrue(abaHold.blockers().contains("ORIGINAL_COST_BASIS_OR_RESERVATION_STALE"));
         assertTrue(abaHold.currencies().isEmpty());

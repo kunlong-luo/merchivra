@@ -124,3 +124,10 @@ V261 [代码 e76e520fe904](https://github.com/kunlong-luo/merchivra/commit/e76e5
 ## V264 · 当前 Owner 与撤销审计门禁（待验收）
 
 V264：V63 request/decide 复用 TenantAccessService 同等 active tenant/user/membership + 全局 OWNER 资格条件；decide 重核请求人当前资格与 request 后 OWNER_REVOKED 审计，历史失效 pending 可重新发起；全订单 read 在原 RR 内同时核查两位 Owner 与各自 request/decision 之后的撤销记录。V250 PG18 合成夹具扩展非 Owner、禁用用户、撤销角色、仅 seller-scoped Owner、membership revoke、待审请求人撤销后恢复及重新审核，强制 JUnit marker，待 A3。没有新 API/UI/迁移；不是全域授权版本或并发撤销线性化保证，未审计的直接数据库 ABA 尚未封闭。V119 stale/legacy 预留继续不可释放，缺乏经批准的补偿规则不开放替换/释放，下一步须明确补偿权限、幂等、不可重复归属及原始区间守恒后再实施；真实外部原件/返仓/G1 缺失，实际回转/realizedNetProfit=null。
+
+
+V262 [代码 40071cb9a80d](https://github.com/kunlong-luo/merchivra/commit/40071cb9a80d2f0cdc37ccba92280a427d4f6f30) [A3 #45576841081 SUCCESS 7/7](https://github.com/kunlong-luo/merchivra/actions/runs/45576841081)，PG18 #139078036767 成功。V263 [A3 #45577315191 CANCELLED](https://github.com/kunlong-luo/merchivra/actions/runs/45577315191)，快 CI 成功，不记为完整通过。V264 [代码 9802fad16e46](https://github.com/kunlong-luo/merchivra/commit/9802fad16e466e4d95f02837b587a70cc8e8b81a) [快 CI #45577963575 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45577963575)，[A3 #45577963556](https://github.com/kunlong-luo/merchivra/actions/runs/45577963556) 待最终核对。
+
+## V265 · 同区间补偿预检（待验收）
+
+V265：内部 RR 同区间补偿预检，限定单 tenant/marketplace/event/item、最多50旧 claim/20 receipt；必须完整覆盖该 item 当前 V34 数量、同一已失效非 NULL 旧版本、旧数量不变、当前 V63 独立审核及原币/订单一致、V203 和 V249/V255 原批次成本指纹仍一致。逐原区间重算原币候选，提案 SHA 包含原身份/区间/指纹/旧与新数量版本/当前 V63 revision。相同快照输出确定性提案，复审 revision 变化生成新 ID；不是写入幂等键或审批。现行预留、历史 NULL、数量改变、来源或成本冲突不生成此类提案。V250 PG18 回归覆盖 current hold、复审前 hold、复审后同坐标 dry run、跨租户、重复读和新审核 revision；新 marker 强制，待 A3。没有迁移/HTTP/UI、没有写入提案/撤销/释放/替换、没有整单补偿激活或实际过账。旧预留依旧 HOLD 并占用区间；真实外部材料/G1 未签，actualRefundCogsReversal/realizedNetProfit=null。后续审批、持久化幂等、全单守恒、并发复核和激活必须另行验收。

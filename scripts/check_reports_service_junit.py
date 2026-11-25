@@ -46,7 +46,8 @@ if __name__ == "__main__":
                 'PASS V261 actual PG18 V63 review required, stale revision, author independence and duplicate audit hold',
                 'PASS V262 actual PG18 nonreusable refund evidence revisions, ABA, recreation, no-op and rollback',
                 'PASS V263 actual PG18 immutable reservation quantity version capture and ABA permanent hold',
-                'PASS V264 actual PG18 current global Owner and audited revocation gates, stale pending reopen'))
+                'PASS V264 actual PG18 current global Owner and audited revocation gates, stale pending reopen',
+                'PASS V265 actual PG18 same-coordinate compensation dry run, deterministic identity and no release'))
     except (OSError, ET.ParseError, ValueError) as exc:
         sys.exit(f"FAIL isolated PG18 service JUnit evidence: {exc}")
     print("PASS V236 actual PG18 Java service test executed (not skipped); remote worker synthetic")
@@ -68,3 +69,5 @@ if __name__ == "__main__":
     print("PASS V263 actual PG18 immutable reservation version JUnit marker verified (not skipped)")
 
     print("PASS V264 actual PG18 current Owner and audited revocation JUnit marker verified (not skipped)")
+
+    print("PASS V265 actual PG18 compensation dry-run JUnit marker verified (not skipped)")
