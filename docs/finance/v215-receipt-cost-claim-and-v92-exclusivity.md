@@ -33,3 +33,5 @@ V215 第一次完整 A3 #45295153716 在精确 `7515edd` 的 PostgreSQL 18 专�
 这是待 G1/DEC 确定数量分母、拒收报废、FX、费用资本化与返仓规则的候选算法，不是已批准会计规则。尚无服务调用、API、持久化区间身份或 UI，单次调用无法防跨调用重复。不得将输出写入 V112/实际 COGS 或利润；后续真实样本和批准前不得自动生成单位区间。Java 回归覆盖 100/3 尾差、部分缺口、退款子区间、微额、最大分母、非法区间及500组固定随机种子独立 BigInteger 重算。
 
 V246 精确 [SHA 8ab8a93a53b3](https://github.com/kunlong-luo/merchivra/commit/8ab8a93a53b348a7a329e0292b992007bd426efb) [CI #45560785767](https://github.com/kunlong-luo/merchivra/actions/runs/45560785767) SUCCESS，PG18 SKIPPED。V247 的本地显式坐标契约见 [V106/V117](v203-sale-to-lot-link-integrity-contract.md)；不改变 V112 来源金额、审批或实际利润门禁。
+
+V247 的完整 A3 PG18 失败，V248 以追加 V118 修正区间触发器别名并补真实双连接回归；参见 [V106/V117/V118](v203-sale-to-lot-link-integrity-contract.md)。V112 金额与 V246 分摊的业务集成留待区间验收及 E1/E3/E5 证据，不以测试代替成本认证。

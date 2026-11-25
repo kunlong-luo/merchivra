@@ -37,4 +37,8 @@
 
 新增 `finance_sale_lot_cost_range_v117`，仅保存对既有 V106 claim 的本地计算坐标，不创建新出库/库存/费用账本。每租户每 claim 至多一条，receipt 和数量分母由数据库从 V106 不可变 QC accepted 快照捕获，不接受伪造快照；区间长度必须等于原 assigned_quantity，边界在 [0,basis] 内。按同一 receipt 行锁串行，写入仅允许 READ COMMITTED，拒绝同收货不同分母或相交半开区间；撤销后既有区间不释放，撤销 claim 不允许新增区间，UPDATE/DELETE 复用 V106 append-only 触发器。旧数据不回填，不猜 FIFO，不自动生成区间。
 
-V117 不等于实物序列身份，不冻结 V112 外部成本组合，不批准 QC accepted 为会计资本化分母，也不认证签发人；未绑定的 claim 必须视为未知，不能推断剩余区间可用。当前无应用写 API/前端/正式过账。读取或将来使用须重新核对 V106 当前完整性、撤销、完整跨订单区间覆盖、原金额/原币与 G1；并发重叠写尚需独立双连接验收。本轮复用 V203 TEMP/ROLLBACK 脚本与已安装 V117 函数，验证伪快照、区间长度、跨租户、撤销占位、重叠和删除负例，完整 A3 待验收。
+V117 不等于实物序列身份，不冻结 V112 外部成本组合，不批准 QC accepted 为会计资本化分母，也不认证签发人；未绑定的 claim 必须视为未知，不能推断剩余区间可用。当前无应用写 API/前端/正式过账。读取或将来使用须重新核对 V106 当前完整性、撤销、完整跨订单区间覆盖、原金额/原币与 G1；并发重叠写尚需独立双连接验收。本轮复用 V203 TEMP/ROLLBACK 脚本与已安装 V117 函数，验证伪快照、区间长度、跨租户、撤销占位、重叠和删除负例，V247 完整 A3 6/7：PG18 失败，见下述 V248 修复。
+
+## V248 / Flyway V118 · 保留历史迁移并修复触发器别名（待验收）
+
+V247 [A3 #45561759490](https://github.com/kunlong-luo/merchivra/actions/runs/45561759490) 6/7，PG18 job #139026923921 日志 `column reference "old.tenant_id" is ambiguous`：V117 关系别名 old 与 PL/pgSQL OLD 冲突。V118 只 CREATE OR REPLACE 该函数，改为 existing_range，V117 文件及守恒约束不改。原 TEMP 负例要求 V118 已安装；另新增真实 PG18 两连接共享一次性 shadow schema 测试：通过 advisory 信号和 pg_blocking_pids 等待实际锁竞争，验证先提交后竞争者拒绝重叠、先回滚后竞争者可成功、RR 拒绝，最终删除测试 schema。不测试生产 FK、并发撤销或外部证明，不开放写入 API。V248 完整 A3 待验收；V112 成本组合和 V246 计算尚未接业务服务。

@@ -40,6 +40,10 @@ DO $$ BEGIN
        WHERE version='117' AND success) THEN
     RAISE EXCEPTION 'Flyway V117 has not run';
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.flyway_schema_history
+       WHERE version='118' AND success) THEN
+    RAISE EXCEPTION 'Flyway V118 has not run';
+  END IF;
 END $$;
 CREATE TEMP TABLE sales_order (
  id uuid,tenant_id uuid,seller_marketplace_id uuid,data_origin text,

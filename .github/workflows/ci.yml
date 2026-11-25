@@ -316,6 +316,7 @@ jobs:
           MERCHIVRA_V202_DISPOSABLE_ONLY=true python3 scripts/smoke_local_lot_cost_provenance_v202.py
           test "$(psql -h 127.0.0.1 -U merchivra -d merchivra -Atc "SELECT count(*) FROM flyway_schema_history WHERE version='106' AND success")" = "1"
           MERCHIVRA_V203_DISPOSABLE_ONLY=true python3 scripts/smoke_sale_lot_assignment_v203.py
+          MERCHIVRA_V248_DISPOSABLE_ONLY=true python3 scripts/smoke_sale_lot_range_race_v248.py
           MERCHIVRA_V204_DISPOSABLE_ONLY=true python3 scripts/smoke_signed_sale_dispatch_v204.py
           MERCHIVRA_V205_DISPOSABLE_ONLY=true python3 scripts/smoke_dispatch_custody_dossier_v205.py
           MERCHIVRA_V206_DISPOSABLE_ONLY=true python3 scripts/smoke_custody_original_content_v206.py
@@ -553,6 +554,7 @@ jobs:
           python3 -m py_compile scripts/smoke_cost_source_audit_integrity_v229.py
           python3 -m py_compile scripts/smoke_external_cost_proof_dossier_v230.py
           python3 -m py_compile scripts/smoke_reports_auth_revision_v234.py
+          python3 -m py_compile scripts/smoke_sale_lot_range_race_v248.py
       - name: V192 V64 order/SKU conservation smoke syntax
         run: python3 -m py_compile scripts/smoke_v192_profit_sku_conservation.py
       - name: V175-B key-possession synthetic three-Owner smoke syntax

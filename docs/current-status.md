@@ -1,6 +1,6 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 本地成本计算区间持久化待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 追加修复与并发测试待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 核心项目状态
 
@@ -45,12 +45,15 @@ V245：V29 历史 COGS 计算拒绝零候选携带成本值、重复/空 item ID
 
 V246：复用 CostAllocationEngine 增加原币批次金额区间分摊候选算法，累计六位小数向下取整差值保证同一原金额/分母上的连续区间金额守恒；拒绝重叠/重复/越界，保留缺口金额和数量。支持原范围内子区间重算及500组独立整数微单位回归。详见 [V112 领域契约](finance/v215-receipt-cost-claim-and-v92-exclusivity.md)。这是纯 Java 算术，未接应用服务/API/UI、未持久化真实区间、不保证跨调用唯一归属、未批准会计政策。快 CI 已通过。
 
-V247：Flyway V117 追加 V106 claim 的显式本地计算区间；每 claim 唯一，冻结原 receipt/QC accepted 快照为候选分母，长度等于 assigned_quantity，同收货行锁及 READ COMMITTED 新快照检查相交区间/分母；撤销不回收，记录不可修改删除，旧 claim 不补写。未绑定区间保持 UNKNOWN，不等于物理序列/外部出库证明。复用 V203 真 PG18 TEMP 测试已安装触发器；双连接并发、应用调用和实际成本组合仍待实现/验证，不改变 V112、G1 或利润门禁。详见 [V106/V117 契约](finance/v203-sale-to-lot-link-integrity-contract.md)。完整 A3 待验收。
+V247：Flyway V117 追加 V106 claim 的显式本地计算区间；每 claim 唯一，冻结原 receipt/QC accepted 快照为候选分母，长度等于 assigned_quantity，同收货行锁及 READ COMMITTED 新快照检查相交区间/分母；撤销不回收，记录不可修改删除，旧 claim 不补写。未绑定区间保持 UNKNOWN，不等于物理序列/外部出库证明。复用 V203 真 PG18 TEMP 测试已安装触发器；双连接并发、应用调用和实际成本组合仍待实现/验证，不改变 V112、G1 或利润门禁。详见 [V106/V117 契约](finance/v203-sale-to-lot-link-integrity-contract.md)。快 CI 成功；完整 A3 6/7，PG18 因 old.tenant_id 别名冲突失败。
+
+V248：Flyway V118 CREATE OR REPLACE V117 capture 函数，修复 old 与 OLD 触发器变量歧义，不改历史迁移/数据/约束。新增实际 PG18 双连接一次性共享 schema 回归，等待真实行锁、提交重叠拒绝/回滚释放/RR 拒绝。仅安装函数及合成影子表，未测试生产 FK 或并发撤销，不接业务 API、V112 金额组合/实际 COGS。完整 A3 待验收。
 
 ## 最近精确验收（切勿混用不同 SHA 的 CI）
 
 | 阶段 | 精确代码 / 测试 | 技术证明边界 |
 | --- | --- | --- |
+| V247 | [SHA 82dcc54c9c0a](https://github.com/kunlong-luo/merchivra/commit/82dcc54c9c0a18327f1ee3d8a3e2cd2d3e7f3810) · [CI #45561759237](https://github.com/kunlong-luo/merchivra/actions/runs/45561759237)（SUCCESS） · [A3 #45561759490](https://github.com/kunlong-luo/merchivra/actions/runs/45561759490)（6/7 FAILURE） | PG18 job #139026923921：column reference old.tenant_id is ambiguous；V248 追加迁移修复 |
 | V246 | [SHA 8ab8a93a53b3](https://github.com/kunlong-luo/merchivra/commit/8ab8a93a53b348a7a329e0292b992007bd426efb) · [CI #45560785767](https://github.com/kunlong-luo/merchivra/actions/runs/45560785767)（SUCCESS） | Java/React/Compose 成功，PG18 SKIPPED，无独立完整 A3 |
 | V245 | [SHA 8a40eb91562e](https://github.com/kunlong-luo/merchivra/commit/8a40eb91562ec0ab19707a641285f4296ec1baca) · [CI #45559136844](https://github.com/kunlong-luo/merchivra/actions/runs/45559136844)（SUCCESS） | Java/React/Compose 成功，PG18 SKIPPED，无独立完整 A3 |
 | **V244** | [SHA 3ec2c68b44d7](https://github.com/kunlong-luo/merchivra/commit/3ec2c68b44d7290688f25db83aa2b4dc45f02056) · [CI #45557992334](https://github.com/kunlong-luo/merchivra/actions/runs/45557992334)（SUCCESS） · [A3 #45557992299](https://github.com/kunlong-luo/merchivra/actions/runs/45557992299)（7/7 SUCCESS） | PG18 job #139014636905：PASS V243 PG18 exact receipt audit cardinality, missing stage and self-review；PASS V244 real Owner HTTP duplicate source audit holds original receipt cost |
