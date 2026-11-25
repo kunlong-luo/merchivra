@@ -138,3 +138,10 @@ V264 [A3 #45577963556 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/
 ## V266 · 不可变补偿提案与独立批准（待验收）
 
 V266：追加 Flyway V123 不可变同区间补偿提案及单独批准表；主键 tenant/proposal SHA，原 V265 canonical payload 独立 SQL SHA256 核对，另存 V63 revision/digest、scope、actor、理由及时间。内部 request/approve 各在独立 RR 重算 V265，校验 expected SHA、当前 Owner，审批人与提案人、V63 两位审核者及当前 V34/V35 作者均不同，已记录的请求人撤销阻断。相同当前快照、同人同理由的重复提交/批准复用记录；冲突理由/actor/过期摘要拒绝；数据库唯一键阻止重复行，RR 并发冲突可能返回 serialization failure，调用者须完整重试，尚无两连接并发回归。V250 PG18 加入真实持久化、重复、独立性、不可变 UPDATE/DELETE、复审过期与无激活场景，强制 JUnit marker，待 A3。批准是历史本地证据，不是激活令牌；不读取为有效预留，不修改/释放 V119，不支持整单补偿守恒或跨期记账，不开放 HTTP/UI。未经 G1/DEC 批准、外部真实材料、授权连续性/并发验收前保持 actualRefundCogsReversal/realizedNetProfit=null。
+
+
+V266 [代码 d39c2e79c15f](https://github.com/kunlong-luo/merchivra/commit/d39c2e79c15fcb4ed185473172f9b114611f4d71) [快 CI #45579559372 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45579559372) [完整 A3 #45579559266 SUCCESS 7/7](https://github.com/kunlong-luo/merchivra/actions/runs/45579559266)，实际 PG18 job #139085964217 成功。
+
+## V267 · 补偿批准当前有效性（待验收）
+
+V267：同 RR 独立预检已记录的 V123 补偿批准，复算 V265/V63、核对当前 proposal SHA、payload、review revision/digest、双方 Owner、审批人与 V63/当前 V34/V35 作者独立、批准时间不早于请求、请求/批准后 OWNER_REVOKED 记录。record/approve 幂等重读复用同一门禁；撤销后恢复资格不能复活原批准，重新 V63 复核产生新的提案与批准，保留原记录。V250 实际 PG18 新增未批准、正常重复读、跨租户、账号禁用、审核人撤销恢复、复审新 ID 场景，强制 marker；待新 A3。无新迁移/API/UI、无激活令牌或实际释放、替换。不是全域授权不可重用版本或并发撤销线性化；V266 RR 并发幂等仍需两连接回归、整单补偿守恒及 G1/DEC 授权。旧预留继续 HOLD，actualRefundCogsReversal/realizedNetProfit=null。

@@ -382,6 +382,60 @@ public class ReceiptCostCompositionServiceV249 {
             """,(rs,n)->new CompensationDecision(rs.getObject(1,UUID.class),rs.getString(2)),tenant,expected);
         return rows.isEmpty()?null:rows.getFirst();
     }
+    // V267: a recorded approval is history, not a perpetual authority.
+    // All callers already have the same RR snapshot as compensationSnapshot.
+    // An audited revoke after request/approval invalidates even a restored role.
+    private void requireCurrentCompensationRequest(UUID tenant,String expected,CompensationRequest request) {
+        recovery.requireCurrentOwner(tenant,request.actor());
+        if(Boolean.TRUE.equals(jdbc.queryForObject("""
+            SELECT EXISTS(SELECT 1 FROM finance_refund_compensation_proposal_v123 p
+              JOIN local_team_audit a ON a.tenant_id=p.tenant_id
+                AND a.subject_user_id=p.requested_by AND a.event_code='OWNER_REVOKED'
+                AND a.occurred_at>=p.requested_at
+              WHERE p.tenant_id=? AND p.proposal_sha256=?)
+            """,Boolean.class,tenant,expected)))throw compensationConflict();
+    }
+
+    private void requireCurrentCompensationDecision(UUID tenant,UUID event,String expected,
+        CompensationSnapshot snapshot,CompensationRequest request,CompensationDecision decision) {
+        if(decision==null)throw compensationConflict();
+        requireCurrentCompensationRequest(tenant,expected,request);
+        recovery.requireCurrentOwner(tenant,decision.actor());
+        RefundRecoveryService.requireIndependent(request.actor(),decision.actor());
+        if(decision.actor().toString().equals(snapshot.review().requestedBy())
+            ||decision.actor().toString().equals(snapshot.review().decidedBy()))
+            throw compensationConflict();
+        recovery.checkIndependentAuthors(tenant,event,decision.actor());
+        if(!Boolean.TRUE.equals(jdbc.queryForObject("""
+            SELECT EXISTS(
+              SELECT 1 FROM finance_refund_compensation_proposal_v123 p
+              JOIN finance_refund_compensation_approval_v123 a ON a.tenant_id=p.tenant_id
+                AND a.proposal_sha256=p.proposal_sha256 AND a.requested_by=p.requested_by
+              WHERE p.tenant_id=? AND p.proposal_sha256=? AND p.requested_by=?
+                AND a.approved_by=? AND a.approved_at>=p.requested_at
+                AND NOT EXISTS(SELECT 1 FROM local_team_audit h
+                  WHERE h.tenant_id=a.tenant_id AND h.subject_user_id=a.approved_by
+                    AND h.event_code='OWNER_REVOKED' AND h.occurred_at>=a.approved_at))
+            """,Boolean.class,tenant,expected,request.actor(),decision.actor())))
+            throw compensationConflict();
+    }
+
+    // Internal approval eligibility only. Never an activation token or write.
+    CompensationReceipt previewApprovedRefundCompensation(UUID tenant,UUID marketplace,UUID event,
+        UUID item,String expected) {
+        if(tenant==null||marketplace==null||event==null||item==null
+            ||expected==null||!expected.matches("[0-9a-f]{64}"))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        return read.execute(ignored->{
+            var snapshot=compensationSnapshot(tenant,marketplace,event,item);
+            if(!expected.equals(snapshot.preview().proposalSha256()))throw compensationConflict();
+            var request=currentRequest(tenant,marketplace,event,item,snapshot);
+            var decision=storedDecision(tenant,expected);
+            requireCurrentCompensationDecision(tenant,event,expected,snapshot,request,decision);
+            return compensationReceipt(expected,request,decision);
+        });
+    }
+
     private static CompensationReceipt compensationReceipt(String expected,CompensationRequest request,
         CompensationDecision decision) {
         return new CompensationReceipt(expected,decision==null?"LOCAL_PROPOSAL_RECORDED":
@@ -407,7 +461,11 @@ public class ReceiptCostCompositionServiceV249 {
                 snapshot.review().revision(),snapshot.reviewDigest(),actor,note);
             var request=currentRequest(tenant,marketplace,event,item,snapshot);
             if(!actor.equals(request.actor())||!note.equals(request.reason()))throw compensationConflict();
-            return compensationReceipt(expected,request,storedDecision(tenant,expected));
+            requireCurrentCompensationRequest(tenant,expected,request);
+            var decision=storedDecision(tenant,expected);
+            if(decision!=null)
+                requireCurrentCompensationDecision(tenant,event,expected,snapshot,request,decision);
+            return compensationReceipt(expected,request,decision);
         });
     }
 
@@ -420,20 +478,13 @@ public class ReceiptCostCompositionServiceV249 {
             var snapshot=compensationSnapshot(tenant,marketplace,event,item);
             if(!expected.equals(snapshot.preview().proposalSha256()))throw compensationConflict();
             var request=currentRequest(tenant,marketplace,event,item,snapshot);
-            recovery.requireCurrentOwner(tenant,request.actor());
+            requireCurrentCompensationRequest(tenant,expected,request);
             RefundRecoveryService.requireIndependent(request.actor(),actor);
             if(actor.toString().equals(snapshot.review().decidedBy())
                 ||actor.toString().equals(snapshot.review().requestedBy()))
                 throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "Compensation approver must differ from both V63 review actors");
             recovery.checkIndependentAuthors(tenant,event,actor);
-            if(Boolean.TRUE.equals(jdbc.queryForObject("""
-                SELECT EXISTS(SELECT 1 FROM finance_refund_compensation_proposal_v123 p
-                  JOIN local_team_audit a ON a.tenant_id=p.tenant_id
-                    AND a.subject_user_id=p.requested_by AND a.event_code='OWNER_REVOKED'
-                    AND a.occurred_at>=p.requested_at
-                  WHERE p.tenant_id=? AND p.proposal_sha256=?)
-                """,Boolean.class,tenant,expected)))throw compensationConflict();
             jdbc.update("""
                 INSERT INTO finance_refund_compensation_approval_v123
                   (tenant_id,proposal_sha256,requested_by,approved_by,approval_reason)
@@ -442,6 +493,7 @@ public class ReceiptCostCompositionServiceV249 {
             var decision=storedDecision(tenant,expected);
             if(decision==null||!actor.equals(decision.actor())||!note.equals(decision.reason()))
                 throw compensationConflict();
+            requireCurrentCompensationDecision(tenant,event,expected,snapshot,request,decision);
             return compensationReceipt(expected,request,decision);
         });
     }

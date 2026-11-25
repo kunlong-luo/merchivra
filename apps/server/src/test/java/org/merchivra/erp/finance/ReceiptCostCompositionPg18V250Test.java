@@ -194,6 +194,7 @@ class ReceiptCostCompositionPg18V250Test {
         var second=new ReceiptCostCompositionPg18V250Test();
         second.db=db;second.write=write;second.service=service;second.recovery=recovery;
         second.crossClaimRace();
+        System.out.println("PASS V267 actual PG18 compensation approval revalidation, revoked approver and new revision");
         System.out.println("PASS V266 actual PG18 immutable compensation request and independent approval, idempotent replay, no activation");
         System.out.println("PASS V265 actual PG18 same-coordinate compensation dry run, deterministic identity and no release");
         System.out.println("PASS V264 actual PG18 current global Owner and audited revocation gates, stale pending reopen");
@@ -546,6 +547,8 @@ class ReceiptCostCompositionPg18V250Test {
             approvalReason="V266 synthetic independent approval";
         var request=service.recordRefundCompensation(tenant,market,event,itemA,digest,maker,requestReason);
         assertEquals("LOCAL_PROPOSAL_RECORDED",request.state());
+        assertEquals(409,assertThrows(ResponseStatusException.class,()->
+            service.previewApprovedRefundCompensation(tenant,market,event,itemA,digest)).getStatusCode().value());
         assertEquals(request,service.recordRefundCompensation(tenant,market,event,itemA,digest,maker,requestReason));
         assertEquals(409,assertThrows(ResponseStatusException.class,()->
             service.recordRefundCompensation(tenant,market,event,itemA,digest,maker,"V266 conflicting request reason")).getStatusCode().value());
@@ -556,6 +559,32 @@ class ReceiptCostCompositionPg18V250Test {
         var approved=service.approveRefundCompensation(tenant,market,event,itemA,digest,compensationApprover,approvalReason);
         assertEquals("LOCAL_APPROVAL_RECORDED_NOT_ACTIVATED",approved.state());
         assertEquals(approved,service.approveRefundCompensation(tenant,market,event,itemA,digest,compensationApprover,approvalReason));
+        assertEquals(approved,service.previewApprovedRefundCompensation(tenant,market,event,itemA,digest));
+        assertEquals(approved,service.recordRefundCompensation(tenant,market,event,itemA,digest,maker,requestReason));
+        assertEquals(404,assertThrows(ResponseStatusException.class,()->
+            service.previewApprovedRefundCompensation(UUID.randomUUID(),market,event,itemA,digest)).getStatusCode().value());
+        db.update("UPDATE app_user SET status='DISABLED' WHERE id=?",compensationApprover);
+        assertEquals(403,assertThrows(ResponseStatusException.class,()->
+            service.previewApprovedRefundCompensation(tenant,market,event,itemA,digest)).getStatusCode().value());
+        assertEquals(403,assertThrows(ResponseStatusException.class,()->
+            service.recordRefundCompensation(tenant,market,event,itemA,digest,maker,requestReason)).getStatusCode().value());
+        db.update("UPDATE app_user SET status='ACTIVE' WHERE id=?",compensationApprover);
+        assertEquals(approved,service.previewApprovedRefundCompensation(tenant,market,event,itemA,digest));
+        // Audited revoke is permanent for this approval even if Owner is restored.
+        write.executeWithoutResult(ignored->{
+            db.update("UPDATE membership SET status='REVOKED' WHERE tenant_id=? AND user_id=?",tenant,compensationApprover);
+            db.update("""
+                INSERT INTO local_team_audit(id,tenant_id,actor_user_id,subject_user_id,event_code)
+                VALUES (?,?,?,?,'OWNER_REVOKED')
+                """,UUID.randomUUID(),tenant,maker,compensationApprover);
+        });
+        db.update("UPDATE membership SET status='ACTIVE' WHERE tenant_id=? AND user_id=?",tenant,compensationApprover);
+        assertEquals(409,assertThrows(ResponseStatusException.class,()->
+            service.previewApprovedRefundCompensation(tenant,market,event,itemA,digest)).getStatusCode().value());
+        assertEquals(409,assertThrows(ResponseStatusException.class,()->
+            service.recordRefundCompensation(tenant,market,event,itemA,digest,maker,requestReason)).getStatusCode().value());
+        assertEquals(409,assertThrows(ResponseStatusException.class,()->
+            service.approveRefundCompensation(tenant,market,event,itemA,digest,compensationApprover,approvalReason)).getStatusCode().value());
         assertFalse(approved.releaseAllowed());
         assertFalse(approved.replacementAllowed());
         assertNull(approved.realizedNetProfit());
@@ -571,6 +600,15 @@ class ReceiptCostCompositionPg18V250Test {
         approveRefund(event);
         assertNotEquals(proposal.proposalSha256(),
             service.previewRefundCompensation(tenant,market,event,itemA).proposalSha256());
+        assertEquals(409,assertThrows(ResponseStatusException.class,()->
+            service.previewApprovedRefundCompensation(tenant,market,event,itemA,digest)).getStatusCode().value());
+        // New V63 revision yields a separate proposal/approval; never edits history.
+        String freshDigest=service.previewRefundCompensation(tenant,market,event,itemA).proposalSha256();
+        service.recordRefundCompensation(tenant,market,event,itemA,freshDigest,maker,requestReason);
+        var freshApproval=service.approveRefundCompensation(tenant,market,event,itemA,freshDigest,
+            compensationApprover,approvalReason);
+        assertEquals(freshApproval,service.previewApprovedRefundCompensation(tenant,market,event,itemA,freshDigest));
+        assertEquals(2,db.queryForObject("SELECT count(*) FROM finance_refund_compensation_approval_v123 WHERE tenant_id=?",Integer.class,tenant));
         assertEquals(409,assertThrows(ResponseStatusException.class,()->
             service.approveRefundCompensation(tenant,market,event,itemA,digest,compensationApprover,approvalReason)).getStatusCode().value());
         assertEquals(409,assertThrows(ResponseStatusException.class,()->

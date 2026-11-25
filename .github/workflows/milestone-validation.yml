@@ -2,7 +2,7 @@
 # Historic milestone commentary is retained in Git and domain evidence documents.
 # Current validation scope: docs/current-status.md and docs/testing/ci-policy.md.
 name: MVP milestone full validation
-run-name: "MVP gate · ${{ inputs.milestone || 'V266-A3-refund-compensation-persistence' }} · ${{ github.sha }}"
+run-name: "MVP gate · ${{ inputs.milestone || 'V267-A3-compensation-approval-revalidation' }} · ${{ github.sha }}"
 
 on:
   # Exactly one automatic baseline when this workflow first lands on main
@@ -128,6 +128,7 @@ on:
           - V264-A3-refund-current-owner
           - V265-A3-refund-compensation-dry-run
           - V266-A3-refund-compensation-persistence
+          - V267-A3-compensation-approval-revalidation
 
 permissions:
   contents: read
