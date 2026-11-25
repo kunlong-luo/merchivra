@@ -196,6 +196,7 @@ class ReceiptCostCompositionPg18V250Test {
         second.crossClaimRace();
         System.out.println("PASS V269 actual PG18 whole-order compensation simulation, explicit approval, no activation and conservation");
         System.out.println("PASS V268 actual PG18 concurrent compensation request and approval, whole RR retry, conflicting reason hold");
+        System.out.println("PASS V277 actual PG18 all unique arbiters compensation request and conflicting reason race");
         System.out.println("PASS V267 actual PG18 compensation approval revalidation, revoked approver and new revision");
         System.out.println("PASS V266 actual PG18 immutable compensation request and independent approval, idempotent replay, no activation");
         System.out.println("PASS V265 actual PG18 same-coordinate compensation dry run, deterministic identity and no release");
@@ -625,7 +626,14 @@ class ReceiptCostCompositionPg18V250Test {
         // A genuinely different reason must still conflict after a full retry.
         approveRefund(event);
         String thirdDigest=service.previewRefundCompensation(tenant,market,event,itemA).proposalSha256();
-        service.recordRefundCompensation(tenant,market,event,itemA,thirdDigest,maker,requestReason);
+        // V277: unlike identical replay, competing reasons for the same
+        // proposal (and same requested_by secondary unique index) must
+        // produce one winner and one explicit conflict, never a raw 23505.
+        var competingRequests=raceCompensation("finance_refund_compensation_proposal_v123",
+            ()->requestOutcome(event,thirdDigest,requestReason),
+            ()->requestOutcome(event,thirdDigest,"V277 competing request reason"));
+        assertEquals(1,competingRequests.stream().filter("RECORDED"::equals).count());
+        assertEquals(1,competingRequests.stream().filter("CONFLICT"::equals).count());
         var conflicting=raceCompensation("finance_refund_compensation_approval_v123",
             ()->approvalOutcome(event,thirdDigest,approvalReason),
             ()->approvalOutcome(event,thirdDigest,"V268 competing approval reason"));
@@ -670,6 +678,16 @@ class ReceiptCostCompositionPg18V250Test {
         assertEquals(404,assertThrows(ResponseStatusException.class,
             ()->service.readWholeOrderRefundReservations(UUID.randomUUID(),market,sale)).getStatusCode().value());
     }
+    private String requestOutcome(UUID event,String digest,String reason) {
+        try {
+            service.recordRefundCompensation(tenant,market,event,itemA,digest,maker,reason);
+            return "RECORDED";
+        } catch(ResponseStatusException conflict) {
+            if(conflict.getStatusCode().value()!=409)throw conflict;
+            return "CONFLICT";
+        }
+    }
+
     private String approvalOutcome(UUID event,String digest,String reason) {
         try {
             service.approveRefundCompensation(tenant,market,event,itemA,digest,compensationApprover,reason);

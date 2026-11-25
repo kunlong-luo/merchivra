@@ -49,10 +49,11 @@ class SettlementCategoryReviewV276Test {
             any(),any(),any(),any(),any(),any(),any());
     }
     @Test void exactKeysAndNoMutableWrite() {
-        for(String sql:List.of(SettlementCategoryReviewV276.REQUEST_SQL,SettlementCategoryReviewV276.APPROVAL_SQL)) {
-            assertTrue(sql.contains("ON CONFLICT (tenant_id,report_id,mapping_sha256,evidence_sha256) DO NOTHING"));
+        assertTrue(SettlementCategoryReviewV276.REQUEST_SQL.contains("ON CONFLICT DO NOTHING"));
+        assertTrue(SettlementCategoryReviewV276.APPROVAL_SQL.contains(
+            "ON CONFLICT (tenant_id,report_id,mapping_sha256,evidence_sha256) DO NOTHING"));
+        for(String sql:List.of(SettlementCategoryReviewV276.REQUEST_SQL,SettlementCategoryReviewV276.APPROVAL_SQL))
             assertFalse(sql.contains("UPDATE"));
-        }
         for(String sql:List.of(SettlementCategoryReviewV276.READ_REQUEST_SQL,SettlementCategoryReviewV276.READ_APPROVAL_SQL))
             assertTrue(sql.contains("r.seller_marketplace_id=?"));
     }

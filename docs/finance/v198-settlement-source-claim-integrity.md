@@ -104,3 +104,10 @@ V275 [代码 4a8af88ffb2e](https://github.com/kunlong-luo/merchivra/commit/4a8af
 V276：Flyway V125 新增内部不可变分类申请/批准两表，精确绑定 tenant/report/mapping SHA/evidence SHA，外键绑定草稿、申请及 membership，申请/批准分别唯一且 UPDATE/DELETE 拒绝。SettlementCategoryReviewV276 在 RR 内调用 V275 当前预检，只有一致且 evidence SHA 完全匹配才接受；复用现有 active 全租户 Owner 校验，审批人与申请人、原映射创建人均不同；读取及重放重查双方资格、审批时间与 OWNER_REVOKED 审计。相同 actor/reason 可幂等复用，冲突拒绝；并发 RR 序列化失败未做自动重试。原证据撤销后同 SHA 不可重新申请（后续需设计重开与授权代际）；非全域 ABA/撤销线性化保证。仅内部服务，无 controller/UI、无 V56 门禁或正式激活；mappingActivated/bankVerified/ledgerPosted=false、realizedNetProfit=null。新增 JUnit 过期、独立性、缺请求与 SQL 契约，扩展 V198 真 PG18 TEMP 精确 V125 DDL、申请/批准 SQL、重复、self approval、站点隔离、不可变触发器；实际迁移与服务端到端未验收。为保留 V275 正在进行的完整验收，本轮不修改 A3 workflow；待 V275 结果明确后另行触发 V276 A3。真实 E1–E5、G1/DEC、Redis smoke 启动问题仍阻塞；Seller/Ads OAuth OFF、#104 NO-GO。
 
 内部方法 `request`、`approve`、`current` 绑定显式 mapping/evidence SHA；未开放 HTTP，保存记录不是激活，当前证据改变则拒绝。审批者不同于原草稿创建者及申请者；审批记录不可变。后续先完成 PG18/真实 HTTP 授权回归及审批重开契约，再评估前端操作入口。
+
+
+V275 [完整 A3 #45618143096 FAILURE 6/7](https://github.com/kunlong-luo/merchivra/actions/runs/45618143096)，[PG18 job #139218878361](https://github.com/kunlong-luo/merchivra/actions/runs/45618143096/job/139218878361) 完整日志已核实：V198/V271/V273/V274/V275 SQL marker 均通过，V250 Java 并发测试第 612/713 行 DuplicateKeyException，DB 记录 finance_refund_compensation_p_tenant_id_proposal_sha256_req_key 唯一冲突，V123 INSERT 仅指定 PK 仲裁目标。HTTP、Java 常规、Next、Chromium、Compose、基线其余6项成功。V276 [代码 9ffb348a325e](https://github.com/kunlong-luo/merchivra/commit/9ffb348a325e98638956ceef315f36c79641c514) [快 CI #45618870958](https://github.com/kunlong-luo/merchivra/actions/runs/45618870958) 核对时运行中，未独立触发 A3。
+
+## V277 · 分类请求唯一键竞争预防（待验收）
+
+V277：修复 V123 请求双唯一约束仲裁漏洞，INSERT 使用无目标 ON CONFLICT DO NOTHING，使 PK 和为审批外键保留的 UNIQUE 均参与冲突仲裁；无操作后仍必须精确复核现行证据、canonical payload、actor/reason 及授权，非唯一键异常不吞掉，保留 V268 40001 整 RR 事务最多3次总尝试。V125 分类申请存在相同结构，预防性调整为全唯一仲裁，审批只有单主键维持原式；不新增事务重试或开放接口。V250 真 PG18 两连接表锁回归保留相同请求/批准与不同批准理由竞争，另增加不同请求理由同键竞争（一个成功、一个409、唯一记录）；强制 V277 JUnit marker，触发新 A3 待验收。无迁移、依赖、前端、补偿激活或 V56 分类门禁变化；分类审批服务的完整并发及 HTTP 验收仍待完成。真实 E1–E5、G1/DEC、Redis 独立 smoke 失败仍待解决；realizedNetProfit=null、OAuth OFF、#104 NO-GO。

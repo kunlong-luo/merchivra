@@ -27,11 +27,13 @@ public class SettlementCategoryReviewV276 {
         boolean ledgerPosted,String realizedNetProfit) {}
     private record Request(UUID actor,String reason,OffsetDateTime at,UUID draftCreator) {}
     private record Approval(UUID actor,String reason,OffsetDateTime at) {}
+    // V277: include both request unique indexes as arbiters, as in V123.
+    // A no-op must still match the exact stored actor and reason.
     static final String REQUEST_SQL="""
         INSERT INTO finance_settlement_category_request_v125
           (tenant_id,report_id,mapping_sha256,evidence_sha256,requested_by,request_reason)
         VALUES (?,?,?,?,?,?)
-        ON CONFLICT (tenant_id,report_id,mapping_sha256,evidence_sha256) DO NOTHING
+        ON CONFLICT DO NOTHING
         """;
     static final String APPROVAL_SQL="""
         INSERT INTO finance_settlement_category_approval_v125

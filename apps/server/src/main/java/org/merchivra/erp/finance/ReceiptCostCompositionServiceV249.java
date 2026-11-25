@@ -506,12 +506,17 @@ public class ReceiptCostCompositionServiceV249 {
             recovery.requireCurrentOwner(tenant,actor);
             var snapshot=compensationSnapshot(tenant,marketplace,event,item);
             if(!expected.equals(snapshot.preview().proposalSha256()))throw compensationConflict();
+            // V277: V123 has BOTH a primary key and a redundant UNIQUE
+            // including requested_by (for the approval FK). Targeting just
+            // the PK can leak 23505 from the other index during a race.
+            // All unique arbiters participate; exact scope/payload/actor/note
+            // is still verified below. FK/check/other failures are not ignored.
             jdbc.update("""
                 INSERT INTO finance_refund_compensation_proposal_v123
                   (tenant_id,marketplace_id,sales_order_id,event_id,order_item_id,proposal_sha256,
                    canonical_payload,review_revision,review_sha256,requested_by,request_reason)
                 VALUES (?,?,?,?,?,?,?,?,?,?,?)
-                ON CONFLICT (tenant_id,proposal_sha256) DO NOTHING
+                ON CONFLICT DO NOTHING
                 """,tenant,marketplace,snapshot.order(),event,item,expected,snapshot.payload(),
                 snapshot.review().revision(),snapshot.reviewDigest(),actor,note);
             var request=currentRequest(tenant,marketplace,event,item,snapshot);

@@ -162,3 +162,10 @@ V269：内部显式选择最多20个已批准 event/item/proposal SHA，在单 R
 
 
 V268 [代码 bfbc124ca446](https://github.com/kunlong-luo/merchivra/commit/bfbc124ca446ce63b3b8fb0afac25baf1e1f1ec0) [完整 A3 #45586332750 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45586332750)。V269 [代码 1f1240d93a17](https://github.com/kunlong-luo/merchivra/commit/1f1240d93a171199c81a85fbb99e2748b3effb8c) [快 CI #45587205802 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45587205802) [完整 A3 #45587205992 SUCCESS 7/7](https://github.com/kunlong-luo/merchivra/actions/runs/45587205992)，实际 PG18 job #139111767787 成功。
+
+
+V275 [完整 A3 #45618143096 FAILURE 6/7](https://github.com/kunlong-luo/merchivra/actions/runs/45618143096)，[PG18 job #139218878361](https://github.com/kunlong-luo/merchivra/actions/runs/45618143096/job/139218878361) 完整日志已核实：V198/V271/V273/V274/V275 SQL marker 均通过，V250 Java 并发测试第 612/713 行 DuplicateKeyException，DB 记录 finance_refund_compensation_p_tenant_id_proposal_sha256_req_key 唯一冲突，V123 INSERT 仅指定 PK 仲裁目标。HTTP、Java 常规、Next、Chromium、Compose、基线其余6项成功。V276 [代码 9ffb348a325e](https://github.com/kunlong-luo/merchivra/commit/9ffb348a325e98638956ceef315f36c79641c514) [快 CI #45618870958](https://github.com/kunlong-luo/merchivra/actions/runs/45618870958) 核对时运行中，未独立触发 A3。
+
+## V277 · 双唯一索引并发仲裁修复（待验收）
+
+V277：修复 V123 请求双唯一约束仲裁漏洞，INSERT 使用无目标 ON CONFLICT DO NOTHING，使 PK 和为审批外键保留的 UNIQUE 均参与冲突仲裁；无操作后仍必须精确复核现行证据、canonical payload、actor/reason 及授权，非唯一键异常不吞掉，保留 V268 40001 整 RR 事务最多3次总尝试。V125 分类申请存在相同结构，预防性调整为全唯一仲裁，审批只有单主键维持原式；不新增事务重试或开放接口。V250 真 PG18 两连接表锁回归保留相同请求/批准与不同批准理由竞争，另增加不同请求理由同键竞争（一个成功、一个409、唯一记录）；强制 V277 JUnit marker，触发新 A3 待验收。无迁移、依赖、前端、补偿激活或 V56 分类门禁变化；分类审批服务的完整并发及 HTTP 验收仍待完成。真实 E1–E5、G1/DEC、Redis 独立 smoke 失败仍待解决；realizedNetProfit=null、OAuth OFF、#104 NO-GO。
