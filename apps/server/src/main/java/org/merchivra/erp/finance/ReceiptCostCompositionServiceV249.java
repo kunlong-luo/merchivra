@@ -5,6 +5,9 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -95,7 +98,11 @@ public class ReceiptCostCompositionServiceV249 {
 
     private RefundOriginalCostSliceEngineV255.Basis captureBasis(
         UUID tenant,UUID marketplace,UUID receipt,UUID claimId) {
-            var candidate=readCandidate(tenant,marketplace,receipt);
+            return captureBasis(tenant,marketplace,receipt,claimId,readCandidate(tenant,marketplace,receipt));
+    }
+
+    private RefundOriginalCostSliceEngineV255.Basis captureBasis(
+        UUID tenant,UUID marketplace,UUID receipt,UUID claimId,Candidate candidate) {
             var identities=jdbc.query("""
                 SELECT sales_order_id,order_item_id FROM finance_sale_lot_claim_v106
                 WHERE tenant_id=? AND marketplace_id=? AND receipt_id=? AND id=?
@@ -115,13 +122,19 @@ public class ReceiptCostCompositionServiceV249 {
 
     record ReservedSlice(UUID event,int from,int to,boolean current) {}
     record RefundReservationRead(String state,String basisSha256,int reservedRows,
-        RefundOriginalCostSliceEngineV255.Replay replay,List<String> blockers) {}
+        RefundOriginalCostSliceEngineV255.Replay replay,List<String> blockers,
+        RefundOriginalCostSliceEngineV255.Basis basis) {}
 
     // Same RR snapshot, never release stale reservations or post a reversal.
     RefundReservationRead readRefundReservations(UUID tenant,UUID marketplace,UUID receipt,UUID claimId) {
         if(tenant==null||marketplace==null||receipt==null||claimId==null)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-        return read.execute(ignored->{
+        return read.execute(ignored->readRefundReservationsSnapshot(
+            tenant,marketplace,receipt,claimId,false,new HashMap<>()));
+    }
+
+    private RefundReservationRead readRefundReservationsSnapshot(UUID tenant,UUID marketplace,
+        UUID receipt,UUID claimId,boolean allowEmpty,Map<UUID,Candidate> cache) {
             var stored=jdbc.query("""
                 SELECT btrim(b.basis_sha256),b.canonical_payload
                 FROM finance_original_cost_basis_v119 b
@@ -161,13 +174,14 @@ public class ReceiptCostCompositionServiceV249 {
                 WHERE s.tenant_id=? AND s.claim_id=? ORDER BY s.unit_from LIMIT 1001
                 """,(rs,n)->new ReservedSlice(rs.getObject(1,UUID.class),rs.getInt(2),
                     rs.getInt(3),rs.getBoolean(4)),tenant,claimId);
-            if(rows.isEmpty()||rows.size()>1000)
+            if((rows.isEmpty()&&!allowEmpty)||rows.size()>1000)
                 return reservationHold(digest,rows.size(),"RESERVATION_POPULATION_EMPTY_OR_UNBOUNDED");
             if(rows.stream().anyMatch(s->!s.current()))
                 return reservationHold(digest,rows.size(),"REFUND_REVIEW_OR_LINK_STALE");
             RefundOriginalCostSliceEngineV255.Basis fresh;
             try {
-                fresh=captureBasis(tenant,marketplace,receipt,claimId);
+                fresh=captureBasis(tenant,marketplace,receipt,claimId,
+                    cache.computeIfAbsent(receipt,key->readCandidate(tenant,marketplace,key)));
             } catch(ResponseStatusException invalid) {
                 if(invalid.getStatusCode().value()!=409&&invalid.getStatusCode().value()!=404)throw invalid;
                 return reservationHold(digest,rows.size(),"ORIGINAL_COST_CANDIDATE_NOT_CURRENT");
@@ -175,21 +189,179 @@ public class ReceiptCostCompositionServiceV249 {
             if(!digest.equals(fresh.sha256())||
                 !stored.getFirst().get(1).equals(RefundOriginalCostSliceEngineV255.canonicalPayload(fresh)))
                 return reservationHold(digest,rows.size(),"ORIGINAL_COST_FINGERPRINT_CHANGED");
+            if(rows.isEmpty())
+                return new RefundReservationRead("LOCAL_RESERVATIONS_EMPTY_UNVERIFIED",digest,0,null,
+                    List.of("EXTERNAL_PHYSICAL_RETURN_AND_G1_UNVERIFIED"),fresh);
             try {
                 var slices=rows.stream().map(s->new RefundOriginalCostSliceEngineV255.Slice(
                     s.event(),fresh.identity().orderItemId(),s.from(),s.to(),s.to()-s.from(),
                     "RESTOCKED_CLAIMED")).toList();
                 var replay=RefundOriginalCostSliceEngineV255.replay(fresh.identity(),digest,fresh,slices);
                 return new RefundReservationRead("LOCAL_RESERVATIONS_CURRENT_UNVERIFIED",digest,
-                    rows.size(),replay,replay.blockerCodes());
+                    rows.size(),replay,replay.blockerCodes(),fresh);
             } catch(IllegalArgumentException invalid) {
                 return reservationHold(digest,rows.size(),"RESERVATION_REPLAY_INCONSISTENT");
             }
-        });
     }
     private static RefundReservationRead reservationHold(String digest,int rows,String reason) {
         return new RefundReservationRead("LOCAL_RESERVATIONS_HOLD",digest,rows,null,
-            List.of(reason,"EXTERNAL_PHYSICAL_RETURN_AND_G1_UNVERIFIED"));
+            List.of(reason,"EXTERNAL_PHYSICAL_RETURN_AND_G1_UNVERIFIED"),null);
+    }
+
+    record OrderItem(UUID id,String externalId,Integer quantity) {}
+    record OrderClaim(UUID id,UUID item,UUID receipt,UUID marketplace,int quantity) {}
+    record OrderRefundEvent(UUID id,UUID marketplace,UUID linkedOrder,String linkState,
+        BigDecimal amount,String externalOrderId) {}
+    record OrderRefundReview(UUID event,String item,int quantity,String disposition) {}
+    record EventItem(UUID event,UUID item) {}
+    record OrderRefundCurrency(String currency,String originalSaleCandidateCost,
+        String refundCandidateCost,String remainingOriginalCandidateCost) {}
+    record OrderRefundRead(String state,String orderId,String marketplaceId,
+        int originalClaimRows,int sourceRefundEvents,long reviewedRefundUnits,
+        long reservedRefundUnits,List<OrderRefundCurrency> currencies,List<String> blockers,
+        boolean refundCogsReversalAllowed,String actualRefundCogsReversal,String realizedNetProfit) {}
+    private static final class CurrencySum {
+        BigDecimal original=BigDecimal.ZERO.setScale(6);
+        BigDecimal refund=BigDecimal.ZERO.setScale(6);
+    }
+    private static OrderRefundRead orderHold(UUID order,UUID market,String reason) {
+        return new OrderRefundRead("LOCAL_ORDER_REFUND_COST_HOLD",order.toString(),market.toString(),
+            0,0,0,0,List.of(),List.of(reason,"EXTERNAL_REFUND_COVERAGE_AND_G1_UNVERIFIED"),false,null,null);
+    }
+
+    // V258: no HTTP/write entry point. One RR for the entire bounded local
+    // order population. All current sale items must be covered, even if an
+    // item has not been refunded. No FX conversion or incomplete totals.
+    OrderRefundRead readWholeOrderRefundReservations(UUID tenant,UUID marketplace,UUID order) {
+        if(tenant==null||marketplace==null||order==null)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        return read.execute(ignored->{
+            var scope=jdbc.queryForList("""
+                SELECT o.external_order_id FROM sales_order o
+                JOIN tenant t ON t.id=o.tenant_id AND t.status='ACTIVE'
+                JOIN seller_marketplace m ON m.tenant_id=o.tenant_id AND m.id=o.seller_marketplace_id
+                WHERE o.tenant_id=? AND o.seller_marketplace_id=? AND o.id=? AND o.data_origin='LIVE'
+                """,String.class,tenant,marketplace,order);
+            if(scope.size()!=1)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            String external=scope.getFirst();
+            if(external==null||external.isBlank())return orderHold(order,marketplace,"ORIGINAL_ORDER_IDENTITY_UNKNOWN");
+            var items=jdbc.query("""
+                SELECT id,external_item_id,quantity FROM order_item
+                WHERE tenant_id=? AND sales_order_id=? AND is_current=true AND data_origin='LIVE'
+                ORDER BY id LIMIT 51
+                """,(rs,n)->new OrderItem(rs.getObject(1,UUID.class),rs.getString(2),
+                    rs.getObject(3,Integer.class)),tenant,order);
+            var claims=jdbc.query("""
+                SELECT id,order_item_id,receipt_id,marketplace_id,assigned_quantity
+                FROM finance_sale_lot_claim_v106 WHERE tenant_id=? AND sales_order_id=?
+                ORDER BY id LIMIT 51
+                """,(rs,n)->new OrderClaim(rs.getObject(1,UUID.class),rs.getObject(2,UUID.class),
+                    rs.getObject(3,UUID.class),rs.getObject(4,UUID.class),rs.getInt(5)),tenant,order);
+            if(items.isEmpty()||items.size()>50||claims.isEmpty()||claims.size()>50||
+                claims.stream().map(OrderClaim::receipt).distinct().count()>20)
+                return orderHold(order,marketplace,"ORDER_ITEM_OR_COST_CLAIM_POPULATION_MISSING_OR_UNBOUNDED");
+            var byExternal=new HashMap<String,OrderItem>();
+            var sold=new HashMap<UUID,Long>();
+            for(var i:items) {
+                if(i.id()==null||i.externalId()==null||i.externalId().isBlank()||
+                    i.quantity()==null||i.quantity()<=0||
+                    byExternal.putIfAbsent(i.externalId(),i)!=null||
+                    sold.putIfAbsent(i.id(),i.quantity().longValue())!=null)
+                    return orderHold(order,marketplace,"ORIGINAL_ORDER_ITEM_IDENTITY_OR_QUANTITY_INVALID");
+            }
+            var attributed=new HashMap<UUID,Long>();
+            for(var c:claims) {
+                if(!marketplace.equals(c.marketplace())||!sold.containsKey(c.item())||c.quantity()<=0)
+                    return orderHold(order,marketplace,"ORIGINAL_ORDER_COST_CLAIM_SCOPE_INVALID");
+                attributed.merge(c.item(),(long)c.quantity(),Long::sum);
+            }
+            if(!sold.equals(attributed))
+                return orderHold(order,marketplace,"ORIGINAL_ORDER_COST_CLAIM_QUANTITY_INCOMPLETE");
+
+            // Include unmatched exact external-order references as blockers,
+            // not just the already matched rows. Unknown external refs remain
+            // a genuine coverage limitation, not an inferred zero.
+            var events=jdbc.query("""
+                SELECT f.id,f.seller_marketplace_id,l.order_id,l.state,f.amount,f.external_order_id
+                FROM finance_source_event f LEFT JOIN finance_event_link_review l
+                  ON l.tenant_id=f.tenant_id AND l.event_id=f.id
+                WHERE f.tenant_id=? AND f.source_family='SPAPI_FINANCES' AND f.data_origin='LIVE'
+                  AND f.category='PRODUCT_REFUND'
+                  AND (l.order_id=? OR (f.seller_marketplace_id=? AND f.external_order_id=?))
+                ORDER BY f.id LIMIT 1001
+                """,(rs,n)->new OrderRefundEvent(rs.getObject(1,UUID.class),rs.getObject(2,UUID.class),
+                    rs.getObject(3,UUID.class),rs.getString(4),rs.getBigDecimal(5),rs.getString(6)),
+                    tenant,order,marketplace,external);
+            var reviews=jdbc.query("""
+                SELECT event_id,external_item_id,reviewed_quantity,disposition
+                FROM finance_refund_item_review WHERE tenant_id=? AND sales_order_id=?
+                ORDER BY event_id,external_item_id LIMIT 1001
+                """,(rs,n)->new OrderRefundReview(rs.getObject(1,UUID.class),rs.getString(2),
+                    rs.getInt(3),rs.getString(4)),tenant,order);
+            if(events.isEmpty()||events.size()>1000||reviews.isEmpty()||reviews.size()>1000)
+                return orderHold(order,marketplace,"LOCAL_REFUND_EVENT_OR_REVIEW_POPULATION_MISSING_OR_UNBOUNDED");
+            var sourceIds=new HashSet<UUID>();
+            for(var e:events) {
+                if(e.id()==null||!sourceIds.add(e.id())||!marketplace.equals(e.marketplace())||
+                    !order.equals(e.linkedOrder())||!"MATCHED".equals(e.linkState())||
+                    e.amount()==null||e.amount().signum()>=0||
+                    (e.externalOrderId()!=null&&!external.equals(e.externalOrderId())))
+                    return orderHold(order,marketplace,"LOCAL_REFUND_EVENT_LINK_OR_AMOUNT_INVALID");
+            }
+            var expected=new HashMap<EventItem,Long>();
+            var reviewedPerItem=new HashMap<UUID,Long>();
+            var reviewedEvents=new HashSet<UUID>();
+            for(var review:reviews) {
+                var item=byExternal.get(review.item());
+                if(item==null||!sourceIds.contains(review.event())||review.quantity()<=0||
+                    !"RESTOCKED_CLAIMED".equals(review.disposition())||
+                    expected.putIfAbsent(new EventItem(review.event(),item.id()),(long)review.quantity())!=null)
+                    return orderHold(order,marketplace,"LOCAL_REFUND_REVIEW_OR_DISPOSITION_UNRESOLVED");
+                reviewedEvents.add(review.event());
+                if(reviewedPerItem.merge(item.id(),(long)review.quantity(),Long::sum)>sold.get(item.id()))
+                    return orderHold(order,marketplace,"CROSS_EVENT_REFUND_QUANTITY_EXCEEDS_SALE");
+            }
+            if(!reviewedEvents.equals(sourceIds))
+                return orderHold(order,marketplace,"REFUND_EVENT_REVIEW_COVERAGE_INCOMPLETE");
+            var cache=new HashMap<UUID,Candidate>();
+            var reserved=new HashMap<EventItem,Long>();
+            var sums=new java.util.TreeMap<String,CurrencySum>();
+            int totalRows=0;
+            for(var c:claims) {
+                RefundReservationRead row;
+                try {
+                    row=readRefundReservationsSnapshot(tenant,marketplace,c.receipt(),c.id(),true,cache);
+                } catch(ResponseStatusException unavailable) {
+                    if(unavailable.getStatusCode().value()!=404&&unavailable.getStatusCode().value()!=409)throw unavailable;
+                    return orderHold(order,marketplace,"ORIGINAL_COST_BASIS_MISSING_OR_CONFLICT");
+                }
+                if(row.basis()==null||row.basis().originalTo()-row.basis().originalFrom()!=c.quantity()||
+                    !c.item().equals(row.basis().identity().orderItemId())||
+                    !order.equals(row.basis().identity().salesOrderId()))
+                    return orderHold(order,marketplace,"ORIGINAL_COST_BASIS_OR_RESERVATION_STALE");
+                totalRows+=row.reservedRows();
+                if(totalRows>1000)return orderHold(order,marketplace,"ORDER_REFUND_RESERVATIONS_UNBOUNDED");
+                var bucket=sums.computeIfAbsent(row.basis().currency(),key->new CurrencySum());
+                bucket.original=bucket.original.add(new BigDecimal(row.basis().originalCandidateAmount()));
+                if(row.replay()!=null) {
+                    bucket.refund=bucket.refund.add(new BigDecimal(row.replay().refundCandidateAmount()));
+                    for(var event:row.replay().events())
+                        reserved.merge(new EventItem(event.refundEventId(),c.item()),(long)event.quantity(),Long::sum);
+                }
+            }
+            if(!expected.equals(reserved))
+                return orderHold(order,marketplace,"REFUND_EVENT_ITEM_RESERVATION_COVERAGE_INCOMPLETE");
+            if(sums.values().stream().anyMatch(s->s.refund.signum()<0||s.refund.compareTo(s.original)>0))
+                return orderHold(order,marketplace,"ORIGINAL_CURRENCY_COST_CONSERVATION_BROKEN");
+            var currencies=sums.entrySet().stream().map(e->new OrderRefundCurrency(e.getKey(),
+                e.getValue().original.toPlainString(),e.getValue().refund.toPlainString(),
+                e.getValue().original.subtract(e.getValue().refund).toPlainString())).toList();
+            long quantity=expected.values().stream().mapToLong(Long::longValue).sum();
+            return new OrderRefundRead("LOCAL_ORDER_REFUND_COST_CANDIDATE_UNVERIFIED",
+                order.toString(),marketplace.toString(),claims.size(),events.size(),quantity,quantity,currencies,
+                List.of("EXTERNAL_REFUND_POPULATION_UNVERIFIED","ORIGINAL_SALE_TIME_COST_UNVERIFIED",
+                    "EXTERNAL_PHYSICAL_RETURN_AND_G1_UNVERIFIED"),false,null,null);
+        });
     }
 
     private Candidate readCandidate(UUID tenant,UUID marketplace,UUID receipt) {

@@ -79,3 +79,5 @@ V255：复用 V250 实际 PG18 回归，要求原认领候选 scope、SHA 与退
 V256：V119 实际 PG18 同 V250 fixture 验证持久化、原摘要、重复/重叠/越界和不可删除；JUnit marker 禁跳过。跨事务竞争及读时失效另行验收，不把本地 reservation 当已过账。
 
 V257：V250 真实表双 JDBC 测试须观察 pg_blocking_pids，验证回滚、同 item 跨 claim 提交数量拒绝及读时审核/成本漂移；JUnit marker 不可跳过。
+
+V258：V256 PG18 job #139053562401 原日志 source_amount ambiguous；追加 V120 而非修改已提交迁移，V250 真实夹具验证全部原认领/退款 event/item 完整覆盖、全退尾差及审核漂移，JUnit marker 强制。未以快 CI 或候选代替实际过账。

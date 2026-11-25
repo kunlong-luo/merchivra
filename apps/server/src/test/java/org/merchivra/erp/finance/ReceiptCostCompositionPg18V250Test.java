@@ -112,7 +112,7 @@ class ReceiptCostCompositionPg18V250Test {
         var replay=RefundOriginalCostSliceEngineV255.replay(basis.identity(),basis.sha256(),basis,proposed);
         assertEquals("14.999999",replay.refundCandidateAmount());
         assertNull(replay.actualRefundCogsReversal());
-        assertEquals(1,db.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE version='119' AND success",Integer.class));
+        assertEquals(2,db.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE version IN ('119','120') AND success",Integer.class));
         var stored=service.persistRefundBasis(tenant,market,receipt,claimA,maker);
         assertEquals(basis,stored);
         assertEquals(basis.sha256(),db.queryForObject("""
@@ -188,6 +188,7 @@ class ReceiptCostCompositionPg18V250Test {
         var second=new ReceiptCostCompositionPg18V250Test();
         second.db=db;second.write=write;second.service=service;
         second.crossClaimRace();
+        System.out.println("PASS V258 actual PG18 whole-order original cost and refund reservation coverage, 30/14.999999/15.000001, full refund and stale hold");
         System.out.println("PASS V257 actual PG18 refund races: rollback release, committed cross-claim quantity rejection, review and cost drift hold");
         System.out.println("PASS V256 actual PG18 immutable local cost basis and refund reservation duplicate, overlap and bounds rejected");
         System.out.println("PASS V255 actual PG18 scoped candidate capture and original refund slice replay, price drift hold");
@@ -295,6 +296,31 @@ class ReceiptCostCompositionPg18V250Test {
             """,Integer.class,tenant,event));
         assertEquals("LOCAL_RESERVATIONS_CURRENT_UNVERIFIED",
             service.readRefundReservations(tenant,market,receipt,claimA).state());
+        var first=service.readWholeOrderRefundReservations(tenant,market,sale);
+        assertEquals("LOCAL_ORDER_REFUND_COST_CANDIDATE_UNVERIFIED",first.state());
+        assertEquals(2,first.originalClaimRows());
+        assertEquals(1,first.reviewedRefundUnits());
+        assertEquals(List.of(new ReceiptCostCompositionServiceV249.OrderRefundCurrency(
+            "USD","30.000000","14.999999","15.000001")),first.currencies());
+        assertFalse(first.refundCogsReversalAllowed());
+        assertNull(first.actualRefundCogsReversal());
+        assertNull(first.realizedNetProfit());
+        UUID next=seedRefund(itemA);
+        var held=service.readWholeOrderRefundReservations(tenant,market,sale);
+        assertEquals("LOCAL_ORDER_REFUND_COST_HOLD",held.state());
+        assertTrue(held.blockers().contains("REFUND_EVENT_ITEM_RESERVATION_COVERAGE_INCOMPLETE"));
+        assertTrue(held.currencies().isEmpty());
+        reserveRefund(claimB,b.sha256(),next,2,3);
+        var full=service.readWholeOrderRefundReservations(tenant,market,sale);
+        assertEquals(List.of(new ReceiptCostCompositionServiceV249.OrderRefundCurrency(
+            "USD","30.000000","30.000000","0.000000")),full.currencies());
+        assertEquals(2,full.reservedRefundUnits());
+        db.update("UPDATE finance_refund_item_review SET revision=2,reviewed_at=clock_timestamp() WHERE tenant_id=? AND event_id=?",tenant,next);
+        var stale=service.readWholeOrderRefundReservations(tenant,market,sale);
+        assertEquals("LOCAL_ORDER_REFUND_COST_HOLD",stale.state());
+        assertTrue(stale.currencies().isEmpty());
+        assertEquals(404,assertThrows(ResponseStatusException.class,
+            ()->service.readWholeOrderRefundReservations(UUID.randomUUID(),market,sale)).getStatusCode().value());
     }
     private Connection connection() throws SQLException {
         return DriverManager.getConnection("jdbc:postgresql://127.0.0.1:5432/merchivra",

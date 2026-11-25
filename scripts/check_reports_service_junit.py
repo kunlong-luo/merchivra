@@ -40,7 +40,8 @@ if __name__ == "__main__":
                 'PASS V254 actual Owner HTTP nonempty receipt candidate',
                 'PASS V255 actual PG18 scoped candidate capture',
                 'PASS V256 actual PG18 immutable local cost basis',
-                'PASS V257 actual PG18 refund races:'))
+                'PASS V257 actual PG18 refund races:',
+                'PASS V258 actual PG18 whole-order original cost'))
     except (OSError, ET.ParseError, ValueError) as exc:
         sys.exit(f"FAIL isolated PG18 service JUnit evidence: {exc}")
     print("PASS V236 actual PG18 Java service test executed (not skipped); remote worker synthetic")
@@ -51,3 +52,4 @@ if __name__ == "__main__":
     print("PASS V255 actual PG18 original candidate replay JUnit marker verified (not skipped)")
     print("PASS V256 actual PG18 immutable candidate and refund reservation JUnit marker verified (not skipped)")
     print("PASS V257 actual PG18 refund race and stale read JUnit marker verified (not skipped)")
+    print("PASS V258 actual PG18 whole-order cost JUnit marker verified (not skipped)")

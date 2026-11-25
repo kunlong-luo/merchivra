@@ -65,3 +65,5 @@ V255 从 V249 同一 RR 观察准备原认领成本候选快照（不是历史�
 V256/Flyway V119 为 V255 同快照候选增加一次性不可变存储与退款区间预留，规则和限制见 [退款原批次契约](v212-refund-original-sale-lot-quantity-envelope.md)。不修改 V112/V117 或财务过账，不开放写接口。
 
 V257 在 V249 同 RR 内重新读取 V119 预留并核对当前 V255 成本指纹及退款审核，失效 HOLD/null；真实双连接和跨认领测试见 [V212 退款契约](v212-refund-original-sale-lot-quantity-envelope.md)。
+
+V258/Flyway V120 修复 V119 成本快照写入 PL/pgSQL `source_amount` 重名，历史迁移不修改；新增全订单同 RR 原币候选汇总，详见 [V212/V258 退款契约](v212-refund-original-sale-lot-quantity-envelope.md)，实际会计成本仍 null。
