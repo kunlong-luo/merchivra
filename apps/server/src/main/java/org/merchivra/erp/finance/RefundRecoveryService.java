@@ -165,7 +165,7 @@ public class RefundRecoveryService {
     // V264: mirror TenantAccessService's active, tenant-wide Owner predicate.
     // This is a point-in-snapshot authorization check, not an external identity
     // certificate or a complete authorization revision/locking protocol.
-    private void requireCurrentOwner(UUID tenant,UUID actor) {
+    void requireCurrentOwner(UUID tenant,UUID actor) {
         if(!Boolean.TRUE.equals(jdbc.queryForObject("""
             SELECT EXISTS(
               SELECT 1 FROM membership m
@@ -309,7 +309,7 @@ public class RefundRecoveryService {
         return display(event,current,stored(tenant,mp,event,false));
     }
     /** Reviewer may not have authored ANY current V34/V35 item review, nor request. */
-    private void checkIndependentAuthors(UUID tenant,UUID event,UUID reviewer) {
+    void checkIndependentAuthors(UUID tenant,UUID event,UUID reviewer) {
         Integer edited=jdbc.queryForObject("""
             SELECT
               (SELECT count(*) FROM finance_refund_item_review

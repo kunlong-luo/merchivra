@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Actual installed PG18 tables, views, FKs and transactions; no external data. */
 class ReceiptCostCompositionPg18V250Test {
     private final UUID tenant=UUID.randomUUID(), maker=UUID.randomUUID(),
-        reviewer=UUID.randomUUID(), approver=UUID.randomUUID(), account=UUID.randomUUID(), market=UUID.randomUUID(),
+        reviewer=UUID.randomUUID(), approver=UUID.randomUUID(), compensationApprover=UUID.randomUUID(), account=UUID.randomUUID(), market=UUID.randomUUID(),
         market2=UUID.randomUUID(), supplier=UUID.randomUUID(), sku=UUID.randomUUID(),
         warehouse=UUID.randomUUID(), bin=UUID.randomUUID(), po=UUID.randomUUID(),
         pol=UUID.randomUUID(), receipt=UUID.randomUUID(), qc=UUID.randomUUID(),
@@ -194,6 +194,7 @@ class ReceiptCostCompositionPg18V250Test {
         var second=new ReceiptCostCompositionPg18V250Test();
         second.db=db;second.write=write;second.service=service;second.recovery=recovery;
         second.crossClaimRace();
+        System.out.println("PASS V266 actual PG18 immutable compensation request and independent approval, idempotent replay, no activation");
         System.out.println("PASS V265 actual PG18 same-coordinate compensation dry run, deterministic identity and no release");
         System.out.println("PASS V264 actual PG18 current global Owner and audited revocation gates, stale pending reopen");
         System.out.println("PASS V263 actual PG18 immutable reservation quantity version capture and ABA permanent hold");
@@ -541,11 +542,39 @@ class ReceiptCostCompositionPg18V250Test {
         assertNull(proposal.actualRefundCogsReversal());
         assertNull(proposal.realizedNetProfit());
         assertEquals(proposal,service.previewRefundCompensation(tenant,market,event,itemA));
+        String digest=proposal.proposalSha256(),requestReason="V266 synthetic compensation request",
+            approvalReason="V266 synthetic independent approval";
+        var request=service.recordRefundCompensation(tenant,market,event,itemA,digest,maker,requestReason);
+        assertEquals("LOCAL_PROPOSAL_RECORDED",request.state());
+        assertEquals(request,service.recordRefundCompensation(tenant,market,event,itemA,digest,maker,requestReason));
+        assertEquals(409,assertThrows(ResponseStatusException.class,()->
+            service.recordRefundCompensation(tenant,market,event,itemA,digest,maker,"V266 conflicting request reason")).getStatusCode().value());
+        assertEquals(403,assertThrows(ResponseStatusException.class,()->
+            service.approveRefundCompensation(tenant,market,event,itemA,digest,maker,approvalReason)).getStatusCode().value());
+        assertEquals(403,assertThrows(ResponseStatusException.class,()->
+            service.approveRefundCompensation(tenant,market,event,itemA,digest,approver,approvalReason)).getStatusCode().value());
+        var approved=service.approveRefundCompensation(tenant,market,event,itemA,digest,compensationApprover,approvalReason);
+        assertEquals("LOCAL_APPROVAL_RECORDED_NOT_ACTIVATED",approved.state());
+        assertEquals(approved,service.approveRefundCompensation(tenant,market,event,itemA,digest,compensationApprover,approvalReason));
+        assertFalse(approved.releaseAllowed());
+        assertFalse(approved.replacementAllowed());
+        assertNull(approved.realizedNetProfit());
+        assertEquals(1,db.queryForObject("SELECT count(*) FROM finance_refund_compensation_proposal_v123 WHERE tenant_id=?",Integer.class,tenant));
+        assertEquals(1,db.queryForObject("SELECT count(*) FROM finance_refund_compensation_approval_v123 WHERE tenant_id=?",Integer.class,tenant));
+        assertThrows(org.springframework.dao.DataAccessException.class,()->
+            db.update("UPDATE finance_refund_compensation_proposal_v123 SET request_reason='V266 forbidden mutation' WHERE tenant_id=?",tenant));
+        assertThrows(org.springframework.dao.DataAccessException.class,()->
+            db.update("DELETE FROM finance_refund_compensation_approval_v123 WHERE tenant_id=?",tenant));
+        assertReservationHold("REFUND_REVIEW_OR_LINK_STALE");
         assertEquals(404,assertThrows(ResponseStatusException.class,
             ()->service.previewRefundCompensation(UUID.randomUUID(),market,event,itemA)).getStatusCode().value());
         approveRefund(event);
         assertNotEquals(proposal.proposalSha256(),
             service.previewRefundCompensation(tenant,market,event,itemA).proposalSha256());
+        assertEquals(409,assertThrows(ResponseStatusException.class,()->
+            service.approveRefundCompensation(tenant,market,event,itemA,digest,compensationApprover,approvalReason)).getStatusCode().value());
+        assertEquals(409,assertThrows(ResponseStatusException.class,()->
+            service.recordRefundCompensation(tenant,market,event,itemA,digest,maker,requestReason)).getStatusCode().value());
         var abaHold=service.readWholeOrderRefundReservations(tenant,market,sale);
         assertTrue(abaHold.blockers().contains("ORIGINAL_COST_BASIS_OR_RESERVATION_STALE"));
         assertTrue(abaHold.currencies().isEmpty());
@@ -727,7 +756,7 @@ class ReceiptCostCompositionPg18V250Test {
     private void seed(boolean sameItem) {
         UUID position2=UUID.randomUUID(),pickLine2=UUID.randomUUID();
         db.update("INSERT INTO tenant(id,name) VALUES (?,?)",tenant,"V250 DISPOSABLE");
-        for(UUID user:List.of(maker,reviewer,approver)) {
+        for(UUID user:List.of(maker,reviewer,approver,compensationApprover)) {
             db.update("INSERT INTO app_user(id,identity_ref) VALUES (?,?)",user,"local:v250:"+user);
             db.update("INSERT INTO membership(tenant_id,user_id) VALUES (?,?)",tenant,user);
         }
@@ -735,7 +764,7 @@ class ReceiptCostCompositionPg18V250Test {
             INSERT INTO local_credential(user_id,login_name,password_hash)
             SELECT ?,?,password_hash FROM local_credential WHERE login_name='v65-ci-owner'
             """,maker,loginName()));
-        for(UUID owner:List.of(maker,approver))
+        for(UUID owner:List.of(maker,approver,compensationApprover))
             db.update("INSERT INTO role_binding(id,tenant_id,user_id,role_code) VALUES (?,?,?,'OWNER')",
                 UUID.randomUUID(),tenant,owner);
         db.update("INSERT INTO seller_account(id,tenant_id,seller_id,region) VALUES (?,?,?,'NA')",

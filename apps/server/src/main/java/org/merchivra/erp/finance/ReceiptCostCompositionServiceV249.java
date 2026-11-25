@@ -237,7 +237,14 @@ public class ReceiptCostCompositionServiceV249 {
         UUID event,UUID orderItem) {
         if(tenant==null||marketplace==null||event==null||orderItem==null)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-        return read.execute(ignored->{
+        return read.execute(ignored->compensationSnapshot(tenant,marketplace,event,orderItem).preview());
+    }
+
+    private record CompensationSnapshot(CompensationPreview preview,UUID order,
+        String payload,String reviewDigest,RefundRecoveryService.Status review) {}
+
+    private CompensationSnapshot compensationSnapshot(UUID tenant,UUID marketplace,
+        UUID event,UUID orderItem) {
             var sources=jdbc.query("""
                 SELECT o.id,i.external_item_id,r.reviewed_quantity,r.evidence_revision_v121,
                   f.currency_code,f.amount
@@ -328,11 +335,114 @@ public class ReceiptCostCompositionServiceV249 {
                 .append('|').append(c.basisSha256()).append('|').append(c.fromInclusive()).append('|')
                 .append(c.toExclusive()).append('|').append(c.previousEvidenceVersion()).append('|')
                 .append(c.currency()).append('|').append(c.candidateAmount());
-            return new CompensationPreview("LOCAL_SAME_COORDINATE_COMPENSATION_PROPOSAL_UNVERIFIED",
-                RefundRecoveryService.hash(canonical.toString()),event.toString(),orderItem.toString(),
+            var digest=jdbc.queryForObject("""
+                SELECT btrim(source_evidence_sha256) FROM finance_refund_recovery_review
+                WHERE tenant_id=? AND seller_marketplace_id=? AND event_id=? AND revision=?
+                """,String.class,tenant,marketplace,event,review.revision());
+            var payload=canonical.toString();
+            var preview=new CompensationPreview("LOCAL_SAME_COORDINATE_COMPENSATION_PROPOSAL_UNVERIFIED",
+                RefundRecoveryService.hash(payload),event.toString(),orderItem.toString(),
                 source.version(),review.revision(),List.copyOf(coordinates),
-                List.of("COMPENSATION_APPROVAL_AND_ACTIVATION_NOT_IMPLEMENTED",
+                List.of("COMPENSATION_ACTIVATION_NOT_IMPLEMENTED",
                     "EXTERNAL_PHYSICAL_RETURN_AND_G1_UNVERIFIED"),false,false,null,null);
+            return new CompensationSnapshot(preview,source.order(),payload,digest,review);
+    }
+
+    // V266: append-only internal proposal/approval. Never consumed by the
+    // reservation read or capacity accounting; no activation/write HTTP route.
+    record CompensationReceipt(String proposalSha256,String state,String requestedBy,
+        String approvedBy,boolean releaseAllowed,boolean replacementAllowed,
+        String actualRefundCogsReversal,String realizedNetProfit) {}
+    private record CompensationRequest(UUID actor,String reason) {}
+    private record CompensationDecision(UUID actor,String reason) {}
+    private static void compensationInput(UUID tenant,UUID marketplace,UUID event,
+        UUID item,UUID actor,String expected) {
+        if(tenant==null||marketplace==null||event==null||item==null||actor==null
+            ||expected==null||!expected.matches("[0-9a-f]{64}"))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+    }
+
+    private CompensationRequest currentRequest(UUID tenant,UUID marketplace,UUID event,
+        UUID item,CompensationSnapshot snapshot) {
+        var rows=jdbc.query("""
+            SELECT requested_by,request_reason FROM finance_refund_compensation_proposal_v123 p
+            WHERE p.tenant_id=? AND p.marketplace_id=? AND p.event_id=? AND p.order_item_id=?
+              AND p.sales_order_id=? AND p.proposal_sha256=? AND p.canonical_payload=?
+              AND p.review_revision=? AND p.review_sha256=?
+            """,(rs,n)->new CompensationRequest(rs.getObject(1,UUID.class),rs.getString(2)),
+            tenant,marketplace,event,item,snapshot.order(),snapshot.preview().proposalSha256(),
+            snapshot.payload(),snapshot.review().revision(),snapshot.reviewDigest());
+        if(rows.size()!=1)throw compensationConflict();
+        return rows.getFirst();
+    }
+    private CompensationDecision storedDecision(UUID tenant,String expected) {
+        var rows=jdbc.query("""
+            SELECT approved_by,approval_reason FROM finance_refund_compensation_approval_v123
+            WHERE tenant_id=? AND proposal_sha256=?
+            """,(rs,n)->new CompensationDecision(rs.getObject(1,UUID.class),rs.getString(2)),tenant,expected);
+        return rows.isEmpty()?null:rows.getFirst();
+    }
+    private static CompensationReceipt compensationReceipt(String expected,CompensationRequest request,
+        CompensationDecision decision) {
+        return new CompensationReceipt(expected,decision==null?"LOCAL_PROPOSAL_RECORDED":
+            "LOCAL_APPROVAL_RECORDED_NOT_ACTIVATED",request.actor().toString(),
+            decision==null?null:decision.actor().toString(),false,false,null,null);
+    }
+
+    CompensationReceipt recordRefundCompensation(UUID tenant,UUID marketplace,UUID event,
+        UUID item,String expected,UUID actor,String reason) {
+        compensationInput(tenant,marketplace,event,item,actor,expected);
+        String note=RefundRecoveryService.reason(reason);
+        return captureTx.execute(ignored->{
+            recovery.requireCurrentOwner(tenant,actor);
+            var snapshot=compensationSnapshot(tenant,marketplace,event,item);
+            if(!expected.equals(snapshot.preview().proposalSha256()))throw compensationConflict();
+            jdbc.update("""
+                INSERT INTO finance_refund_compensation_proposal_v123
+                  (tenant_id,marketplace_id,sales_order_id,event_id,order_item_id,proposal_sha256,
+                   canonical_payload,review_revision,review_sha256,requested_by,request_reason)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT (tenant_id,proposal_sha256) DO NOTHING
+                """,tenant,marketplace,snapshot.order(),event,item,expected,snapshot.payload(),
+                snapshot.review().revision(),snapshot.reviewDigest(),actor,note);
+            var request=currentRequest(tenant,marketplace,event,item,snapshot);
+            if(!actor.equals(request.actor())||!note.equals(request.reason()))throw compensationConflict();
+            return compensationReceipt(expected,request,storedDecision(tenant,expected));
+        });
+    }
+
+    CompensationReceipt approveRefundCompensation(UUID tenant,UUID marketplace,UUID event,
+        UUID item,String expected,UUID actor,String reason) {
+        compensationInput(tenant,marketplace,event,item,actor,expected);
+        String note=RefundRecoveryService.reason(reason);
+        return captureTx.execute(ignored->{
+            recovery.requireCurrentOwner(tenant,actor);
+            var snapshot=compensationSnapshot(tenant,marketplace,event,item);
+            if(!expected.equals(snapshot.preview().proposalSha256()))throw compensationConflict();
+            var request=currentRequest(tenant,marketplace,event,item,snapshot);
+            recovery.requireCurrentOwner(tenant,request.actor());
+            RefundRecoveryService.requireIndependent(request.actor(),actor);
+            if(actor.toString().equals(snapshot.review().decidedBy())
+                ||actor.toString().equals(snapshot.review().requestedBy()))
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Compensation approver must differ from both V63 review actors");
+            recovery.checkIndependentAuthors(tenant,event,actor);
+            if(Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS(SELECT 1 FROM finance_refund_compensation_proposal_v123 p
+                  JOIN local_team_audit a ON a.tenant_id=p.tenant_id
+                    AND a.subject_user_id=p.requested_by AND a.event_code='OWNER_REVOKED'
+                    AND a.occurred_at>=p.requested_at
+                  WHERE p.tenant_id=? AND p.proposal_sha256=?)
+                """,Boolean.class,tenant,expected)))throw compensationConflict();
+            jdbc.update("""
+                INSERT INTO finance_refund_compensation_approval_v123
+                  (tenant_id,proposal_sha256,requested_by,approved_by,approval_reason)
+                VALUES (?,?,?,?,?) ON CONFLICT (tenant_id,proposal_sha256) DO NOTHING
+                """,tenant,expected,request.actor(),actor,note);
+            var decision=storedDecision(tenant,expected);
+            if(decision==null||!actor.equals(decision.actor())||!note.equals(decision.reason()))
+                throw compensationConflict();
+            return compensationReceipt(expected,request,decision);
         });
     }
 
