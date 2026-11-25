@@ -134,7 +134,7 @@ public class SettlementReportScanService {
                 && previous.lease()!=null && previous.lease().isAfter(clock.instant()))
                 throw new ResponseStatusException(HttpStatus.CONFLICT,"Report job is active");
             // Lock the captured grant/role before returning a freshly bound job.
-            lockRevisions(scope);
+            lockCurrentScope(scope,mp);
             if(!previous.id().equals(id))jdbc.update("""
                 UPDATE spapi_settlement_scan_job
                 SET state='READY',window_after=?,window_before=?,
@@ -226,7 +226,7 @@ public class SettlementReportScanService {
             return tx.execute(t->{
                 Job j=assertLease(c);
                 sameScope(c.scope(),approved(tenant,c.market()));
-                lockRevisions(c.scope());
+                lockCurrentScope(c.scope(),mp);
                 int changed=jdbc.update("""
                     UPDATE spapi_settlement_scan_job
                     SET state=?,next_token=?,token_issued_at=?,row_offset=?,
@@ -268,19 +268,10 @@ public class SettlementReportScanService {
             && Objects.equals(scope.grantRevision(),grant)
             && Objects.equals(scope.financeRoleRevision(),role);
     }
-    private void lockRevisions(SpApiSellerScope scope) {
-        var rows=jdbc.query("""
-            SELECT g.report_auth_revision FROM spapi_seller_authorization g
-            JOIN spapi_finances_role_evidence re
-              ON re.tenant_id=g.tenant_id AND re.seller_account_id=g.seller_account_id
-            WHERE g.tenant_id=? AND g.seller_account_id=?
-              AND g.report_auth_revision=? AND re.report_auth_revision=?
-              AND g.status='VERIFIED' AND re.revoked_at IS NULL
-              AND re.expires_at>now() AND re.grant_verified_at=g.verified_at
-            FOR SHARE OF g,re
-            """,(rs,n)->rs.getLong(1),scope.tenantId(),scope.sellerAccountId(),
-            scope.grantRevision(),scope.financeRoleRevision());
-        if(rows.size()!=1)throw new SecurityException("Finance grant changed during report read");
+    private void lockCurrentScope(SpApiSellerScope scope,UUID marketplace) {
+        var market=SettlementReportImportService.lockCurrentScope(jdbc,scope);
+        if(!marketplace.equals(market.id()))
+            throw new SecurityException("Reports Marketplace changed during report read");
     }
     private static void sameScope(SpApiSellerScope expected,SpApiSellerScope live) {
         SpApiSettlementReportsWorker.requireUnchangedFinanceScope(expected,live);

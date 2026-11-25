@@ -38,7 +38,7 @@ class SettlementReportImportServiceTest {
             """).getBytes(StandardCharsets.UTF_8);
         assertThrows(SecurityException.class,()->
             service.importDocument(finance,"RPT-12345678","DOC-12345678",report,false));
-        verify(jdbc).query(contains("spapi_finances_role_evidence"),any(
+        verify(jdbc).query(contains("FOR SHARE OF t,m,a,g,re,v,member,u,reviewer,owner"),any(
             org.springframework.jdbc.core.RowMapper.class),any(),any(),any(),any(),any(),eq(1L),eq(2L));
         verify(jdbc,never()).update(anyString(),any(Object[].class));
     }

@@ -47,52 +47,7 @@ public class SettlementReportImportService {
         if(!safeId(amazonReportId,160) || !safeId(reportDocumentId,256))
             throw new IllegalArgumentException("Invalid Amazon Reports identifiers");
         var parsed=SettlementReportParser.parse(body,gzip);
-        List<Market> allowed=jdbc.query("""
-            SELECT m.id,m.currency_code
-            FROM seller_marketplace m
-            JOIN tenant t ON t.id=m.tenant_id AND t.status='ACTIVE'
-            JOIN seller_account a ON a.tenant_id=m.tenant_id
-              AND a.id=m.seller_account_id
-            JOIN spapi_seller_authorization g ON g.tenant_id=a.tenant_id
-              AND g.seller_account_id=a.id
-            JOIN spapi_finances_role_evidence re ON re.tenant_id=g.tenant_id
-              AND re.seller_account_id=g.seller_account_id
-            WHERE m.tenant_id=? AND a.id=? AND m.marketplace_id=?
-              AND a.seller_id=? AND a.region=? AND a.connection_status='CONNECTED'
-              AND g.report_auth_revision=? AND re.report_auth_revision=?
-              AND g.status='VERIFIED' AND g.seller_id=a.seller_id
-              AND g.region=a.region AND re.role_code='Finance and Accounting'
-              AND re.evidence_kind='EXTERNAL_APP_ROLE_REVIEW'
-              AND re.grant_verified_at=g.verified_at
-              AND re.expires_at>now() AND re.revoked_at IS NULL
-              AND EXISTS (
-                SELECT 1 FROM spapi_marketplace_verification v
-                WHERE v.tenant_id=g.tenant_id AND v.seller_account_id=g.seller_account_id
-                  AND v.marketplace_id=m.marketplace_id
-                  AND v.verified_at>now()-interval '24 hours')
-              AND EXISTS (
-                SELECT 1 FROM membership member
-                JOIN app_user u ON u.id=member.user_id AND u.status='ACTIVE'
-                JOIN role_binding reviewer ON reviewer.tenant_id=member.tenant_id
-                  AND reviewer.user_id=member.user_id
-                  AND reviewer.role_code='SECURITY_REVIEWER'
-                JOIN role_binding owner ON owner.tenant_id=member.tenant_id
-                  AND owner.user_id=member.user_id AND owner.role_code='OWNER'
-                  AND owner.seller_account_id IS NULL
-                WHERE member.tenant_id=re.tenant_id
-                  AND member.user_id=re.reviewed_by
-                  AND member.status='ACTIVE'
-                  AND (reviewer.seller_account_id IS NULL
-                    OR reviewer.seller_account_id=a.id))
-            FOR SHARE OF m,a,g,re
-            """,(rs,n)->new Market(rs.getObject(1,UUID.class),
-                rs.getString(2).trim()),
-            approved.tenantId(),approved.sellerAccountId(),approved.marketplaceId(),
-            approved.sellerId(),approved.region().name(),
-            approved.grantRevision(),approved.financeRoleRevision());
-        if(allowed.size()!=1)
-            throw new SecurityException("Current Seller Finance scope no longer approved");
-        Market market=allowed.getFirst();
+        Market market=lockCurrentScope(jdbc,approved);
         if(!market.currency().equals(parsed.currency()))
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "Report currency disagrees with Marketplace; manual FX review required");
@@ -236,7 +191,61 @@ public class SettlementReportImportService {
                 new ResponseStatusException(HttpStatus.NOT_FOUND,"Report not found"));
     }
 
-    private record Market(UUID id,String currency) {}
+    /**
+     * Common transaction fence for Owner start, checkpoint and report staging.
+     * Caller MUST already own the transaction; no network calls while locked.
+     * This prevents concurrent mutation/deletion of currently qualifying rows,
+     * not ABA that completed before these locks or expiration after the check.
+     */
+    static Market lockCurrentScope(JdbcTemplate jdbc,SpApiSellerScope approved) {
+        if(approved==null || !approved.hasReportsRevisions())
+            throw new SecurityException("Verified Finance Seller scope required");
+        List<Market> allowed=jdbc.query("""
+            SELECT m.id,m.currency_code
+            FROM seller_marketplace m
+            JOIN tenant t ON t.id=m.tenant_id AND t.status='ACTIVE'
+            JOIN seller_account a ON a.tenant_id=m.tenant_id
+              AND a.id=m.seller_account_id
+            JOIN spapi_seller_authorization g ON g.tenant_id=a.tenant_id
+              AND g.seller_account_id=a.id
+            JOIN spapi_finances_role_evidence re ON re.tenant_id=g.tenant_id
+              AND re.seller_account_id=g.seller_account_id
+            JOIN spapi_marketplace_verification v ON v.tenant_id=g.tenant_id
+              AND v.seller_account_id=g.seller_account_id AND v.marketplace_id=m.marketplace_id
+            JOIN membership member ON member.tenant_id=re.tenant_id
+              AND member.user_id=re.reviewed_by
+            JOIN app_user u ON u.id=member.user_id AND u.status='ACTIVE'
+            JOIN role_binding reviewer ON reviewer.tenant_id=member.tenant_id
+              AND reviewer.user_id=member.user_id AND reviewer.role_code='SECURITY_REVIEWER'
+            JOIN role_binding owner ON owner.tenant_id=member.tenant_id
+              AND owner.user_id=member.user_id AND owner.role_code='OWNER'
+              AND owner.seller_account_id IS NULL
+            WHERE m.tenant_id=? AND a.id=? AND m.marketplace_id=?
+              AND a.seller_id=? AND a.region=? AND a.connection_status='CONNECTED'
+              AND g.report_auth_revision=? AND re.report_auth_revision=?
+              AND g.status='VERIFIED' AND g.seller_id=a.seller_id
+              AND g.region=a.region AND re.role_code='Finance and Accounting'
+              AND re.evidence_kind='EXTERNAL_APP_ROLE_REVIEW'
+              AND re.grant_verified_at=g.verified_at
+              AND re.expires_at>clock_timestamp() AND re.revoked_at IS NULL
+              AND v.verified_at>clock_timestamp()-interval '24 hours'
+              AND member.status='ACTIVE'
+              AND (reviewer.seller_account_id IS NULL OR reviewer.seller_account_id=a.id)
+            FOR SHARE OF t,m,a,g,re,v,member,u,reviewer,owner
+            """,(rs,n)->new Market(rs.getObject(1,UUID.class),
+                rs.getString(2).trim()),
+            approved.tenantId(),approved.sellerAccountId(),approved.marketplaceId(),
+            approved.sellerId(),approved.region().name(),
+            approved.grantRevision(),approved.financeRoleRevision());
+        // Both global and scoped reviewer bindings may match the same Marketplace.
+        // Lock every matching row, but do not treat that multiplicity as a second market.
+        allowed=allowed.stream().distinct().toList();
+        if(allowed.size()!=1)
+            throw new SecurityException("Current Seller Finance scope no longer approved");
+        return allowed.getFirst();
+    }
+
+    record Market(UUID id,String currency) {}
     private static boolean safeId(String value,int max) {
         return value!=null && value.length()>=8 && value.length()<=max
             && value.matches("[A-Za-z0-9][A-Za-z0-9._:/-]*");

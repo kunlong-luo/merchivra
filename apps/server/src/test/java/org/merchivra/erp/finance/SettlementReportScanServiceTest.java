@@ -280,6 +280,46 @@ class SettlementReportScanServiceTest {
         assertEquals(java.util.HexFormat.of().formatHex(
             java.security.MessageDigest.getInstance("SHA-256").digest(body)),
             report.get("document_sha256").toString().strip());
+        // V241: hold the actual shared eligibility fence while an independent
+        // connection attempts to mutate each previously unlocked input.
+        // The timeout is a test-only bound, not a production configuration.
+        tx.executeWithoutResult(s->{
+            assertEquals(market,SettlementReportImportService.lockCurrentScope(db,third).id());
+            try(var other=ds.getConnection();var setting=other.createStatement()) {
+                setting.execute("SET lock_timeout='150ms'");
+                for(var sql:java.util.List.of(
+                    "UPDATE tenant SET status=status WHERE id=?",
+                    "UPDATE app_user SET status=status WHERE id=?",
+                    "UPDATE membership SET status=status WHERE tenant_id=? AND user_id=?",
+                    "UPDATE role_binding SET role_code=role_code WHERE tenant_id=? AND user_id=?",
+                    "UPDATE spapi_marketplace_verification SET verified_at=verified_at WHERE tenant_id=? AND seller_account_id=? AND marketplace_id=?")) {
+                    try(var statement=other.prepareStatement(sql)) {
+                        if(sql.contains("UPDATE tenant "))statement.setObject(1,tenant);
+                        else if(sql.contains("UPDATE app_user "))statement.setObject(1,reviewer);
+                        else {
+                            statement.setObject(1,tenant);
+                            statement.setObject(2,sql.contains("spapi_marketplace_verification")?account:reviewer);
+                            if(sql.contains("spapi_marketplace_verification"))statement.setString(3,site);
+                        }
+                        var blocked=assertThrows(java.sql.SQLException.class,statement::executeUpdate);
+                        assertEquals("55P03",blocked.getSQLState(),sql);
+                    }
+                }
+            } catch(java.sql.SQLException failure) {
+                throw new AssertionError("Independent PG18 eligibility lock probe failed",failure);
+            }
+        });
+        // Revocation after lock release must prevent new staging and Owner start.
+        assertEquals(1,db.update("""
+            DELETE FROM role_binding WHERE tenant_id=? AND user_id=? AND role_code='SECURITY_REVIEWER'
+            """,tenant,reviewer));
+        assertThrows(SecurityException.class,()->tx.executeWithoutResult(s->
+            new SettlementReportImportService(db).importDocument(
+                third,"V241-DENIED-REPORT","V241-DENIED-DOC",body,false)));
+        assertThrows(SecurityException.class,()->live.start(tenant,market,actor));
+        assertEquals(1,db.queryForObject(
+            "SELECT count(*) FROM spapi_settlement_report WHERE tenant_id=?",Integer.class,tenant));
+        System.out.println("PASS V241 actual PG18 shared Reports eligibility row fence and reviewer revocation");
         // Fixture exists only inside isolated disposable service DB.
         System.out.println("PASS V236 real PG18 Java Reports start/step/fenced import; synthetic remote worker only");
     }
