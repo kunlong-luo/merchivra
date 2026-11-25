@@ -47,12 +47,13 @@ public class ReceiptCostCompositionServiceV249 {
     private final JdbcTemplate jdbc;
     private final ReceiptCostIntegrityServiceV216 audit;
     private final OrderLotAssignmentIntegrityServiceV203 orderLots;
+    private final RefundRecoveryService recovery;
     private final TransactionTemplate read;
     private final TransactionTemplate captureTx;
     public ReceiptCostCompositionServiceV249(JdbcTemplate jdbc,
         ReceiptCostIntegrityServiceV216 audit,PlatformTransactionManager manager,
-        OrderLotAssignmentIntegrityServiceV203 orderLots) {
-        this.jdbc=jdbc;this.audit=audit;this.orderLots=orderLots;
+        OrderLotAssignmentIntegrityServiceV203 orderLots,RefundRecoveryService recovery) {
+        this.jdbc=jdbc;this.audit=audit;this.orderLots=orderLots;this.recovery=recovery;
         read=new TransactionTemplate(manager);
         read.setReadOnly(true);
         read.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
@@ -414,6 +415,22 @@ public class ReceiptCostCompositionServiceV249 {
             }
             if(!expected.equals(reserved))
                 return orderHold(order,marketplace,"REFUND_EVENT_ITEM_RESERVATION_COVERAGE_INCOMPLETE");
+            // V261: expensive V63 recomputations are explicitly bounded.
+            // Join the same RR; propagate business conflicts rather than catch
+            // a participating transactional exception and return a false result.
+            if(events.size()>100)
+                return orderHold(order,marketplace,"REFUND_INDEPENDENT_REVIEW_POPULATION_UNBOUNDED");
+            for(var e:events) {
+                var review=recovery.preview(tenant,marketplace,e.id());
+                var gate=RefundCogsReversalGateV197.assess(e.id(),review,order,e.currency().trim(),e.amount());
+                if(!gate.sourceSnapshotConsistent()||
+                    !"REVIEWED".equals(review.state())||!review.evidenceCurrent()||
+                    !"MANUAL_UNVERIFIED".equals(review.evidenceOrigin())||
+                    review.exposure()==null||
+                    !"MANUAL_EVIDENCE_BALANCED_UNVERIFIED".equals(review.exposure().status())||
+                    !recovery.currentIndependentAudit(tenant,marketplace,e.id(),review))
+                    return orderHold(order,marketplace,"REFUND_INDEPENDENT_REVIEW_MISSING_STALE_OR_CONFLICTING");
+            }
             if(sums.values().stream().anyMatch(s->s.refund.signum()<0||s.refund.compareTo(s.original)>0))
                 return orderHold(order,marketplace,"ORIGINAL_CURRENCY_COST_CONSERVATION_BROKEN");
             var currencies=sums.entrySet().stream().map(e->new OrderRefundCurrency(e.getKey(),

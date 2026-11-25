@@ -142,6 +142,42 @@ public class RefundRecoveryService {
         Evidence src=evidence(tenant,mp,event);
         return display(event,src,stored(tenant,mp,event,false));
     }
+    // V261: called within the whole-order RR after preview independently
+    // recalculates the V63 evidence digest. Check the exact current revision's
+    // request/decision audit pair and current V34/V35 author independence.
+    // This is not external identity authentication or a complete ABA fence.
+    boolean currentIndependentAudit(UUID tenant,UUID mp,UUID event,Status status) {
+        if(status==null||!"REVIEWED".equals(status.state())||!status.evidenceCurrent()
+            ||status.revision()<1||status.requestedBy()==null||status.decidedBy()==null
+            ||status.requestedBy().equals(status.decidedBy()))return false;
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+            SELECT EXISTS(
+              SELECT 1 FROM finance_refund_recovery_review r
+              WHERE r.tenant_id=? AND r.seller_marketplace_id=? AND r.event_id=?
+                AND r.sales_order_id=? AND r.state='REVIEWED' AND r.revision=?
+                AND r.requested_by=? AND r.decided_by=? AND r.requested_by<>r.decided_by
+                AND r.decided_at>=r.requested_at
+                AND NOT EXISTS(SELECT 1 FROM finance_refund_item_review v
+                  WHERE v.tenant_id=r.tenant_id AND v.event_id=r.event_id AND v.reviewed_by=r.decided_by)
+                AND NOT EXISTS(SELECT 1 FROM finance_refund_amount_allocation v
+                  WHERE v.tenant_id=r.tenant_id AND v.event_id=r.event_id AND v.reviewed_by=r.decided_by)
+                AND (SELECT count(*) FROM finance_refund_recovery_audit a
+                  WHERE a.tenant_id=r.tenant_id AND a.event_id=r.event_id AND a.revision=r.revision)=2
+                AND (SELECT count(*) FROM finance_refund_recovery_audit a
+                  WHERE a.tenant_id=r.tenant_id AND a.event_id=r.event_id AND a.revision=r.revision
+                    AND a.action=CASE WHEN r.revision=1 THEN 'REQUESTED' ELSE 'REOPENED' END
+                    AND a.actor_user_id=r.requested_by AND a.source_evidence_sha256=r.source_evidence_sha256
+                    AND a.occurred_at=r.requested_at)=1
+                AND (SELECT count(*) FROM finance_refund_recovery_audit a
+                  WHERE a.tenant_id=r.tenant_id AND a.event_id=r.event_id AND a.revision=r.revision
+                    AND a.action='REVIEWED' AND a.actor_user_id=r.decided_by
+                    AND a.source_evidence_sha256=r.source_evidence_sha256
+                    AND a.occurred_at=r.decided_at)=1
+            )
+            """,Boolean.class,tenant,mp,event,UUID.fromString(status.orderId()),status.revision(),
+                UUID.fromString(status.requestedBy()),UUID.fromString(status.decidedBy())));
+    }
+
     private void lockOrderAndEvent(UUID tenant,UUID mp,UUID event,UUID order) {
         var orderRows=jdbc.queryForList("""
             SELECT id FROM sales_order WHERE tenant_id=? AND seller_marketplace_id=?

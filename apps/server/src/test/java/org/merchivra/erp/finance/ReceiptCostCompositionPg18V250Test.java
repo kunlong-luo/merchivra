@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /** Actual installed PG18 tables, views, FKs and transactions; no external data. */
 class ReceiptCostCompositionPg18V250Test {
     private final UUID tenant=UUID.randomUUID(), maker=UUID.randomUUID(),
-        reviewer=UUID.randomUUID(), account=UUID.randomUUID(), market=UUID.randomUUID(),
+        reviewer=UUID.randomUUID(), approver=UUID.randomUUID(), account=UUID.randomUUID(), market=UUID.randomUUID(),
         market2=UUID.randomUUID(), supplier=UUID.randomUUID(), sku=UUID.randomUUID(),
         warehouse=UUID.randomUUID(), bin=UUID.randomUUID(), po=UUID.randomUUID(),
         pol=UUID.randomUUID(), receipt=UUID.randomUUID(), qc=UUID.randomUUID(),
@@ -42,6 +42,7 @@ class ReceiptCostCompositionPg18V250Test {
     private JdbcTemplate db;
     private TransactionTemplate write;
     private ReceiptCostCompositionServiceV249 service;
+    private RefundRecoveryService recovery;
 
     @Test
     @EnabledIfEnvironmentVariable(named="MERCHIVRA_V250_DISPOSABLE_ONLY",matches="true")
@@ -70,9 +71,14 @@ class ReceiptCostCompositionPg18V250Test {
             SELECT count(*) FROM flyway_schema_history
             WHERE version IN ('106','112','117','118') AND success
             """,Integer.class));
+        var costs=new OrderCostReadinessService(db);
+        var classification=new FinanceClassificationService(db,new FinancesBreakdownService(db));
+        var itemReviews=new RefundItemReviewService(db,classification,costs);
+        recovery=new RefundRecoveryService(db,itemReviews,
+            new RefundAmountAllocationService(db,itemReviews,classification));
         service=new ReceiptCostCompositionServiceV249(db,
             new ReceiptCostIntegrityServiceV216(db,new CostIdentityReconciliationService(db),manager),
-            manager,new OrderLotAssignmentIntegrityServiceV203(db,new OrderCostReadinessService(db)));
+            manager,new OrderLotAssignmentIntegrityServiceV203(db,costs),recovery);
         write.executeWithoutResult(ignored->seed());
         var client=loginFixtureOwner();
         expense(market,"INBOUND_FREIGHT","20","10","a");
@@ -186,8 +192,9 @@ class ReceiptCostCompositionPg18V250Test {
         assertEquals(204,http(client,"/api/v1/auth/logout","",csrf.path("token").asText()).statusCode());
         assertEquals(401,http(client,candidatePath(),null,null).statusCode());
         var second=new ReceiptCostCompositionPg18V250Test();
-        second.db=db;second.write=write;second.service=service;
+        second.db=db;second.write=write;second.service=service;second.recovery=recovery;
         second.crossClaimRace();
+        System.out.println("PASS V261 actual PG18 V63 review required, stale revision, author independence and duplicate audit hold");
         System.out.println("PASS V260 actual PG18 historical SKU mapping missing and remapped hold, V259 amount coverage");
         System.out.println("PASS V258 actual PG18 whole-order original cost and refund reservation coverage, 30/14.999999/15.000001, full refund and stale hold");
         System.out.println("PASS V257 actual PG18 refund races: rollback release, committed cross-claim quantity rejection, review and cost drift hold");
@@ -316,6 +323,20 @@ class ReceiptCostCompositionPg18V250Test {
                 VALUES (?,?,?,10,'USD',current_date-1,?)
                 """,UUID.randomUUID(),tenant,sku,maker);
         });
+        write.executeWithoutResult(ignored->{
+            db.update("""
+                INSERT INTO finance_breakdown_rule(id,tenant_id,seller_marketplace_id,source_type,
+                    category,state,updated_by)
+                VALUES (?,?,?,'V261_SYNTHETIC_REFUND','PRODUCT_REFUND','ACTIVE',?)
+                """,UUID.randomUUID(),tenant,market,maker);
+        });
+        var unreviewed=service.readWholeOrderRefundReservations(tenant,market,sale);
+        assertTrue(unreviewed.blockers().contains("REFUND_INDEPENDENT_REVIEW_MISSING_STALE_OR_CONFLICTING"));
+        assertTrue(unreviewed.currencies().isEmpty());
+        write.executeWithoutResult(ignored->recovery.request(tenant,market,event,maker,"V261 synthetic request"));
+        var pending=service.readWholeOrderRefundReservations(tenant,market,sale);
+        assertTrue(pending.blockers().contains("REFUND_INDEPENDENT_REVIEW_MISSING_STALE_OR_CONFLICTING"));
+        write.executeWithoutResult(ignored->recovery.decide(tenant,market,event,approver,true,"V261 synthetic approval"));
         var first=service.readWholeOrderRefundReservations(tenant,market,sale);
         assertEquals("LOCAL_ORDER_REFUND_COST_CANDIDATE_UNVERIFIED",first.state());
         assertEquals(2,first.originalClaimRows());
@@ -354,6 +375,30 @@ class ReceiptCostCompositionPg18V250Test {
         assertNull(partial.actualRefundCogsReversal());
         db.update("UPDATE finance_refund_amount_allocation SET signed_amount=-20 WHERE tenant_id=? AND event_id=?",tenant,event);
         assertEquals(first.currencies(),service.readWholeOrderRefundReservations(tenant,market,sale).currencies());
+        // A changed V35 revision is stale even when the signed amount is unchanged.
+        db.update("UPDATE finance_refund_amount_allocation SET revision=2 WHERE tenant_id=? AND event_id=?",tenant,event);
+        var staleReview=service.readWholeOrderRefundReservations(tenant,market,sale);
+        assertTrue(staleReview.blockers().contains("REFUND_INDEPENDENT_REVIEW_MISSING_STALE_OR_CONFLICTING"));
+        assertTrue(staleReview.currencies().isEmpty());
+        approveRefund(event);
+        assertEquals(first.currencies(),service.readWholeOrderRefundReservations(tenant,market,sale).currencies());
+        db.update("UPDATE finance_refund_amount_allocation SET reviewed_by=? WHERE tenant_id=? AND event_id=?",approver,tenant,event);
+        var sameAuthor=service.readWholeOrderRefundReservations(tenant,market,sale);
+        assertTrue(sameAuthor.blockers().contains("REFUND_INDEPENDENT_REVIEW_MISSING_STALE_OR_CONFLICTING"));
+        db.update("UPDATE finance_refund_amount_allocation SET reviewed_by=? WHERE tenant_id=? AND event_id=?",reviewer,tenant,event);
+        assertEquals(first.currencies(),service.readWholeOrderRefundReservations(tenant,market,sale).currencies());
+        // Missing/duplicated V63 audit must not be masked by a current digest.
+        UUID duplicate=UUID.randomUUID();
+        db.update("""
+            INSERT INTO finance_refund_recovery_audit(id,tenant_id,event_id,revision,actor_user_id,
+                action,source_evidence_sha256,reason,occurred_at)
+            SELECT ?,tenant_id,event_id,revision,actor_user_id,action,source_evidence_sha256,reason,occurred_at
+            FROM finance_refund_recovery_audit WHERE tenant_id=? AND event_id=? AND revision=2 AND action='REVIEWED'
+            """,duplicate,tenant,event);
+        var duplicateAudit=service.readWholeOrderRefundReservations(tenant,market,sale);
+        assertTrue(duplicateAudit.blockers().contains("REFUND_INDEPENDENT_REVIEW_MISSING_STALE_OR_CONFLICTING"));
+        assertTrue(duplicateAudit.currencies().isEmpty());
+        approveRefund(event);
         UUID next=seedRefund(itemA);
         var held=service.readWholeOrderRefundReservations(tenant,market,sale);
         assertEquals("LOCAL_ORDER_REFUND_COST_HOLD",held.state());
@@ -371,6 +416,9 @@ class ReceiptCostCompositionPg18V250Test {
             SELECT ?,?,external_item_id,-20,'USD','V259-SYNTHETIC',1,?
             FROM order_item WHERE tenant_id=? AND id=?
             """,tenant,next,reviewer,tenant,itemA);
+        var nextUnreviewed=service.readWholeOrderRefundReservations(tenant,market,sale);
+        assertTrue(nextUnreviewed.blockers().contains("REFUND_INDEPENDENT_REVIEW_MISSING_STALE_OR_CONFLICTING"));
+        approveRefund(next);
         var full=service.readWholeOrderRefundReservations(tenant,market,sale);
         assertEquals(List.of(new ReceiptCostCompositionServiceV249.OrderRefundCurrency(
             "USD","30.000000","30.000000","0.000000")),full.currencies());
@@ -432,6 +480,11 @@ class ReceiptCostCompositionPg18V250Test {
         }
     }
 
+    private void approveRefund(UUID event) {
+        write.executeWithoutResult(ignored->recovery.request(tenant,market,event,maker,"V261 synthetic request"));
+        write.executeWithoutResult(ignored->recovery.decide(tenant,market,event,approver,true,"V261 synthetic approval"));
+    }
+
     private UUID seedRefund(UUID item) {
         UUID event=UUID.randomUUID();
         write.executeWithoutResult(ignored->{
@@ -442,6 +495,11 @@ class ReceiptCostCompositionPg18V250Test {
                 VALUES (?,?,?,'SPAPI_FINANCES',?,'LIVE','PRODUCT_REFUND',-20,'USD',now(),
                    'V250-SYNTHETIC-ORDER','V256_SYNTHETIC_ONLY')
                 """,event,tenant,market,"V256-"+event);
+            db.update("""
+                INSERT INTO finance_transaction_breakdown(tenant_id,event_id,source_path,source_type,
+                    original_amount,currency_code,is_leaf)
+                VALUES (?,?,'0','V261_SYNTHETIC_REFUND',-20,'USD',true)
+                """,tenant,event);
             db.update("""
                 INSERT INTO finance_event_link_review(tenant_id,event_id,order_id,state,reviewed_by)
                 VALUES (?,?,?,'MATCHED',?)
@@ -532,7 +590,7 @@ class ReceiptCostCompositionPg18V250Test {
     private void seed(boolean sameItem) {
         UUID position2=UUID.randomUUID(),pickLine2=UUID.randomUUID();
         db.update("INSERT INTO tenant(id,name) VALUES (?,?)",tenant,"V250 DISPOSABLE");
-        for(UUID user:List.of(maker,reviewer)) {
+        for(UUID user:List.of(maker,reviewer,approver)) {
             db.update("INSERT INTO app_user(id,identity_ref) VALUES (?,?)",user,"local:v250:"+user);
             db.update("INSERT INTO membership(tenant_id,user_id) VALUES (?,?)",tenant,user);
         }
