@@ -159,3 +159,6 @@ V268 [代码 bfbc124ca446](https://github.com/kunlong-luo/merchivra/commit/bfbc1
 ## V269 · 显式整单补偿守恒模拟（待验收）
 
 V269：内部显式选择最多20个已批准 event/item/proposal SHA，在单 RR 复用 V258–V267 整单人口/原币/历史 SKU/原成本及审核校验；V123 当前批准复核后仅对精确 stale claim/event 原坐标模拟补偿，保留其余 V119 通用条件、旧 peer 一致、原成本 digest、原区间与逐事件金额，必须逐一消费所有选定坐标、整单 event/item 数量守恒、原币成本守恒。普通读取仍无选择、stale HOLD；模拟结果单独标识 LOCAL_ORDER_COMPENSATION_SIMULATION_UNVERIFIED、COMPENSATION_NOT_ACTIVATED，未批准、缺覆盖、重复/过期/跨租户或其他证据失效不得产生完整候选，部分业务异常仍以403/404/409传播。V250 PG18 夹具两 claim 两事件，旧 A 已批准补偿 + 当前 B，正例与旧指纹/重复/跨租户/另一个 stale 负例，强制 marker，待 A3。没有写入、释放、替换、激活、公开 API/UI 或正式会计回转；未新增迁移。不是实际外部完整性、全域授权 ABA 或跨期会计批准，actualRefundCogsReversal/realizedNetProfit=null。
+
+
+V268 [代码 bfbc124ca446](https://github.com/kunlong-luo/merchivra/commit/bfbc124ca446ce63b3b8fb0afac25baf1e1f1ec0) [完整 A3 #45586332750 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45586332750)。V269 [代码 1f1240d93a17](https://github.com/kunlong-luo/merchivra/commit/1f1240d93a171199c81a85fbb99e2748b3effb8c) [快 CI #45587205802 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45587205802) [完整 A3 #45587205992 SUCCESS 7/7](https://github.com/kunlong-luo/merchivra/actions/runs/45587205992)，实际 PG18 job #139111767787 成功。

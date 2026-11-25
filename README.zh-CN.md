@@ -11,7 +11,7 @@
 
 ## 当前工程状态
 
-V237 完整隔离 A3 7/7 通过，实际 PostgreSQL18 Java Reports 服务回归未跳过，远程 Worker 为合成模拟；V238–V240 快速 CI 通过；V241 完整 A3 7/7 已通过；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7 已通过；V245 快 CI 通过；V246 快 CI 通过；V247 快 CI 通过、A3 6/7（PG18 别名冲突）；V248 完整 A3 7/7；V249 快 CI 通过；V250 快 CI/A3 均未启动 job；V251 快 CI 成功、A3 shell 变量失败；V252 完整 A3 7/7（实际 PG18 组合及 Owner HTTP 空状态）；V253 完整 A3 7/7；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 快 CI 通过、A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7 已通过；V259 V35 金额/商品覆盖快 CI 通过（未见完整 A3）；V260 历史 SKU/批次门禁完整 A3 7/7；V261/V262 完整 A3 通过；V263 快 CI 通过、A3 取消；V264 完整 A3 通过；V265/V266/V267 完整 A3 通过；V268 并发重试快 CI 通过、A3 待核；V269 显式已批准整单补偿模拟待 A3，未开放释放/替换或正式回转。见[当前事实](docs/current-status.md)。
+V237 完整隔离 A3 7/7 通过，实际 PostgreSQL18 Java Reports 服务回归未跳过，远程 Worker 为合成模拟；V238–V240 快速 CI 通过；V241 完整 A3 7/7 已通过；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7 已通过；V245 快 CI 通过；V246 快 CI 通过；V247 快 CI 通过、A3 6/7（PG18 别名冲突）；V248 完整 A3 7/7；V249 快 CI 通过；V250 快 CI/A3 均未启动 job；V251 快 CI 成功、A3 shell 变量失败；V252 完整 A3 7/7（实际 PG18 组合及 Owner HTTP 空状态）；V253 完整 A3 7/7；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 快 CI 通过、A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7 已通过；V259 V35 金额/商品覆盖快 CI 通过（未见完整 A3）；V260 历史 SKU/批次门禁完整 A3 7/7；V261/V262 完整 A3 通过；V263 快 CI 通过、A3 取消；V264 完整 A3 通过；V265/V266/V267 完整 A3 通过；V268/V269 完整 A3 通过；V270 本地结算报告与银行样本离线核对待 A3，未开放释放/替换或正式回转。见[当前事实](docs/current-status.md)。
 
 ## 一、仓库根目录：保留哪些，分别有什么用？
 
@@ -85,3 +85,5 @@ Java 测试为 `./apps/server/gradlew -p apps/server --no-daemon test`；文档�
 普通开发**直接提交 `main`**，不为常规开发新建 PR/分支；资金/身份/数据库边界仍必须基于精确 SHA 的真实 PG18/HTTP/Chromium 等验证。合成 CI 全通过既不等于真实 Amazon/Ads/银行核证，也不能替代财务和生产签署。
 
 [公开 GitHub Pages 演示](https://kunlong-luo.github.io/merchivra/)仅为虚构数据，不提供正式 ERP 登录、银行或真实成本入账。
+
+首笔真实结算样本请在受控本地使用 Gradle `checkLocalSettlementSample`，见 [V60/V270 操作步骤](docs/finance/manual-bank-payout-v60.md)。核对器无需数据库、OAuth 或上传；金额相符不代表外部认证。

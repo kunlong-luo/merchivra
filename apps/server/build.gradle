@@ -93,3 +93,14 @@ if (providers.gradleProperty('strictCoverage').isPresent()) {
         dependsOn tasks.named('jacocoTestCoverageVerification')
     }
 }
+
+// Operator-only offline sample arithmetic. File paths are supplied via local
+// environment, never Gradle args or project properties. Do not run on real
+// customer data in CI; Gradle tests use synthetic temporary fixtures only.
+tasks.register('checkLocalSettlementSample', JavaExec) {
+    group = 'verification'
+    description = 'Compare one private local settlement report and normalized bank observation (not verification)'
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = 'org.merchivra.erp.finance.LocalSettlementSampleV270'
+    javaLauncher = javaToolchains.launcherFor(java.toolchain)
+}

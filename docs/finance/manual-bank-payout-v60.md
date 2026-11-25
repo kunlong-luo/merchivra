@@ -46,3 +46,24 @@ ENTRY-2026-002,SETTLE-2026-002,2026-10-31,EUR,88.00,2.00,0.90000000
 - Java 25 / Spring Boot 4.1.2 / Gradle：CSV 限制、跨租户 Controller 范围、不同来源匹配状态、双人审核角色和银行 false 不变量。
 - PostgreSQL 18：Flyway V57–V59 真迁移与复合外键。
 - React 19 / TypeScript：数据模式严格验证、CSRF 上传、文件大小和敏感请求约束、只读来源比较及审批状态。
+
+
+## V270 · 首笔真实结算样本本地核对（代码待 A3，真实材料 BLOCKED）
+
+维护者仅在有合法权限的受控本地工作区、完成依赖预缓存后执行（POSIX shell，仓库根目录；文件必须位于仓库之外的私有目录）：
+
+1. 从授权渠道取得一份完整 Amazon 原始结算 TSV（或原始 gzip），另从银行官方渠道取得对应真实回单/流水；在独立受信系统保留原文件、渠道和签发者核验。不要改写原报告，不把原始银行账单放入仓库。
+2. 按上面 V60 固定格式制作**仅一条**银行标准化 CSV，准确填写匹配 Settlement ID、原币、实际贷记和从该笔转账扣留的银行费。此 CSV 是人工派生，不是银行原件；如跨币种、分拆、合并、冲正、负数或无声明净额，保留差异，不强行匹配。
+3. 运行（示例路径仅占位，替换为真实私有本地路径，不要发送路径、原件或凭证给 ChatGPT/GitHub）：
+
+```bash
+export MERCHIVRA_SAMPLE_REPORT=/private/path/settlement.tsv
+export MERCHIVRA_SAMPLE_BANK=/private/path/normalized-bank.csv
+# 若原文件是 gzip，设置 MERCHIVRA_SAMPLE_GZIP=true；普通 TSV 默认 false。
+./apps/server/gradlew -p apps/server --offline --no-daemon --console=plain checkLocalSettlementSample
+```
+
+- 默认输出固定 JSON 状态与 false/null，无文件路径、交易 ID、金额、币种或哈希；退出 0 只表示该样本的本地金额算术一致，退出 2（Gradle 任务失败）表示差异/输入不支持。Gradle 自身仍可能输出构建环境日志，不应将完整日志外传。
+- 若需要本地独立差异复算，可在**私有不记录终端**中设置 `MERCHIVRA_SAMPLE_PRIVATE_DETAILS=true` 再运行。输出两个所选文件的字节 SHA-256（gzip 对原压缩字节散列）、原币、声明净额、明细合计、银行贷记+费、两项有符号差额；仅用于受控本地，不得提交/上传完整输出。随后 unset 上述环境变量。标准化银行 CSV 的 SHA 不代表银行原件 SHA；内存数组尽力清零，Java parser/OS 内部副本不保证清除。
+- `LOCAL_SAMPLE_AMOUNTS_AGREE_UNVERIFIED` 不代表真实资金到账、无重复账单、Finances 行完整性或会计确认；本地核对仅支持单一正向同币种结算及唯一银行条目，复用已有解析器，5 MiB 原报告/8 MiB 解压/10,000 明细行、64 KiB 银行 CSV 原解析边界。真实样本须进一步由独立人员核验原始签发主体、真实到账、Finances/Reports 完整归属、实际货物成本与 G1/DEC。仅用合成样本跑 CI；不得在 CI 执行真实文件任务。
+- 下一步：对这笔合法真实样本记录脱敏状态码和不可公开的独立证据位置，按 [V199](v199-settlement-declared-net-fail-closed.md)、[V182](v182-settlement-attribution-evidence.md) 与 [唯一现行计划](../roadmap/current-plan.md) 完成 E1–E5。真实原件尚未提供；保持真实 OAuth OFF、实际净利润 null、生产 NO-GO。
