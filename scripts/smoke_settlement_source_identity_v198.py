@@ -247,7 +247,8 @@ ALTER TABLE spapi_settlement_report_line ADD COLUMN transaction_type text,
  ADD COLUMN amount_type text, ADD COLUMN amount_description text;
 ALTER TABLE finance_transaction_breakdown ADD COLUMN source_type text;
 CREATE TEMP TABLE finance_breakdown_rule (
- tenant_id uuid,seller_marketplace_id uuid,source_type text,category text,state text
+ tenant_id uuid,seller_marketplace_id uuid,source_type text,category text,state text,
+ id uuid DEFAULT gen_random_uuid(),revision integer DEFAULT 1
 ) ON COMMIT DROP;
 UPDATE spapi_settlement_report_line SET transaction_type='Order',amount_type='ItemFees',
  amount_description='Commission' WHERE report_id='{report}' AND line_number=2;
@@ -255,25 +256,51 @@ INSERT INTO finance_transaction_breakdown
  (tenant_id,event_id,source_path,original_amount,currency_code,is_leaf,source_type) VALUES
  ('{tenant}','{first}','0.0',20,'USD',true,'Principal'),
  ('{tenant}','{first}','0.1',-2.50,'USD',true,'Commission');
-INSERT INTO finance_breakdown_rule VALUES
+INSERT INTO finance_breakdown_rule (tenant_id,seller_marketplace_id,source_type,category,state) VALUES
  ('{tenant}','{market}','Principal','PRODUCT_SALES','ACTIVE'),
  ('{tenant}','{market}','Commission','AMAZON_FEE','INACTIVE'),
  ('{tenant}','{other_market}','Commission','FBA_FEE','ACTIVE'),
  ('{other_tenant}','{market}','Commission','FBA_FEE','ACTIVE');
 CREATE TEMP VIEW v273_categories AS {category_query};
-DO $ BEGIN
+DO $v275$ BEGIN
  IF (SELECT count(*) FROM v273_categories)<>4
     OR (SELECT count(*) FROM v273_categories WHERE NOT report_side AND category='PRODUCT_SALES')<>1
     OR (SELECT count(*) FROM v273_categories WHERE NOT report_side AND category IS NULL)<>1
     OR (SELECT count(*) FROM v273_categories WHERE report_side AND amount_description='Commission')<>1
  THEN RAISE EXCEPTION 'V273 exact category scope or mapping failure'; END IF;
-END $;
+END $v275$;
 UPDATE finance_breakdown_rule SET state='ACTIVE'
  WHERE tenant_id='{tenant}' AND seller_marketplace_id='{market}' AND source_type='Commission';
-DO $ BEGIN
+DO $v275$ BEGIN
  IF (SELECT count(*) FROM v273_categories WHERE NOT report_side AND category='AMAZON_FEE')<>1
  THEN RAISE EXCEPTION 'V273 active rule not applied'; END IF;
-END $;
+END $v275$;
+""")
+# V275: actual rule digest SQL; normal revision ABA must change it, unrelated
+# rules must not. Compare on the same fixture population used by V273.
+rule_match = re.search(r'static final String CATEGORY_RULE_EVIDENCE_SQL="""\s*(.*?)\s*""";', java, re.S)
+if not rule_match or rule_match.group(1).count("?") != 3:
+    raise SystemExit("Unable to find exact V275 rule evidence SQL")
+rule_query = rule_match.group(1)
+for value in (tenant, market, report):
+    rule_query = rule_query.replace("?", "'" + value + "'::uuid", 1)
+commands.append(f"""
+CREATE TEMP VIEW v275_rule_digest AS {rule_query};
+CREATE TEMP TABLE v275_before ON COMMIT DROP AS SELECT * FROM v275_rule_digest;
+UPDATE finance_breakdown_rule SET revision=revision+1
+ WHERE tenant_id='{other_tenant}';
+DO $v275$ BEGIN
+ IF (SELECT fingerprint FROM v275_rule_digest) IS DISTINCT FROM
+    (SELECT fingerprint FROM v275_before)
+ THEN RAISE EXCEPTION 'V275 unrelated rule changed digest'; END IF;
+END $v275$;
+UPDATE finance_breakdown_rule SET revision=revision+1
+ WHERE tenant_id='{tenant}' AND seller_marketplace_id='{market}' AND source_type='Commission';
+DO $v275$ BEGIN
+ IF (SELECT fingerprint FROM v275_rule_digest) IS NOT DISTINCT FROM
+    (SELECT fingerprint FROM v275_before)
+ THEN RAISE EXCEPTION 'V275 current rule revision failed to invalidate digest'; END IF;
+END $v275$;
 """)
 # Exercise the exact V124 migration on disposable TEMP shadow tables.
 migration = Path("apps/server/src/main/resources/db/migration/V124__settlement_category_mapping_draft.sql").read_text()
@@ -286,19 +313,50 @@ INSERT INTO membership VALUES ('{tenant}','{first}');
 """)
 commands.append(migration.replace("CREATE TABLE finance_settlement_category_mapping_v124",
                                   "CREATE TEMP TABLE finance_settlement_category_mapping_v124",1))
+# Use the actual Java save/read SQL against the V124 TEMP migration, including
+# duplicate insert, Marketplace scope, valid-payload mutation and delete.
+import hashlib
+payload = "V274_REPORT_MAPPING\\nOrder|ItemFees|Commission|AMAZON_FEE"
+sha = hashlib.sha256(payload.replace("\\n", "\n").encode()).hexdigest()
+payload = payload.replace("\\n", "\n")
+def exact_sql(name, values):
+    match = re.search(r'static final String ' + name + r'="""\s*(.*?)\s*""";', java, re.S)
+    if not match or match.group(1).count("?") != len(values):
+        raise SystemExit("Unexpected V274 SQL shape: " + name)
+    result = match.group(1)
+    for value in values:
+        result = result.replace("?", value, 1)
+    return result
+def uuid(value):
+    return "'" + value + "'::uuid"
+def literal(value):
+    return "'" + value.replace("'", "''") + "'"
+save = exact_sql("SAVE_MAPPING_SQL", [literal(sha), literal(payload), uuid(first),
+                 uuid(tenant), uuid(market), uuid(report)])
+read = exact_sql("READ_MAPPING_SQL", [uuid(tenant), uuid(market), uuid(report), literal(sha)])
+wrong = exact_sql("READ_MAPPING_SQL", [uuid(tenant), uuid(other_market), uuid(report), literal(sha)])
+commands.append(save + ";\n" + save + ";\n")
 commands.append(f"""
-INSERT INTO finance_settlement_category_mapping_v124
- (tenant_id,report_id,mapping_sha256,canonical_payload,created_by)
- SELECT '{tenant}','{report}',encode(sha256(convert_to('V274_REPORT_MAPPING','UTF8')),'hex'),
- 'V274_REPORT_MAPPING','{first}';
-DO $ BEGIN
+CREATE TEMP VIEW v274_read AS {read};
+CREATE TEMP VIEW v274_wrong AS {wrong};
+DO $v275$ BEGIN
+ IF (SELECT count(*) FROM finance_settlement_category_mapping_v124)<>1
+    OR (SELECT count(*) FROM v274_read)<>1
+    OR (SELECT count(*) FROM v274_wrong)<>0
+ THEN RAISE EXCEPTION 'V274 save/read scope or idempotency failed'; END IF;
  BEGIN
-  UPDATE finance_settlement_category_mapping_v124 SET canonical_payload='different';
+  UPDATE finance_settlement_category_mapping_v124 SET canonical_payload=canonical_payload;
   RAISE EXCEPTION 'V274 mutation unexpectedly succeeded' USING ERRCODE='XX000';
- EXCEPTION WHEN OTHERS THEN
-  IF SQLSTATE='XX000' THEN RAISE; END IF;
+ EXCEPTION WHEN SQLSTATE 'P0001' THEN
+  IF SQLERRM NOT LIKE 'V106:%append-only' THEN RAISE; END IF;
  END;
-END $;
+ BEGIN
+  DELETE FROM finance_settlement_category_mapping_v124;
+  RAISE EXCEPTION 'V274 delete unexpectedly succeeded' USING ERRCODE='XX000';
+ EXCEPTION WHEN SQLSTATE 'P0001' THEN
+  IF SQLERRM NOT LIKE 'V106:%append-only' THEN RAISE; END IF;
+ END;
+END $v275$;
 """)
 commands.append("ROLLBACK;\n")
 result = subprocess.run(
@@ -319,3 +377,5 @@ print("PASS V272 real PG18 exact Java SQL: gross direction and leaf coverage")
 print("PASS V273 real PG18 exact category SQL: current active rule, scope, leaf-only and unmapped coverage")
 
 print("PASS V274 real PG18 TEMP exact migration: mapping identity and immutable trigger")
+
+print("PASS V275 real PG18 current rule revision fingerprint and exact V124 save/read scope")

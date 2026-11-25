@@ -46,6 +46,17 @@ final class SettlementCategoryMappingV274 {
         SettlementCategoryPreviewV273.validate(out);
         return List.copyOf(out);
     }
+    static String evidence(java.util.UUID tenant,java.util.UUID marketplace,java.util.UUID report,
+        String mapping,String source,String rules) {
+        java.util.Objects.requireNonNull(tenant);
+        java.util.Objects.requireNonNull(marketplace);
+        java.util.Objects.requireNonNull(report);
+        for(String hash:new String[]{mapping,source,rules})
+            if(hash==null||!hash.matches("[0-9a-f]{64}"))
+                throw new IllegalArgumentException("Invalid evidence digest");
+        return digest("V275_CATEGORY_EVIDENCE\n"+tenant+"\n"+marketplace+"\n"+report+
+            "\n"+mapping+"\n"+source+"\n"+rules);
+    }
     private static String digest(String value) {
         try {return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256")
             .digest(value.getBytes(StandardCharsets.UTF_8)));}

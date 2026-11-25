@@ -86,3 +86,12 @@ V274：Flyway V124 报告范围不可变分类映射草稿（tenant/report/conte
 - `POST /category-mapping-drafts`：请求体复用 V273 显式映射数组；返回 `mappingSha256` 和规范排序后的 `mappings`，状态 `LOCAL_IMMUTABLE_MAPPING_DRAFT`。重复内容返回同一身份；不是更新接口。草稿保存允许尚未完全覆盖的有效类型映射，不声称分类一致。
 - `GET /category-mapping-drafts/{mappingSha256}`：读取当前报告范围指定草稿；不同报告/站点不可读取。调用者需保留返回 SHA；无草稿列表或“当前已批准版本”概念。
 - `GET /category-mapping-drafts/{mappingSha256}/preview`：重算当前来源及分类，返回 SHA 和 V273 `preview`，不会使用历史缓存。变更 V28 或原始来源可能改变结果；旧草稿本身不变。后续独立审批必须绑定证据版本与完整映射，不得仅凭 SHA 认定有效。
+
+
+V272 [完整 A3 #45615522448 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45615522448)。V273 [完整 A3 #45616101623 FAILURE 6/7](https://github.com/kunlong-luo/merchivra/actions/runs/45616101623)，PG18 job #139213034617 的综合脚本步骤失败，日志接口不可读取；静态核查发现 V273/V274 新增 DO $ BEGIN / END $; 非法分隔符，已改为具名 dollar quote，不宣称为唯一失败根因。V274 [代码 dc203b85c4f2](https://github.com/kunlong-luo/merchivra/commit/dc203b85c4f216069c28ca4f8f66af004ae26598) [快 CI #45616598969 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45616598969)，未触发完整 A3。
+
+## V275 · 回归修复与分类证据指纹（待验收）
+
+V275：修复 V273/V274 PG18 TEMP SQL DO 分隔符，V124 回归改为直接提取真实 Java SAVE_MAPPING_SQL/READ_MAPPING_SQL，验证内容 SHA、重复提交仅一条、错误 Marketplace 无结果、无变化 UPDATE 与 DELETE 必须触发 V106 不可变拒绝，而非把任意异常当成功。quick CI 增加该 Python 文件语法检查（不能替代 PG18 执行）。V274 保存映射预检仅在 LOCAL_CATEGORY_AMOUNTS_AGREE_UNVERIFIED 时新增 evidenceSha256，绑定 tenant/marketplace/report UUID、mapping SHA、V56/V272 源证据指纹与当前实际使用 V28 ACTIVE 规则 ID/type/category/revision/state 指纹；全在 RR 事务，同内容稳定、正常规则修订变更使证据失效，非相关规则不参与。缺覆盖/冲突不返回证据摘要。新增 Java digest 反例及真 PG18 规则修订与范围测试，触发完整 A3 待验收。不持久化证据、不建立独立审批、不改变 V56 门禁、UI、源事实或利润；不是签章、授权令牌或全域 ABA 防护。真实 HTTP、Redis smoke V270 失败、外部 E1–E5 与 G1/DEC 仍待完成。mappingApproved=false、realizedNetProfit=null、OAuth OFF、#104 NO-GO。
+
+`GET /category-mapping-drafts/{mappingSha256}/preview` 新增可空 `evidenceSha256`。只有当前预检完全一致时生成本地证据身份，供后续独立审核绑定；规则或原始来源变化后必须重新预检比较，不得将旧摘要作为现行批准。

@@ -213,6 +213,7 @@ jobs:
           python3 scripts/check_ci_cadence_v108.py
           bash -n scripts/run_pg18_full_ci.sh
           python3 -m py_compile scripts/check_reports_service_junit.py
+          python3 -m py_compile scripts/smoke_settlement_source_identity_v198.py
       - name: Verify V109 active documentation links and runtime status
         run: python3 scripts/check_docs_consistency_v109.py
       - name: V219-V226 real receipt, epoch, source ABA and bounded batch smoke syntax

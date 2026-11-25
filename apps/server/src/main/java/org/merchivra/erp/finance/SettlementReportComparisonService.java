@@ -289,7 +289,7 @@ public class SettlementReportComparisonService {
         List<SettlementCategoryPreviewV273.Mapping> mappings,boolean mappingApproved,
         boolean bankVerified,boolean ledgerPosted,String realizedNetProfit) {}
     public record SavedMappingPreview(String mappingSha256,SettlementCategoryPreviewV273.Preview preview,
-        boolean mappingApproved) {}
+        String evidenceSha256,boolean mappingApproved) {}
     static final String SAVE_MAPPING_SQL="""
         INSERT INTO finance_settlement_category_mapping_v124
           (tenant_id,report_id,mapping_sha256,canonical_payload,created_by)
@@ -341,11 +341,49 @@ public class SettlementReportComparisonService {
             canonical.mappings(),false,false,false,null);
     }
 
+    // V275: bind only rules actually used by this settlement's leaves.
+    // Include rule ID/revision so normal deactivate/reactivate or edits
+    // invalidate the evidence even if the final category is unchanged.
+    static final String CATEGORY_RULE_EVIDENCE_SQL="""
+        SELECT encode(sha256(convert_to(coalesce((
+          SELECT jsonb_agg(jsonb_build_array(used.id,used.source_type,used.category,
+              used.revision,used.state) ORDER BY used.id)::text
+          FROM (
+            SELECT DISTINCT rule.id,rule.source_type,rule.category,rule.revision,rule.state
+            FROM finance_transaction_reference ref
+            JOIN finance_source_event f ON f.tenant_id=ref.tenant_id AND f.id=ref.event_id
+            JOIN finance_transaction_breakdown b ON b.tenant_id=f.tenant_id AND b.event_id=f.id
+              AND b.is_leaf AND b.currency_code=f.currency_code
+            JOIN finance_breakdown_rule rule ON rule.tenant_id=f.tenant_id
+              AND rule.seller_marketplace_id=f.seller_marketplace_id AND rule.source_type=b.source_type
+              AND rule.state='ACTIVE'
+            WHERE ref.tenant_id=r.tenant_id AND ref.reference_kind='SETTLEMENT_ID'
+              AND ref.reference_value=r.settlement_reference
+              AND f.seller_marketplace_id=r.seller_marketplace_id
+              AND f.source_family='SPAPI_FINANCES' AND f.data_origin='LIVE'
+              AND f.currency_code=r.statement_currency
+          ) used
+        ),'[]'),'UTF8')),'hex') AS fingerprint
+        FROM spapi_settlement_report r
+        WHERE r.tenant_id=? AND r.seller_marketplace_id=? AND r.id=?
+        """;
+
     @org.springframework.transaction.annotation.Transactional(readOnly=true,
         isolation=org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
     public SavedMappingPreview previewSavedCategoryMapping(UUID tenant,UUID marketplace,UUID reportId,String sha) {
         var draft=readCategoryMapping(tenant,marketplace,reportId,sha);
-        return new SavedMappingPreview(sha,previewCategories(tenant,marketplace,reportId,draft.mappings()),false);
+        var preview=previewCategories(tenant,marketplace,reportId,draft.mappings());
+        String evidence=null;
+        if("LOCAL_CATEGORY_AMOUNTS_AGREE_UNVERIFIED".equals(preview.state())) {
+            // Same RR transaction as draft, current V272 comparison and V273
+            // category preview. Not a token authorizing approval or posting.
+            String source=jdbc.queryForObject(SettlementSourceReviewService.EVIDENCE_SQL,
+                String.class,tenant,marketplace,reportId);
+            String rules=jdbc.queryForObject(CATEGORY_RULE_EVIDENCE_SQL,
+                String.class,tenant,marketplace,reportId);
+            evidence=SettlementCategoryMappingV274.evidence(tenant,marketplace,reportId,sha,source,rules);
+        }
+        return new SavedMappingPreview(sha,preview,evidence,false);
     }
 
     private static String money(BigDecimal value) {

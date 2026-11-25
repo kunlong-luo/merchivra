@@ -29,6 +29,19 @@ class SettlementCategoryMappingV274Test {
         assertThrows(IllegalArgumentException.class,()->SettlementCategoryMappingV274.canonical(List.of(
             new Mapping(A.reportType(),"UNCLASSIFIED"))));
     }
+    @Test void evidenceBindsScopeMappingSourceAndRuleRevisionDigest() {
+        var tenant=java.util.UUID.randomUUID();
+        var market=java.util.UUID.randomUUID();
+        var report=java.util.UUID.randomUUID();
+        String a="a".repeat(64),b="b".repeat(64),c="c".repeat(64),d="d".repeat(64);
+        String digest=SettlementCategoryMappingV274.evidence(tenant,market,report,a,b,c);
+        assertEquals(digest,SettlementCategoryMappingV274.evidence(tenant,market,report,a,b,c));
+        assertNotEquals(digest,SettlementCategoryMappingV274.evidence(tenant,market,report,d,b,c));
+        assertNotEquals(digest,SettlementCategoryMappingV274.evidence(tenant,market,report,a,d,c));
+        assertNotEquals(digest,SettlementCategoryMappingV274.evidence(tenant,market,report,a,b,d));
+        assertNotEquals(digest,SettlementCategoryMappingV274.evidence(tenant,market,java.util.UUID.randomUUID(),a,b,c));
+        assertThrows(IllegalArgumentException.class,()->SettlementCategoryMappingV274.evidence(tenant,market,report,a,b,null));
+    }
     @Test void persistenceQueriesKeepReportScopeAndNeverUpdate() {
         var save=SettlementReportComparisonService.SAVE_MAPPING_SQL;
         var read=SettlementReportComparisonService.READ_MAPPING_SQL;
