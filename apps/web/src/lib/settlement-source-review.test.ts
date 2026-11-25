@@ -26,6 +26,10 @@ describe('Settlement report review integrity',()=>{
    sourceState:'SETTLEMENT_REFERENCE_SHARED_REPORTS'}).evidenceCurrent).toBe(false)
   expect(()=>sourceReview.parse({...body,sourceState:'BANK_VERIFIED'})).toThrow()
  })
+ it('V272 preserves leaf and direction blockers in source review',()=>{
+  for(const sourceState of ['FINANCES_LEAF_COVERAGE_INCOMPLETE','ORDER_DIRECTION_AMOUNT_DIFFERENCE'])
+   expect(sourceReview.parse({...body,sourceState}).sourceState).toBe(sourceState)
+ })
  it('V271 preserves order-reference mismatch in source review',()=>{
   expect(sourceReview.parse({...body,sourceState:'ORDER_REFERENCE_AMOUNT_DIFFERENCE'}).sourceState)
    .toBe('ORDER_REFERENCE_AMOUNT_DIFFERENCE')

@@ -91,6 +91,19 @@ class SettlementReportComparisonServiceTest {
     }
 
     @Test
+    void netEqualityDoesNotProveGrossDirectionOrLeafCoverage() {
+        assertEquals("FINANCES_LEAF_COVERAGE_INCOMPLETE",
+            SettlementReportComparisonService.decision(amount("17.50"),amount("17.50"),
+                amount("17.50"),2,0,2,2,0,0,0,false,true,true));
+        assertEquals("ORDER_DIRECTION_AMOUNT_DIFFERENCE",
+            SettlementReportComparisonService.decision(amount("17.50"),amount("17.50"),
+                amount("17.50"),2,0,2,2,0,0,0,false,false,true));
+        assertEquals("SOURCE_AMOUNTS_AGREE_UNVERIFIED",
+            SettlementReportComparisonService.decision(amount("17.50"),amount("17.50"),
+                amount("17.50"),2,0,2,2,0,0,0,false,false,false));
+    }
+
+    @Test
     void allEvidenceCountsComeFromTenantMarketplaceBoundedScope() {
         String sql=SettlementReportComparisonService.COMPARISON_SQL;
         assertTrue(sql.contains("r.tenant_id=? AND r.seller_marketplace_id=? AND r.id=?"));

@@ -42,7 +42,7 @@ public class SettlementSourceReviewService {
     // The report SHA ties the snapshot to the immutable document bytes.
     static final String EVIDENCE_SQL="""
         SELECT encode(sha256(convert_to(
-          'V271:' || jsonb_build_array(r.document_sha256,r.settlement_reference,
+          'V272:' || jsonb_build_array(r.document_sha256,r.settlement_reference,
             r.statement_currency,r.declared_net,r.line_count)::text || ':' ||
           COALESCE((
             SELECT string_agg(jsonb_build_array(line.line_number,line.transaction_type,
@@ -55,7 +55,11 @@ public class SettlementSourceReviewService {
             SELECT string_agg(
                 jsonb_build_array(f.id,f.amount,f.currency_code,
                     extract(epoch FROM f.posted_at),f.external_order_id,
-                    f.source_type,f.category)::text,
+                    f.source_type,f.category,
+                    (SELECT jsonb_agg(jsonb_build_array(b.source_path,b.parent_path,b.source_type,
+                        b.original_amount,b.currency_code,b.is_leaf) ORDER BY b.source_path)
+                     FROM finance_transaction_breakdown b
+                     WHERE b.tenant_id=f.tenant_id AND b.event_id=f.id))::text,
                 '|' ORDER BY f.id)
             FROM finance_transaction_reference ref
             JOIN finance_source_event f ON f.tenant_id=ref.tenant_id

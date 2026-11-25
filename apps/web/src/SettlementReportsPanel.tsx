@@ -73,6 +73,8 @@ export default function SettlementReportsPanel({tenantId,marketplaceId,connected
         NO_FINANCES_SETTLEMENT_REFERENCE:'没有精确 Settlement ID 来源证据',
         SOURCE_TOTAL_DIFFERENCE:'两种来源有符号金额不一致',
         ORDER_REFERENCE_AMOUNT_DIFFERENCE:'结算总额相同，但原始订单参考分组金额或覆盖不同，需核对归属',
+        FINANCES_LEAF_COVERAGE_INCOMPLETE:'Finances 末级明细缺失、混币或未与交易金额核平',
+        ORDER_DIRECTION_AMOUNT_DIFFERENCE:'订单净额相同，但正向收入或负向扣减的金额不一致',
         SOURCE_AMOUNTS_AGREE_UNVERIFIED:'来源有符号金额一致，但仍需人工验真'
        } as Record<string,string>)[compare.data.state]??compare.data.state}</strong></p>
      <p className="setup-hint">

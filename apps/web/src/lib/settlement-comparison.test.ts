@@ -38,6 +38,10 @@ describe('V198 settlement evidence conflicts cannot pass as reconciled',()=>{
    state:'SETTLEMENT_REFERENCE_SHARED_REPORTS',
    otherReportSameSettlementCount:1}).otherReportSameSettlementCount).toBe(1)
  })
+ it('V272 blocks incomplete leaves and offsetting gross amounts',()=>{
+  for(const state of ['FINANCES_LEAF_COVERAGE_INCOMPLETE','ORDER_DIRECTION_AMOUNT_DIFFERENCE'])
+   expect(settlementComparison.parse({...sample,state}).state).toBe(state)
+ })
  it('V271 accepts order-reference mismatch even when overall totals agree',()=>{
   expect(settlementComparison.parse({...sample,state:'ORDER_REFERENCE_AMOUNT_DIFFERENCE'}).state)
    .toBe('ORDER_REFERENCE_AMOUNT_DIFFERENCE')

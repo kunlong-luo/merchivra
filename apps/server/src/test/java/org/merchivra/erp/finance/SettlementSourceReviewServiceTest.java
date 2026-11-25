@@ -41,7 +41,9 @@ class SettlementSourceReviewServiceTest {
     @Test void digestIncludesAllIndependentFinanceSourcesWithoutPiiOrTokens(){
         String sql=SettlementSourceReviewService.EVIDENCE_SQL;
         assertTrue(sql.contains("r.document_sha256"));
-        assertTrue(sql.contains("'V271:'"));
+        assertTrue(sql.contains("'V272:'"));
+        assertTrue(sql.contains("b.original_amount,b.currency_code,b.is_leaf"));
+        assertTrue(sql.contains("ORDER BY b.source_path"));
         assertTrue(sql.contains("line.external_order_id"));
         assertTrue(sql.contains("f.external_order_id"));
         assertTrue(sql.contains("ORDER BY line.line_number"));

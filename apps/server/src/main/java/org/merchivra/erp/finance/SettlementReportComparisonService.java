@@ -53,6 +53,53 @@ public class SettlementReportComparisonService {
             HAVING count(report_amount)=0 OR count(finance_amount)=0
               OR sum(report_amount) IS DISTINCT FROM sum(finance_amount)
           ) AS order_bucket_conflict,
+          -- V272: transaction totals may net several fee and income leaves.
+          -- Never compare the sign of a net transaction to report line signs.
+          EXISTS (
+            SELECT 1 FROM finance_transaction_reference ref
+            JOIN finance_source_event f ON f.tenant_id=ref.tenant_id AND f.id=ref.event_id
+            LEFT JOIN LATERAL (
+              SELECT count(*) AS leaf_count,count(b.original_amount) AS amount_count,
+                count(*) FILTER (WHERE b.currency_code=f.currency_code) AS currency_count,
+                sum(b.original_amount) AS leaf_net
+              FROM finance_transaction_breakdown b
+              WHERE b.tenant_id=f.tenant_id AND b.event_id=f.id AND b.is_leaf
+            ) leaves ON true
+            WHERE ref.tenant_id=r.tenant_id AND ref.reference_kind='SETTLEMENT_ID'
+              AND ref.reference_value=r.settlement_reference
+              AND f.seller_marketplace_id=r.seller_marketplace_id
+              AND f.source_family='SPAPI_FINANCES' AND f.data_origin='LIVE'
+              AND f.currency_code=r.statement_currency
+              AND (leaves.leaf_count NOT BETWEEN 1 AND 2000
+                OR leaves.amount_count<>leaves.leaf_count
+                OR leaves.currency_count<>leaves.leaf_count
+                OR leaves.leaf_net IS DISTINCT FROM f.amount)
+          ) AS leaf_coverage_conflict,
+          EXISTS (
+            SELECT 1 FROM (
+              SELECT line.external_order_id AS order_ref,sign(line.signed_amount) AS direction,
+                line.signed_amount AS report_amount,NULL::numeric AS finance_amount
+              FROM spapi_settlement_report_line line
+              WHERE line.tenant_id=r.tenant_id AND line.report_id=r.id
+                AND line.currency_code=r.statement_currency
+              UNION ALL
+              SELECT f.external_order_id,sign(b.original_amount),NULL::numeric,b.original_amount
+              FROM finance_transaction_reference ref
+              JOIN finance_source_event f ON f.tenant_id=ref.tenant_id AND f.id=ref.event_id
+              JOIN finance_transaction_breakdown b ON b.tenant_id=f.tenant_id AND b.event_id=f.id
+                AND b.is_leaf AND b.currency_code=f.currency_code
+              WHERE ref.tenant_id=r.tenant_id AND ref.reference_kind='SETTLEMENT_ID'
+                AND ref.reference_value=r.settlement_reference
+                AND f.seller_marketplace_id=r.seller_marketplace_id
+                AND f.source_family='SPAPI_FINANCES' AND f.data_origin='LIVE'
+                AND f.currency_code=r.statement_currency
+            ) direction_rows
+            -- Zero amounts have no direction; coverage stays subject to V271.
+            WHERE direction<>0
+            GROUP BY order_ref,direction
+            HAVING count(report_amount)=0 OR count(finance_amount)=0
+              OR sum(report_amount) IS DISTINCT FROM sum(finance_amount)
+          ) AS direction_bucket_conflict,
           (SELECT count(*) FROM spapi_settlement_report_line entry
            WHERE entry.tenant_id=r.tenant_id
              AND entry.report_id=r.id) AS actual_line_count,
@@ -133,7 +180,8 @@ public class SettlementReportComparisonService {
                 money(declared),money(line),money(finance),
                 count,other,expected,actual,foreignLines,multiRefs,sharedReports,
                 decision(declared,line,finance,count,other,expected,actual,
-                    foreignLines,multiRefs,sharedReports,rs.getBoolean("order_bucket_conflict")),false,false);
+                    foreignLines,multiRefs,sharedReports,rs.getBoolean("order_bucket_conflict"),
+                    rs.getBoolean("leaf_coverage_conflict"),rs.getBoolean("direction_bucket_conflict")),false,false);
         },tenant,marketplace,reportId);
         return result.stream().findFirst().orElseThrow(()->
             new ResponseStatusException(HttpStatus.NOT_FOUND,"Report not available"));
@@ -157,6 +205,15 @@ public class SettlementReportComparisonService {
         BigDecimal finances,long count,long otherCurrency,
         long expectedLines,long actualLines,long foreignLines,
         long multiSettlementEvents,long sharedReports,boolean orderBucketConflict) {
+        return decision(declared,detail,finances,count,otherCurrency,expectedLines,actualLines,
+            foreignLines,multiSettlementEvents,sharedReports,orderBucketConflict,false,false);
+    }
+
+    static String decision(BigDecimal declared,BigDecimal detail,
+        BigDecimal finances,long count,long otherCurrency,
+        long expectedLines,long actualLines,long foreignLines,
+        long multiSettlementEvents,long sharedReports,boolean orderBucketConflict,
+        boolean leafCoverageConflict,boolean directionBucketConflict) {
         if(expectedLines<1||actualLines!=expectedLines)
             return "REPORT_LINE_COUNT_MISMATCH";
         if(foreignLines>0)return "REPORT_LINE_CURRENCY_CONFLICT";
@@ -174,6 +231,8 @@ public class SettlementReportComparisonService {
         if(count==0 || finances==null)return "NO_FINANCES_SETTLEMENT_REFERENCE";
         if(detail.compareTo(finances)!=0)return "SOURCE_TOTAL_DIFFERENCE";
         if(orderBucketConflict)return "ORDER_REFERENCE_AMOUNT_DIFFERENCE";
+        if(leafCoverageConflict)return "FINANCES_LEAF_COVERAGE_INCOMPLETE";
+        if(directionBucketConflict)return "ORDER_DIRECTION_AMOUNT_DIFFERENCE";
         return "SOURCE_AMOUNTS_AGREE_UNVERIFIED";
     }
     private static String money(BigDecimal value) {

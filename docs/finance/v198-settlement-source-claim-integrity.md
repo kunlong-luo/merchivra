@@ -47,3 +47,10 @@ Next.js 原有结算报告工作台显示数值和中文原因；`settlement-com
 ## V271 · 订单原始参考分组守恒（待验收）
 
 V271：在 V198 同 SQL 快照比较中对当前 tenant/marketplace/report 的原币报告行及精确 settlement ID LIVE Finances 交易按原始 external_order_id 分组，NULL 单独分组、不得猜测归属。总额一致但任一分组缺一侧（含零金额）或原币净额不同，返回 ORDER_REFERENCE_AMOUNT_DIFFERENCE，旧 V56 只允许 SOURCE_AMOUNTS_AGREE_UNVERIFIED 的批准规则继续阻断；保留原状态优先级。V56 指纹升级 V271（旧审核需重审，不回填），包含报告实际明细、声明净额、Finances 原订单参考/类别/source_type/UTC epoch；状态读取 RR，未宣称全域并发或 ABA 证明。Next 原工作台及 Zod 接受新阻断状态；扩展 V198 真 PG18 TEMP/ROLLBACK 原 SQL、Java/Vitest 反例，待 A3。属于订单净额分组一致性门禁，不等同逐行匹配或证明全部费用、非订单费用、实际到账、FX/COGS/会计签署；真实 E1–E5 未完成，realizedNetProfit=null、Seller/Ads OAuth OFF、#104 NO-GO。
+
+
+V271 [代码 6a17618dfbd2](https://github.com/kunlong-luo/merchivra/commit/6a17618dfbd2156c9b0b8f36b076e9ddbe423ad9) [快 CI #45611812174 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45611812174) [完整 A3 #45611813480 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45611813480)，[只读 Pages #45611811764 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45611811764)。
+
+## V272 · 末级明细与正负方向守恒（待验收）
+
+V272：现有 V198/V271 比较单 SQL 快照对每笔精确 Settlement ID、同 tenant/marketplace/currency LIVE Finances 事件核验 1–2000 个末级明细、非 NULL 金额/原币一致、末级净额等于事件净额；父节点不计入金额。缺口 FINANCES_LEAF_COVERAGE_INCOMPLETE，覆盖后按原始订单参考（NULL 单独）+金额正负方向核对 Reports 明细与 Finances leaf 合计，差异 ORDER_DIRECTION_AMOUNT_DIFFERENCE。零额无正负方向，仍由 V271 分组覆盖约束。保留旧阻断优先级、V56 审批仅允许 SOURCE_AMOUNTS_AGREE_UNVERIFIED。V272 指纹含当前全部拆分节点的 path/parent/type/amount/currency/is_leaf，旧指纹失效，未回填；前端 Zod 和提示同步；Java/Vitest 及 V198 真 PG18 TEMP 回归待 A3。此为金额方向守恒，不把正数一律认定商品收入、负数一律认定佣金，不凭名称猜测跨来源费用分类；同方向类别抵消、逐行身份、item/SKU 归属、实际原件与会计批准仍未解决。缺历史拆分的审核会阻断，须合法重新获取完整来源。独立 Redis smoke V270 失败具体原因未核实，不改测试或宣称修复。realizedNetProfit=null、OAuth OFF、#104 NO-GO。

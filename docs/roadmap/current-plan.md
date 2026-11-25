@@ -1,6 +1,6 @@
 # Merchivra · 唯一现行 P0 执行计划
 
-**CURRENT · 2026-11-25 · V271：结算订单分组差异门禁及 E1/E4 外部原件。**
+**CURRENT · 2026-11-25 · V272：结算末级明细与正负方向守恒及 E1/E4 外部原件。**
 
 > **北极星**：对 Amazon Seller ERP 的每笔订单、退款、SKU、采购批次及每个原币费用来源建立可以由独立第三方验证的记录，覆盖全成本/真实库存 COGS，最后在经批准的 G1/DEC 会计政策下生成可审计期间净利润。不能为了显示一个数字填补 UNKNOWN 为0。项目仍为 pre-alpha、`realizedNetProfit=null`，真实 Seller/Ads OAuth OFF，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
 
@@ -26,10 +26,10 @@
 
 **评分闸门**：V231 76/100 与真实利润 10/25 仍为最新已验收基线；V232 未通过上述真实证据关卡前不发布新评分。合成 CI 通过只证明工程契约，不能代替会计签署。保持 `realizedNetProfit=null`、Seller/Ads OAuth OFF、#104 NO-GO。真实材料须由维护者在合法本地环境取得，独立财务人员签署，不由开发代理代签。
 
-### 当前执行：V271 结算订单分组差异
+### 当前执行：V272 结算末级明细与方向守恒
 
-- V258/V260/V261/V262 完整 A3 成功；V263 快 CI 成功、A3 取消；V264 快 CI 及完整 A3 成功；V265/V266/V267/V268/V269/V270 快 CI 与完整 A3 成功；V270 独立 Redis Session smoke 容器启动失败，需核实日志后修复。各 SHA、运行与历史失败见[当前事实](../current-status.md)和[退款领域证据](../finance/v212-refund-original-sale-lot-quantity-envelope.md)。
-- V270 [本地结算样本核对](../finance/manual-bank-payout-v60.md) 完整 A3 通过；V271 在既有 V198 比较加入原始订单分组覆盖及净额差异（待 A3），V56 旧指纹需重审。下一步取得真实报告、Finances 行和银行回单，按 E1–E5 检查逐行身份、费用、原币与签发、真实到账及会计口径。未经签署不确认利润，不继续堆叠内部模拟。
+- V258/V260/V261/V262 完整 A3 成功；V263 快 CI 成功、A3 取消；V264 快 CI 及完整 A3 成功；V265/V266/V267/V268/V269/V270/V271 快 CI 与完整 A3 成功；V270 独立 Redis Session smoke 容器启动失败，需核实日志后修复。各 SHA、运行与历史失败见[当前事实](../current-status.md)和[退款领域证据](../finance/v212-refund-original-sale-lot-quantity-envelope.md)。
+- V270 本地样本核对及 V271 订单净额门禁已验收；V272 在 [现有结算比较](../finance/v198-settlement-source-claim-integrity.md) 加入 Finances 完整末级拆分、订单正负金额独立比较及 V56 指纹升级，待 A3。下一步取得真实报告、Finances 行和银行回单，依据经审核的跨来源费用类型映射核对类别与 SKU，不猜测分类；按 E1–E5 验证签发、到账及会计规则。未经签署不确认利润。
 - 优先取得 E1 合法真实采购/头程费用或银行结算样本，受控本地提供原始字节、官方签发渠道或可信签章、原币金额/币种、不可变单据/行键、关联订单/批次/付款以及独立复核。外部原件及隐私不得进入公开 Git；无真实样本和 G1/DEC 签署前维持全部实际利润阻断。
 
 ## 文档清理规则

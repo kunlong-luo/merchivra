@@ -60,6 +60,10 @@ CREATE TEMP TABLE finance_source_event (
  source_family TEXT, data_origin TEXT, amount NUMERIC(20,6),
  currency_code CHAR(3), external_order_id TEXT
 ) ON COMMIT DROP;
+CREATE TEMP TABLE finance_transaction_breakdown (
+ tenant_id UUID, event_id UUID, source_path TEXT, original_amount NUMERIC(20,6),
+ currency_code CHAR(3), is_leaf BOOLEAN
+) ON COMMIT DROP;
 CREATE TEMP TABLE finance_transaction_reference (
  tenant_id UUID, event_id UUID, reference_kind TEXT,
  reference_value TEXT
@@ -200,6 +204,39 @@ UPDATE spapi_settlement_report_line SET signed_amount=17.50
  WHERE report_id='{report}' AND line_number=2;
 """)
 check("V271 missing zero bucket not silently ignored", "finance_net=17.50 AND line_net=17.50 AND order_bucket_conflict")
+commands.append(f"""
+-- Same order net 17.50; positive 20 and negative -2.50 are the real detail.
+UPDATE spapi_settlement_report_line SET external_order_id='ORDER-B',signed_amount=20
+ WHERE report_id='{report}' AND line_number=1;
+UPDATE spapi_settlement_report_line SET signed_amount=-2.50 WHERE report_id='{report}' AND line_number=2;
+UPDATE finance_source_event SET external_order_id='ORDER-B',amount=17.50 WHERE id='{first}';
+DELETE FROM finance_transaction_reference WHERE event_id='{second}';
+INSERT INTO finance_transaction_breakdown VALUES
+ ('{tenant}','{first}','0',17.50,'USD',false),
+ ('{tenant}','{first}','0.0',20,'USD',true),
+ ('{tenant}','{first}','0.1',-2.50,'USD',true);
+""")
+check("V272 valid gross leaf direction ignores parent", "NOT order_bucket_conflict AND NOT leaf_coverage_conflict AND NOT direction_bucket_conflict")
+commands.append(f"""
+UPDATE finance_transaction_breakdown SET original_amount=19
+ WHERE event_id='{first}' AND source_path='0.0';
+UPDATE finance_transaction_breakdown SET original_amount=-1.50
+ WHERE event_id='{first}' AND source_path='0.1';
+""")
+check("V272 equal net hides gross differences", "NOT order_bucket_conflict AND NOT leaf_coverage_conflict AND direction_bucket_conflict")
+commands.append(f"""
+UPDATE finance_transaction_breakdown SET original_amount=NULL WHERE event_id='{first}' AND source_path='0.1';
+""")
+check("V272 missing leaf amount", "leaf_coverage_conflict")
+commands.append(f"""
+UPDATE finance_transaction_breakdown SET original_amount=-1.50,currency_code='EUR'
+ WHERE event_id='{first}' AND source_path='0.1';
+""")
+check("V272 mixed leaf currency", "leaf_coverage_conflict")
+commands.append(f"""
+DELETE FROM finance_transaction_breakdown WHERE event_id='{first}' AND is_leaf;
+""")
+check("V272 parent alone does not prove coverage", "leaf_coverage_conflict")
 commands.append("ROLLBACK;\n")
 result = subprocess.run(
     ["psql", "-X", "-h", "127.0.0.1", "-U", "merchivra", "-d", "merchivra",
@@ -213,3 +250,5 @@ print("PASS V198 real PG18 exact Java SQL: unique source claim, report identity,
       "line completeness, currency and tenant/Marketplace scope")
 
 print("PASS V271 real PG18 exact Java SQL: order buckets, offsetting errors, NULL and absent zero bucket")
+
+print("PASS V272 real PG18 exact Java SQL: gross direction and leaf coverage")
