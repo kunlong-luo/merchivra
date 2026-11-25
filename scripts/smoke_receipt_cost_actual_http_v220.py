@@ -223,7 +223,8 @@ BEGIN
      WHERE tenant_id=a AND id=src;
    INSERT INTO finance_cost_source_audit_v91
      (id,tenant_id,source_id,action,actor_id)
-   VALUES(gen_random_uuid(),a,src,'REVIEWED_UNVERIFIED',owner);
+   VALUES(gen_random_uuid(),a,src,'STAGED','{staff_id}'),
+         (gen_random_uuid(),a,src,'REVIEWED_UNVERIFIED',owner);
    INSERT INTO finance_receipt_cost_plan_v112
      (id,tenant_id,source_id,proposed_by)
    VALUES(pl,a,src,'{staff_id}');

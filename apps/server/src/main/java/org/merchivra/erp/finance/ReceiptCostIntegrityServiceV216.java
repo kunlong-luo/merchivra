@@ -29,17 +29,17 @@ public class ReceiptCostIntegrityServiceV216 {
           (SELECT count(*) FROM finance_cost_allocation_batch_v92 v92
            WHERE v92.tenant_id=p.tenant_id AND v92.source_id=p.source_id
              AND v92.state IN ('PENDING_REVIEW','APPROVED_UNVERIFIED')) AS v92_count,
-          EXISTS(SELECT 1 FROM finance_receipt_cost_audit_v112 a
-            WHERE a.tenant_id=p.tenant_id AND a.plan_id=p.id
-              AND a.action='PENDING_REVIEW' AND a.actor_id=p.proposed_by)
+          (plan_audit.total_count=CASE WHEN p.state='PENDING_REVIEW' THEN 1 ELSE 2 END
+            AND plan_audit.initial_count=1
+            AND (p.state<>'PENDING_REVIEW' OR plan_audit.decision_count=0))
             AS initial_audit,
-          EXISTS(SELECT 1 FROM finance_receipt_cost_audit_v112 a
-            WHERE a.tenant_id=p.tenant_id AND a.plan_id=p.id
-              AND a.action=p.state AND a.actor_id=p.reviewed_by)
+          (p.state<>'PENDING_REVIEW' AND p.reviewed_by IS NOT NULL
+            AND p.reviewed_by<>p.proposed_by AND p.reviewed_by<>s.created_by
+            AND plan_audit.total_count=2 AND plan_audit.decision_count=1)
             AS decision_audit,
-          EXISTS(SELECT 1 FROM finance_cost_source_audit_v91 a
-            WHERE a.tenant_id=s.tenant_id AND a.source_id=s.id
-              AND a.action='REVIEWED_UNVERIFIED' AND a.actor_id=s.reviewed_by)
+          (s.review_state='REVIEWED_UNVERIFIED' AND s.reviewed_by IS NOT NULL
+            AND s.reviewed_by<>s.created_by AND source_audit.total_count=2
+            AND source_audit.stage_count=1 AND source_audit.review_count=1)
             AS review_audit
         FROM finance_receipt_cost_line_v112 l
         JOIN finance_receipt_cost_plan_v112 p
@@ -59,6 +59,25 @@ public class ReceiptCostIntegrityServiceV216 {
             ON po.tenant_id=pr.tenant_id AND po.id=pr.purchase_order_id
           WHERE all_lines.tenant_id=p.tenant_id AND all_lines.plan_id=p.id
         ) totals ON true
+        JOIN LATERAL (
+          SELECT count(*) AS total_count,
+            count(*) FILTER (WHERE a.action='PENDING_REVIEW'
+              AND a.actor_id=p.proposed_by) AS initial_count,
+            count(*) FILTER (WHERE a.action=p.state
+              AND a.action IN ('APPROVED_UNVERIFIED','REJECTED')
+              AND a.actor_id=p.reviewed_by) AS decision_count
+          FROM finance_receipt_cost_audit_v112 a
+          WHERE a.tenant_id=p.tenant_id AND a.plan_id=p.id
+        ) plan_audit ON true
+        JOIN LATERAL (
+          SELECT count(*) AS total_count,
+            count(*) FILTER (WHERE a.action='STAGED'
+              AND a.actor_id=s.created_by) AS stage_count,
+            count(*) FILTER (WHERE a.action='REVIEWED_UNVERIFIED'
+              AND a.actor_id=s.reviewed_by) AS review_count
+          FROM finance_cost_source_audit_v91 a
+          WHERE a.tenant_id=s.tenant_id AND a.source_id=s.id
+        ) source_audit ON true
         WHERE l.tenant_id=? AND l.receipt_id=?
           AND s.seller_marketplace_id=?
         ORDER BY p.id LIMIT 51

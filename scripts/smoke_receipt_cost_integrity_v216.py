@@ -62,7 +62,7 @@ CREATE TEMP TABLE finance_receipt_cost_line_v112 (
 CREATE TEMP TABLE finance_cost_source_v91 (
  id uuid,tenant_id uuid,seller_marketplace_id uuid,
  review_state text,currency_code char(3),category text,
- amount numeric(20,6),reviewed_by uuid
+ amount numeric(20,6),created_by uuid,reviewed_by uuid
 ) ON COMMIT DROP;
 CREATE TEMP TABLE finance_cost_allocation_batch_v92 (
  id uuid,tenant_id uuid,source_id uuid,state text
@@ -84,13 +84,13 @@ INSERT INTO erp_purchase_receipt VALUES
  ('{receipt}','{tenant}','{po}'),('{receipt2}','{tenant}','{po}');
 INSERT INTO finance_cost_source_v91 VALUES
  ('{source1}','{tenant}','{mp}','REVIEWED_UNVERIFIED','USD',
-  'INBOUND_FREIGHT',100,'{reviewer}'),
+  'INBOUND_FREIGHT',100,'{maker}','{reviewer}'),
  ('{source2}','{tenant}','{mp}','REVIEWED_UNVERIFIED','EUR',
-  'IMPORT_DUTY',80,'{reviewer}'),
+  'IMPORT_DUTY',80,'{maker}','{reviewer}'),
  ('{source3}','{tenant}','{other_mp}','REVIEWED_UNVERIFIED','USD',
-  'INBOUND_FREIGHT',30,'{reviewer}'),
+  'INBOUND_FREIGHT',30,'{maker}','{reviewer}'),
  ('{source1}','{foreign}','{mp}','STAGED','USD',
-  'INBOUND_FREIGHT',999,'{reviewer}');
+  'INBOUND_FREIGHT',999,'{maker}','{reviewer}');
 INSERT INTO finance_receipt_cost_plan_v112 VALUES
  ('{plan1}','{tenant}','{source1}','APPROVED_UNVERIFIED','USD',100,
   '{maker}','{reviewer}'),
@@ -107,6 +107,7 @@ INSERT INTO finance_receipt_cost_audit_v112 VALUES
  ('{tenant}','{plan1}','APPROVED_UNVERIFIED','{reviewer}'),
  ('{tenant}','{plan2}','PENDING_REVIEW','{maker}');
 INSERT INTO finance_cost_source_audit_v91 VALUES
+ ('{tenant}','{source1}','STAGED','{maker}'),
  ('{tenant}','{source1}','REVIEWED_UNVERIFIED','{reviewer}');
 CREATE TEMP TABLE v216_initial AS
 {select()};
@@ -124,11 +125,48 @@ DO $$ BEGIN
  IF NOT EXISTS (SELECT 1 FROM v216_initial
    WHERE plan_id='{plan2}' AND receipt_amount=25
      AND allocated=25 AND line_count=1 AND currency_count=0
-     AND v92_count=1 AND initial_audit
+     AND v92_count=1 AND NOT initial_audit
      AND NOT decision_audit AND NOT review_audit) THEN
    RAISE EXCEPTION 'V216 conflicting V92/currency/decision not exposed';
  END IF;
 END $$;
+-- V243: unexpected duplicate/missing events must not satisfy a mere EXISTS.
+SAVEPOINT v243_duplicate;
+INSERT INTO finance_receipt_cost_audit_v112 VALUES
+ ('{tenant}','{plan1}','APPROVED_UNVERIFIED','{reviewer}');
+INSERT INTO finance_cost_source_audit_v91 VALUES
+ ('{tenant}','{source1}','STAGED','{maker}');
+CREATE TEMP TABLE v243_duplicate_audit AS {select()};
+DO $ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM v243_duplicate_audit WHERE plan_id='{plan1}'
+    AND NOT initial_audit AND NOT decision_audit AND NOT review_audit) THEN
+   RAISE EXCEPTION 'V243 duplicate V112/V91 audit was accepted';
+ END IF;
+END $;
+ROLLBACK TO SAVEPOINT v243_duplicate;
+SAVEPOINT v243_missing;
+DELETE FROM finance_cost_source_audit_v91
+ WHERE tenant_id='{tenant}' AND source_id='{source1}' AND action='STAGED';
+CREATE TEMP TABLE v243_missing_stage AS {select()};
+DO $ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM v243_missing_stage WHERE plan_id='{plan1}'
+    AND initial_audit AND decision_audit AND NOT review_audit) THEN
+   RAISE EXCEPTION 'V243 missing source stage audit was accepted';
+ END IF;
+END $;
+ROLLBACK TO SAVEPOINT v243_missing;
+SAVEPOINT v243_wrong_actor;
+UPDATE finance_receipt_cost_plan_v112 SET reviewed_by='{maker}' WHERE id='{plan1}';
+UPDATE finance_receipt_cost_audit_v112 SET actor_id='{maker}'
+ WHERE plan_id='{plan1}' AND action='APPROVED_UNVERIFIED';
+CREATE TEMP TABLE v243_wrong_reviewer AS {select()};
+DO $ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM v243_wrong_reviewer WHERE plan_id='{plan1}'
+    AND NOT decision_audit) THEN
+   RAISE EXCEPTION 'V243 self-reviewed receipt plan was accepted';
+ END IF;
+END $;
+ROLLBACK TO SAVEPOINT v243_wrong_actor;
 -- Changing current PO currency must invalidate *whole plan* read-time.
 UPDATE erp_purchase_order SET currency_code='EUR' WHERE id='{po}';
 CREATE TEMP TABLE v216_changed AS
@@ -171,3 +209,5 @@ print("PASS V216 anonymous Owner GET 401")
 print("PASS V216 PG18 exact receipt/V91/V92 evidence SQL: source-wide "
       "original currency, independent audit, V92 conflict, "
       "PO drift, tenant/Marketplace isolation, synthetic TEMP ROLLBACK")
+
+print('PASS V243 PG18 exact receipt audit cardinality, missing stage and self-review')

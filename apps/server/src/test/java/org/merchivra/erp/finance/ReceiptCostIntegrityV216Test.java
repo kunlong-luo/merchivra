@@ -127,6 +127,11 @@ class ReceiptCostIntegrityV216Test {
         assertTrue(sql.contains("finance_cost_source_audit_v91 a"));
         assertTrue(sql.contains("finance_receipt_cost_audit_v112 a"));
         assertTrue(sql.contains("finance_cost_allocation_batch_v92 v92"));
+        assertTrue(sql.contains("plan_audit.initial_count=1"));
+        assertTrue(sql.contains("plan_audit.total_count=2 AND plan_audit.decision_count=1"));
+        assertTrue(sql.contains("source_audit.total_count=2"));
+        assertTrue(sql.contains("source_audit.stage_count=1 AND source_audit.review_count=1"));
+        assertTrue(sql.contains("p.reviewed_by<>s.created_by"));
         assertTrue(sql.contains("ORDER BY p.id LIMIT 51"));
         assertFalse(sql.contains("OFFSET"));
     }
