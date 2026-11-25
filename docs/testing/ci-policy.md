@@ -62,4 +62,4 @@ python3 scripts/check_next_runtime_v122.py
 - [V239 CI 策略完整历史快照](https://github.com/kunlong-luo/merchivra/blob/2c2265036df33f0afc7269ff392eea8a5a5059e4/docs/testing/ci-policy.md)
 - [TEST-001 原文](https://github.com/kunlong-luo/merchivra/blob/2c2265036df33f0afc7269ff392eea8a5a5059e4/docs/testing/test-plan.md)
 
-原版本的验收链接与源日志仍可逐项追溯。V241 最新确认完整 A3 以及 V238–V242 快 CI 结果见当前事实；新提交必须独立验收，不继承旧 SHA。
+原版本的验收链接与源日志仍可逐项追溯。V242 最新确认完整 A3 以及 V238–V243 快 CI 结果见当前事实；新提交必须独立验收，不继承旧 SHA。

@@ -11,7 +11,7 @@
 
 ## 当前工程状态
 
-V237 完整隔离 A3 7/7 通过，实际 PostgreSQL18 Java Reports 服务回归未跳过，远程 Worker 为合成模拟；V238–V240 快速 CI 通过；V241 完整 A3 7/7 已通过；V242 快 CI 通过，完整 A3 核查时 IN_PROGRESS（6/7，PG18 未完成）；V243 收货费用审计数量与独立性门禁待验收。见[当前事实](docs/current-status.md)。
+V237 完整隔离 A3 7/7 通过，实际 PostgreSQL18 Java Reports 服务回归未跳过，远程 Worker 为合成模拟；V238–V240 快速 CI 通过；V241 完整 A3 7/7 已通过；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 修复 SQL 负例并增加真实 Owner HTTP 审计阻断，待完整 A3。见[当前事实](docs/current-status.md)。
 
 ## 一、仓库根目录：保留哪些，分别有什么用？
 

@@ -350,6 +350,22 @@ assert_local(restored, h, 2)
 assert plan(1, restored)["integrityState"] == (
     "LOCAL_RECEIPT_ALLOCATION_INTACT_UNVERIFIED")
 
+# V244: insert an extra audit event on a disposable source with the real
+# schema and a real logged-in Owner. Keep the anomaly append-only, rather
+# than deleting it to make subsequent tests pass.
+sql_run(f"""
+INSERT INTO finance_cost_source_audit_v91
+ (id,tenant_id,source_id,action,actor_id)
+VALUES (gen_random_uuid(),'{tenant_a}','{uid(220101)}','STAGED','{staff_id}');
+""")
+extra, h, _ = owner.call(path(mp_a))
+assert_local(extra, h, 2)
+assert plan(1, extra)["integrityState"] == "LOCAL_RECEIPT_EVIDENCE_STALE_OR_UNAUDITED"
+assert "SOURCE_OR_INDEPENDENT_DECISION_AUDIT_MISSING" in plan(1, extra)["blockerCodes"]
+assert plan(1, extra)["localAllReceiptsCandidateAmount"] == "90.000000"
+assert plan(2, extra)["integrityState"] == "POTENTIAL_EXTERNAL_CHARGE_IDENTITY_COLLISION_HOLD"
+print("PASS V244 real Owner HTTP duplicate source audit holds original receipt cost")
+
 # Real global cap: exactly 50 must be complete/200, 51 must be 409.
 # A 409 may NEVER be a partial 50-item "successful" receipt snapshot.
 sql_run(make_plans(3, 50))

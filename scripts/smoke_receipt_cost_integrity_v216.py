@@ -137,35 +137,35 @@ INSERT INTO finance_receipt_cost_audit_v112 VALUES
 INSERT INTO finance_cost_source_audit_v91 VALUES
  ('{tenant}','{source1}','STAGED','{maker}');
 CREATE TEMP TABLE v243_duplicate_audit AS {select()};
-DO $ BEGIN
+DO $$ BEGIN
  IF NOT EXISTS(SELECT 1 FROM v243_duplicate_audit WHERE plan_id='{plan1}'
     AND NOT initial_audit AND NOT decision_audit AND NOT review_audit) THEN
    RAISE EXCEPTION 'V243 duplicate V112/V91 audit was accepted';
  END IF;
-END $;
+END $$;
 ROLLBACK TO SAVEPOINT v243_duplicate;
 SAVEPOINT v243_missing;
 DELETE FROM finance_cost_source_audit_v91
  WHERE tenant_id='{tenant}' AND source_id='{source1}' AND action='STAGED';
 CREATE TEMP TABLE v243_missing_stage AS {select()};
-DO $ BEGIN
+DO $$ BEGIN
  IF NOT EXISTS(SELECT 1 FROM v243_missing_stage WHERE plan_id='{plan1}'
     AND initial_audit AND decision_audit AND NOT review_audit) THEN
    RAISE EXCEPTION 'V243 missing source stage audit was accepted';
  END IF;
-END $;
+END $$;
 ROLLBACK TO SAVEPOINT v243_missing;
 SAVEPOINT v243_wrong_actor;
 UPDATE finance_receipt_cost_plan_v112 SET reviewed_by='{maker}' WHERE id='{plan1}';
 UPDATE finance_receipt_cost_audit_v112 SET actor_id='{maker}'
  WHERE plan_id='{plan1}' AND action='APPROVED_UNVERIFIED';
 CREATE TEMP TABLE v243_wrong_reviewer AS {select()};
-DO $ BEGIN
+DO $$ BEGIN
  IF NOT EXISTS(SELECT 1 FROM v243_wrong_reviewer WHERE plan_id='{plan1}'
     AND NOT decision_audit) THEN
    RAISE EXCEPTION 'V243 self-reviewed receipt plan was accepted';
  END IF;
-END $;
+END $$;
 ROLLBACK TO SAVEPOINT v243_wrong_actor;
 -- Changing current PO currency must invalidate *whole plan* read-time.
 UPDATE erp_purchase_order SET currency_code='EUR' WHERE id='{po}';

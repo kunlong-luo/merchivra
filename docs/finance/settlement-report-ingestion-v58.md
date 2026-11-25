@@ -52,6 +52,8 @@
 - 关键验证：Java25 Gradle、PG18 Flyway V55、React19 Vitest，租户隔离、重试筛选、来源金额状态；浏览器不接触敏感 Token/URL。仅在核心功能完善后由 Owner 本地实测 Amazon。
 - 尚缺：真实 Amazon Report 文件变体/超大文件方案、分页 token 可靠性和完整压力测试、可信银行入账来源、人工正式确认/审计对账状态与运营级通知。不可宣称真实结算闭环已通过。
 
-## V242 · 原始明细币种与摘要一致性（待验收）
+## V242 · 原始明细币种与摘要一致性（完整合成 A3 已通过）
 
 没有显式摘要币种时，每条交易行必须有自己的合法原币；相邻交易不能证明缺失行币种。摘要明确声明币种时，明细空币种才允许继承，显式不一致仍拒绝。缺失、混币、非法值在解析时失败，不创建报告或行；解析与 SHA-256 使用同一份私有原始字节副本（GZIP 以收到的压缩字节为准）。旧报告不自动改写，不将该解析约束当作外部身份认证。真实平台文件变体仍需合法本地样本验证。精确验收见 [当前事实](../current-status.md)。
+
+精确 V242 SHA [42c9112c53e8](https://github.com/kunlong-luo/merchivra/commit/42c9112c53e8b650e82b8c78dcb2da08531e1957) 的 [A3 #45557051970](https://github.com/kunlong-luo/merchivra/actions/runs/45557051970) 7/7 SUCCESS，PG18 job #139011547816 日志明确输出 `PASS V241/V242 actual PG18 eligibility and currency regression markers verified`。仅合成技术验收。
