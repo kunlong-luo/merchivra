@@ -67,3 +67,5 @@ python3 scripts/check_next_runtime_v122.py
 ### V251 · 完整 PG18 脚本维护
 
 `.github/workflows/ci.yml` 完整 PG18 job 调用 [scripts/run_pg18_full_ci.sh](../../scripts/run_pg18_full_ci.sh)。长 YAML `run` 标量原命令及顺序保留，增加精确一次性 CI 数据库/主分支/授权 OFF 环境检查、退出清理、快 CI 的 `bash -n` 与关键调用守卫。V250 两个工作流失败且无 job，未获得拒绝注释，不能确定根因；外置是预防性修复。原 V236/V250 JUnit XML 的成功和不跳过条件仍强制。新验收必须核对精确 SHA 和实际日志。
+
+V252：GitHub 表达式必须留在 YAML（`PG18_SERVICE_CONTAINER_ID` env），Bash 静态禁止 `${{`，保留原验收命令。V219 真实 Session HTTP 增成本候选 GET 空状态、401/403/404；V250 非空 PG18 Java 回归仍必须实际执行。

@@ -43,6 +43,9 @@ assert "pg18-migrations:" in ci
 # Keep the long PG18 suite out of YAML run scalars; prevent accidental omission.
 assert "run: bash scripts/run_pg18_full_ci.sh" in ci
 pg18 = load("scripts/run_pg18_full_ci.sh")
+assert "${{" not in pg18, "GitHub expressions must be resolved in workflow env, not Bash"
+assert "PG18_SERVICE_CONTAINER_ID: ${{ job.services.postgres.id }}" in ci
+assert 'docker exec -i "$PG18_SERVICE_CONTAINER_ID"' in pg18
 for required in (
     "MERCHIVRA_V203_DISPOSABLE_ONLY=true python3 scripts/smoke_sale_lot_assignment_v203.py",
     "MERCHIVRA_V248_DISPOSABLE_ONLY=true python3 scripts/smoke_sale_lot_range_race_v248.py",

@@ -293,3 +293,45 @@ print("PASS V219 real Spring/PG18 HTTP: separate JSESSIONID login, "
       "authenticated scoped OPERATOR_READ A 403 even with OWNER B, "
       "active-tenant switch 403/200, session logout 401 and no cross-user "
       "session leakage (synthetic disposable only; no external COGS)")
+
+
+# V252: use the same actual principal/tenant fixture, not a second login stack.
+# At V219 there are no sale-range claims, so the only valid result is HOLD.
+def composition_route(mp, receipt):
+    return route(mp, receipt).replace("/manual-cost-integrity", "/cost-composition-candidate")
+
+
+def composition_unknown(payload, headers, mp, receipt):
+    assert payload["marketplaceId"] == mp
+    assert payload["purchaseReceiptId"] == receipt
+    assert payload["state"] == "LOCAL_COST_COMPOSITION_HOLD"
+    assert "RECEIPT_CLAIM_POPULATION_MISSING_OR_UNBOUNDED" in payload["blockerCodes"]
+    for key in ("originalCurrency", "receiptCandidateCost", "allocatedCandidateCost",
+                "unallocatedCandidateCost", "actualBatchCogs", "realizedNetProfit"):
+        assert key in payload and payload[key] is None
+    assert payload["components"] == [] and payload["saleShares"] == []
+    for key in ("completeExternalCostCoverage", "actualBatchCogsVerified", "postingAllowed"):
+        assert payload[key] is False
+    assert "no-store" in headers.get("Cache-Control", "").lower()
+
+
+anon.call(composition_route(mp_a, receipt_a), 401)
+owner.login("v65-ci-owner")
+p, h = owner.call(composition_route(mp_a, receipt_a), 200)
+composition_unknown(p, h, mp_a, receipt_a)
+p, h = owner.call(composition_route(mp_a, receipt_a) + "?tenantId=" + tenant_b, 200)
+composition_unknown(p, h, mp_a, receipt_a)
+owner.call(composition_route(mp_b, receipt_b), 404)
+owner.call(composition_route(mp_a, receipt_b), 404)
+owner.call(composition_route(mp_a, ident(21999)), 404)
+scoped.login(staff_login)
+scoped.switch(tenant_a, 200)
+scoped.call(composition_route(mp_a, receipt_a), 403)
+scoped.switch(tenant_b, 200)
+p, h = scoped.call(composition_route(mp_b, receipt_b), 200)
+composition_unknown(p, h, mp_b, receipt_b)
+scoped.call(composition_route(mp_a, receipt_a), 404)
+owner.logout()
+owner.call(composition_route(mp_a, receipt_a), 401)
+scoped.logout()
+print("PASS V252 actual Owner HTTP candidate HOLD/no-store/null amounts, anonymous/staff/foreign tenant denied")

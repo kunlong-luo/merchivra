@@ -166,6 +166,8 @@ jobs:
           install: false
       - name: Start actual Spring Boot against isolated PostgreSQL 18
         shell: bash
+        env:
+          PG18_SERVICE_CONTAINER_ID: ${{ job.services.postgres.id }}
         run: bash scripts/run_pg18_full_ci.sh
       - name: Preserve V141 disposable disk/WAL/PITR-not-ready metrics (no credentials)
         if: always()

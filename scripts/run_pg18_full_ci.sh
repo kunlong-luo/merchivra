@@ -21,6 +21,7 @@ for key in GITHUB_ACTIONS GITHUB_REPOSITORY GITHUB_REF DB_HOST DB_PORT DB_NAME D
   fi
 done
 [[ "${GITHUB_RUN_ID:-}" =~ ^[0-9]+$ ]] || exit 1
+[[ "${PG18_SERVICE_CONTAINER_ID:-}" =~ ^[0-9a-f]{64}$ ]] || { echo "Missing disposable PG18 service container ID" >&2; exit 1; }
 # Resolve repository root, independent of the caller's working directory.
 cd "$(dirname "$0")/.."
 
@@ -288,7 +289,7 @@ v141_attest="$(mktemp /tmp/merchivra-v141-attest-XXXXXX.json)"
 v141_disk="$(mktemp /tmp/merchivra-v141-disk-XXXXXX.json)"
 MERCHIVRA_V141_ATTESTATION_FILE="$v141_attest" \
   MERCHIVRA_V68_DISPOSABLE_ONLY=true bash scripts/smoke_pg_restore_v68.sh
-docker exec -i "${{ job.services.postgres.id }}" sh -s \
+docker exec -i "$PG18_SERVICE_CONTAINER_ID" sh -s \
   < scripts/collect_pg18_disk_v141.sh > "$v141_disk"
 python3 scripts/pg18_ops_probe_v141.py --mode disposable \
   --disk-json "$v141_disk" --backup-json "$v141_attest" \
