@@ -72,3 +72,7 @@ PG18 作业原始日志记录 `PASS V212 PG18 exact V34/V106/V96/V97 source SELE
 ## V255 · 原认领成本候选版本与退款子区间（内部观察，待验收）
 
 `ReceiptCostCompositionServiceV249.prepareRefundBasis` 在同一独立只读 RR 中重算 V249、读取 V106 租户/Marketplace/receipt/claim/order/item 作用域，提取 V117 原销售区间、原币、数量分母、PO/头程/关税各 receipt 原金额与 claim 分摊；缺失/失效/撤销/费用 hold 拒绝，不另查当前 SKU 均价。`RefundOriginalCostSliceEngineV255` 对固定版本和上述字段做规范 SHA-256，逐来源独立复算原认领金额；退款重放必须显式提供期望作用域、原指纹和同一认领下全部拟议退款子区间。原 receipt 前缀差分复用 V246，禁止重复 event、重叠/越界、错误 item、数量不符、NOT_RESTOCKED 或空集合；同一 event 在同一 claim 仅允许一个连续区间。逐事件及剩余金额守恒，仍只返回未核证候选，实际回转与利润 null。V255 没有持久化快照、完整退款人口/事件存在性或跨调用全局唯一归属证明；RESTOCKED_CLAIMED 仍只是人工声称，SHA 不是签名或销售发生时会计事实。不得依据事后 capture 伪造历史成本。后续需不可变版本保存、V34/V210/V212/V213 原事件/返仓证据和数据库级退款区间守卫；E1/E3/E5 未通过前不可记账。单元回归和 V250 实际 PG18 scope/capture/价格漂移及 replay marker 待新 A3。
+
+## V256 · Flyway V119 不可变本地成本观察与退款区间预留（待验收）
+
+新增 `finance_original_cost_basis_v119`，每租户/原 V117 claim 一次性保存 V255 规范 payload 与 SHA-256、记录者/数据库时间。V249 包内 persistRefundBasis 使用独立可写 RR 同快照生成并插入；无 HTTP 入口、无回填。数据库独立核验摘要、原 scope、数量区间、PO 参考额、V112 费用行/原币/状态、来源唯一/数量与精确微单位金额；不能代替 V216 全审计或外部签证。`finance_refund_cost_slice_v119` 绑定快照摘要、实际本地 V34 RESTOCKED_CLAIMED review、V21 匹配 LIVE PRODUCT_REFUND（测试 LIVE 仅合成标签），数据库覆盖 review revision/quantity/time、item 和 recorded_at。READ COMMITTED + 原 item 行锁跨原认领串行，拒绝重叠/重复 event-claim、超原销售区间、同 event/item 超已审核数量；更新/删除拒绝，历史不释放。V250 实际 PG18 扩展持久化、重复、重叠、越界、删除回归，JUnit marker 强制；尚无双连接 V119 竞争、跨 claim 数量负例、读时失效检查、真实返仓证据、退款事件完整性或实际过账。原观察不是销售时历史 COGS；未来 V34 revision/撤销/关联变化必须读时 hold；不得把预约金额放进利润。

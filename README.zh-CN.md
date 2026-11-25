@@ -11,7 +11,7 @@
 
 ## 当前工程状态
 
-V237 完整隔离 A3 7/7 通过，实际 PostgreSQL18 Java Reports 服务回归未跳过，远程 Worker 为合成模拟；V238–V240 快速 CI 通过；V241 完整 A3 7/7 已通过；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7 已通过；V245 快 CI 通过；V246 快 CI 通过；V247 快 CI 通过、A3 6/7（PG18 别名冲突）；V248 完整 A3 7/7；V249 快 CI 通过；V250 快 CI/A3 均未启动 job；V251 快 CI 成功、A3 shell 变量失败；V252 完整 A3 7/7（实际 PG18 组合及 Owner HTTP 空状态）；V253 完整 A3 7/7；V254 快 CI 与 Chromium 专属通过，非空 HTTP 待核；V255 原认领成本候选版本与退款子区间重放，未持久化历史成本或正式回转。见[当前事实](docs/current-status.md)。
+V237 完整隔离 A3 7/7 通过，实际 PostgreSQL18 Java Reports 服务回归未跳过，远程 Worker 为合成模拟；V238–V240 快速 CI 通过；V241 完整 A3 7/7 已通过；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7 已通过；V245 快 CI 通过；V246 快 CI 通过；V247 快 CI 通过、A3 6/7（PG18 别名冲突）；V248 完整 A3 7/7；V249 快 CI 通过；V250 快 CI/A3 均未启动 job；V251 快 CI 成功、A3 shell 变量失败；V252 完整 A3 7/7（实际 PG18 组合及 Owner HTTP 空状态）；V253 完整 A3 7/7；V254 完整 A3 7/7；V255 Java 快任务通过，A3 待核；V256 Flyway V119 不可变本地成本观察与退款区间预留，待新 A3，非历史会计成本或正式回转。见[当前事实](docs/current-status.md)。
 
 ## 一、仓库根目录：保留哪些，分别有什么用？
 

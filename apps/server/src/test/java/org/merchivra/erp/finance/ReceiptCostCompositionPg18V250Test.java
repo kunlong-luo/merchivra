@@ -107,6 +107,30 @@ class ReceiptCostCompositionPg18V250Test {
         var replay=RefundOriginalCostSliceEngineV255.replay(basis.identity(),basis.sha256(),basis,proposed);
         assertEquals("14.999999",replay.refundCandidateAmount());
         assertNull(replay.actualRefundCogsReversal());
+        assertEquals(1,db.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE version='119' AND success",Integer.class));
+        var stored=service.persistRefundBasis(tenant,market,receipt,claimA,maker);
+        assertEquals(basis,stored);
+        assertEquals(basis.sha256(),db.queryForObject("""
+            SELECT btrim(basis_sha256) FROM finance_original_cost_basis_v119 WHERE tenant_id=? AND claim_id=?
+            """,String.class,tenant,claimA));
+        assertThrows(org.springframework.dao.DataAccessException.class,
+            ()->service.persistRefundBasis(tenant,market,receipt,claimA,maker));
+        assertThrows(org.springframework.dao.DataAccessException.class,
+            ()->db.update("DELETE FROM finance_original_cost_basis_v119 WHERE tenant_id=? AND claim_id=?",tenant,claimA));
+        UUID event=seedRefund(itemA),rival=seedRefund(itemA);
+        reserveRefund(claimA,stored.sha256(),event,0,1);
+        assertThrows(org.springframework.dao.DataAccessException.class,
+            ()->reserveRefund(claimA,stored.sha256(),rival,0,1));
+        assertThrows(org.springframework.dao.DataAccessException.class,
+            ()->reserveRefund(claimA,stored.sha256(),event,0,1));
+        assertThrows(org.springframework.dao.DataAccessException.class,
+            ()->reserveRefund(claimA,stored.sha256(),rival,1,2));
+        assertThrows(org.springframework.dao.DataAccessException.class,
+            ()->db.update("DELETE FROM finance_refund_cost_slice_v119 WHERE tenant_id=? AND claim_id=?",tenant,claimA));
+        assertEquals(1,db.queryForObject("""
+            SELECT count(*) FROM finance_refund_cost_slice_v119
+            WHERE tenant_id=? AND claim_id=? AND order_item_id=? AND review_revision=1 AND review_quantity=1
+            """,Integer.class,tenant,claimA,itemA));
         assertEquals(404,assertThrows(ResponseStatusException.class,
             ()->service.prepareRefundBasis(tenant,market,receipt,UUID.randomUUID())).getStatusCode().value());
         assertEquals(401,http(HttpClient.newHttpClient(),candidatePath(),null,null).statusCode());
@@ -142,6 +166,7 @@ class ReceiptCostCompositionPg18V250Test {
         var csrf=readJson(http(client,"/api/v1/auth/csrf",null,null));
         assertEquals(204,http(client,"/api/v1/auth/logout","",csrf.path("token").asText()).statusCode());
         assertEquals(401,http(client,candidatePath(),null,null).statusCode());
+        System.out.println("PASS V256 actual PG18 immutable local cost basis and refund reservation duplicate, overlap and bounds rejected");
         System.out.println("PASS V255 actual PG18 scoped candidate capture and original refund slice replay, price drift hold");
         System.out.println("PASS V254 actual Owner HTTP nonempty receipt candidate 45/30/15, exact shares, drift/recovery, hold and logout");
         System.out.println("PASS V250 actual PG18 V249 composition: PO freight duty 45/30/15, original source shares, missing range/duty, drift, retraction and cross-marketplace hold");
@@ -223,6 +248,38 @@ class ReceiptCostCompositionPg18V250Test {
             assertTrue(d.path(key).isNull(),key);
         for(String key:List.of("components","saleShares"))
             assertTrue(d.path(key).isArray()&&d.path(key).isEmpty(),key);
+    }
+
+    private UUID seedRefund(UUID item) {
+        UUID event=UUID.randomUUID();
+        write.executeWithoutResult(ignored->{
+            db.update("""
+                INSERT INTO finance_source_event
+                  (id,tenant_id,seller_marketplace_id,source_family,source_event_key,data_origin,
+                   category,amount,currency_code,posted_at,external_order_id,source_type)
+                VALUES (?,?,?,'SPAPI_FINANCES',?,'LIVE','PRODUCT_REFUND',-20,'USD',now(),
+                   'V250-SYNTHETIC-ORDER','V256_SYNTHETIC_ONLY')
+                """,event,tenant,market,"V256-"+event);
+            db.update("""
+                INSERT INTO finance_event_link_review(tenant_id,event_id,order_id,state,reviewed_by)
+                VALUES (?,?,?,'MATCHED',?)
+                """,tenant,event,sale,reviewer);
+            db.update("""
+                INSERT INTO finance_refund_item_review
+                  (tenant_id,event_id,sales_order_id,external_item_id,reviewed_quantity,
+                   disposition,evidence_reference,reviewed_by)
+                SELECT ?,?,?,external_item_id,1,'RESTOCKED_CLAIMED','V256-SYNTHETIC',?
+                FROM order_item WHERE tenant_id=? AND id=?
+                """,tenant,event,sale,reviewer,tenant,item);
+        });
+        return event;
+    }
+    private void reserveRefund(UUID claim,String digest,UUID event,int from,int to) {
+        db.update("""
+            INSERT INTO finance_refund_cost_slice_v119
+              (tenant_id,claim_id,basis_sha256,refund_event_id,unit_from,unit_to,recorded_by)
+            VALUES (?,?,?,?,?,?,?)
+            """,tenant,claim,digest,event,from,to,maker);
     }
 
     private void hold(String reason) {

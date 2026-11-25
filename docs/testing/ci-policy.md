@@ -62,7 +62,7 @@ python3 scripts/check_next_runtime_v122.py
 - [V239 CI 策略完整历史快照](https://github.com/kunlong-luo/merchivra/blob/2c2265036df33f0afc7269ff392eea8a5a5059e4/docs/testing/ci-policy.md)
 - [TEST-001 原文](https://github.com/kunlong-luo/merchivra/blob/2c2265036df33f0afc7269ff392eea8a5a5059e4/docs/testing/test-plan.md)
 
-原版本的验收链接与源日志仍可逐项追溯。V253 最新确认完整 A3 以及 V238–V249 快 CI、V251/V252 快 CI 结果见当前事实；新提交必须独立验收，不继承旧 SHA。
+原版本的验收链接与源日志仍可逐项追溯。V254 最新确认完整 A3 以及 V238–V249 快 CI、V251/V252 快 CI 结果见当前事实；新提交必须独立验收，不继承旧 SHA。
 
 ### V251 · 完整 PG18 脚本维护
 
@@ -75,3 +75,5 @@ V253：复用 `check_manual_cost_openapi_v228.py` 检查实际 V252 GET/嵌套 D
 V254：V250 同一真实 PG18 合成夹具内发起独立 Owner Cookie/CSRF HTTP，JUnit XML 必须含 V254 非空完成标记；既有 Chromium 合成轨迹额外核对 V253 面板和截图。真实 HTTP 与浏览器合成 fixture 不可混为同一外部业务验收；新 A3 待确认。
 
 V255：复用 V250 实际 PG18 回归，要求原认领候选 scope、SHA 与退款子区间重放、价格漂移 hold 完成标记；单元测试覆盖精确尾差、重复/越界/重叠、跨作用域与 fingerprint 不一致。未持久化退款事件人口或外部物理证明。
+
+V256：V119 实际 PG18 同 V250 fixture 验证持久化、原摘要、重复/重叠/越界和不可删除；JUnit marker 禁跳过。跨事务竞争及读时失效另行验收，不把本地 reservation 当已过账。

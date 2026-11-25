@@ -61,3 +61,5 @@ V252 精确 [SHA 65128ba2eb93](https://github.com/kunlong-luo/merchivra/commit/6
 V253 [快 CI #45568099720](https://github.com/kunlong-luo/merchivra/actions/runs/45568099720) SUCCESS，完整 [A3 #45568099866](https://github.com/kunlong-luo/merchivra/actions/runs/45568099866) 本轮初查 5/7 成功、2 项运行中。V254 扩展原 V250 一次性夹具：复制仅 CI bootstrap hash 建立独立合成 Owner，真实 loopback HTTP Cookie/CSRF 登录，验证缺关税 HOLD、45/30/15 原币候选与 claim 尾差、价格漂移/恢复、跨站点 HOLD、匿名/退出 401、no-store 及禁止核证字段；原服务回归保留且 JUnit 必须含 V254 marker。扩展既有 Next Chromium 360px 合成 fixture：显式 GET、金额及认领明细、409 清空旧值、重试、切站点不自动读、HOLD 不显示旧金额，保存截图。浏览器是合成 HTTP fixture，不是同一真实 PG18 浏览器会话；两者均待新 SHA A3，不新增 API、依赖、会计成本版本或退款回转。下一步以已确认原始成本区间与独立退款物理证据为基础设计回转。
 
 V255 从 V249 同一 RR 观察准备原认领成本候选快照（不是历史过账），复用逐来源 V246 算术计算显式退款子区间；[退款原批次契约](v212-refund-original-sale-lot-quantity-envelope.md) 维护版本、摘要、守恒与缺失持久化/外部物理证明限制。不新增 HTTP/UI，实际回转、利润保持 null。
+
+V256/Flyway V119 为 V255 同快照候选增加一次性不可变存储与退款区间预留，规则和限制见 [退款原批次契约](v212-refund-original-sale-lot-quantity-envelope.md)。不修改 V112/V117 或财务过账，不开放写接口。

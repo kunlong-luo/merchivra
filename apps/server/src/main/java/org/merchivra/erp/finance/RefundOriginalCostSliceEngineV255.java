@@ -124,7 +124,7 @@ public final class RefundOriginalCostSliceEngineV255 {
         require(po==1&&freight>0&&duty>0&&total.compareTo(money(b.originalCandidateAmount()))==0,
             "Original cost sources or amount incomplete");
     }
-    private static String digest(Basis b) {
+    static String canonicalPayload(Basis b) {
         // All tokens have fixed constrained alphabets (UUID, category enum,
         // ISO-like code, integer, exact amount), no delimiter injection.
         var i=b.identity();
@@ -136,9 +136,12 @@ public final class RefundOriginalCostSliceEngineV255 {
             fields.add(s.category());fields.add(s.sourceId()==null?"PO":s.sourceId().toString());
             fields.add(s.receiptAmount());fields.add(s.originalClaimAmount());
         });
+        return String.join("|",fields);
+    }
+    private static String digest(Basis b) {
         try {
             return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(
-                String.join("|",fields).getBytes(StandardCharsets.UTF_8)));
+                canonicalPayload(b).getBytes(StandardCharsets.UTF_8)));
         } catch(NoSuchAlgorithmException unavailable){throw new IllegalStateException(unavailable);}
     }
 

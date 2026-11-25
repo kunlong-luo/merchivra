@@ -1,6 +1,6 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 快 CI 成功、Chromium 专属通过，完整 A3 待核；V255 退款原认领候选版本待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 Java 快任务成功、A3 待核；V256 不可变候选观察与退款区间预留待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 核心项目状态
 
@@ -59,15 +59,18 @@ V252：外置 shell 不应包含 GitHub Actions 表达式，workflow env 传递 
 
 V253：复用 V228 Orval bundle 与 V217 共享收货面板，新增候选成本按需读取、Session scope/revision/cancel、Zod + BigInt 原币六位守恒/重复/空值门禁、来源和销售认领金额表及阻断文案。无新路由、写入或过账；快 CI 与完整 A3 7/7，实际 Springdoc 字段通过。V254 补非空 HTTP 与新面板专属 Chromium。详见 [V112/V253](finance/v215-receipt-cost-claim-and-v92-exclusivity.md)。
 
-V254：复用 V250 真实 PG18 夹具新增独立合成 Owner Cookie/CSRF HTTP 非空及 HOLD/价格漂移/恢复/退出验证，JUnit 强制完成标记；扩展现有 Next Chromium 合成 fixture 显式查询、金额/认领、409 隐藏旧值、切站点 HOLD 及截图。未改变业务 API/会计规则，快 CI 通过，Chromium 专属 PASS 已核对原始日志；本轮初查 A3 5/7 成功、两项运行中，非空 HTTP 待核；退款实际回转尚未实现。
+V254：复用 V250 真实 PG18 夹具新增独立合成 Owner Cookie/CSRF HTTP 非空及 HOLD/价格漂移/恢复/退出验证，JUnit 强制完成标记；扩展现有 Next Chromium 合成 fixture 显式查询、金额/认领、409 隐藏旧值、切站点 HOLD 及截图。未改变业务 API/会计规则，快 CI 通过，Chromium 专属 PASS 已核对原始日志；完整 A3 7/7，非空 HTTP JUnit marker 已核对；退款实际回转尚未实现。
 
 V255：V249 同一 RR 内提取 V106 scope 与 V117 区间及逐来源金额，版本 SHA-256，内部 `RefundOriginalCostSliceEngineV255` 独立重算、显式退款子区间/数量/事件去重与守恒。仅内存候选观察，未保存销售时成本、未验证真实退款人口或跨调用归属；无 API/写入/正式回转，actualRefundCogsReversal/realizedNetProfit=null。单元与实际 PG18 回归待验收。详见 [原批次退款契约](finance/v212-refund-original-sale-lot-quantity-envelope.md)。
+
+V256：Flyway V119 每原 claim 不可变保存规范 V255 payload+SHA、同 RR 内部 persistRefundBasis、数据库独立范围/原币/金额/来源检查；退款 reservation 绑定 V34 review/V21 matched refund，RC item 行锁、重叠/重复/越界及 event/item 数量守恒。真实 PG18 追加回归待新 A3；双连接、跨 claim 负例、读时失效、实际返仓与历史会计成本未完成，无 HTTP 写入、无正式回转。详见 [V212/V256](finance/v212-refund-original-sale-lot-quantity-envelope.md)。
 
 ## 最近精确验收（切勿混用不同 SHA 的 CI）
 
 | 阶段 | 精确代码 / 测试 | 技术证明边界 |
 | --- | --- | --- |
-| V254 | [SHA 4c115528fafd](https://github.com/kunlong-luo/merchivra/commit/4c115528fafd52132f47b3c40409b5049915ed8c) · [CI #45568637219](https://github.com/kunlong-luo/merchivra/actions/runs/45568637219)（SUCCESS） · [A3 #45568637200](https://github.com/kunlong-luo/merchivra/actions/runs/45568637200) | 初查 5/7 成功，Chromium job #139049675072 PASS V254 Next Chromium candidate；非空 HTTP 待核 |
+| V255 | [SHA 859287e1b34f](https://github.com/kunlong-luo/merchivra/commit/859287e1b34fcc3dc237b141c4dd5980d86ed0c5) · [CI #45569211952](https://github.com/kunlong-luo/merchivra/actions/runs/45569211952) · [A3 #45569211987](https://github.com/kunlong-luo/merchivra/actions/runs/45569211987) | 本轮初查 Java/Compose 快任务成功，完整 A3 运行中 |
+| V254 | [SHA 4c115528fafd](https://github.com/kunlong-luo/merchivra/commit/4c115528fafd52132f47b3c40409b5049915ed8c) · [CI #45568637219](https://github.com/kunlong-luo/merchivra/actions/runs/45568637219)（SUCCESS） · [A3 #45568637200](https://github.com/kunlong-luo/merchivra/actions/runs/45568637200) | A3 7/7 SUCCESS；Chromium job #139049675072 PASS V254 Next Chromium candidate；PG18 job #139049675782 PASS V254 actual nonempty Owner HTTP JUnit marker |
 | V253 | [SHA 3d1a41218b22](https://github.com/kunlong-luo/merchivra/commit/3d1a41218b229c63079e534117d7cc1e670718f8) · [CI #45568099720](https://github.com/kunlong-luo/merchivra/actions/runs/45568099720)（SUCCESS） · [A3 #45568099866](https://github.com/kunlong-luo/merchivra/actions/runs/45568099866) | A3 7/7 SUCCESS；PG18 job #139047797199 PASS V253 actual Springdoc |
 | **V252** | [SHA 65128ba2eb93](https://github.com/kunlong-luo/merchivra/commit/65128ba2eb938574d600ee281b83301603b16fd2) · [CI #45566116953](https://github.com/kunlong-luo/merchivra/actions/runs/45566116953)（SUCCESS） · [A3 #45566116963](https://github.com/kunlong-luo/merchivra/actions/runs/45566116963)（7/7 SUCCESS） | PG18 job #139041361728：PASS V250 实际非空 Java 组合与 PASS V252 Owner HTTP HOLD/权限 |
 | V251 | [SHA 38ebd6fcfdee](https://github.com/kunlong-luo/merchivra/commit/38ebd6fcfdee20e9868cb9e40ab707e7d502442a) · [CI #45565714489](https://github.com/kunlong-luo/merchivra/actions/runs/45565714489) · [A3 #45565714565](https://github.com/kunlong-luo/merchivra/actions/runs/45565714565) | 快 CI SUCCESS，A3 FAILURE（PG18 bad substitution）；V252 修复 shell 上下文表达式 |

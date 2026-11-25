@@ -44,6 +44,7 @@ public class ReceiptCostCompositionServiceV249 {
     private final JdbcTemplate jdbc;
     private final ReceiptCostIntegrityServiceV216 audit;
     private final TransactionTemplate read;
+    private final TransactionTemplate captureTx;
     public ReceiptCostCompositionServiceV249(JdbcTemplate jdbc,
         ReceiptCostIntegrityServiceV216 audit,PlatformTransactionManager manager) {
         this.jdbc=jdbc;this.audit=audit;
@@ -51,6 +52,9 @@ public class ReceiptCostCompositionServiceV249 {
         read.setReadOnly(true);
         read.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
         read.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+        captureTx=new TransactionTemplate(manager);
+        captureTx.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
+        captureTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
     }
 
     // No public route or write method. One independent RR snapshot, not the
@@ -68,7 +72,29 @@ public class ReceiptCostCompositionServiceV249 {
         UUID tenant,UUID marketplace,UUID receipt,UUID claimId) {
         if(tenant==null||marketplace==null||receipt==null||claimId==null)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-        return read.execute(ignored->{
+        return read.execute(ignored->captureBasis(tenant,marketplace,receipt,claimId));
+    }
+
+    // Internal only; deliberately no HTTP write endpoint. One observation per
+    // claim. A later different cost cannot replace or silently version it.
+    RefundOriginalCostSliceEngineV255.Basis persistRefundBasis(
+        UUID tenant,UUID marketplace,UUID receipt,UUID claimId,UUID actor) {
+        if(tenant==null||marketplace==null||receipt==null||claimId==null||actor==null)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        return captureTx.execute(ignored->{
+            var basis=captureBasis(tenant,marketplace,receipt,claimId);
+            jdbc.update("""
+                INSERT INTO finance_original_cost_basis_v119
+                  (tenant_id,claim_id,basis_sha256,canonical_payload,recorded_by)
+                VALUES (?,?,?,?,?)
+                """,tenant,claimId,basis.sha256(),
+                RefundOriginalCostSliceEngineV255.canonicalPayload(basis),actor);
+            return basis;
+        });
+    }
+
+    private RefundOriginalCostSliceEngineV255.Basis captureBasis(
+        UUID tenant,UUID marketplace,UUID receipt,UUID claimId) {
             var candidate=readCandidate(tenant,marketplace,receipt);
             var identities=jdbc.query("""
                 SELECT sales_order_id,order_item_id FROM finance_sale_lot_claim_v106
@@ -85,7 +111,6 @@ public class ReceiptCostCompositionServiceV249 {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Cannot capture intact original local cost candidate",invalid);
             }
-        });
     }
 
     private Candidate readCandidate(UUID tenant,UUID marketplace,UUID receipt) {
