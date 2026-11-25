@@ -58,6 +58,30 @@ public class SettlementReportController {
             .body(comparisons.previewCategories(tenants.currentTenant(auth,req),marketplaceId,reportId,mapping));
     }
 
+    @org.springframework.web.bind.annotation.PostMapping("/{reportId}/category-mapping-drafts")
+    public ResponseEntity<SettlementReportComparisonService.MappingDraft> saveCategoryMapping(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID marketplaceId,@PathVariable UUID reportId,
+        @org.springframework.web.bind.annotation.RequestBody List<SettlementCategoryPreviewV273.Mapping> mapping) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(comparisons.saveCategoryMapping(
+            tenants.currentTenant(auth,req),marketplaceId,reportId,tenants.authenticatedUser(auth),mapping));
+    }
+
+    @GetMapping("/{reportId}/category-mapping-drafts/{mappingSha256}")
+    public ResponseEntity<SettlementReportComparisonService.MappingDraft> readCategoryMapping(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID marketplaceId,@PathVariable UUID reportId,
+        @PathVariable String mappingSha256) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(comparisons.readCategoryMapping(
+            tenants.currentTenant(auth,req),marketplaceId,reportId,mappingSha256));
+    }
+
+    @GetMapping("/{reportId}/category-mapping-drafts/{mappingSha256}/preview")
+    public ResponseEntity<SettlementReportComparisonService.SavedMappingPreview> previewSavedCategoryMapping(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID marketplaceId,@PathVariable UUID reportId,
+        @PathVariable String mappingSha256) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(comparisons.previewSavedCategoryMapping(
+            tenants.currentTenant(auth,req),marketplaceId,reportId,mappingSha256));
+    }
+
     @GetMapping("/{reportId}/review")
     public ResponseEntity<SettlementReportImportService.Review> review(
         Authentication auth,HttpServletRequest req,@PathVariable UUID marketplaceId,

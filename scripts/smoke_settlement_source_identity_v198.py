@@ -275,6 +275,31 @@ DO $ BEGIN
  THEN RAISE EXCEPTION 'V273 active rule not applied'; END IF;
 END $;
 """)
+# Exercise the exact V124 migration on disposable TEMP shadow tables.
+migration = Path("apps/server/src/main/resources/db/migration/V124__settlement_category_mapping_draft.sql").read_text()
+commands.append(f"""
+ALTER TABLE spapi_settlement_report ADD UNIQUE(tenant_id,id);
+CREATE TEMP TABLE tenant(id uuid PRIMARY KEY,status text) ON COMMIT DROP;
+INSERT INTO tenant VALUES ('{tenant}','ACTIVE');
+CREATE TEMP TABLE membership(tenant_id uuid,user_id uuid,PRIMARY KEY(tenant_id,user_id)) ON COMMIT DROP;
+INSERT INTO membership VALUES ('{tenant}','{first}');
+""")
+commands.append(migration.replace("CREATE TABLE finance_settlement_category_mapping_v124",
+                                  "CREATE TEMP TABLE finance_settlement_category_mapping_v124",1))
+commands.append(f"""
+INSERT INTO finance_settlement_category_mapping_v124
+ (tenant_id,report_id,mapping_sha256,canonical_payload,created_by)
+ SELECT '{tenant}','{report}',encode(sha256(convert_to('V274_REPORT_MAPPING','UTF8')),'hex'),
+ 'V274_REPORT_MAPPING','{first}';
+DO $ BEGIN
+ BEGIN
+  UPDATE finance_settlement_category_mapping_v124 SET canonical_payload='different';
+  RAISE EXCEPTION 'V274 mutation unexpectedly succeeded' USING ERRCODE='XX000';
+ EXCEPTION WHEN OTHERS THEN
+  IF SQLSTATE='XX000' THEN RAISE; END IF;
+ END;
+END $;
+""")
 commands.append("ROLLBACK;\n")
 result = subprocess.run(
     ["psql", "-X", "-h", "127.0.0.1", "-U", "merchivra", "-d", "merchivra",
@@ -292,3 +317,5 @@ print("PASS V271 real PG18 exact Java SQL: order buckets, offsetting errors, NUL
 print("PASS V272 real PG18 exact Java SQL: gross direction and leaf coverage")
 
 print("PASS V273 real PG18 exact category SQL: current active rule, scope, leaf-only and unmapped coverage")
+
+print("PASS V274 real PG18 TEMP exact migration: mapping identity and immutable trigger")

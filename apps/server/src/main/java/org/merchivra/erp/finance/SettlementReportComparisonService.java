@@ -283,6 +283,71 @@ public class SettlementReportComparisonService {
         return SettlementCategoryPreviewV273.evaluate(comparison.state(),comparison.currency(),rows,mappings);
     }
 
+    // V274: persistence is an immutable draft only. No source snapshot or
+    // accounting approval is inferred from a mapping content hash.
+    public record MappingDraft(String reportId,String mappingSha256,String state,
+        List<SettlementCategoryPreviewV273.Mapping> mappings,boolean mappingApproved,
+        boolean bankVerified,boolean ledgerPosted,String realizedNetProfit) {}
+    public record SavedMappingPreview(String mappingSha256,SettlementCategoryPreviewV273.Preview preview,
+        boolean mappingApproved) {}
+    static final String SAVE_MAPPING_SQL="""
+        INSERT INTO finance_settlement_category_mapping_v124
+          (tenant_id,report_id,mapping_sha256,canonical_payload,created_by)
+        SELECT r.tenant_id,r.id,?,?,?
+        FROM spapi_settlement_report r
+        JOIN tenant t ON t.id=r.tenant_id AND t.status='ACTIVE'
+        WHERE r.tenant_id=? AND r.seller_marketplace_id=? AND r.id=?
+        ON CONFLICT (tenant_id,report_id,mapping_sha256) DO NOTHING
+        """;
+    static final String READ_MAPPING_SQL="""
+        SELECT d.canonical_payload,btrim(d.mapping_sha256) AS mapping_sha256
+        FROM finance_settlement_category_mapping_v124 d
+        JOIN spapi_settlement_report r ON r.tenant_id=d.tenant_id AND r.id=d.report_id
+        JOIN tenant t ON t.id=r.tenant_id AND t.status='ACTIVE'
+        WHERE r.tenant_id=? AND r.seller_marketplace_id=? AND r.id=? AND d.mapping_sha256=?
+        """;
+
+    @org.springframework.transaction.annotation.Transactional
+    public MappingDraft saveCategoryMapping(UUID tenant,UUID marketplace,UUID reportId,UUID actor,
+        List<SettlementCategoryPreviewV273.Mapping> input) {
+        if(actor==null)throw new ResponseStatusException(HttpStatus.UNAUTHORIZED);
+        final SettlementCategoryMappingV274.Canonical canonical;
+        try {canonical=SettlementCategoryMappingV274.canonical(input);}
+        catch(IllegalArgumentException invalid) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid explicit report category mapping");
+        }
+        jdbc.update(SAVE_MAPPING_SQL,canonical.sha256(),canonical.payload(),actor,tenant,marketplace,reportId);
+        var stored=readCategoryMapping(tenant,marketplace,reportId,canonical.sha256());
+        if(!stored.mappings().equals(canonical.mappings()))
+            throw new ResponseStatusException(HttpStatus.CONFLICT,"Stored mapping differs");
+        return stored;
+    }
+
+    @org.springframework.transaction.annotation.Transactional(readOnly=true)
+    public MappingDraft readCategoryMapping(UUID tenant,UUID marketplace,UUID reportId,String sha) {
+        if(sha==null||!sha.matches("[0-9a-f]{64}"))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid mapping identity");
+        var rows=jdbc.query(READ_MAPPING_SQL,(rs,n)->{
+            try {
+                return SettlementCategoryMappingV274.stored(rs.getString("canonical_payload"),
+                    rs.getString("mapping_sha256"));
+            } catch(IllegalArgumentException invalid) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,"Stored mapping integrity mismatch");
+            }
+        },tenant,marketplace,reportId,sha);
+        if(rows.size()!=1)throw new ResponseStatusException(HttpStatus.NOT_FOUND,"Mapping not available");
+        var canonical=rows.getFirst();
+        return new MappingDraft(reportId.toString(),canonical.sha256(),"LOCAL_IMMUTABLE_MAPPING_DRAFT",
+            canonical.mappings(),false,false,false,null);
+    }
+
+    @org.springframework.transaction.annotation.Transactional(readOnly=true,
+        isolation=org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
+    public SavedMappingPreview previewSavedCategoryMapping(UUID tenant,UUID marketplace,UUID reportId,String sha) {
+        var draft=readCategoryMapping(tenant,marketplace,reportId,sha);
+        return new SavedMappingPreview(sha,previewCategories(tenant,marketplace,reportId,draft.mappings()),false);
+    }
+
     private static String money(BigDecimal value) {
         return value==null?null:value.toPlainString();
     }

@@ -71,3 +71,18 @@ V273：新 POST category-comparison-preview（Owner Session/CSRF/no-store，只�
 ```
 
 实际请求需覆盖该报告全部原始类型组合，Finances 末级分类由当前 V28 ACTIVE 规则读取。`CATEGORY_MAPPING_INCOMPLETE` 不返回局部总额；`ORDER_CATEGORY_AMOUNT_DIFFERENCE` 表示按订单/类别/方向至少一个分组差异，汇总两侧金额仍可能抵消。`LOCAL_CATEGORY_AMOUNTS_AGREE_UNVERIFIED` 只说明给定映射下本地金额相符。无授权、无真实外部证据、无会计签署时禁止把结果用作正式利润。尚无持久化映射与 UI，后续基于真实原件设计独立审核、版本及失效契约，而非自动批准。
+
+
+V273 [代码 9955a7b93751](https://github.com/kunlong-luo/merchivra/commit/9955a7b93751e34d8589bed31deb1e2cfd4cc6e9) [快 CI #45616101485 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45616101485)，[A3 #45616101623](https://github.com/kunlong-luo/merchivra/actions/runs/45616101623) 核对时尚未开始；[V272 A3 #45615522448](https://github.com/kunlong-luo/merchivra/actions/runs/45615522448) 核对时运行中。
+
+## V274 · 不可变 Reports 分类映射草稿（待验收）
+
+V274：Flyway V124 报告范围不可变分类映射草稿（tenant/report/content SHA-256 主键，报告与创建者复合外键、内容哈希 DB CHECK、复用不可变 UPDATE/DELETE trigger）；复用 V273 验证器，三元组 NULL 显式编码、按内容排序，提交顺序不改变身份，修改生成新 SHA，相同内容 ON CONFLICT DO NOTHING 幂等保存。读取强制当前 ACTIVE tenant、marketplace/report，重新校验 SHA、规范编码及类型映射；保存不隐含当前证据一致。保存的映射预检在 RR 重读 V272/V273 和当前 V28 规则，旧草稿不缓存财务结果。新增三个 Owner Session/CSRF（写）/no-store API；无自动映射、独立批准、签署、细分类别扩展、V56 门禁或 UI，mappingApproved/bankVerified/ledgerPosted=false，realizedNetProfit=null。JUnit 覆盖规范化及范围 SQL，扩展既有 V198 PG18 TEMP 测试执行 V124 DDL 的临时表副本及不可变 trigger；实际 Flyway 与新 HTTP 行为仍待 A3/后续端到端验证。本轮暂不修改现有 A3 workflow 定义，避免取消运行中的 V272/V273 验收，V274 自身完整 A3 需后续明确触发。Redis smoke V270 启动失败尚未修复。真实 E1–E5 未完成，Seller/Ads OAuth OFF，#104 NO-GO。
+
+### API
+
+基准路径 `/api/v1/finance/marketplaces/{marketplaceId}/reports/{reportId}`。
+
+- `POST /category-mapping-drafts`：请求体复用 V273 显式映射数组；返回 `mappingSha256` 和规范排序后的 `mappings`，状态 `LOCAL_IMMUTABLE_MAPPING_DRAFT`。重复内容返回同一身份；不是更新接口。草稿保存允许尚未完全覆盖的有效类型映射，不声称分类一致。
+- `GET /category-mapping-drafts/{mappingSha256}`：读取当前报告范围指定草稿；不同报告/站点不可读取。调用者需保留返回 SHA；无草稿列表或“当前已批准版本”概念。
+- `GET /category-mapping-drafts/{mappingSha256}/preview`：重算当前来源及分类，返回 SHA 和 V273 `preview`，不会使用历史缓存。变更 V28 或原始来源可能改变结果；旧草稿本身不变。后续独立审批必须绑定证据版本与完整映射，不得仅凭 SHA 认定有效。
