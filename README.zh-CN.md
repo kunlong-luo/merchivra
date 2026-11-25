@@ -11,7 +11,7 @@
 
 ## 当前工程状态
 
-V237 完整隔离 A3 7/7 通过，实际 PostgreSQL18 Java Reports 服务回归未跳过，远程 Worker 为合成模拟；V238–V240 快速 CI 通过；V241 完整 A3 7/7 已通过；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7 已通过；V245 快 CI 通过；V246 原币批次数量区间分摊候选算术待快 CI，尚未接业务 API 或正式入账。见[当前事实](docs/current-status.md)。
+V237 完整隔离 A3 7/7 通过，实际 PostgreSQL18 Java Reports 服务回归未跳过，远程 Worker 为合成模拟；V238–V240 快速 CI 通过；V241 完整 A3 7/7 已通过；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7 已通过；V245 快 CI 通过；V246 快 CI 通过；V247 Flyway V117 显式本地销售认领成本计算区间待完整 A3，未接业务写 API 或正式入账。见[当前事实](docs/current-status.md)。
 
 ## 一、仓库根目录：保留哪些，分别有什么用？
 

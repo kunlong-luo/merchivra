@@ -32,3 +32,9 @@
 **没有外部 WMS 的真实法人/主体身份、出库/交付原始签名、Amazon FBA/FBM 订单履约交叉核验、货运/关税成本分配、退款实际收货与 COGS 回转，以及独立会计 G1 批准，因此实际批次成本必须继续被阻断。** 现有人工 V19 SKU 成本和 V20 PO 单价只能作为来源参考，不参与真实净利润宣称。
 
 `realizedNetProfit=null`、真实 Seller/Ads OAuth OFF、生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) NO-GO、正式评分 **70/100** 均不变。
+
+## V247 / Flyway V117 · 显式成本计算区间（待验收）
+
+新增 `finance_sale_lot_cost_range_v117`，仅保存对既有 V106 claim 的本地计算坐标，不创建新出库/库存/费用账本。每租户每 claim 至多一条，receipt 和数量分母由数据库从 V106 不可变 QC accepted 快照捕获，不接受伪造快照；区间长度必须等于原 assigned_quantity，边界在 [0,basis] 内。按同一 receipt 行锁串行，写入仅允许 READ COMMITTED，拒绝同收货不同分母或相交半开区间；撤销后既有区间不释放，撤销 claim 不允许新增区间，UPDATE/DELETE 复用 V106 append-only 触发器。旧数据不回填，不猜 FIFO，不自动生成区间。
+
+V117 不等于实物序列身份，不冻结 V112 外部成本组合，不批准 QC accepted 为会计资本化分母，也不认证签发人；未绑定的 claim 必须视为未知，不能推断剩余区间可用。当前无应用写 API/前端/正式过账。读取或将来使用须重新核对 V106 当前完整性、撤销、完整跨订单区间覆盖、原金额/原币与 G1；并发重叠写尚需独立双连接验收。本轮复用 V203 TEMP/ROLLBACK 脚本与已安装 V117 函数，验证伪快照、区间长度、跨租户、撤销占位、重叠和删除负例，完整 A3 待验收。

@@ -26,8 +26,10 @@ V216 优先实现独立只读源漂移/跨来源双计诊断以及 V112 回归�
 
 V215 第一次完整 A3 #45295153716 在精确 `7515edd` 的 PostgreSQL 18 专项 FAILED：新 TEMP V91 fixture 填写 REVIEWED_UNVERIFIED，却缺 required reviewed_by/reviewed_at/review_reason，原 V91 CHECK 正确拦截；不是已经证明 V112 的触发器失败。已修正测试夹具而**未放宽** V91/V112 的任何真实约束；下一次同 SHA A3 成功后才可验收。
 
-## V246 · 采购收货成本按明确数量区间分摊（候选算术，待验收）
+## V246 · 采购收货成本按明确数量区间分摊（候选算术，快 CI 已通过）
 
 复用 `CostAllocationEngine.partitionReceiptAmount`，不另建费用账本。调用者显式提供同币种、六位小数以内的原始收货成本金额、正整数数量分母与稳定的半开区间 [from,to)，区间仅是计算坐标，不是货物序列号、实际出库或返仓证明。对每份同一原始成本的分摊，定义 F(k)=floor(amount*k/basis,6)，区间金额=F(to)-F(from)，按区间排序、拒绝重复 claim ID/重叠/越界（最多1000行），保留缺口数量与未分配金额。连续区间相加精确回到原金额；退款若未来有真实原出库区间，只能以同一原金额/分母/原范围内的子区间重算，不得重新平均或跨批次推断。零金额必须由调用者明确提供，不代替未知；计算得到零份额不等于可创建 V112 零金额行。
 
 这是待 G1/DEC 确定数量分母、拒收报废、FX、费用资本化与返仓规则的候选算法，不是已批准会计规则。尚无服务调用、API、持久化区间身份或 UI，单次调用无法防跨调用重复。不得将输出写入 V112/实际 COGS 或利润；后续真实样本和批准前不得自动生成单位区间。Java 回归覆盖 100/3 尾差、部分缺口、退款子区间、微额、最大分母、非法区间及500组固定随机种子独立 BigInteger 重算。
+
+V246 精确 [SHA 8ab8a93a53b3](https://github.com/kunlong-luo/merchivra/commit/8ab8a93a53b348a7a329e0292b992007bd426efb) [CI #45560785767](https://github.com/kunlong-luo/merchivra/actions/runs/45560785767) SUCCESS，PG18 SKIPPED。V247 的本地显式坐标契约见 [V106/V117](v203-sale-to-lot-link-integrity-contract.md)；不改变 V112 来源金额、审批或实际利润门禁。

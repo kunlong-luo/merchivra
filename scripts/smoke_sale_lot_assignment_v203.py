@@ -36,6 +36,10 @@ DO $$ BEGIN
        WHERE version='106' AND success) THEN
     RAISE EXCEPTION 'Flyway V106 has not run';
   END IF;
+  IF NOT EXISTS (SELECT 1 FROM public.flyway_schema_history
+       WHERE version='117' AND success) THEN
+    RAISE EXCEPTION 'Flyway V117 has not run';
+  END IF;
 END $$;
 CREATE TEMP TABLE sales_order (
  id uuid,tenant_id uuid,seller_marketplace_id uuid,data_origin text,
@@ -95,6 +99,13 @@ CREATE TRIGGER v203_temp_capture BEFORE INSERT ON finance_sale_lot_claim_v106
 CREATE TRIGGER v203_temp_immutable BEFORE UPDATE OR DELETE
  ON finance_sale_lot_claim_v106 FOR EACH ROW
  EXECUTE FUNCTION public.finance_sale_lot_immutable_v106();
+CREATE TEMP TABLE finance_sale_lot_cost_range_v117
+ (LIKE public.finance_sale_lot_cost_range_v117
+  INCLUDING DEFAULTS INCLUDING CONSTRAINTS INCLUDING INDEXES) ON COMMIT DROP;
+CREATE TRIGGER v247_temp_capture BEFORE INSERT ON finance_sale_lot_cost_range_v117
+ FOR EACH ROW EXECUTE FUNCTION public.finance_sale_lot_cost_range_capture_v117();
+CREATE TRIGGER v247_temp_immutable BEFORE UPDATE OR DELETE ON finance_sale_lot_cost_range_v117
+ FOR EACH ROW EXECUTE FUNCTION public.finance_sale_lot_immutable_v106();
 CREATE TEMP VIEW v203_integrity AS
 {view}
 INSERT INTO sales_order VALUES ('{order}','{tenant}','{mp}','LIVE',
@@ -139,6 +150,20 @@ DO $$ BEGIN
      AND platform_fulfillment_verified=FALSE AND actual_batch_cogs_verified=FALSE
      AND realized_batch_cogs IS NULL
  ) THEN RAISE EXCEPTION 'V203: intact local claim must remain unverified'; END IF;
+END $$;
+-- V247: no backfill; explicit caller coordinates, database-captured basis.
+DO $$ BEGIN
+ IF EXISTS(SELECT 1 FROM finance_sale_lot_cost_range_v117) THEN
+  RAISE EXCEPTION 'V247 unexpected automatic range'; END IF;
+END $$;
+INSERT INTO finance_sale_lot_cost_range_v117
+ (tenant_id,claim_id,receipt_id,basis_quantity,unit_from,unit_to,recorded_by)
+ VALUES ('{tenant}','{claim}','{pos}',999,0,2,'{actor}');
+DO $$ BEGIN
+ IF NOT EXISTS(SELECT 1 FROM finance_sale_lot_cost_range_v117
+   WHERE claim_id='{claim}' AND receipt_id='{receipt}' AND basis_quantity=4
+     AND unit_from=0 AND unit_to=2) THEN
+  RAISE EXCEPTION 'V247 snapshot or range not captured'; END IF;
 END $$;
 -- Same pick/outbound segment cannot be attributed again under another claim id.
 DO $$ BEGIN
@@ -260,6 +285,56 @@ DO $$ BEGIN
   IF SQLERRM NOT LIKE '%append-only%' THEN RAISE; END IF;
  END;
 END $$;
+-- V247: another local sale claim can reserve remaining coordinates, but the
+-- previously retracted claim still reserves its historical interval.
+INSERT INTO order_item VALUES
+ ('{item2}','{tenant}','{order}',2,'AMZ-ITEM-2',true,'2026-10-01T10:00:00Z');
+INSERT INTO finance_sale_lot_claim_v106
+ (id,tenant_id,marketplace_id,sales_order_id,order_item_id,pick_line_id,
+  receipt_id,assigned_quantity,external_dispatch_ref,external_payload_sha256,recorded_by)
+ VALUES ('{claim2}','{tenant}','{mp}','{order}','{item2}','{line2}',
+ '{receipt}',2,'LOCAL-UNVERIFIED-002','{hashval}','{actor}');
+DO $$ BEGIN
+ BEGIN
+  INSERT INTO finance_sale_lot_cost_range_v117
+   (tenant_id,claim_id,unit_from,unit_to,recorded_by)
+  VALUES ('{tenant}','{claim2}',1,3,'{actor}');
+  RAISE EXCEPTION 'V247 accepted overlapping range';
+ EXCEPTION WHEN OTHERS THEN
+  IF SQLERRM NOT LIKE '%overlapping range or inconsistent receipt basis%' THEN RAISE; END IF;
+ END;
+ BEGIN
+  INSERT INTO finance_sale_lot_cost_range_v117
+   (tenant_id,claim_id,unit_from,unit_to,recorded_by)
+  VALUES ('{tenant}','{claim2}',2,3,'{actor}');
+  RAISE EXCEPTION 'V247 accepted wrong assigned quantity';
+ EXCEPTION WHEN OTHERS THEN
+  IF SQLERRM NOT LIKE '%range length or bounds%' THEN RAISE; END IF;
+ END;
+ BEGIN
+  INSERT INTO finance_sale_lot_cost_range_v117
+   (tenant_id,claim_id,unit_from,unit_to,recorded_by)
+  VALUES ('{mp}','{claim2}',2,4,'{actor}');
+  RAISE EXCEPTION 'V247 accepted foreign tenant claim';
+ EXCEPTION WHEN OTHERS THEN
+  IF SQLERRM NOT LIKE '%original local claim not found in tenant%' THEN RAISE; END IF;
+ END;
+END $$;
+INSERT INTO finance_sale_lot_cost_range_v117
+ (tenant_id,claim_id,unit_from,unit_to,recorded_by)
+ VALUES ('{tenant}','{claim2}',2,4,'{actor}');
+DO $$ BEGIN
+ IF (SELECT count(*) FROM finance_sale_lot_cost_range_v117 WHERE receipt_id='{receipt}')<>2
+    OR (SELECT sum(unit_to-unit_from) FROM finance_sale_lot_cost_range_v117
+         WHERE receipt_id='{receipt}')<>4 THEN
+  RAISE EXCEPTION 'V247 range population does not conserve quantity'; END IF;
+ BEGIN
+  DELETE FROM finance_sale_lot_cost_range_v117 WHERE claim_id='{claim}';
+  RAISE EXCEPTION 'V247 accepted deletion';
+ EXCEPTION WHEN OTHERS THEN
+  IF SQLERRM NOT LIKE '%append-only%' THEN RAISE; END IF;
+ END;
+END $$;
 ROLLBACK;
 """
 # Tests run against the disposable PostgreSQL 18 service used by existing CI.
@@ -271,3 +346,5 @@ if proc.returncode:
 print("PASS V203 PG18 TEMP: real Flyway function and independent view; "
       "sale/pick/receipt conservation, unique pick claim, stale QC/sale/pick, "
       "append-only retraction; external proof and actual COGS remain blocked")
+
+print("PASS V247 PG18 installed range trigger: explicit snapshot, cross-tenant/length/overlap rejection, retracted reservation and append-only")
