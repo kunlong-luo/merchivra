@@ -72,6 +72,7 @@ export default function SettlementReportsPanel({tenantId,marketplaceId,connected
         CURRENCY_CONFLICT:'存在跨币种来源，禁止合并',
         NO_FINANCES_SETTLEMENT_REFERENCE:'没有精确 Settlement ID 来源证据',
         SOURCE_TOTAL_DIFFERENCE:'两种来源有符号金额不一致',
+        ORDER_REFERENCE_AMOUNT_DIFFERENCE:'结算总额相同，但原始订单参考分组金额或覆盖不同，需核对归属',
         SOURCE_AMOUNTS_AGREE_UNVERIFIED:'来源有符号金额一致，但仍需人工验真'
        } as Record<string,string>)[compare.data.state]??compare.data.state}</strong></p>
      <p className="setup-hint">

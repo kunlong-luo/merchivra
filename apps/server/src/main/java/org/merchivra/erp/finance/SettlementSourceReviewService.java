@@ -42,12 +42,20 @@ public class SettlementSourceReviewService {
     // The report SHA ties the snapshot to the immutable document bytes.
     static final String EVIDENCE_SQL="""
         SELECT encode(sha256(convert_to(
-          r.document_sha256 || ':' || r.settlement_reference || ':' ||
-          r.statement_currency || ':' ||
+          'V271:' || jsonb_build_array(r.document_sha256,r.settlement_reference,
+            r.statement_currency,r.declared_net,r.line_count)::text || ':' ||
+          COALESCE((
+            SELECT string_agg(jsonb_build_array(line.line_number,line.transaction_type,
+                line.amount_type,line.amount_description,line.external_order_id,
+                line.signed_amount,line.currency_code)::text,'|' ORDER BY line.line_number)
+            FROM spapi_settlement_report_line line
+            WHERE line.tenant_id=r.tenant_id AND line.report_id=r.id
+          ),'') || ':' ||
           COALESCE((
             SELECT string_agg(
-                f.id::text || ':' || f.amount::text || ':' ||
-                f.currency_code::text || ':' || f.posted_at::text,
+                jsonb_build_array(f.id,f.amount,f.currency_code,
+                    extract(epoch FROM f.posted_at),f.external_order_id,
+                    f.source_type,f.category)::text,
                 '|' ORDER BY f.id)
             FROM finance_transaction_reference ref
             JOIN finance_source_event f ON f.tenant_id=ref.tenant_id
@@ -106,7 +114,7 @@ public class SettlementSourceReviewService {
             stored.version(),fresh,false,false);
     }
 
-    @Transactional(readOnly=true)
+    @Transactional(readOnly=true,isolation=Isolation.REPEATABLE_READ)
     public Review status(UUID tenant,UUID mp,UUID report) {
         Evidence current=evidence(tenant,mp,report);
         return display(stored(tenant,mp,report,false),current);

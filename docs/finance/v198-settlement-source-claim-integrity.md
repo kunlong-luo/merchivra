@@ -42,3 +42,8 @@ Next.js 原有结算报告工作台显示数值和中文原因；`settlement-com
 - **仍未完成的商业链路**：有合法授权后的 Amazon Settlement/Finances 交叉证据独立验真、到账银行真实核证、已批准的退款 COGS/税费/外币会计处理和可过账利润。历史多归属**只生成诊断/拦截，不自动裁决或删除**。`realizedNetProfit=null`，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 继续 **NO-GO**。
 
 现行开发规范以 [AGENTS.md](../../AGENTS.md)、[ENG-001](../governance/engineering-standards.md) 为准；评分仍按 [68/100 基线](../governance/project-scorecard-2026-11-22.md) 审视外部真值，不因仅增加合成测试而自动提高。
+
+
+## V271 · 订单原始参考分组守恒（待验收）
+
+V271：在 V198 同 SQL 快照比较中对当前 tenant/marketplace/report 的原币报告行及精确 settlement ID LIVE Finances 交易按原始 external_order_id 分组，NULL 单独分组、不得猜测归属。总额一致但任一分组缺一侧（含零金额）或原币净额不同，返回 ORDER_REFERENCE_AMOUNT_DIFFERENCE，旧 V56 只允许 SOURCE_AMOUNTS_AGREE_UNVERIFIED 的批准规则继续阻断；保留原状态优先级。V56 指纹升级 V271（旧审核需重审，不回填），包含报告实际明细、声明净额、Finances 原订单参考/类别/source_type/UTC epoch；状态读取 RR，未宣称全域并发或 ABA 证明。Next 原工作台及 Zod 接受新阻断状态；扩展 V198 真 PG18 TEMP/ROLLBACK 原 SQL、Java/Vitest 反例，待 A3。属于订单净额分组一致性门禁，不等同逐行匹配或证明全部费用、非订单费用、实际到账、FX/COGS/会计签署；真实 E1–E5 未完成，realizedNetProfit=null、Seller/Ads OAuth OFF、#104 NO-GO。

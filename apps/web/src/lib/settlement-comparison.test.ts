@@ -38,6 +38,10 @@ describe('V198 settlement evidence conflicts cannot pass as reconciled',()=>{
    state:'SETTLEMENT_REFERENCE_SHARED_REPORTS',
    otherReportSameSettlementCount:1}).otherReportSameSettlementCount).toBe(1)
  })
+ it('V271 accepts order-reference mismatch even when overall totals agree',()=>{
+  expect(settlementComparison.parse({...sample,state:'ORDER_REFERENCE_AMOUNT_DIFFERENCE'}).state)
+   .toBe('ORDER_REFERENCE_AMOUNT_DIFFERENCE')
+ })
  it('missing declared statement amount is a blocker, not zero',()=>{
   expect(settlementComparison.parse({...sample,
    reportedNet:null,state:'REPORT_DECLARED_NET_UNAVAILABLE'}).state)

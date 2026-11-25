@@ -26,6 +26,10 @@ describe('Settlement report review integrity',()=>{
    sourceState:'SETTLEMENT_REFERENCE_SHARED_REPORTS'}).evidenceCurrent).toBe(false)
   expect(()=>sourceReview.parse({...body,sourceState:'BANK_VERIFIED'})).toThrow()
  })
+ it('V271 preserves order-reference mismatch in source review',()=>{
+  expect(sourceReview.parse({...body,sourceState:'ORDER_REFERENCE_AMOUNT_DIFFERENCE'}).sourceState)
+   .toBe('ORDER_REFERENCE_AMOUNT_DIFFERENCE')
+ })
  it('reads only the selected marketplace and report without browser tenantId',async()=>{
   const mock=vi.fn().mockResolvedValue({ok:true,json:async()=>body})
   vi.stubGlobal('fetch',mock)

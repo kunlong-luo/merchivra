@@ -78,6 +78,19 @@ class SettlementReportComparisonServiceTest {
     }
 
     @Test
+    void equalTotalsCannotHideOrderReferenceDifferences() {
+        assertEquals("ORDER_REFERENCE_AMOUNT_DIFFERENCE",
+            SettlementReportComparisonService.decision(amount("17.50"),amount("17.50"),
+                amount("17.50"),2,0,2,2,0,0,0,true));
+        assertEquals("SOURCE_TOTAL_DIFFERENCE",
+            SettlementReportComparisonService.decision(amount("17.50"),amount("17.50"),
+                amount("17.49"),2,0,2,2,0,0,0,true));
+        assertEquals("REPORT_LINE_COUNT_MISMATCH",
+            SettlementReportComparisonService.decision(amount("17.50"),amount("17.50"),
+                amount("17.50"),2,0,2,1,0,0,0,true));
+    }
+
+    @Test
     void allEvidenceCountsComeFromTenantMarketplaceBoundedScope() {
         String sql=SettlementReportComparisonService.COMPARISON_SQL;
         assertTrue(sql.contains("r.tenant_id=? AND r.seller_marketplace_id=? AND r.id=?"));

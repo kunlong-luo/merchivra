@@ -67,3 +67,6 @@ export MERCHIVRA_SAMPLE_BANK=/private/path/normalized-bank.csv
 - 若需要本地独立差异复算，可在**私有不记录终端**中设置 `MERCHIVRA_SAMPLE_PRIVATE_DETAILS=true` 再运行。输出两个所选文件的字节 SHA-256（gzip 对原压缩字节散列）、原币、声明净额、明细合计、银行贷记+费、两项有符号差额；仅用于受控本地，不得提交/上传完整输出。随后 unset 上述环境变量。标准化银行 CSV 的 SHA 不代表银行原件 SHA；内存数组尽力清零，Java parser/OS 内部副本不保证清除。
 - `LOCAL_SAMPLE_AMOUNTS_AGREE_UNVERIFIED` 不代表真实资金到账、无重复账单、Finances 行完整性或会计确认；本地核对仅支持单一正向同币种结算及唯一银行条目，复用已有解析器，5 MiB 原报告/8 MiB 解压/10,000 明细行、64 KiB 银行 CSV 原解析边界。真实样本须进一步由独立人员核验原始签发主体、真实到账、Finances/Reports 完整归属、实际货物成本与 G1/DEC。仅用合成样本跑 CI；不得在 CI 执行真实文件任务。
 - 下一步：对这笔合法真实样本记录脱敏状态码和不可公开的独立证据位置，按 [V199](v199-settlement-declared-net-fail-closed.md)、[V182](v182-settlement-attribution-evidence.md) 与 [唯一现行计划](../roadmap/current-plan.md) 完成 E1–E5。真实原件尚未提供；保持真实 OAuth OFF、实际净利润 null、生产 NO-GO。
+
+
+V270 [代码 89edb8f76b98](https://github.com/kunlong-luo/merchivra/commit/89edb8f76b983c170430740b7fccce9215f62fae) [快 CI #45588988874 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45588988874) [A3 #45588988944 SUCCESS 7/7](https://github.com/kunlong-luo/merchivra/actions/runs/45588988944)，PG18 job #139118070723 成功；另 [Redis 8 Session smoke #45588988904 FAILURE](https://github.com/kunlong-luo/merchivra/actions/runs/45588988904)，job #139117867603 的容器启动步骤失败，未确认具体原因、未修复，不视为通过。

@@ -52,12 +52,13 @@ CREATE TEMP TABLE spapi_settlement_report (
 ) ON COMMIT DROP;
 CREATE TEMP TABLE spapi_settlement_report_line (
  tenant_id UUID, report_id UUID, line_number INTEGER,
- signed_amount NUMERIC(20,6), currency_code CHAR(3)
+ signed_amount NUMERIC(20,6), currency_code CHAR(3),
+ external_order_id TEXT
 ) ON COMMIT DROP;
 CREATE TEMP TABLE finance_source_event (
  id UUID, tenant_id UUID, seller_marketplace_id UUID,
  source_family TEXT, data_origin TEXT, amount NUMERIC(20,6),
- currency_code CHAR(3)
+ currency_code CHAR(3), external_order_id TEXT
 ) ON COMMIT DROP;
 CREATE TEMP TABLE finance_transaction_reference (
  tenant_id UUID, event_id UUID, reference_kind TEXT,
@@ -166,6 +167,39 @@ UPDATE spapi_settlement_report_line SET currency_code='USD'
 check("absent declared net is still null with matching sums",
       "declared_net IS NULL AND line_net=17.50 AND finance_net=17.50 "
       "AND actual_line_count=2 AND foreign_line_count=0")
+commands.append(f"""
+UPDATE spapi_settlement_report SET declared_net=17.50 WHERE id='{report}';
+UPDATE spapi_settlement_report_line SET external_order_id='ORDER-A'
+ WHERE report_id='{report}' AND line_number=1;
+UPDATE spapi_settlement_report_line SET external_order_id='ORDER-B'
+ WHERE report_id='{report}' AND line_number=2;
+UPDATE finance_source_event SET external_order_id='ORDER-A' WHERE id='{first}';
+UPDATE finance_source_event SET external_order_id='ORDER-B' WHERE id='{second}';
+""")
+check("V271 correct raw order buckets", "NOT order_bucket_conflict")
+commands.append(f"""
+UPDATE finance_source_event SET amount=9.00 WHERE id='{first}';
+UPDATE finance_source_event SET amount=8.50 WHERE id='{second}';
+""")
+check("V271 offsetting order errors", "finance_net=17.50 AND line_net=17.50 AND order_bucket_conflict")
+commands.append(f"""
+UPDATE finance_source_event SET amount=10.00,external_order_id=NULL WHERE id='{first}';
+UPDATE finance_source_event SET amount=7.50 WHERE id='{second}';
+""")
+check("V271 missing order reference not allocated", "finance_net=17.50 AND order_bucket_conflict")
+commands.append(f"""
+UPDATE spapi_settlement_report_line SET external_order_id=NULL
+ WHERE report_id='{report}' AND line_number=1;
+""")
+check("V271 matching unassigned bucket remains unverified", "NOT order_bucket_conflict")
+commands.append(f"""
+UPDATE finance_source_event SET external_order_id='ORDER-B' WHERE id='{first}';
+UPDATE spapi_settlement_report_line SET signed_amount=0
+ WHERE report_id='{report}' AND line_number=1;
+UPDATE spapi_settlement_report_line SET signed_amount=17.50
+ WHERE report_id='{report}' AND line_number=2;
+""")
+check("V271 missing zero bucket not silently ignored", "finance_net=17.50 AND line_net=17.50 AND order_bucket_conflict")
 commands.append("ROLLBACK;\n")
 result = subprocess.run(
     ["psql", "-X", "-h", "127.0.0.1", "-U", "merchivra", "-d", "merchivra",
@@ -177,3 +211,5 @@ if result.returncode:
     raise SystemExit("V198 disposable PG18 check failed:\n" + result.stderr[-4000:])
 print("PASS V198 real PG18 exact Java SQL: unique source claim, report identity, "
       "line completeness, currency and tenant/Marketplace scope")
+
+print("PASS V271 real PG18 exact Java SQL: order buckets, offsetting errors, NULL and absent zero bucket")

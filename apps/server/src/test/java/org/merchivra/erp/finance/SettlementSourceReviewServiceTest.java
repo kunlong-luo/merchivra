@@ -41,6 +41,11 @@ class SettlementSourceReviewServiceTest {
     @Test void digestIncludesAllIndependentFinanceSourcesWithoutPiiOrTokens(){
         String sql=SettlementSourceReviewService.EVIDENCE_SQL;
         assertTrue(sql.contains("r.document_sha256"));
+        assertTrue(sql.contains("'V271:'"));
+        assertTrue(sql.contains("line.external_order_id"));
+        assertTrue(sql.contains("f.external_order_id"));
+        assertTrue(sql.contains("ORDER BY line.line_number"));
+        assertTrue(sql.contains("extract(epoch FROM f.posted_at)"));
         assertTrue(sql.contains("ref.reference_kind='SETTLEMENT_ID'"));
         assertTrue(sql.contains("ref.reference_value=r.settlement_reference"));
         assertTrue(sql.contains("f.seller_marketplace_id=r.seller_marketplace_id"));
