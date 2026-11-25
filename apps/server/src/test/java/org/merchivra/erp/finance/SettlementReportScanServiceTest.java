@@ -309,6 +309,19 @@ class SettlementReportScanServiceTest {
                 throw new AssertionError("Independent PG18 eligibility lock probe failed",failure);
             }
         });
+        // V242: no neighboring-row currency inference in the real importer.
+        var malformed=("settlement-id\ttransaction-type\tamount\tcurrency\n"
+            +"V242-SETTLE-0001\tOrder\t1.00\tUSD\n"
+            +"V242-SETTLE-0001\tOrder\t2.00\t\n")
+            .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        assertThrows(IllegalArgumentException.class,()->tx.executeWithoutResult(s->
+            new SettlementReportImportService(db).importDocument(
+                third,"V242-MISSING-CURRENCY","V242-MISSING-DOC",malformed,false)));
+        assertEquals(1,db.queryForObject(
+            "SELECT count(*) FROM spapi_settlement_report WHERE tenant_id=?",Integer.class,tenant));
+        assertEquals(1,db.queryForObject(
+            "SELECT count(*) FROM spapi_settlement_report_line WHERE tenant_id=?",Integer.class,tenant));
+        System.out.println("PASS V242 actual PG18 report missing currency rejected before staging");
         // Revocation after lock release must prevent new staging and Owner start.
         assertEquals(1,db.update("""
             DELETE FROM role_binding WHERE tenant_id=? AND user_id=? AND role_code='SECURITY_REVIEWER'

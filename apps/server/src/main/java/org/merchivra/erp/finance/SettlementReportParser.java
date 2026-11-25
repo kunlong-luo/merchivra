@@ -62,6 +62,7 @@ public final class SettlementReportParser {
         Map<String,Integer> firstIndex=headers(first);
         String settlementId=null,currency=null;
         BigDecimal declared=null;
+        String summaryCurrency=null;
         // Some Amazon settlement versions lead with a metadata header/value
         // followed by the actual transaction header and data rows.
         if (firstIndex.containsKey("total-amount") &&
@@ -71,7 +72,8 @@ public final class SettlementReportParser {
             String[] values=columns(physical[offset++]);
             requireWidth(first,values);
             settlementId=identifier(field(values,firstIndex,"settlement-id"),160);
-            currency=currency(field(values,firstIndex,"currency"));
+            summaryCurrency=currency(field(values,firstIndex,"currency"));
+            currency=summaryCurrency;
             String reported=field(values,firstIndex,"total-amount");
             declared=reported.isBlank()?null:amount(reported);
             if(offset>=physical.length)throw new IllegalArgumentException("Detail header missing");
@@ -92,7 +94,13 @@ public final class SettlementReportParser {
             if (!settlementId.equals(ref))
                 throw new IllegalArgumentException("Mixed settlement references");
             String rowCurrency=field(row,firstIndex,"currency");
-            if(!rowCurrency.isBlank()) {
+            // Only an explicit report summary can supply an omitted detail currency.
+            // A neighboring transaction is not evidence of this row's original currency.
+            if(rowCurrency.isBlank()) {
+                if(summaryCurrency==null)
+                    throw new IllegalArgumentException("Report row missing original currency");
+                rowCurrency=summaryCurrency;
+            } else {
                 rowCurrency=currency(rowCurrency);
                 if(currency==null)currency=rowCurrency;
                 if(!currency.equals(rowCurrency))
@@ -105,7 +113,7 @@ public final class SettlementReportParser {
             if(!order.isBlank())order=identifier(order,160);
             lines.add(new Line(lines.size()+1,type,amountType,detail,
                 order.isBlank()?null:order,amount(field(row,firstIndex,"amount")),
-                rowCurrency.isBlank()?currency:rowCurrency));
+                rowCurrency));
             if(lines.size()>MAX_LINES)throw new IllegalArgumentException("Too many report rows");
         }
         if(lines.isEmpty() || currency==null)

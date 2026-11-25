@@ -60,6 +60,36 @@ class SettlementReportParserTest {
     }
 
     @Test
+    void detailCurrencyMustBeExplicitWithoutReportSummary() {
+        String header="settlement-id\tcurrency\ttransaction-type\tamount\n";
+        String usd="SETTLE-2026-0001\tUSD\tOrder\t10.00\n";
+        String missing="SETTLE-2026-0001\t\tOrder\t2.00\n";
+        for(String invalid:java.util.List.of(header+missing+usd,header+usd+missing,
+            "settlement-id\ttransaction-type\tamount\nSETTLE-2026-0001\tOrder\t2.00\n")) {
+            assertThrows(IllegalArgumentException.class,()->SettlementReportParser.parse(
+                invalid.getBytes(StandardCharsets.UTF_8),false));
+        }
+        var good=SettlementReportParser.parse((header+usd+usd)
+            .getBytes(StandardCharsets.UTF_8),false);
+        assertTrue(good.lines().stream().allMatch(line->"USD".equals(line.currency())));
+    }
+
+    @Test
+    void explicitSummaryCurrencyMayBeInheritedButNeverOverridden() {
+        var good=SettlementReportParser.parse(DOCUMENT.getBytes(StandardCharsets.UTF_8),false);
+        assertTrue(good.lines().stream().allMatch(line->"USD".equals(line.currency())));
+        String detail="settlement-id\ttransaction-type\tamount\tcurrency\n";
+        String summary="settlement-id\ttotal-amount\tcurrency\nSETTLE-2026-0001\t2.00\tUSD\n";
+        var mixedExplicitAndInherited=SettlementReportParser.parse((summary+detail+
+            "SETTLE-2026-0001\tOrder\t1.00\t\nSETTLE-2026-0001\tOrder\t1.00\tUSD\n")
+            .getBytes(StandardCharsets.UTF_8),false);
+        assertTrue(mixedExplicitAndInherited.lines().stream().allMatch(line->"USD".equals(line.currency())));
+        assertThrows(IllegalArgumentException.class,()->SettlementReportParser.parse(
+            (summary+detail+"SETTLE-2026-0001\tOrder\t2.00\tEUR\n")
+            .getBytes(StandardCharsets.UTF_8),false));
+    }
+
+    @Test
     void rejectsUnboundedDocumentAndQuotedPiiRows() {
         assertThrows(IllegalArgumentException.class,()->
             SettlementReportParser.parse(new byte[SettlementReportParser.MAX_DOCUMENT_BYTES+1],false));

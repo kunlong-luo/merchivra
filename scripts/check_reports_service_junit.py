@@ -22,6 +22,13 @@ def verify(path):
     for key in ("skipped", "failures", "errors"):
         if int(result.get(key, "0")) != 0:
             raise ValueError("Reports regression suite was not successful")
+    output="\n".join(node.text or "" for node in result.iter("system-out"))
+    for marker in (
+        "PASS V241 actual PG18 shared Reports eligibility row fence and reviewer revocation",
+        "PASS V242 actual PG18 report missing currency rejected before staging",
+    ):
+        if marker not in output:
+            raise ValueError(f"Required regression completion marker missing: {marker}")
 
 
 if __name__ == "__main__":
@@ -30,3 +37,4 @@ if __name__ == "__main__":
     except (OSError, ET.ParseError, ValueError) as exc:
         sys.exit(f"FAIL V236 Reports JUnit evidence: {exc}")
     print("PASS V236 actual PG18 Java service test executed (not skipped); remote worker synthetic")
+    print("PASS V241/V242 actual PG18 eligibility and currency regression markers verified")

@@ -11,7 +11,7 @@
 
 ## Current engineering status
 
-V237 full isolated A3 passed (7/7), including the actual PostgreSQL 18 Java Reports service test with a synthetic remote worker. V238–V240 quick CI passed. V241 adds the shared Reports eligibility-row transaction fence; its full A3 is pending. See [current status](docs/current-status.md).
+V237 full isolated A3 passed (7/7), including the actual PostgreSQL 18 Java Reports service test with a synthetic remote worker. V238–V240 quick CI passed. V241 full A3 passed (7/7); V242 rejects missing original currency without explicit report-summary evidence, pending full A3. See [current status](docs/current-status.md).
 
 ## What the repository directories actually do
 

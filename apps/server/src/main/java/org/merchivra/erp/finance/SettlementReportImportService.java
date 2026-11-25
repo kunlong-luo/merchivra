@@ -46,12 +46,17 @@ public class SettlementReportImportService {
             throw new SecurityException("Verified Finance Seller scope required");
         if(!safeId(amazonReportId,160) || !safeId(reportDocumentId,256))
             throw new IllegalArgumentException("Invalid Amazon Reports identifiers");
-        var parsed=SettlementReportParser.parse(body,gzip);
+        // Parse and hash the same private, bounded byte snapshot.
+        // This preserves the received representation (including GZIP).
+        if(body==null || body.length==0 || body.length>SettlementReportParser.MAX_DOCUMENT_BYTES)
+            throw new IllegalArgumentException("Report document outside size bounds");
+        byte[] snapshot=body.clone();
+        var parsed=SettlementReportParser.parse(snapshot,gzip);
+        String hash=sha(snapshot);
         Market market=lockCurrentScope(jdbc,approved);
         if(!market.currency().equals(parsed.currency()))
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                 "Report currency disagrees with Marketplace; manual FX review required");
-        String hash=sha(body);
         UUID id=UUID.randomUUID();
         try {
             int inserted=jdbc.update("""
