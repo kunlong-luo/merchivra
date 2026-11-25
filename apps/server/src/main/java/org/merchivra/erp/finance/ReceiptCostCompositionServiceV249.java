@@ -46,11 +46,13 @@ public class ReceiptCostCompositionServiceV249 {
 
     private final JdbcTemplate jdbc;
     private final ReceiptCostIntegrityServiceV216 audit;
+    private final OrderLotAssignmentIntegrityServiceV203 orderLots;
     private final TransactionTemplate read;
     private final TransactionTemplate captureTx;
     public ReceiptCostCompositionServiceV249(JdbcTemplate jdbc,
-        ReceiptCostIntegrityServiceV216 audit,PlatformTransactionManager manager) {
-        this.jdbc=jdbc;this.audit=audit;
+        ReceiptCostIntegrityServiceV216 audit,PlatformTransactionManager manager,
+        OrderLotAssignmentIntegrityServiceV203 orderLots) {
+        this.jdbc=jdbc;this.audit=audit;this.orderLots=orderLots;
         read=new TransactionTemplate(manager);
         read.setReadOnly(true);
         read.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
@@ -278,6 +280,26 @@ public class ReceiptCostCompositionServiceV249 {
             }
             if(!sold.equals(attributed))
                 return orderHold(order,marketplace,"ORIGINAL_ORDER_COST_CLAIM_QUANTITY_INCOMPLETE");
+
+            // V260: reuse the V203 effective-state gate (V29 date-valid SKU
+            // and cost readiness + V106). REQUIRED propagation joins this RR;
+            // never substitute a receipt SKU for a stale order-time mapping.
+            var lineage=orderLots.preview(tenant,marketplace,order);
+            if(!"COGS_READY_PREVIEW".equals(lineage.orderCostReadiness())||
+                lineage.claims().size()!=claims.size())
+                return orderHold(order,marketplace,"ORIGINAL_ORDER_HISTORICAL_SKU_COST_NOT_READY");
+            var claimById=new HashMap<String,OrderClaim>();
+            for(var c:claims)claimById.put(c.id().toString(),c);
+            var lineageIds=new HashSet<String>();
+            for(var link:lineage.claims()) {
+                var c=claimById.get(link.claimId());
+                var item=byExternal.get(link.externalItemId());
+                if(c==null||item==null||!lineageIds.add(link.claimId())||
+                    !c.item().equals(item.id())||!c.receipt().toString().equals(link.purchaseReceiptId())||
+                    c.quantity()!=link.assignedQuantity()||
+                    !"LOCAL_LINK_INTACT_UNVERIFIED".equals(link.integrityState()))
+                    return orderHold(order,marketplace,"ORIGINAL_ORDER_SALE_SKU_OR_LOT_LINEAGE_STALE");
+            }
 
             // Include unmatched exact external-order references as blockers,
             // not just the already matched rows. Unknown external refs remain

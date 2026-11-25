@@ -72,7 +72,7 @@ class ReceiptCostCompositionPg18V250Test {
             """,Integer.class));
         service=new ReceiptCostCompositionServiceV249(db,
             new ReceiptCostIntegrityServiceV216(db,new CostIdentityReconciliationService(db),manager),
-            manager);
+            manager,new OrderLotAssignmentIntegrityServiceV203(db,new OrderCostReadinessService(db)));
         write.executeWithoutResult(ignored->seed());
         var client=loginFixtureOwner();
         expense(market,"INBOUND_FREIGHT","20","10","a");
@@ -188,6 +188,7 @@ class ReceiptCostCompositionPg18V250Test {
         var second=new ReceiptCostCompositionPg18V250Test();
         second.db=db;second.write=write;second.service=service;
         second.crossClaimRace();
+        System.out.println("PASS V260 actual PG18 historical SKU mapping missing and remapped hold, V259 amount coverage");
         System.out.println("PASS V258 actual PG18 whole-order original cost and refund reservation coverage, 30/14.999999/15.000001, full refund and stale hold");
         System.out.println("PASS V257 actual PG18 refund races: rollback release, committed cross-claim quantity rejection, review and cost drift hold");
         System.out.println("PASS V256 actual PG18 immutable local cost basis and refund reservation duplicate, overlap and bounds rejected");
@@ -296,6 +297,25 @@ class ReceiptCostCompositionPg18V250Test {
             """,Integer.class,tenant,event));
         assertEquals("LOCAL_RESERVATIONS_CURRENT_UNVERIFIED",
             service.readRefundReservations(tenant,market,receipt,claimA).state());
+        var unmapped=service.readWholeOrderRefundReservations(tenant,market,sale);
+        assertEquals("LOCAL_ORDER_REFUND_COST_HOLD",unmapped.state());
+        assertTrue(unmapped.blockers().contains("ORIGINAL_ORDER_HISTORICAL_SKU_COST_NOT_READY"));
+        assertTrue(unmapped.currencies().isEmpty());
+        UUID listing=UUID.randomUUID(),mapping=UUID.randomUUID();
+        write.executeWithoutResult(ignored->{
+            db.update("""
+                INSERT INTO marketplace_listing(id,tenant_id,seller_marketplace_id,seller_sku,mapping_status,data_origin)
+                VALUES (?,?,?,'V250-SKU','ACTIVE','LIVE')
+                """,listing,tenant,market);
+            db.update("""
+                INSERT INTO listing_sku_mapping(id,tenant_id,listing_id,product_sku_id,status,valid_from,mapping_version)
+                VALUES (?,?,?,?,'ACTIVE',now()-interval '1 day',1)
+                """,mapping,tenant,listing,sku);
+            db.update("""
+                INSERT INTO sku_cost_version(id,tenant_id,product_sku_id,unit_cost,currency_code,effective_from,created_by)
+                VALUES (?,?,?,10,'USD',current_date-1,?)
+                """,UUID.randomUUID(),tenant,sku,maker);
+        });
         var first=service.readWholeOrderRefundReservations(tenant,market,sale);
         assertEquals("LOCAL_ORDER_REFUND_COST_CANDIDATE_UNVERIFIED",first.state());
         assertEquals(2,first.originalClaimRows());
@@ -305,6 +325,27 @@ class ReceiptCostCompositionPg18V250Test {
         assertFalse(first.refundCogsReversalAllowed());
         assertNull(first.actualRefundCogsReversal());
         assertNull(first.realizedNetProfit());
+        // V260: an independently cost-ready, but different, historical SKU
+        // must not authorize use of the old receipt's cost basis.
+        UUID differentSku=UUID.randomUUID();
+        write.executeWithoutResult(ignored->{
+            db.update("INSERT INTO product_sku(id,tenant_id,internal_sku,display_name) VALUES (?,?,'V260-OTHER','Synthetic other SKU')",
+                differentSku,tenant);
+            db.update("""
+                INSERT INTO sku_cost_version(id,tenant_id,product_sku_id,unit_cost,currency_code,effective_from,created_by)
+                VALUES (?,?,?,10,'USD',current_date-1,?)
+                """,UUID.randomUUID(),tenant,differentSku,maker);
+            db.update("UPDATE listing_sku_mapping SET product_sku_id=? WHERE tenant_id=? AND id=?",
+                differentSku,tenant,mapping);
+        });
+        var remapped=service.readWholeOrderRefundReservations(tenant,market,sale);
+        assertEquals("LOCAL_ORDER_REFUND_COST_HOLD",remapped.state());
+        assertTrue(remapped.blockers().contains("ORIGINAL_ORDER_SALE_SKU_OR_LOT_LINEAGE_STALE"));
+        assertTrue(remapped.currencies().isEmpty());
+        assertNull(remapped.realizedNetProfit());
+        db.update("UPDATE listing_sku_mapping SET product_sku_id=? WHERE tenant_id=? AND id=?",
+            sku,tenant,mapping);
+        assertEquals(first.currencies(),service.readWholeOrderRefundReservations(tenant,market,sale).currencies());
         // V259: quantity and reservation coverage are not enough without V35.
         db.update("UPDATE finance_refund_amount_allocation SET signed_amount=-19 WHERE tenant_id=? AND event_id=?",tenant,event);
         var partial=service.readWholeOrderRefundReservations(tenant,market,sale);

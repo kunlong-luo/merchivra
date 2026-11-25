@@ -90,3 +90,11 @@ V256 [CI #45569699760](https://github.com/kunlong-luo/merchivra/actions/runs/455
 ## V259 · 全单原始退款金额与 V35 覆盖门禁（待验收）
 
 在 V258 同一只读 RR 中，限定相关 LIVE PRODUCT_REFUND 的 V35 `finance_refund_amount_allocation` 全人口（LIMIT 1001，超1000 hold），与 V34 event/item 集合严格相等；复用 `RefundAmountAllocationEngine.evaluate` 对每个原始事件的负向金额、原币与分摊合计独立核对。部分、缺失、错币/符号或重复均不返回任何订单成本候选金额。扩展 V250 真 PG18 合成夹具：V35 完整时保持 V258 原币候选；-19 对 -20 及删除 V35 行时 HOLD，恢复后候选恢复。此处比较的是原始 PRODUCT_REFUND 金额，并未调用 V22 分类或验证 V63 独立审核、V35 历史变更/审计、外部完整性和物理退货，不等于真实退款成本或利润。无新迁移、API、目录或过账，CI/A3 待核对，actualRefundCogsReversal/realizedNetProfit=null。
+
+
+V258 验收回填：[代码 SHA 97ee40d99c1d](https://github.com/kunlong-luo/merchivra/commit/97ee40d99c1dec7f1bc9f2118fa1e8a7219c18e3)、[快 CI #45570749711 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45570749711)、[完整 A3 #45570749671 SUCCESS 7/7](https://github.com/kunlong-luo/merchivra/actions/runs/45570749671)，PG18 job #139057514459 成功。V259 [代码 SHA 3610ac70bae6](https://github.com/kunlong-luo/merchivra/commit/3610ac70bae682070cb2cd249db73ed185cce63c) [快 CI #45571409601 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45571409601)，该 SHA 未见完整 A3，不能把 V258 结果用于 V259。
+
+## V260 · 历史 SKU/原销售批次门禁（待验收）
+
+
+V260：全单候选在同一独立 RR 中复用 V203 preview（V29 历史成本和销售时 SKU 映射、V106 批次完整性），逐 claim 对齐 ID、订单行、原 receipt、数量、effectiveState；缺历史成本、映射重定向或任一 claim 失效则整单 HOLD，金额为空。底层 scope/conflict 异常仍失败封闭，不在参与事务内部吞掉异常。扩展 V250 真实 PG18 合成回归：缺映射 hold，补历史成本及映射后恢复候选，改到另一个同价有效 SKU hold，恢复原映射后候选恢复；保留 V259 金额负例并要求新 JUnit marker。V260 完整 A3 待验收；该门禁不证明销售时实际 COGS 或 ABA，不包含 V63/外部物理返仓/G1，实际回转与利润仍 null。无新迁移/API/目录。

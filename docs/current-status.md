@@ -1,6 +1,6 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 修复及全单成本候选待验收；V259 V35 原币金额与商品覆盖门禁待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7；V259 快 CI 通过；V260 历史 SKU/原批次门禁待 A3。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 核心项目状态
 
@@ -118,3 +118,9 @@ V231 已在 [精确代码 SHA `9ff02147de17`](https://github.com/kunlong-luo/mer
 
 
 V259：在 V258 同一 RR 内读取全部相关 V35 分摊（上限1000），逐 event/item 与 V34 审核严格匹配；复用 RefundAmountAllocationEngine 比对 LIVE 原始 PRODUCT_REFUND 符号、原币及合计，缺行、部分金额或不一致整单 HOLD、currencies 空。扩展实际 PG18 V250 夹具补齐 V35 合成行，负例为部分金额和缺分摊、恢复后候选一致。仅原始事件金额与本地 V35 核对，不证明 V22 分类、V63 独立复核或实际外部退款/返仓；CI/A3 未核对，无正式回转，realizedNetProfit=null。见[既有退款契约](finance/v212-refund-original-sale-lot-quantity-envelope.md)。
+
+
+V258 验收回填：[代码 SHA 97ee40d99c1d](https://github.com/kunlong-luo/merchivra/commit/97ee40d99c1dec7f1bc9f2118fa1e8a7219c18e3)、[快 CI #45570749711 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45570749711)、[完整 A3 #45570749671 SUCCESS 7/7](https://github.com/kunlong-luo/merchivra/actions/runs/45570749671)，PG18 job #139057514459 成功。V259 [代码 SHA 3610ac70bae6](https://github.com/kunlong-luo/merchivra/commit/3610ac70bae682070cb2cd249db73ed185cce63c) [快 CI #45571409601 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45571409601)，该 SHA 未见完整 A3，不能把 V258 结果用于 V259。
+
+
+V260：全单候选在同一独立 RR 中复用 V203 preview（V29 历史成本和销售时 SKU 映射、V106 批次完整性），逐 claim 对齐 ID、订单行、原 receipt、数量、effectiveState；缺历史成本、映射重定向或任一 claim 失效则整单 HOLD，金额为空。底层 scope/conflict 异常仍失败封闭，不在参与事务内部吞掉异常。扩展 V250 真实 PG18 合成回归：缺映射 hold，补历史成本及映射后恢复候选，改到另一个同价有效 SKU hold，恢复原映射后候选恢复；保留 V259 金额负例并要求新 JUnit marker。V260 完整 A3 待验收；该门禁不证明销售时实际 COGS 或 ABA，不包含 V63/外部物理返仓/G1，实际回转与利润仍 null。无新迁移/API/目录。
