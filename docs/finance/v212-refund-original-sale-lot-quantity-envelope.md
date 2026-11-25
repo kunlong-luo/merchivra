@@ -86,3 +86,7 @@ V255 [CI #45569211952](https://github.com/kunlong-luo/merchivra/actions/runs/455
 V256 [CI #45569699760](https://github.com/kunlong-luo/merchivra/actions/runs/45569699760) SUCCESS，[A3 #45569699719](https://github.com/kunlong-luo/merchivra/actions/runs/45569699719) 6/7 FAILURE：PG18 job #139053562401 原日志 `column reference "source_amount" is ambiguous`，发生在 V250 Java 第111行 persistRefundBasis；此前 V119 已迁移但写入未通过。追加 Flyway V120 CREATE OR REPLACE，仅将同名变量改为专用变量，不改 V119。V257 快 CI SUCCESS、A3 初查尚未确认。
 
 `readWholeOrderRefundReservations` 单独 RR 内复用 V257 读取及当前 V249/V255 指纹核对；每订单最多50个当前 LIVE item/50个 claim/20个收货单、1000事件/审核/预留，按 receipt 缓存计算。原销售数量必须全部有原 claim，所有 claim（含未退款）都需现行不可变成本；本地匹配 LIVE PRODUCT_REFUND 以及同站点精确外部订单引用全部纳入，未匹配、错归属、非负、未审核、NOT_RESTOCKED/UNKNOWN 或跨事件数量异常阻断（保守不猜未返仓成本）。每 event/item 审核数量与已存全部预留严格相等；缺任一行、成本指纹或审核失效整单 HOLD，currencies 空，不输出部分金额。不同原币分别给原销售候选、退款候选和剩余原候选，不换汇；无外部事件完整性、V35/V63 金额复核、真实退货、ABA 或历史销售时会计成本证明，不能记账。V250 实际 PG18 夹具扩展全单30/14.999999/15.000001，缺第二事件区间 hold，补齐后全退30、审核漂移 hold；JUnit 强制 V258 marker。待新 SHA A3；无 HTTP/UI 入口。
+
+## V259 · 全单原始退款金额与 V35 覆盖门禁（待验收）
+
+在 V258 同一只读 RR 中，限定相关 LIVE PRODUCT_REFUND 的 V35 `finance_refund_amount_allocation` 全人口（LIMIT 1001，超1000 hold），与 V34 event/item 集合严格相等；复用 `RefundAmountAllocationEngine.evaluate` 对每个原始事件的负向金额、原币与分摊合计独立核对。部分、缺失、错币/符号或重复均不返回任何订单成本候选金额。扩展 V250 真 PG18 合成夹具：V35 完整时保持 V258 原币候选；-19 对 -20 及删除 V35 行时 HOLD，恢复后候选恢复。此处比较的是原始 PRODUCT_REFUND 金额，并未调用 V22 分类或验证 V63 独立审核、V35 历史变更/审计、外部完整性和物理退货，不等于真实退款成本或利润。无新迁移、API、目录或过账，CI/A3 待核对，actualRefundCogsReversal/realizedNetProfit=null。

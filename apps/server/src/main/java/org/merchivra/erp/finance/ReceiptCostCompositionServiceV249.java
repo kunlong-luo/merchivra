@@ -211,7 +211,8 @@ public class ReceiptCostCompositionServiceV249 {
     record OrderItem(UUID id,String externalId,Integer quantity) {}
     record OrderClaim(UUID id,UUID item,UUID receipt,UUID marketplace,int quantity) {}
     record OrderRefundEvent(UUID id,UUID marketplace,UUID linkedOrder,String linkState,
-        BigDecimal amount,String externalOrderId) {}
+        BigDecimal amount,String externalOrderId,String currency) {}
+    record OrderRefundAllocation(UUID event,String item,BigDecimal amount,String currency) {}
     record OrderRefundReview(UUID event,String item,int quantity,String disposition) {}
     record EventItem(UUID event,UUID item) {}
     record OrderRefundCurrency(String currency,String originalSaleCandidateCost,
@@ -282,7 +283,7 @@ public class ReceiptCostCompositionServiceV249 {
             // not just the already matched rows. Unknown external refs remain
             // a genuine coverage limitation, not an inferred zero.
             var events=jdbc.query("""
-                SELECT f.id,f.seller_marketplace_id,l.order_id,l.state,f.amount,f.external_order_id
+                SELECT f.id,f.seller_marketplace_id,l.order_id,l.state,f.amount,f.external_order_id,f.currency_code
                 FROM finance_source_event f LEFT JOIN finance_event_link_review l
                   ON l.tenant_id=f.tenant_id AND l.event_id=f.id
                 WHERE f.tenant_id=? AND f.source_family='SPAPI_FINANCES' AND f.data_origin='LIVE'
@@ -290,7 +291,7 @@ public class ReceiptCostCompositionServiceV249 {
                   AND (l.order_id=? OR (f.seller_marketplace_id=? AND f.external_order_id=?))
                 ORDER BY f.id LIMIT 1001
                 """,(rs,n)->new OrderRefundEvent(rs.getObject(1,UUID.class),rs.getObject(2,UUID.class),
-                    rs.getObject(3,UUID.class),rs.getString(4),rs.getBigDecimal(5),rs.getString(6)),
+                    rs.getObject(3,UUID.class),rs.getString(4),rs.getBigDecimal(5),rs.getString(6),rs.getString(7)),
                     tenant,order,marketplace,external);
             var reviews=jdbc.query("""
                 SELECT event_id,external_item_id,reviewed_quantity,disposition
@@ -304,7 +305,8 @@ public class ReceiptCostCompositionServiceV249 {
             for(var e:events) {
                 if(e.id()==null||!sourceIds.add(e.id())||!marketplace.equals(e.marketplace())||
                     !order.equals(e.linkedOrder())||!"MATCHED".equals(e.linkState())||
-                    e.amount()==null||e.amount().signum()>=0||
+                    e.amount()==null||e.amount().signum()>=0||e.currency()==null||
+                    !e.currency().trim().matches("[A-Z]{3}")||
                     (e.externalOrderId()!=null&&!external.equals(e.externalOrderId())))
                     return orderHold(order,marketplace,"LOCAL_REFUND_EVENT_LINK_OR_AMOUNT_INVALID");
             }
@@ -323,6 +325,45 @@ public class ReceiptCostCompositionServiceV249 {
             }
             if(!reviewedEvents.equals(sourceIds))
                 return orderHold(order,marketplace,"REFUND_EVENT_REVIEW_COVERAGE_INCOMPLETE");
+            // V259: V34 quantity coverage alone cannot establish a balanced
+            // refund. Reuse the V35 signed amount engine against every locally
+            // identified raw refund event, without claiming V63 or classification.
+            var allocations=jdbc.query("""
+                SELECT a.event_id,a.external_item_id,a.signed_amount,a.currency_code
+                FROM finance_refund_amount_allocation a
+                JOIN finance_source_event f ON f.tenant_id=a.tenant_id AND f.id=a.event_id
+                LEFT JOIN finance_event_link_review l ON l.tenant_id=f.tenant_id AND l.event_id=f.id
+                WHERE f.tenant_id=? AND f.source_family='SPAPI_FINANCES' AND f.data_origin='LIVE'
+                  AND f.category='PRODUCT_REFUND'
+                  AND (l.order_id=? OR (f.seller_marketplace_id=? AND f.external_order_id=?))
+                ORDER BY a.event_id,a.external_item_id LIMIT 1001
+                """,(rs,n)->new OrderRefundAllocation(rs.getObject(1,UUID.class),
+                    rs.getString(2),rs.getBigDecimal(3),rs.getString(4)),
+                    tenant,order,marketplace,external);
+            if(allocations.size()>1000)
+                return orderHold(order,marketplace,"REFUND_AMOUNT_ALLOCATION_POPULATION_UNBOUNDED");
+            var amountKeys=new HashSet<EventItem>();
+            var byEvent=new HashMap<UUID,List<RefundAmountAllocationEngine.Entry>>();
+            for(var a:allocations) {
+                var item=byExternal.get(a.item());
+                if(item==null||!sourceIds.contains(a.event())||a.currency()==null||
+                    !amountKeys.add(new EventItem(a.event(),item.id())))
+                    return orderHold(order,marketplace,"REFUND_AMOUNT_ALLOCATION_SCOPE_INVALID");
+                byEvent.computeIfAbsent(a.event(),key->new ArrayList<>()).add(
+                    new RefundAmountAllocationEngine.Entry(a.item(),a.amount(),a.currency().trim()));
+            }
+            if(!amountKeys.equals(expected.keySet()))
+                return orderHold(order,marketplace,"REFUND_AMOUNT_ITEM_COVERAGE_INCOMPLETE");
+            for(var e:events) {
+                try {
+                    var summary=RefundAmountAllocationEngine.evaluate(e.amount(),e.currency().trim(),
+                        true,byEvent.getOrDefault(e.id(),List.of()));
+                    if(!"SIGNED_TOTAL_MATCHES_UNVERIFIED".equals(summary.status()))
+                        return orderHold(order,marketplace,"REFUND_AMOUNT_NOT_BALANCED_IN_ORIGINAL_CURRENCY");
+                } catch(IllegalArgumentException invalid) {
+                    return orderHold(order,marketplace,"REFUND_AMOUNT_NOT_BALANCED_IN_ORIGINAL_CURRENCY");
+                }
+            }
             var cache=new HashMap<UUID,Candidate>();
             var reserved=new HashMap<EventItem,Long>();
             var sums=new java.util.TreeMap<String,CurrencySum>();

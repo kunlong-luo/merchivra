@@ -1,6 +1,6 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 修复及全单成本候选待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 修复及全单成本候选待验收；V259 V35 原币金额与商品覆盖门禁待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 核心项目状态
 
@@ -115,3 +115,6 @@ V231 已在 [精确代码 SHA `9ff02147de17`](https://github.com/kunlong-luo/mer
 - 默认 Next 本地 `pnpm dev` 只启动前端；Spring Boot 127.0.0.1:8080 与 PostgreSQL18 必须另行正常运行。HTTP401 是未登录，HTTP500/502/503/504 是服务端/代理异常，不能当作口令错误或绕过身份校验。参阅[本地会话排错](development.md)。
 - 已删除无独立规则的 `Agent.md` 兼容别名和重复的 V120 旧英文待 CI 草稿；保留根 `AGENTS.md`、正式 V120 文档与历史 Git；清理原因与每个目录用途见[根中文 README](../README.zh-CN.md)、[英文 README](../README.md) 与 [文档中心](README.md)。旧版带精确 SHA 的历史 A3/财务文件和 Flyway 不属于无用文件。
 - 新文档/目录一致性检查是 `python3 scripts/check_docs_consistency_v109.py`；不要重复引入 npm、Maven、PostgreSQL17、过期默认 Vite 或第二份现行计划。
+
+
+V259：在 V258 同一 RR 内读取全部相关 V35 分摊（上限1000），逐 event/item 与 V34 审核严格匹配；复用 RefundAmountAllocationEngine 比对 LIVE 原始 PRODUCT_REFUND 符号、原币及合计，缺行、部分金额或不一致整单 HOLD、currencies 空。扩展实际 PG18 V250 夹具补齐 V35 合成行，负例为部分金额和缺分摊、恢复后候选一致。仅原始事件金额与本地 V35 核对，不证明 V22 分类、V63 独立复核或实际外部退款/返仓；CI/A3 未核对，无正式回转，realizedNetProfit=null。见[既有退款契约](finance/v212-refund-original-sale-lot-quantity-envelope.md)。

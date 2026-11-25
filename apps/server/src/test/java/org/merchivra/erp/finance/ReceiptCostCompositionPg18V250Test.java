@@ -305,12 +305,31 @@ class ReceiptCostCompositionPg18V250Test {
         assertFalse(first.refundCogsReversalAllowed());
         assertNull(first.actualRefundCogsReversal());
         assertNull(first.realizedNetProfit());
+        // V259: quantity and reservation coverage are not enough without V35.
+        db.update("UPDATE finance_refund_amount_allocation SET signed_amount=-19 WHERE tenant_id=? AND event_id=?",tenant,event);
+        var partial=service.readWholeOrderRefundReservations(tenant,market,sale);
+        assertTrue(partial.blockers().contains("REFUND_AMOUNT_NOT_BALANCED_IN_ORIGINAL_CURRENCY"));
+        assertTrue(partial.currencies().isEmpty());
+        assertNull(partial.actualRefundCogsReversal());
+        db.update("UPDATE finance_refund_amount_allocation SET signed_amount=-20 WHERE tenant_id=? AND event_id=?",tenant,event);
+        assertEquals(first.currencies(),service.readWholeOrderRefundReservations(tenant,market,sale).currencies());
         UUID next=seedRefund(itemA);
         var held=service.readWholeOrderRefundReservations(tenant,market,sale);
         assertEquals("LOCAL_ORDER_REFUND_COST_HOLD",held.state());
         assertTrue(held.blockers().contains("REFUND_EVENT_ITEM_RESERVATION_COVERAGE_INCOMPLETE"));
         assertTrue(held.currencies().isEmpty());
         reserveRefund(claimB,b.sha256(),next,2,3);
+        db.update("DELETE FROM finance_refund_amount_allocation WHERE tenant_id=? AND event_id=?",tenant,next);
+        var missing=service.readWholeOrderRefundReservations(tenant,market,sale);
+        assertTrue(missing.blockers().contains("REFUND_AMOUNT_ITEM_COVERAGE_INCOMPLETE"));
+        assertTrue(missing.currencies().isEmpty());
+        db.update("""
+            INSERT INTO finance_refund_amount_allocation
+              (tenant_id,event_id,external_item_id,signed_amount,currency_code,
+               reason_reference,revision,reviewed_by)
+            SELECT ?,?,external_item_id,-20,'USD','V259-SYNTHETIC',1,?
+            FROM order_item WHERE tenant_id=? AND id=?
+            """,tenant,next,reviewer,tenant,itemA);
         var full=service.readWholeOrderRefundReservations(tenant,market,sale);
         assertEquals(List.of(new ReceiptCostCompositionServiceV249.OrderRefundCurrency(
             "USD","30.000000","30.000000","0.000000")),full.currencies());
@@ -393,6 +412,13 @@ class ReceiptCostCompositionPg18V250Test {
                 SELECT ?,?,?,external_item_id,1,'RESTOCKED_CLAIMED','V256-SYNTHETIC',?
                 FROM order_item WHERE tenant_id=? AND id=?
                 """,tenant,event,sale,reviewer,tenant,item);
+            db.update("""
+                INSERT INTO finance_refund_amount_allocation
+                  (tenant_id,event_id,external_item_id,signed_amount,currency_code,
+                   reason_reference,revision,reviewed_by)
+                SELECT ?,?,external_item_id,-20,'USD','V259-SYNTHETIC',1,?
+                FROM order_item WHERE tenant_id=? AND id=?
+                """,tenant,event,reviewer,tenant,item);
         });
         return event;
     }
