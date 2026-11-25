@@ -1,0 +1,278 @@
+package org.merchivra.erp.finance;
+
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+import org.springframework.web.server.ResponseStatusException;
+import static org.junit.jupiter.api.Assertions.*;
+
+/** Actual installed PG18 tables, views, FKs and transactions; no external data. */
+class ReceiptCostCompositionPg18V250Test {
+    private final UUID tenant=UUID.randomUUID(), maker=UUID.randomUUID(),
+        reviewer=UUID.randomUUID(), account=UUID.randomUUID(), market=UUID.randomUUID(),
+        market2=UUID.randomUUID(), supplier=UUID.randomUUID(), sku=UUID.randomUUID(),
+        warehouse=UUID.randomUUID(), bin=UUID.randomUUID(), po=UUID.randomUUID(),
+        pol=UUID.randomUUID(), receipt=UUID.randomUUID(), qc=UUID.randomUUID(),
+        position=UUID.randomUUID(), op=UUID.randomUUID(), pick=UUID.randomUUID(),
+        pickLine=UUID.randomUUID(), sale=UUID.randomUUID(), itemA=UUID.randomUUID(),
+        itemB=UUID.randomUUID(), claimA=UUID.randomUUID(), claimB=UUID.randomUUID();
+    private JdbcTemplate db;
+    private TransactionTemplate write;
+    private ReceiptCostCompositionServiceV249 service;
+
+    @Test
+    @EnabledIfEnvironmentVariable(named="MERCHIVRA_V250_DISPOSABLE_ONLY",matches="true")
+    void actualPg18ReceiptCostsAndSaleRangesConserveAmounts() {
+        Map.ofEntries(
+            Map.entry("GITHUB_ACTIONS","true"),
+            Map.entry("GITHUB_REPOSITORY","kunlong-luo/merchivra"),
+            Map.entry("GITHUB_REF","refs/heads/main"),
+            Map.entry("MERCHIVRA_SPAPI_ENABLED","false"),
+            Map.entry("MERCHIVRA_SPAPI_OAUTH_ENABLED","false"),
+            Map.entry("DB_HOST","127.0.0.1"),Map.entry("DB_PORT","5432"),
+            Map.entry("DB_NAME","merchivra"),Map.entry("DB_USER","merchivra"),
+            Map.entry("DB_PASSWORD","ci_disposable_database_password"),
+            Map.entry("MERCHIVRA_BOOTSTRAP_USERNAME","v65-ci-owner")
+        ).forEach((k,v)->assertEquals(v,System.getenv(k),"Disposable CI required: "+k));
+        assertTrue(System.getenv().getOrDefault("GITHUB_RUN_ID","").matches("[0-9]+"));
+        var ds=new DriverManagerDataSource("jdbc:postgresql://127.0.0.1:5432/merchivra",
+            "merchivra","ci_disposable_database_password");
+        db=new JdbcTemplate(ds);
+        var manager=new DataSourceTransactionManager(ds);
+        write=new TransactionTemplate(manager);
+        int version=Integer.parseInt(db.queryForObject("SHOW server_version_num",String.class));
+        assertTrue(version>=180000&&version<190000);
+        assertEquals(4,db.queryForObject("""
+            SELECT count(*) FROM flyway_schema_history
+            WHERE version IN ('106','112','117','118') AND success
+            """,Integer.class));
+        service=new ReceiptCostCompositionServiceV249(db,
+            new ReceiptCostIntegrityServiceV216(db,new CostIdentityReconciliationService(db),manager),
+            manager);
+        write.executeWithoutResult(ignored->seed());
+        expense(market,"INBOUND_FREIGHT","20","10","a");
+        bind(claimA,0,1);
+        hold("ORIGINAL_CLAIM_OR_RANGE_INCOMPLETE_OR_STALE");
+        bind(claimB,2,3);
+        hold("FREIGHT_OR_DUTY_EVIDENCE_UNKNOWN_NOT_ZERO");
+        expense(market,"IMPORT_DUTY","10","5","b");
+        var result=service.preview(tenant,market,receipt);
+        assertEquals("LOCAL_PO_FREIGHT_DUTY_CANDIDATE_UNVERIFIED",result.state());
+        assertEquals("USD",result.currency());
+        assertEquals("45.000000",result.receiptCandidateCost());
+        assertEquals("30.000000",result.allocatedCandidateCost());
+        assertEquals("15.000000",result.unallocatedCandidateCost());
+        assertEquals(List.of(claimA.toString(),claimB.toString()),
+            result.saleShares().stream().map(ReceiptCostCompositionServiceV249.SaleShare::claimId).toList());
+        assertEquals(List.of("14.999999","15.000001"),
+            result.saleShares().stream().map(ReceiptCostCompositionServiceV249.SaleShare::candidateCost).toList());
+        assertEquals(3,result.components().size());
+        assertEquals("10.000000",result.components().stream()
+            .filter(c->c.category().equals("INBOUND_FREIGHT")).findFirst().orElseThrow()
+            .partition().sourceAmount());
+        assertEquals("5.000000",result.components().stream()
+            .filter(c->c.category().equals("IMPORT_DUTY")).findFirst().orElseThrow()
+            .partition().sourceAmount());
+        assertFalse(result.actualBatchCogsVerified());
+        assertNull(result.actualBatchCogs());
+        assertNull(result.realizedNetProfit());
+        // An independent current read cannot borrow foreign tenant receipts.
+        assertEquals(404,assertThrows(ResponseStatusException.class,
+            ()->service.preview(UUID.randomUUID(),market,receipt)).getStatusCode().value());
+        db.update("UPDATE erp_purchase_order_line SET unit_cost=11 WHERE tenant_id=? AND id=?",tenant,pol);
+        hold("ORIGINAL_CLAIM_OR_RANGE_INCOMPLETE_OR_STALE");
+        db.update("UPDATE erp_purchase_order_line SET unit_cost=10 WHERE tenant_id=? AND id=?",tenant,pol);
+        assertEquals(result,service.preview(tenant,market,receipt));
+        // A real local retraction leaves the persisted range reserved and
+        // prevents a misleading total. The foreign-source hold has priority,
+        // so it can be tested after the committed append-only retraction.
+        db.update("""
+            INSERT INTO finance_sale_lot_retraction_v106
+            (id,tenant_id,claim_id,retracted_by,reason) VALUES (?,?,?,?,?)
+            """,UUID.randomUUID(),tenant,claimB,reviewer,"V250 isolated retraction only");
+        hold("ORIGINAL_CLAIM_OR_RANGE_INCOMPLETE_OR_STALE");
+        assertEquals(2,db.queryForObject("""
+            SELECT count(*) FROM finance_sale_lot_cost_range_v117 WHERE tenant_id=? AND receipt_id=?
+            """,Integer.class,tenant,receipt));
+        expense(market2,"INBOUND_FREIGHT","7","2","c");
+        hold("CROSS_MARKETPLACE_RECEIPT_SCOPE_UNRESOLVED");
+        System.out.println("PASS V250 actual PG18 V249 composition: PO freight duty 45/30/15, original source shares, missing range/duty, drift, retraction and cross-marketplace hold");
+    }
+
+    private void hold(String reason) {
+        var c=service.preview(tenant,market,receipt);
+        assertEquals("LOCAL_COST_COMPOSITION_HOLD",c.state());
+        assertTrue(c.blockerCodes().contains(reason),c.blockerCodes().toString());
+        assertNull(c.receiptCandidateCost());
+        assertNull(c.allocatedCandidateCost());
+        assertNull(c.unallocatedCandidateCost());
+        assertTrue(c.components().isEmpty());
+        assertTrue(c.saleShares().isEmpty());
+        assertNull(c.actualBatchCogs());
+        assertNull(c.realizedNetProfit());
+    }
+
+    private void bind(UUID claim,int start,int end) {
+        db.update("""
+            INSERT INTO finance_sale_lot_cost_range_v117
+            (tenant_id,claim_id,unit_from,unit_to,recorded_by) VALUES (?,?,?,?,?)
+            """,tenant,claim,start,end,maker);
+    }
+
+    private void expense(UUID marketplace,String category,String original,String allocated,String digest) {
+        write.executeWithoutResult(ignored->{
+            UUID source=UUID.randomUUID(),plan=UUID.randomUUID();
+            db.update("""
+                INSERT INTO finance_cost_source_v91
+                  (id,tenant_id,seller_marketplace_id,category,source_kind,source_key,
+                   source_document_sha256,business_date,currency_code,amount,created_by)
+                VALUES (?,?,?,?,'MANUAL_INVOICE',?,?,DATE '2026-11-24','USD',?,?)
+                """,source,tenant,marketplace,category,"V250-SYNTHETIC-"+source,
+                digest.repeat(64),new BigDecimal(original),maker);
+            db.update("""
+                UPDATE finance_cost_source_v91 SET review_state='REVIEWED_UNVERIFIED',
+                  reviewed_by=?,reviewed_at=now(),review_reason='V250 synthetic review only'
+                WHERE tenant_id=? AND id=?
+                """,reviewer,tenant,source);
+            for(String action:List.of("STAGED","REVIEWED_UNVERIFIED"))
+                db.update("""
+                    INSERT INTO finance_cost_source_audit_v91
+                      (id,tenant_id,source_id,action,actor_id) VALUES (?,?,?,?,?)
+                    """,UUID.randomUUID(),tenant,source,action,
+                    action.equals("STAGED")?maker:reviewer);
+            db.update("""
+                INSERT INTO finance_receipt_cost_plan_v112
+                  (id,tenant_id,source_id,proposed_by) VALUES (?,?,?,?)
+                """,plan,tenant,source,maker);
+            db.update("""
+                INSERT INTO finance_receipt_cost_line_v112
+                  (tenant_id,plan_id,receipt_id,amount) VALUES (?,?,?,?)
+                """,tenant,plan,receipt,new BigDecimal(allocated));
+            db.update("""
+                UPDATE finance_receipt_cost_plan_v112 SET state='APPROVED_UNVERIFIED',
+                  reviewed_by=?,reviewed_at=now(),review_reason='V250 synthetic independent allocation'
+                WHERE tenant_id=? AND id=?
+                """,reviewer,tenant,plan);
+        });
+    }
+
+    private void seed() {
+        db.update("INSERT INTO tenant(id,name) VALUES (?,?)",tenant,"V250 DISPOSABLE");
+        for(UUID user:List.of(maker,reviewer)) {
+            db.update("INSERT INTO app_user(id,identity_ref) VALUES (?,?)",user,"local:v250:"+user);
+            db.update("INSERT INTO membership(tenant_id,user_id) VALUES (?,?)",tenant,user);
+        }
+        db.update("INSERT INTO seller_account(id,tenant_id,seller_id,region) VALUES (?,?,?,'NA')",
+            account,tenant,"V250-SYNTHETIC-"+account);
+        for(UUID m:List.of(market,market2))
+            db.update("""
+                INSERT INTO seller_marketplace
+                  (id,tenant_id,seller_account_id,marketplace_id,currency_code,timezone)
+                VALUES (?,?,?,?,'USD','Etc/UTC')
+                """,m,tenant,account,"V250-"+m);
+        db.update("""
+            INSERT INTO erp_supplier(id,tenant_id,supplier_code,display_name)
+            VALUES (?,?,'V250-SUP','Synthetic supplier')
+            """,supplier,tenant);
+        db.update("""
+            INSERT INTO product_sku(id,tenant_id,internal_sku,display_name)
+            VALUES (?,?,'V250-SKU','Synthetic SKU')
+            """,sku,tenant);
+        db.update("""
+            INSERT INTO erp_local_warehouse(id,tenant_id,warehouse_code,display_name,created_by)
+            VALUES (?,?,'V250-WH','Synthetic warehouse',?)
+            """,warehouse,tenant,maker);
+        db.update("""
+            INSERT INTO erp_local_stock_bin(id,tenant_id,warehouse_id,bin_code,purpose,created_by)
+            VALUES (?,?,?,'V250-BIN','STORAGE',?)
+            """,bin,tenant,warehouse,maker);
+        db.update("""
+            INSERT INTO erp_purchase_order(id,tenant_id,supplier_id,order_number,currency_code,status,created_by)
+            VALUES (?,?,?,'V250-PO','USD','RECEIVING',?)
+            """,po,tenant,supplier,maker);
+        db.update("""
+            INSERT INTO erp_purchase_order_line(id,tenant_id,purchase_order_id,product_sku_id,ordered_quantity,unit_cost)
+            VALUES (?,?,?,?,3,10)
+            """,pol,tenant,po,sku);
+        db.update("""
+            INSERT INTO erp_purchase_receipt
+              (id,tenant_id,purchase_order_id,purchase_order_line_id,quantity,received_by,warehouse_id)
+            VALUES (?,?,?,?,3,?,?)
+            """,receipt,tenant,po,pol,maker,warehouse);
+        db.update("""
+            INSERT INTO erp_purchase_receipt_qc
+              (id,tenant_id,request_key,purchase_receipt_id,warehouse_id,product_sku_id,
+               inspected_quantity,accepted_quantity,rejected_quantity,reason,inspected_by)
+            VALUES (?,?,?,?,?,?,3,3,0,'V250 synthetic acceptance',?)
+            """,qc,tenant,UUID.randomUUID(),receipt,warehouse,sku,reviewer);
+        db.update("""
+            INSERT INTO erp_receipt_quality_batch
+              (tenant_id,receipt_id,warehouse_id,product_sku_id,received_quantity,lot_code,
+               status,inspection_id,released_by,released_at,received_by)
+            VALUES (?,?,?,?,3,'V250-LOT','RELEASED',?,?,now(),?)
+            """,tenant,receipt,warehouse,sku,qc,reviewer,maker);
+        db.update("""
+            INSERT INTO erp_local_stock_movement
+              (id,tenant_id,warehouse_id,product_sku_id,inspection_id,movement_type,quantity,actor_user_id)
+            VALUES (?,?,?,?,?,'QC_RELEASE',3,?)
+            """,UUID.randomUUID(),tenant,warehouse,sku,qc,reviewer);
+        db.update("""
+            INSERT INTO erp_local_lot_position
+              (id,tenant_id,request_key,receipt_id,warehouse_id,product_sku_id,bin_id,
+               placed_quantity,remaining_quantity,reason,created_by)
+            VALUES (?,?,?,?,?,?,?,3,1,'V250 synthetic placement',?)
+            """,position,tenant,UUID.randomUUID(),receipt,warehouse,sku,bin,maker);
+        db.update("""
+            INSERT INTO erp_local_stock_operation
+              (id,tenant_id,request_key,operation_type,source_warehouse_id,product_sku_id,
+               requested_quantity,expected_on_hand,applied_delta,after_quantity,reason,created_by)
+            VALUES (?,?,?,'OUTBOUND',?,?,2,3,-2,1,'V250 synthetic outbound',?)
+            """,op,tenant,UUID.randomUUID(),warehouse,sku,maker);
+        db.update("""
+            INSERT INTO erp_local_lot_pick
+              (id,tenant_id,request_key,warehouse_id,product_sku_id,operation_id,policy,
+               quantity,expected_on_hand,reason,actor_user_id)
+            VALUES (?,?,?,?,?,?,'FIFO',2,3,'V250 synthetic pick',?)
+            """,pick,tenant,UUID.randomUUID(),warehouse,sku,op,maker);
+        db.update("""
+            INSERT INTO erp_local_lot_pick_line(id,tenant_id,pick_id,position_id,quantity)
+            VALUES (?,?,?,?,2)
+            """,pickLine,tenant,pick,position);
+        db.update("""
+            INSERT INTO erp_local_stock_movement
+              (id,tenant_id,warehouse_id,product_sku_id,operation_id,movement_type,quantity,actor_user_id)
+            VALUES (?,?,?,?,?,'OUTBOUND',-2,?)
+            """,UUID.randomUUID(),tenant,warehouse,sku,op,maker);
+        // LIVE is a schema fixture label, NOT a real Amazon order.
+        db.update("""
+            INSERT INTO sales_order(id,tenant_id,seller_marketplace_id,external_order_id,
+              fulfillment_status_raw,data_origin,order_time,source_updated_at,items_observation)
+            VALUES (?,?,?,'V250-SYNTHETIC-ORDER','SHIPPED','LIVE',now(),now(),'OBSERVED')
+            """,sale,tenant,market);
+        for(UUID item:List.of(itemA,itemB))
+            db.update("""
+                INSERT INTO order_item(id,tenant_id,sales_order_id,external_item_id,seller_sku_raw,
+                  quantity,data_origin,source_updated_at,is_current)
+                VALUES (?,?,?,?, 'V250-SKU',1,'LIVE',now(),true)
+                """,item,tenant,sale,"V250-ITEM-"+item);
+        for(UUID claim:List.of(claimA,claimB))
+            db.update("""
+                INSERT INTO finance_sale_lot_claim_v106
+                  (id,tenant_id,marketplace_id,sales_order_id,order_item_id,pick_line_id,
+                   receipt_id,assigned_quantity,external_dispatch_ref,external_payload_sha256,recorded_by)
+                VALUES (?,?,?,?,?,?,?,1,?,?,?)
+                """,claim,tenant,market,sale,claim.equals(claimA)?itemA:itemB,pickLine,
+                receipt,"V250-DISPATCH-"+claim,"d".repeat(64),maker);
+        assertEquals(2,db.queryForObject("""
+            SELECT count(*) FROM finance_sale_lot_integrity_v106
+            WHERE tenant_id=? AND receipt_id=? AND integrity_state='LOCAL_LINK_INTACT_UNVERIFIED'
+            """,Integer.class,tenant,receipt));
+    }
+}

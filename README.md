@@ -11,7 +11,7 @@
 
 ## Current engineering status
 
-V237 full isolated A3 passed (7/7), including the actual PostgreSQL 18 Java Reports service test with a synthetic remote worker. V238–V240 quick CI passed. V241 full A3 passed (7/7); V242 full A3 passed (7/7). V243 quick CI passed but PG18 had a failed step; V244 full A3 passed (7/7), including real Owner HTTP audit rejection. V245 quick CI passed. V246 quick CI passed. V247 quick CI passed; A3 6/7 failed on PG18 trigger alias ambiguity. V248 full A3 passed (7/7), including real PG18 range races. V249 combines local PO, freight and duty candidates per receipt and sale range; internal service only, quick CI pending. See [current status](docs/current-status.md).
+V237 full isolated A3 passed (7/7), including the actual PostgreSQL 18 Java Reports service test with a synthetic remote worker. V238–V240 quick CI passed. V241 full A3 passed (7/7); V242 full A3 passed (7/7). V243 quick CI passed but PG18 had a failed step; V244 full A3 passed (7/7), including real Owner HTTP audit rejection. V245 quick CI passed. V246 quick CI passed. V247 quick CI passed; A3 6/7 failed on PG18 trigger alias ambiguity. V248 full A3 passed (7/7), including real PG18 range races. V249 quick CI passed. V250 adds actual PG18 composition service regression on disposable real tables and installed triggers; full A3 pending, no public API or posting. See [current status](docs/current-status.md).
 
 ## What the repository directories actually do
 

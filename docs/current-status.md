@@ -1,6 +1,6 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 批次成本内部候选组合待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 实际 PG18 批次组合服务回归待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 核心项目状态
 
@@ -49,12 +49,15 @@ V247：Flyway V117 追加 V106 claim 的显式本地计算区间；每 claim 唯
 
 V248：Flyway V118 CREATE OR REPLACE V117 capture 函数，修复 old 与 OLD 触发器变量歧义，不改历史迁移/数据/约束。新增实际 PG18 双连接一次性共享 schema 回归，等待真实行锁、提交重叠拒绝/回滚释放/RR 拒绝。仅安装函数及合成影子表，未测试生产 FK 或并发撤销，不接业务 API、实际 COGS。完整 A3 7/7 已通过，PG18 确认 V247/V248 PASS。
 
-V249：新增内部 ReceiptCostCompositionServiceV249，独立 RR 复用 V216 来源校验、全历史 V106/V117 与 V246，逐来源分摊 PO 参考金额、已归属收货单的头程/关税，保留来源及 claim 明细和未分配金额。跨站点、缺失/失效范围、拒收口径、缺费用、碰撞或 FX 不明均 hold；未接 HTTP、未冻结正式会计成本版本，actualBatchCogs/realizedNetProfit 恒 null。Java 回归待快 CI；真实 PG18 服务集成待验收。详见 [V112 契约](finance/v215-receipt-cost-claim-and-v92-exclusivity.md)。
+V249：新增内部 ReceiptCostCompositionServiceV249，独立 RR 复用 V216 来源校验、全历史 V106/V117 与 V246，逐来源分摊 PO 参考金额、已归属收货单的头程/关税，保留来源及 claim 明细和未分配金额。跨站点、缺失/失效范围、拒收口径、缺费用、碰撞或 FX 不明均 hold；未接 HTTP、未冻结正式会计成本版本，actualBatchCogs/realizedNetProfit 恒 null。Java 回归快 CI 已通过；真实 PG18 服务集成由 V250 补充。详见 [V112 契约](finance/v215-receipt-cost-claim-and-v92-exclusivity.md)。
+
+V250：实际 PG18 Java 服务集成回归通过真实业务表、FK、V106/V112/V117/V118 与 V165/V216/V249，合成 PO/头程/关税逐来源45/30/15、尾差及缺区间/费用、价格漂移、跨租户、撤销和跨站点 hold。CI 仅一次性库且 OAuth OFF；复用 JUnit XML 守卫禁止静默跳过。完整 A3 待验收，尚无业务 HTTP/UI 或外部证据。详见 [V112/V249/V250 契约](finance/v215-receipt-cost-claim-and-v92-exclusivity.md)。
 
 ## 最近精确验收（切勿混用不同 SHA 的 CI）
 
 | 阶段 | 精确代码 / 测试 | 技术证明边界 |
 | --- | --- | --- |
+| V249 | [SHA 9a41dc9b7613](https://github.com/kunlong-luo/merchivra/commit/9a41dc9b76139583ac77007720a21ed624eaab21) · [CI #45563638010](https://github.com/kunlong-luo/merchivra/actions/runs/45563638010)（SUCCESS） | Java/React/Compose 成功，PG18 SKIPPED，无独立完整 A3 |
 | **V248** | [SHA 95d8ebd634fd](https://github.com/kunlong-luo/merchivra/commit/95d8ebd634fdf4997481c824023dbfdf405f9eb2) · [CI #45562454305](https://github.com/kunlong-luo/merchivra/actions/runs/45562454305)（SUCCESS） · [A3 #45562454277](https://github.com/kunlong-luo/merchivra/actions/runs/45562454277)（7/7 SUCCESS） | PG18 job #139029197065：PASS V247 installed range trigger；PASS V248 actual PG18 V118 range race |
 | V247 | [SHA 82dcc54c9c0a](https://github.com/kunlong-luo/merchivra/commit/82dcc54c9c0a18327f1ee3d8a3e2cd2d3e7f3810) · [CI #45561759237](https://github.com/kunlong-luo/merchivra/actions/runs/45561759237)（SUCCESS） · [A3 #45561759490](https://github.com/kunlong-luo/merchivra/actions/runs/45561759490)（6/7 FAILURE） | PG18 job #139026923921：column reference old.tenant_id is ambiguous；V248 追加迁移修复 |
 | V246 | [SHA 8ab8a93a53b3](https://github.com/kunlong-luo/merchivra/commit/8ab8a93a53b348a7a329e0292b992007bd426efb) · [CI #45560785767](https://github.com/kunlong-luo/merchivra/actions/runs/45560785767)（SUCCESS） | Java/React/Compose 成功，PG18 SKIPPED，无独立完整 A3 |

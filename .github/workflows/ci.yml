@@ -492,7 +492,7 @@ jobs:
           MERCHIVRA_V229_DISPOSABLE_ONLY=true MERCHIVRA_V226_DISPOSABLE_ONLY=true MERCHIVRA_V225_DISPOSABLE_ONLY=true python3 scripts/smoke_cost_source_audit_integrity_v229.py
           MERCHIVRA_V230_DISPOSABLE_ONLY=true MERCHIVRA_V229_DISPOSABLE_ONLY=true MERCHIVRA_V226_DISPOSABLE_ONLY=true MERCHIVRA_V225_DISPOSABLE_ONLY=true python3 scripts/smoke_external_cost_proof_dossier_v230.py
           MERCHIVRA_V234_DISPOSABLE_ONLY=true python3 scripts/smoke_reports_auth_revision_v234.py
-          MERCHIVRA_V236_DISPOSABLE_ONLY=true ./apps/server/gradlew -p apps/server --no-daemon --console plain test --tests 'org.merchivra.erp.finance.SettlementReportScanServiceTest.actualPg18OwnerRestartAndFencedImportRejectStaleAuthorization'
+          MERCHIVRA_V236_DISPOSABLE_ONLY=true MERCHIVRA_V250_DISPOSABLE_ONLY=true ./apps/server/gradlew -p apps/server --no-daemon --console plain test --tests 'org.merchivra.erp.finance.SettlementReportScanServiceTest.actualPg18OwnerRestartAndFencedImportRejectStaleAuthorization' --tests 'org.merchivra.erp.finance.ReceiptCostCompositionPg18V250Test.actualPg18ReceiptCostsAndSaleRangesConserveAmounts'
           python3 scripts/check_reports_service_junit.py
           echo "PostgreSQL 18 / Flyway / actual finance + FBA OpenAPI and local mock chain verified"
           kill "$app_pid" 2>/dev/null || true
