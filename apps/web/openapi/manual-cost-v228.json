@@ -160,6 +160,72 @@
           }
         }
       }
+    },
+    "/api/v1/finance/marketplaces/{marketplaceId}/purchase-receipts/{receiptId}/cost-composition-candidate": {
+      "get": {
+        "tags": [
+          "receipt-cost-candidate"
+        ],
+        "operationId": "getPurchaseReceiptCostCandidateV252",
+        "summary": "Owner only: local receipt cost composition, never actual COGS",
+        "parameters": [
+          {
+            "name": "marketplaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "receiptId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Unverified candidate or HOLD; original currency, exact decimal strings, no posting",
+            "headers": {
+              "Cache-Control": {
+                "description": "no-store",
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReceiptCostCandidateV252"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Not authenticated"
+          },
+          "403": {
+            "description": "Owner permission required"
+          },
+          "404": {
+            "description": "Not found in current tenant/Marketplace"
+          },
+          "409": {
+            "description": "Inconsistent or unbounded source evidence"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -459,6 +525,188 @@
           },
           "eligibleForRealizedProfit": {
             "type": "boolean"
+          }
+        }
+      },
+      "ReceiptCostSourceSummaryV252": {
+        "type": "object",
+        "required": [
+          "sourceId",
+          "category",
+          "originalCurrency",
+          "basisQuantity",
+          "allocatedQuantity",
+          "unallocatedQuantity",
+          "receiptCandidateAmount",
+          "allocatedCandidateAmount",
+          "unallocatedCandidateAmount"
+        ],
+        "properties": {
+          "sourceId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "category": {
+            "type": "string",
+            "enum": [
+              "PURCHASE_PO_REFERENCE",
+              "INBOUND_FREIGHT",
+              "IMPORT_DUTY"
+            ]
+          },
+          "originalCurrency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$"
+          },
+          "basisQuantity": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "allocatedQuantity": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "unallocatedQuantity": {
+            "type": "integer",
+            "format": "int32",
+            "minimum": 0
+          },
+          "receiptCandidateAmount": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]{6}$"
+          },
+          "allocatedCandidateAmount": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]{6}$"
+          },
+          "unallocatedCandidateAmount": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]{6}$"
+          }
+        }
+      },
+      "ReceiptCostSaleShareV252": {
+        "type": "object",
+        "required": [
+          "claimId",
+          "candidateCost"
+        ],
+        "properties": {
+          "claimId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "candidateCost": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]{6}$"
+          }
+        }
+      },
+      "ReceiptCostCandidateV252": {
+        "type": "object",
+        "required": [
+          "marketplaceId",
+          "purchaseReceiptId",
+          "state",
+          "originalCurrency",
+          "receiptCandidateCost",
+          "allocatedCandidateCost",
+          "unallocatedCandidateCost",
+          "components",
+          "saleShares",
+          "blockerCodes",
+          "completeExternalCostCoverage",
+          "actualBatchCogsVerified",
+          "actualBatchCogs",
+          "postingAllowed",
+          "realizedNetProfit"
+        ],
+        "properties": {
+          "marketplaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "purchaseReceiptId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "LOCAL_COST_COMPOSITION_HOLD",
+              "LOCAL_PO_FREIGHT_DUTY_CANDIDATE_UNVERIFIED"
+            ]
+          },
+          "originalCurrency": {
+            "type": "string",
+            "pattern": "^[A-Z]{3}$",
+            "nullable": true
+          },
+          "receiptCandidateCost": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]{6}$",
+            "nullable": true
+          },
+          "allocatedCandidateCost": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]{6}$",
+            "nullable": true
+          },
+          "unallocatedCandidateCost": {
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]{6}$",
+            "nullable": true
+          },
+          "components": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReceiptCostSourceSummaryV252"
+            },
+            "maxItems": 51
+          },
+          "saleShares": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ReceiptCostSaleShareV252"
+            },
+            "maxItems": 1000
+          },
+          "blockerCodes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "completeExternalCostCoverage": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "actualBatchCogsVerified": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "actualBatchCogs": {
+            "type": "string",
+            "nullable": true,
+            "description": "Always null; no verified accounting."
+          },
+          "postingAllowed": {
+            "type": "boolean",
+            "enum": [
+              false
+            ]
+          },
+          "realizedNetProfit": {
+            "type": "string",
+            "nullable": true,
+            "description": "Always null; no verified accounting."
           }
         }
       }

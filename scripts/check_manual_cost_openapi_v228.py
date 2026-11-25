@@ -108,3 +108,24 @@ assert {"code","description","independentlyVerified"} <= set(
     live_requirement.get("properties",{}))
 print("PASS V230 live Springdoc namespaced Orval read dossier with audited "
       "source, scoped proof requirements, all external truth/profit fields",flush=True)
+
+
+# V253: verify the existing Orval bundle against actual V252 Springdoc.
+V253_PATH="/api/v1/finance/marketplaces/{marketplaceId}/purchase-receipts/{receiptId}/cost-composition-candidate"
+declared=expected["paths"][V253_PATH]["get"]
+actual=live["paths"][V253_PATH]["get"]
+assert declared["operationId"]==actual["operationId"]=="getPurchaseReceiptCostCandidateV252"
+assert declared["security"]==[{"sessionCookie":[]}]
+assert {"marketplaceId","receiptId"}=={p["name"] for p in actual["parameters"]
+    if p.get("in")=="path" and p.get("required")}
+def exact_properties(expected_name,live_schema):
+    schema=deref(live_schema)
+    fields=expected["components"]["schemas"][expected_name]["properties"]
+    assert set(schema["properties"])==set(fields), (expected_name,sorted(set(fields)-set(schema["properties"])))
+    return schema["properties"]
+props=exact_properties("ReceiptCostCandidateV252",actual["responses"]["200"]["content"]["application/json"]["schema"])
+for name,contract in (("components","ReceiptCostSourceSummaryV252"),("saleShares","ReceiptCostSaleShareV252")):
+    exact_properties(contract,deref(props[name])["items"])
+for field in ("receiptCandidateCost","allocatedCandidateCost","unallocatedCandidateCost","actualBatchCogs","realizedNetProfit"):
+    assert deref(props[field]).get("type")=="string",field
+print("PASS V253 actual Springdoc receipt candidate GET and nested Orval response fields")

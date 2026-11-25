@@ -1,6 +1,6 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 只读候选 API 与脚本变量修复待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 Orval 成本候选与共享面板待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 核心项目状态
 
@@ -55,13 +55,16 @@ V250：实际 PG18 Java 服务集成回归通过真实业务表、FK、V106/V112
 
 V251：V250 两工作流在分配 job 前失败，拒绝注释未取得。PG18 大 run scalar 接近平台限制，作为预防性修复，逐行去 YAML 缩进原样外置为 `scripts/run_pg18_full_ci.sh`，保留所有验收命令及顺序，新增一次性 CI 环境守卫和 EXIT 清理；快 CI 增 bash -n、JUnit checker 语法及关键调用守卫。[快 CI #45565714489](https://github.com/kunlong-luo/merchivra/actions/runs/45565714489) / [A3 #45565714565](https://github.com/kunlong-luo/merchivra/actions/runs/45565714565) 已恢复创建任务；本轮检查时仍运行，Java/Compose 快任务已成功。外置脚本仍遗留 job.services.postgres.id 表达式，V252 修复。
 
-V252：外置 shell 不应包含 GitHub Actions 表达式，workflow env 传递 PG18_SERVICE_CONTAINER_ID，静态禁止残留；新增 Owner GET cost-composition-candidate，复用 V249，返回紧凑逐来源/claim 候选、未知 null，显式当前租户 Owner、no-store、禁止实际 COGS/过账。扩展 V219 真 HTTP 空候选及 401/403/404/退出测试，新增 Controller 单测；非空 HTTP、Orval/Next UI 及 V250 实际 PG18 服务验收仍未确认，待新 SHA A3。详见 [V112 契约](finance/v215-receipt-cost-claim-and-v92-exclusivity.md)。
+V252：外置 shell 不应包含 GitHub Actions 表达式，workflow env 传递 PG18_SERVICE_CONTAINER_ID，静态禁止残留；新增 Owner GET cost-composition-candidate，复用 V249，返回紧凑逐来源/claim 候选、未知 null，显式当前租户 Owner、no-store、禁止实际 COGS/过账。扩展 V219 真 HTTP 空候选及 401/403/404/退出测试，新增 Controller 单测；完整 A3 7/7，V250 非空真实 PG18 服务和 V252 真 HTTP HOLD/权限通过；非空 HTTP 仍未验证。详见 [V112 契约](finance/v215-receipt-cost-claim-and-v92-exclusivity.md)。
+
+V253：复用 V228 Orval bundle 与 V217 共享收货面板，新增候选成本按需读取、Session scope/revision/cancel、Zod + BigInt 原币六位守恒/重复/空值门禁、来源和销售认领金额表及阻断文案。无新路由、写入或过账；待快 CI 生成及完整 A3 的 Springdoc/Vitest 验收。非空 HTTP 与新面板专属 Chromium 场景未完成。详见 [V112/V253](finance/v215-receipt-cost-claim-and-v92-exclusivity.md)。
 
 ## 最近精确验收（切勿混用不同 SHA 的 CI）
 
 | 阶段 | 精确代码 / 测试 | 技术证明边界 |
 | --- | --- | --- |
-| V251 | [SHA 38ebd6fcfdee](https://github.com/kunlong-luo/merchivra/commit/38ebd6fcfdee20e9868cb9e40ab707e7d502442a) · [CI #45565714489](https://github.com/kunlong-luo/merchivra/actions/runs/45565714489) · [A3 #45565714565](https://github.com/kunlong-luo/merchivra/actions/runs/45565714565) | 本轮检查任务已启动、尚未结束；V252 修复 shell 上下文表达式 |
+| **V252** | [SHA 65128ba2eb93](https://github.com/kunlong-luo/merchivra/commit/65128ba2eb938574d600ee281b83301603b16fd2) · [CI #45566116953](https://github.com/kunlong-luo/merchivra/actions/runs/45566116953)（SUCCESS） · [A3 #45566116963](https://github.com/kunlong-luo/merchivra/actions/runs/45566116963)（7/7 SUCCESS） | PG18 job #139041361728：PASS V250 实际非空 Java 组合与 PASS V252 Owner HTTP HOLD/权限 |
+| V251 | [SHA 38ebd6fcfdee](https://github.com/kunlong-luo/merchivra/commit/38ebd6fcfdee20e9868cb9e40ab707e7d502442a) · [CI #45565714489](https://github.com/kunlong-luo/merchivra/actions/runs/45565714489) · [A3 #45565714565](https://github.com/kunlong-luo/merchivra/actions/runs/45565714565) | 快 CI SUCCESS，A3 FAILURE（PG18 bad substitution）；V252 修复 shell 上下文表达式 |
 | V250 | [SHA 201957f5da48](https://github.com/kunlong-luo/merchivra/commit/201957f5da4836a3b64067a6486f11d933c69ad8) · [CI #45564608797](https://github.com/kunlong-luo/merchivra/actions/runs/45564608797)（FAILURE） · [A3 #45564610271](https://github.com/kunlong-luo/merchivra/actions/runs/45564610271)（FAILURE） | 两者 jobs=[]，未执行；拒绝原因尚无注释证据，V251 外置脚本 |
 | V249 | [SHA 9a41dc9b7613](https://github.com/kunlong-luo/merchivra/commit/9a41dc9b76139583ac77007720a21ed624eaab21) · [CI #45563638010](https://github.com/kunlong-luo/merchivra/actions/runs/45563638010)（SUCCESS） | Java/React/Compose 成功，PG18 SKIPPED，无独立完整 A3 |
 | **V248** | [SHA 95d8ebd634fd](https://github.com/kunlong-luo/merchivra/commit/95d8ebd634fdf4997481c824023dbfdf405f9eb2) · [CI #45562454305](https://github.com/kunlong-luo/merchivra/actions/runs/45562454305)（SUCCESS） · [A3 #45562454277](https://github.com/kunlong-luo/merchivra/actions/runs/45562454277)（7/7 SUCCESS） | PG18 job #139029197065：PASS V247 installed range trigger；PASS V248 actual PG18 V118 range race |

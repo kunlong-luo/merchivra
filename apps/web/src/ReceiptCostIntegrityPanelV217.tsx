@@ -1,5 +1,6 @@
 import {useEffect,useState,type FormEvent} from 'react'
 import {useQuery} from '@tanstack/react-query'
+import ReceiptCostCandidatePanelV253 from './ReceiptCostCandidatePanelV253'
 import {getReceiptCostIntegrityV217,validPurchaseReceiptId}
  from './lib/receipt-cost-integrity-v217'
 
@@ -125,6 +126,9 @@ export default function ReceiptCostIntegrityPanelV217({
      </p>
     </>}
   </div>}
+  {expanded&&valid&&marketplaceId&&<ReceiptCostCandidatePanelV253
+   key={[tenantId,marketplaceId,target,inspectionRevision].join(':')}
+   tenantId={tenantId} marketplaceId={marketplaceId} receiptId={target}/>}
   {!expanded&&<p className="setup-hint">
    未执行此项核对不代表真实成本为零；当前界面不会请求 Amazon、
    银行或第三方仓储，也不会写入任何财务数据。</p>}

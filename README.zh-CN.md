@@ -11,7 +11,7 @@
 
 ## 当前工程状态
 
-V237 完整隔离 A3 7/7 通过，实际 PostgreSQL18 Java Reports 服务回归未跳过，远程 Worker 为合成模拟；V238–V240 快速 CI 通过；V241 完整 A3 7/7 已通过；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7 已通过；V245 快 CI 通过；V246 快 CI 通过；V247 快 CI 通过、A3 6/7（PG18 别名冲突）；V248 完整 A3 7/7；V249 快 CI 通过；V250 快 CI/A3 均未启动 job；V251 已恢复工作流任务启动；V252 修复外置脚本容器变量，新增 Owner 只读批次候选 API，待完整 A3，未接 Orval/Next 或正式入账。见[当前事实](docs/current-status.md)。
+V237 完整隔离 A3 7/7 通过，实际 PostgreSQL18 Java Reports 服务回归未跳过，远程 Worker 为合成模拟；V238–V240 快速 CI 通过；V241 完整 A3 7/7 已通过；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7 已通过；V245 快 CI 通过；V246 快 CI 通过；V247 快 CI 通过、A3 6/7（PG18 别名冲突）；V248 完整 A3 7/7；V249 快 CI 通过；V250 快 CI/A3 均未启动 job；V251 快 CI 成功、A3 shell 变量失败；V252 完整 A3 7/7（实际 PG18 组合及 Owner HTTP 空状态）；V253 复用 Orval/收货面板查询批次候选成本，待新 CI，未正式入账。见[当前事实](docs/current-status.md)。
 
 ## 一、仓库根目录：保留哪些，分别有什么用？
 

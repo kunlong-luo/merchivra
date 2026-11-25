@@ -46,6 +46,12 @@ V249 [SHA 9a41dc9b7613](https://github.com/kunlong-luo/merchivra/commit/9a41dc9b
 
 V250 精确 [SHA 201957f5da48](https://github.com/kunlong-luo/merchivra/commit/201957f5da4836a3b64067a6486f11d933c69ad8) 快 [CI #45564608797](https://github.com/kunlong-luo/merchivra/actions/runs/45564608797) / [A3 #45564610271](https://github.com/kunlong-luo/merchivra/actions/runs/45564610271) 均 FAILURE 且 jobs=[]；未执行 JUnit。未获取工作流拒绝注释，不能断言根因或测试失败。V251 将 约2.1万字符 PG18 run scalar 原样移至 [run_pg18_full_ci.sh](../../scripts/run_pg18_full_ci.sh)，增加隔离环境检查与 EXIT 清理，不删旧测试或放宽验收；待新 SHA 验收后再决定只读 API。
 
-## V252 · Owner 只读批次候选成本 API（待验收）
+## V252 · Owner 只读批次候选成本 API（完整 A3 已通过）
 
 `GET /api/v1/finance/marketplaces/{marketplaceId}/purchase-receipts/{receiptId}/cost-composition-candidate`（operationId `getPurchaseReceiptCostCandidateV252`）复用 V249/V216，不新增费用账本或写接口。Session 当前可读租户必须具有 OWNER，不能从 Staff 工作区自动切到另一 Owner 租户；服务重新核对 receipt/Marketplace，404 跨租户。no-store，原币六位字符串/未知 null；返回最多51条逐来源摘要（不重复返回每个来源的全区间明细）和最多1000条 claim 候选值。completeExternalCostCoverage=false、actualBatchCogsVerified=false、postingAllowed=false、actualBatchCogs/realizedNetProfit=null。V219 真 HTTP 复用无 claim 夹具，验证 HOLD、匿名401/Staff403/跨租户404、伪造 query tenant 无效、退出失效；正金额仅服务回归/Controller 单测，真实非空 HTTP、Orval 和 Next UI 留待验收后。V251 的完整 A3 在本轮开始仍运行；V252 额外修复外置 shell 遗留 GitHub 表达式，将 job service ID 经 env 传递，新增静态禁止未展开表达式。未确认 V250/V251 真 PG18 服务通过，不开放生产。
+
+V252 精确 [SHA 65128ba2eb93](https://github.com/kunlong-luo/merchivra/commit/65128ba2eb938574d600ee281b83301603b16fd2) [CI #45566116953](https://github.com/kunlong-luo/merchivra/actions/runs/45566116953) SUCCESS / [A3 #45566116963](https://github.com/kunlong-luo/merchivra/actions/runs/45566116963) 7/7 SUCCESS，PG18 job #139041361728 原日志含 PASS V252 actual Owner HTTP candidate 与 PASS V250 actual PG18 composition JUnit marker verified (not skipped)。V251 PG18 日志确认 bad substitution 已修复。
+
+## V253 · 既有收货面板的 Orval 成本候选读取（待验收）
+
+扩展原 `apps/web/openapi/manual-cost-v228.json` 与既有 Orval 生成流程（生成文件不手改、不提交），V217 收货单面板内按精确租户/Marketplace/receipt 及检查 revision 挂载 V253，独立按需 GET、取消请求、无旧值展示。Zod + BigInt 微单位核对来源唯一、原币、数量和来源/整批/销售金额守恒，HOLD null 不显示部分金额，禁止 verified/posting/net profit。复用现有样式与 Session transport；采购与财务共享 V217 的位置均可访问。不增加新路由或并行 HTTP 客户端。扩展既有 Springdoc 检查及 Vitest 运输/守恒负例，待 CI 生成及 A3；真实非空 HTTP 和 Chromium 新面板专属流程未完成，仍无实际外部证据、退款过账或正式成本版本。
