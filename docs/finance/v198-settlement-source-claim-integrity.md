@@ -95,3 +95,12 @@ V272 [完整 A3 #45615522448 SUCCESS](https://github.com/kunlong-luo/merchivra/a
 V275：修复 V273/V274 PG18 TEMP SQL DO 分隔符，V124 回归改为直接提取真实 Java SAVE_MAPPING_SQL/READ_MAPPING_SQL，验证内容 SHA、重复提交仅一条、错误 Marketplace 无结果、无变化 UPDATE 与 DELETE 必须触发 V106 不可变拒绝，而非把任意异常当成功。quick CI 增加该 Python 文件语法检查（不能替代 PG18 执行）。V274 保存映射预检仅在 LOCAL_CATEGORY_AMOUNTS_AGREE_UNVERIFIED 时新增 evidenceSha256，绑定 tenant/marketplace/report UUID、mapping SHA、V56/V272 源证据指纹与当前实际使用 V28 ACTIVE 规则 ID/type/category/revision/state 指纹；全在 RR 事务，同内容稳定、正常规则修订变更使证据失效，非相关规则不参与。缺覆盖/冲突不返回证据摘要。新增 Java digest 反例及真 PG18 规则修订与范围测试，触发完整 A3 待验收。不持久化证据、不建立独立审批、不改变 V56 门禁、UI、源事实或利润；不是签章、授权令牌或全域 ABA 防护。真实 HTTP、Redis smoke V270 失败、外部 E1–E5 与 G1/DEC 仍待完成。mappingApproved=false、realizedNetProfit=null、OAuth OFF、#104 NO-GO。
 
 `GET /category-mapping-drafts/{mappingSha256}/preview` 新增可空 `evidenceSha256`。只有当前预检完全一致时生成本地证据身份，供后续独立审核绑定；规则或原始来源变化后必须重新预检比较，不得将旧摘要作为现行批准。
+
+
+V275 [代码 4a8af88ffb2e](https://github.com/kunlong-luo/merchivra/commit/4a8af88ffb2e11d69795a32f16a7c3e475ab46e6) [快 CI #45618142971 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45618142971)，[完整 A3 #45618143096](https://github.com/kunlong-luo/merchivra/actions/runs/45618143096) 核对时 PG18 与 HTTP job 尚未结束。
+
+## V276 · 内部独立分类审批记录（待验收）
+
+V276：Flyway V125 新增内部不可变分类申请/批准两表，精确绑定 tenant/report/mapping SHA/evidence SHA，外键绑定草稿、申请及 membership，申请/批准分别唯一且 UPDATE/DELETE 拒绝。SettlementCategoryReviewV276 在 RR 内调用 V275 当前预检，只有一致且 evidence SHA 完全匹配才接受；复用现有 active 全租户 Owner 校验，审批人与申请人、原映射创建人均不同；读取及重放重查双方资格、审批时间与 OWNER_REVOKED 审计。相同 actor/reason 可幂等复用，冲突拒绝；并发 RR 序列化失败未做自动重试。原证据撤销后同 SHA 不可重新申请（后续需设计重开与授权代际）；非全域 ABA/撤销线性化保证。仅内部服务，无 controller/UI、无 V56 门禁或正式激活；mappingActivated/bankVerified/ledgerPosted=false、realizedNetProfit=null。新增 JUnit 过期、独立性、缺请求与 SQL 契约，扩展 V198 真 PG18 TEMP 精确 V125 DDL、申请/批准 SQL、重复、self approval、站点隔离、不可变触发器；实际迁移与服务端到端未验收。为保留 V275 正在进行的完整验收，本轮不修改 A3 workflow；待 V275 结果明确后另行触发 V276 A3。真实 E1–E5、G1/DEC、Redis smoke 启动问题仍阻塞；Seller/Ads OAuth OFF、#104 NO-GO。
+
+内部方法 `request`、`approve`、`current` 绑定显式 mapping/evidence SHA；未开放 HTTP，保存记录不是激活，当前证据改变则拒绝。审批者不同于原草稿创建者及申请者；审批记录不可变。后续先完成 PG18/真实 HTTP 授权回归及审批重开契约，再评估前端操作入口。

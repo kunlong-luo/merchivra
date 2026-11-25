@@ -358,6 +358,66 @@ DO $v275$ BEGIN
  END;
 END $v275$;
 """)
+# V276: verify the new immutable request/approval constraints and actual
+# insert/read SQL on the same isolated TEMP report and mapping.
+review_java = Path("apps/server/src/main/java/org/merchivra/erp/finance/"
+                   "SettlementCategoryReviewV276.java").read_text()
+def review_sql(name, values):
+    match = re.search(r'static final String ' + name + r'="""\s*(.*?)\s*""";', review_java, re.S)
+    if not match or match.group(1).count("?") != len(values):
+        raise SystemExit("Unexpected V276 SQL shape: " + name)
+    query = match.group(1)
+    for value in values:
+        query = query.replace("?", value, 1)
+    return query
+review_migration = Path("apps/server/src/main/resources/db/migration/"
+                        "V125__settlement_category_independent_review.sql").read_text()
+commands.append(f"INSERT INTO membership VALUES ('{tenant}','{second}');")
+commands.append(review_migration.replace("CREATE TABLE finance_settlement_category_",
+                                         "CREATE TEMP TABLE finance_settlement_category_"))
+evidence_sha = "b" * 64
+request_keys = [uuid(tenant), uuid(report), literal(sha), literal(evidence_sha)]
+read_keys = [uuid(tenant), uuid(market), uuid(report), literal(sha), literal(evidence_sha)]
+request_sql = review_sql("REQUEST_SQL", request_keys + [uuid(first), literal("Synthetic request")])
+approve_sql = review_sql("APPROVAL_SQL", request_keys +
+                         [uuid(first), uuid(second), literal("Synthetic approval")])
+self_sql = review_sql("APPROVAL_SQL", request_keys +
+                      [uuid(first), uuid(first), literal("Synthetic self approval")])
+commands.append(request_sql + ";\n" + request_sql + ";\n")
+commands.append(f"""
+DO $v276$ BEGIN
+ BEGIN
+  {self_sql};
+  RAISE EXCEPTION 'V276 self approval unexpectedly succeeded' USING ERRCODE='XX000';
+ EXCEPTION WHEN check_violation THEN NULL;
+ END;
+END $v276$;
+""")
+commands.append(approve_sql + ";\n" + approve_sql + ";\n")
+commands.append(f"""
+CREATE TEMP VIEW v276_request AS {review_sql("READ_REQUEST_SQL",read_keys)};
+CREATE TEMP VIEW v276_approval AS {review_sql("READ_APPROVAL_SQL",read_keys)};
+CREATE TEMP VIEW v276_wrong AS {review_sql("READ_APPROVAL_SQL",
+ [uuid(tenant),uuid(other_market),uuid(report),literal(sha),literal(evidence_sha)])};
+DO $v276$ BEGIN
+ IF (SELECT count(*) FROM v276_request)<>1
+    OR (SELECT count(*) FROM v276_approval)<>1
+    OR (SELECT count(*) FROM v276_wrong)<>0
+ THEN RAISE EXCEPTION 'V276 review scope or idempotency failed'; END IF;
+ BEGIN
+  UPDATE finance_settlement_category_approval_v125 SET approval_reason=approval_reason;
+  RAISE EXCEPTION 'V276 mutation unexpectedly succeeded' USING ERRCODE='XX000';
+ EXCEPTION WHEN SQLSTATE 'P0001' THEN
+  IF SQLERRM NOT LIKE 'V106:%append-only' THEN RAISE; END IF;
+ END;
+ BEGIN
+  DELETE FROM finance_settlement_category_request_v125;
+  RAISE EXCEPTION 'V276 delete unexpectedly succeeded' USING ERRCODE='XX000';
+ EXCEPTION WHEN SQLSTATE 'P0001' THEN
+  IF SQLERRM NOT LIKE 'V106:%append-only' THEN RAISE; END IF;
+ END;
+END $v276$;
+""")
 commands.append("ROLLBACK;\n")
 result = subprocess.run(
     ["psql", "-X", "-h", "127.0.0.1", "-U", "merchivra", "-d", "merchivra",
@@ -379,3 +439,5 @@ print("PASS V273 real PG18 exact category SQL: current active rule, scope, leaf-
 print("PASS V274 real PG18 TEMP exact migration: mapping identity and immutable trigger")
 
 print("PASS V275 real PG18 current rule revision fingerprint and exact V124 save/read scope")
+
+print("PASS V276 real PG18 TEMP review request/approval keys, self approval, replay and append-only")
