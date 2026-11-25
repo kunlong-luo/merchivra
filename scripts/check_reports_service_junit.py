@@ -43,7 +43,8 @@ if __name__ == "__main__":
                 'PASS V257 actual PG18 refund races:',
                 'PASS V258 actual PG18 whole-order original cost',
                 'PASS V260 actual PG18 historical SKU mapping missing and remapped hold, V259 amount coverage',
-                'PASS V261 actual PG18 V63 review required, stale revision, author independence and duplicate audit hold'))
+                'PASS V261 actual PG18 V63 review required, stale revision, author independence and duplicate audit hold',
+                'PASS V262 actual PG18 nonreusable refund evidence revisions, ABA, recreation, no-op and rollback'))
     except (OSError, ET.ParseError, ValueError) as exc:
         sys.exit(f"FAIL isolated PG18 service JUnit evidence: {exc}")
     print("PASS V236 actual PG18 Java service test executed (not skipped); remote worker synthetic")
@@ -59,3 +60,5 @@ if __name__ == "__main__":
     print("PASS V260 actual PG18 V203 mapping and V259 amount coverage JUnit marker verified (not skipped)")
 
     print("PASS V261 actual PG18 independent refund review and audit JUnit marker verified (not skipped)")
+
+    print("PASS V262 actual PG18 refund evidence revision JUnit marker verified (not skipped)")

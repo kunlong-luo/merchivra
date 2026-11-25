@@ -105,3 +105,8 @@ V260 验收回填：[代码 SHA f0b020b80aba](https://github.com/kunlong-luo/mer
 ## V261 · V63 独立审核和当前审计门禁（待验收）
 
 V261：单 RR 全单候选在 V259 金额、V260 SKU 和 V119 预留完整后，复用 V63 preview 重算证据 SHA 与 V197 source parity；每订单最多100个 V63 事件，要求 REVIEWED/current、原币一致和完整本地金额。V63 同 revision 精确请求/决策审计二条，actor/digest/time 匹配，审核人不得为当前 V34/V35 作者。缺审、待审、变更、重复审计或同人冲突整单 HOLD，参与事务的业务异常仍失败封闭。V250 实际 PG18 夹具扩展真实 V63 request/decide、未审/待审、V35 revision 改变、同作者、重复审计及新审核恢复；JUnit marker 强制，待新 SHA A3。尚无跨修订完整审计/不可重用版本、ABA、现行 Owner 资格重核、真实返仓或外部签发证明。旧审计不能代替 G1，不实际过账，realizedNetProfit=null。无新迁移或 API。
+
+
+## V262 · V34/V35 不可重用行版本与 V63 指纹升级（待验收）
+
+V262：追加 Flyway V121，V34/V35 每行增加数据库全局序列不可重用版本；任何实际 UPDATE/INSERT（含恢复原值、删除重建、伪造旧版本）重分配，完全 no-op 保持，回滚不改变已提交版本。V63 证据摘要显式版本化并绑定同 RR 的两组有界行版本，旧 V63 指纹不能自动升级，必须重新发起并独立审批。V250 真实 PG18 夹具增加金额/作者/数量 ABA、撤回重建（携旧版本）、no-op、rollback 和复审恢复，JUnit marker 强制；V261 既有审计负例保留。仅覆盖 V34/V35 行生命周期，不涵盖 SKU/成本/源分类/订单/授权 ABA、管理员篡改序列或 V119 预留版本；不改历史迁移或原金额，不增加 API/UI。V261 CI/A3 尚未最终核对，V262 待独立 A3。真实返仓与外部来源/G1 缺失，实际回转与 realizedNetProfit=null。

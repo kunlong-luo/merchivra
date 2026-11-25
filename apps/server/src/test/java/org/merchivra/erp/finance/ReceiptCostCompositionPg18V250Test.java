@@ -194,6 +194,7 @@ class ReceiptCostCompositionPg18V250Test {
         var second=new ReceiptCostCompositionPg18V250Test();
         second.db=db;second.write=write;second.service=service;second.recovery=recovery;
         second.crossClaimRace();
+        System.out.println("PASS V262 actual PG18 nonreusable refund evidence revisions, ABA, recreation, no-op and rollback");
         System.out.println("PASS V261 actual PG18 V63 review required, stale revision, author independence and duplicate audit hold");
         System.out.println("PASS V260 actual PG18 historical SKU mapping missing and remapped hold, V259 amount coverage");
         System.out.println("PASS V258 actual PG18 whole-order original cost and refund reservation coverage, 30/14.999999/15.000001, full refund and stale hold");
@@ -374,6 +375,8 @@ class ReceiptCostCompositionPg18V250Test {
         assertTrue(partial.currencies().isEmpty());
         assertNull(partial.actualRefundCogsReversal());
         db.update("UPDATE finance_refund_amount_allocation SET signed_amount=-20 WHERE tenant_id=? AND event_id=?",tenant,event);
+        assertIndependentHold(); // V262: same value, different DB revision.
+        approveRefund(event);
         assertEquals(first.currencies(),service.readWholeOrderRefundReservations(tenant,market,sale).currencies());
         // A changed V35 revision is stale even when the signed amount is unchanged.
         db.update("UPDATE finance_refund_amount_allocation SET revision=2 WHERE tenant_id=? AND event_id=?",tenant,event);
@@ -386,6 +389,41 @@ class ReceiptCostCompositionPg18V250Test {
         var sameAuthor=service.readWholeOrderRefundReservations(tenant,market,sale);
         assertTrue(sameAuthor.blockers().contains("REFUND_INDEPENDENT_REVIEW_MISSING_STALE_OR_CONFLICTING"));
         db.update("UPDATE finance_refund_amount_allocation SET reviewed_by=? WHERE tenant_id=? AND event_id=?",reviewer,tenant,event);
+        assertIndependentHold();
+        approveRefund(event);
+        assertEquals(first.currencies(),service.readWholeOrderRefundReservations(tenant,market,sale).currencies());
+        // No-op and aborted transaction must not invalidate a committed review.
+        long before=db.queryForObject("SELECT evidence_revision_v121 FROM finance_refund_amount_allocation WHERE tenant_id=? AND event_id=?",Long.class,tenant,event);
+        db.update("UPDATE finance_refund_amount_allocation SET signed_amount=signed_amount WHERE tenant_id=? AND event_id=?",tenant,event);
+        assertEquals(before,db.queryForObject("SELECT evidence_revision_v121 FROM finance_refund_amount_allocation WHERE tenant_id=? AND event_id=?",Long.class,tenant,event).longValue());
+        write.executeWithoutResult(tx->{
+            db.update("UPDATE finance_refund_amount_allocation SET signed_amount=-18 WHERE tenant_id=? AND event_id=?",tenant,event);
+            tx.setRollbackOnly();
+        });
+        assertEquals(first.currencies(),service.readWholeOrderRefundReservations(tenant,market,sale).currencies());
+        // Withdraw/recreate with all former business fields and a supplied old
+        // token still receives a fresh identity, including the same revision.
+        write.executeWithoutResult(ignored->{
+            db.update("""
+                CREATE TEMP TABLE v262_saved_allocation ON COMMIT DROP AS
+                SELECT * FROM finance_refund_amount_allocation WHERE tenant_id=? AND event_id=?
+                """,tenant,event);
+            db.update("DELETE FROM finance_refund_amount_allocation WHERE tenant_id=? AND event_id=?",tenant,event);
+            assertEquals(1,db.update("""
+                INSERT INTO finance_refund_amount_allocation(tenant_id,event_id,external_item_id,
+                    signed_amount,currency_code,reason_reference,revision,reviewed_by,reviewed_at,evidence_revision_v121)
+                SELECT tenant_id,event_id,external_item_id,signed_amount,currency_code,reason_reference,
+                    revision,reviewed_by,reviewed_at,evidence_revision_v121 FROM v262_saved_allocation
+                """));
+        });
+        assertTrue(db.queryForObject("SELECT evidence_revision_v121 FROM finance_refund_amount_allocation WHERE tenant_id=? AND event_id=?",Long.class,tenant,event)>before);
+        assertIndependentHold();
+        approveRefund(event);
+        // V34 quantity ABA, same application revision and timestamp.
+        db.update("UPDATE finance_refund_item_review SET reviewed_quantity=2 WHERE tenant_id=? AND event_id=?",tenant,event);
+        db.update("UPDATE finance_refund_item_review SET reviewed_quantity=1 WHERE tenant_id=? AND event_id=?",tenant,event);
+        assertIndependentHold();
+        approveRefund(event);
         assertEquals(first.currencies(),service.readWholeOrderRefundReservations(tenant,market,sale).currencies());
         // Missing/duplicated V63 audit must not be masked by a current digest.
         UUID duplicate=UUID.randomUUID();
@@ -393,8 +431,9 @@ class ReceiptCostCompositionPg18V250Test {
             INSERT INTO finance_refund_recovery_audit(id,tenant_id,event_id,revision,actor_user_id,
                 action,source_evidence_sha256,reason,occurred_at)
             SELECT ?,tenant_id,event_id,revision,actor_user_id,action,source_evidence_sha256,reason,occurred_at
-            FROM finance_refund_recovery_audit WHERE tenant_id=? AND event_id=? AND revision=2 AND action='REVIEWED'
-            """,duplicate,tenant,event);
+            FROM finance_refund_recovery_audit WHERE tenant_id=? AND event_id=? AND action='REVIEWED'
+              AND revision=(SELECT revision FROM finance_refund_recovery_review WHERE tenant_id=? AND event_id=?)
+            """,duplicate,tenant,event,tenant,event);
         var duplicateAudit=service.readWholeOrderRefundReservations(tenant,market,sale);
         assertTrue(duplicateAudit.blockers().contains("REFUND_INDEPENDENT_REVIEW_MISSING_STALE_OR_CONFLICTING"));
         assertTrue(duplicateAudit.currencies().isEmpty());
@@ -478,6 +517,15 @@ class ReceiptCostCompositionPg18V250Test {
             if(commit)assertTrue(outcome.contains(expected),outcome);
             else assertEquals("SUCCESS",outcome);
         }
+    }
+
+    private void assertIndependentHold() {
+        var held=service.readWholeOrderRefundReservations(tenant,market,sale);
+        assertEquals("LOCAL_ORDER_REFUND_COST_HOLD",held.state());
+        assertTrue(held.blockers().contains("REFUND_INDEPENDENT_REVIEW_MISSING_STALE_OR_CONFLICTING"),
+            held.blockers().toString());
+        assertTrue(held.currencies().isEmpty());
+        assertNull(held.realizedNetProfit());
     }
 
     private void approveRefund(UUID event) {

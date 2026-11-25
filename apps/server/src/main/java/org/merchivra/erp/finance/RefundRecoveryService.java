@@ -91,7 +91,27 @@ public class RefundRecoveryService {
             new BigDecimal(amounts.summary().sourceRefundAmount()),
             sourceLines,refundLines);
         UUID order=UUID.fromString(source.orderId());
-        var canonical=new StringBuilder(event.toString()).append('|')
+        // V262: version the digest and bind the database-assigned revision
+        // population, not only reusable application revisions/field values.
+        // preview/request/decide already run in a single RR transaction.
+        var quantityVersions=jdbc.queryForList("""
+            SELECT evidence_revision_v121 FROM finance_refund_item_review
+            WHERE tenant_id=? AND event_id=? ORDER BY evidence_revision_v121 LIMIT 101
+            """,Long.class,tenant,event);
+        var amountVersions=jdbc.queryForList("""
+            SELECT evidence_revision_v121 FROM finance_refund_amount_allocation
+            WHERE tenant_id=? AND event_id=? ORDER BY evidence_revision_v121 LIMIT 101
+            """,Long.class,tenant,event);
+        if(quantityVersions.size()!=sourceLines.size()||amountVersions.size()!=refundLines.size()
+            ||quantityVersions.size()>100||amountVersions.size()>100
+            ||java.util.stream.Stream.concat(quantityVersions.stream(),amountVersions.stream())
+                .anyMatch(v->v==null||v<=0)
+            ||java.util.stream.Stream.concat(quantityVersions.stream(),amountVersions.stream())
+                .distinct().count()!=quantityVersions.size()+amountVersions.size())
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Refund evidence revision population inconsistent");
+        var canonical=new StringBuilder("V121|Q:").append(quantityVersions)
+            .append("|A:").append(amountVersions).append('|').append(event).append('|')
             .append(order).append('|').append(source.currency()).append('|')
             .append(preview.signedRefundTotal()).append('|')
             .append(source.refundSourceAmount()).append('|')

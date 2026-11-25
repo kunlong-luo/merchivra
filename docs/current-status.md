@@ -1,6 +1,6 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7；V259 快 CI 通过；V260 完整 A3 7/7；V261 V63 独立审核及审计门禁待 A3。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7；V259 快 CI 通过；V260 完整 A3 7/7；V261 V63 独立审核待 A3；V262 V121 证据版本防 ABA 待 A3。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 核心项目状态
 
@@ -129,3 +129,6 @@ V260：全单候选在同一独立 RR 中复用 V203 preview（V29 历史成本�
 V260 验收回填：[代码 SHA f0b020b80aba](https://github.com/kunlong-luo/merchivra/commit/f0b020b80abada92da7faed7c2f3a7e013070cfd)、[快 CI #45572837644 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45572837644)、[完整 A3 #45572837650 SUCCESS 7/7](https://github.com/kunlong-luo/merchivra/actions/runs/45572837650)，PG18 job #139063491336 成功（包含 V259 金额回归）。
 
 V261：单 RR 全单候选在 V259 金额、V260 SKU 和 V119 预留完整后，复用 V63 preview 重算证据 SHA 与 V197 source parity；每订单最多100个 V63 事件，要求 REVIEWED/current、原币一致和完整本地金额。V63 同 revision 精确请求/决策审计二条，actor/digest/time 匹配，审核人不得为当前 V34/V35 作者。缺审、待审、变更、重复审计或同人冲突整单 HOLD，参与事务的业务异常仍失败封闭。V250 实际 PG18 夹具扩展真实 V63 request/decide、未审/待审、V35 revision 改变、同作者、重复审计及新审核恢复；JUnit marker 强制，待新 SHA A3。尚无跨修订完整审计/不可重用版本、ABA、现行 Owner 资格重核、真实返仓或外部签发证明。旧审计不能代替 G1，不实际过账，realizedNetProfit=null。无新迁移或 API。
+
+
+V262：追加 Flyway V121，V34/V35 每行增加数据库全局序列不可重用版本；任何实际 UPDATE/INSERT（含恢复原值、删除重建、伪造旧版本）重分配，完全 no-op 保持，回滚不改变已提交版本。V63 证据摘要显式版本化并绑定同 RR 的两组有界行版本，旧 V63 指纹不能自动升级，必须重新发起并独立审批。V250 真实 PG18 夹具增加金额/作者/数量 ABA、撤回重建（携旧版本）、no-op、rollback 和复审恢复，JUnit marker 强制；V261 既有审计负例保留。仅覆盖 V34/V35 行生命周期，不涵盖 SKU/成本/源分类/订单/授权 ABA、管理员篡改序列或 V119 预留版本；不改历史迁移或原金额，不增加 API/UI。V261 CI/A3 尚未最终核对，V262 待独立 A3。真实返仓与外部来源/G1 缺失，实际回转与 realizedNetProfit=null。
