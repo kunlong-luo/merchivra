@@ -263,6 +263,26 @@ for relative in [*ROOT.glob("*.md"), *(ROOT / "docs").rglob("*.md")]:
             if resolved.is_relative_to(ROOT / old):
                 errors.append(f"{relative.relative_to(ROOT)}: stale retired path: {href}")
 
+# V240: merged file aliases must not be reintroduced or linked locally.
+RETIRED_DOC_FILES = {
+    "docs/finance/v181-settlement-identity-fingerprint-v1.md": "docs/finance/v181-immutable-settlement-line-identity.md",
+    "docs/testing/test-plan.md": "docs/testing/ci-policy.md",
+    "docs/architecture/mature-tool-first-api-client-2026-11-01.md": "docs/architecture/dependency-adoption.md",
+}
+for old, new in RETIRED_DOC_FILES.items():
+    if (ROOT / old).exists():
+        errors.append(f"Retired duplicate document reintroduced: {old}")
+    if not (ROOT / new).is_file():
+        errors.append(f"Canonical merged document missing: {new}")
+for relative in [*ROOT.glob("*.md"), *(ROOT / "docs").rglob("*.md")]:
+    for found in INLINE.finditer(relative.read_text(encoding="utf-8")):
+        href = found.group(1).strip().split(' "', 1)[0].strip().strip("<>")
+        parts = urlsplit(href)
+        if not parts.scheme and not parts.netloc and parts.path:
+            resolved = (relative.parent / unquote(parts.path)).resolve()
+            if any(resolved == ROOT / old for old in RETIRED_DOC_FILES):
+                errors.append(f"{relative.relative_to(ROOT)}: stale merged document: {href}")
+
 # All actual first-level docs domains must be named in the directory tables.
 for folder in sorted((ROOT / "docs").iterdir()):
     if not folder.is_dir() or folder.name.startswith("."):

@@ -11,7 +11,7 @@
 
 ## 当前工程状态
 
-V237 完整隔离 A3 7/7 通过，实际 PostgreSQL18 Java Reports 服务回归未跳过，远程 Worker 为合成模拟；V238 快速 CI 通过。见[当前事实](docs/current-status.md)。
+V237 完整隔离 A3 7/7 通过，实际 PostgreSQL18 Java Reports 服务回归未跳过，远程 Worker 为合成模拟；V238、V239 快速 CI 通过。见[当前事实](docs/current-status.md)。
 
 ## 一、仓库根目录：保留哪些，分别有什么用？
 
@@ -47,7 +47,7 @@ V237 完整隔离 A3 7/7 通过，实际 PostgreSQL18 Java Reports 服务回归�
 
 ### 目录维护与去重
 
-现保留上表 17 个文档领域目录。已移除的旧路径：`docs/ops/` → [运维手册](docs/operations/operations.md)、`docs/ux/` → [设计参考](docs/design/navigation-and-page-states.md)、`docs/diagrams/` → [架构图纸](docs/architecture/diagram-index.md)、`docs/processes/` → [产品流程](docs/product/core-flows.md)、`docs/templates/` → [ADR 模板](docs/architecture/adrs/template.md)。旧重复稿与原文可从 Git 恢复；根 `ops/` 为实际工具，仍保留。统一删留依据为[文档控制](docs/governance/document-control.md)，CI 禁止恢复旧目录、禁止遗漏现有文档目录用途。
+现保留上表 17 个文档领域目录。已移除的旧路径：`docs/ops/` → [运维手册](docs/operations/operations.md)、`docs/ux/` → [设计参考](docs/design/navigation-and-page-states.md)、`docs/diagrams/` → [架构图纸](docs/architecture/diagram-index.md)、`docs/processes/` → [产品流程](docs/product/core-flows.md)、`docs/templates/` → [ADR 模板](docs/architecture/adrs/template.md)。旧重复稿与原文可从 Git 恢复；根 `ops/` 为实际工具，仍保留。V240 将 V181/V181B 归为[结算身份契约](docs/finance/v181-immutable-settlement-line-identity.md)、TEST-001 并入 [CI 策略](docs/testing/ci-policy.md)、早期 API 选型并入[依赖复用契约](docs/architecture/dependency-adoption.md)，各保留文档内以精确 Git SHA 链接原文。统一删留依据为[文档控制](docs/governance/document-control.md)，CI 禁止恢复旧目录、禁止遗漏现有文档目录用途。
 
 ## 三、本地启动（包含 PostgreSQL 18）
 

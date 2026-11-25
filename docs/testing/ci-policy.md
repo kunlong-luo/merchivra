@@ -1,6 +1,6 @@
-# TEST-003 · 当前 CI / 完整 A3 验收策略（V195 / DOC-196）
+# TEST-003 · 当前 CI / 完整 A3 验收策略（TEST-003 / DOC-196）
 
-> **2026-11-22 · 当前维护约定**：日常开发与文档修改直接提交 `main`，不为每个 Vxxx 开发重复创建分支/PR。快速 CI 保证构建与高价值单测；PG18 全链路、Chromium/Next、真实 Docker Compose 是有条件执行的**隔离合成**里程碑验收；两者均**不是**真实 Amazon/银行核证或生产许可。见 [事实基线](../current-status.md)、[发布阻断](release-readiness-v68.md)。
+> **2026-11-25 · 当前维护约定**：日常开发与文档修改直接提交 `main`，不为每个 Vxxx 开发重复创建分支/PR。快速 CI 保证构建与高价值单测；PG18 全链路、Chromium/Next、真实 Docker Compose 是有条件执行的**隔离合成**里程碑验收；两者均**不是**真实 Amazon/银行核证或生产许可。见 [事实基线](../current-status.md)、[发布阻断](release-readiness-v68.md)。
 
 ## 实际 GitHub Actions 入口
 
@@ -19,45 +19,29 @@
 3. **跨数据库/进程、版本化快照、Next 容器或部署回退**：按风险触发[完整 A3](https://github.com/kunlong-luo/merchivra/actions/workflows/milestone-validation.yml)；除业务绿灯外必须核对未运行/跳过的任务及 SHA。
 4. **真实目标上线/卖家接入**：必须独立取得合法角色/地区/银行及第三方凭证，G1/G2/G3 人工批准、TLS/KMS/备份/PITR、外部告警送达/ACK、撤销、恢复与性能证据；**不存在**“A3 绿色就自动部署”的路径。
 
-## V199 财务负例验证范围
+## 质量金字塔
 
-V199 拒绝 V54 结算 `declared_net=NULL` 被视为三方来源金额一致：Java 的缺值/真零金额负例、Next 状态合同、PG18 TEMP/ROLLBACK 原 SQL 检查、原 V56 独立审批必须继续 fail-closed。本次 [精确 `30fd25c` 提交](https://github.com/kunlong-luo/merchivra/commit/30fd25c9205c10234fced28626d69e0df2b81889) 的 [完整 A3 #45022799341（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45022799341) 与 [快速 CI #45022799357](https://github.com/kunlong-luo/merchivra/actions/runs/45022799357) SUCCESS；合成 PG18 原 SQL 的 NULL 证明与 Java 缺证 fail-closed 负例分开验证，不能冒充真实外部结算认证。
+1. 领域单元测试：成本有效日期、SKU 映射、金额计算、状态迁移。
+2. Adapter 契约测试：Amazon DTO → 标准化 DTO，含不同站点/错误结构。
+3. PostgreSQL 集成测试：Flyway、事务、唯一键、分页检查点和幂等。
+4. API 安全测试：未授权、角色权限、跨租户负例和导出权限。
+5. UI 端到端：管理员接入 Mock、查看订单、库存、预估利润与同步失败。
+6. 运维演练：限流、Worker 崩溃、数据库恢复、凭证失效。
 
-## V200 历史成本重叠专项（[精确 V200 代码 `2715529`](https://github.com/kunlong-luo/merchivra/commit/271552911b55a451e66662cdf3aab94c2db21341) · [快速 CI #45023721155 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45023721155) · [完整 A3 #45023721170（7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45023721170)）
+## Mock 数据集
 
-后端 `OrderCostEngineTest` 负例检测多映射、重叠成本区间、候选数未知，且任何歧义不能进入 `provisionalCost`；真实 PG18 合成测试 `scripts/smoke_order_cost_ambiguity_v200.py` 在 TEMP/ROLLBACK 中运行同一 Java SQL 并检查正常、重叠、缺失情形。Next 原有订单成本面板显示清晰阻断原因。精确 V200 源码的完整 A3 已通过 7/7；上述负例是隔离合成数据库技术验证，不代表外部 Amazon 单据、批次实收或实际会计放行。
+- 2 个租户、2 个卖家账户、3 个 Marketplace，不包含真实卖家 ID。
+- 同 ASIN 对应不同账号 Seller SKU，两个不同币种的订单。
+- FBA 可售/预留/在途快照；过期、未获取与实际 0 三种场景。
+- 一条先来退款、后到订单；一条重复财务事件；缺失成本/汇率案例。
+- 429、401、500、分页过期、网络中断样例，不包含真实响应 PII。
 
+## 测试记录格式
 
-## V201 跨事件退货数量读时阻断（[精确代码 `c47873c`](https://github.com/kunlong-luo/merchivra/commit/c47873cd1ad3e9963f57c9d69dc19b2ba5a17c90) · [快速 CI #45024903306 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45024903306) · [完整 A3 #45024903265（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45024903265)）
-
-- Java `RefundItemReviewServiceV201Test` 检查多事件汇总 SQL 作用域、当前 LIVE 订单项约束和冲突优先序；Next `refund-review-v201.test.ts` 检查明确冲突状态和不可信实收标志的拒绝。
-- PG18 `MERCHIVRA_V201_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_cross_event_quantity_v201.py` 在 TEMP 表 + ROLLBACK 执行**Java 生产源 SQL 原文**，包含已审 2+1 件、订单后改数量、异租户/订单隔离、非 LIVE/旧项与另一商品项的反例。
-- 本次代码精确 SHA 的快 CI 与完整 A3 已通过 7/7，测试使用隔离 PG18 原 Java SQL 与合成订单/退款行；真实物理退货、成本总账与银行仍完全不在 CI 范围内。
-
-
-## V202 本地采购批次原币来源核对（[精确代码 `4d07d87`](https://github.com/kunlong-luo/merchivra/commit/4d07d87c92366b661ad9c5400b759ac73d98362f) · [快速 CI #45105511319 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45105511319) · [完整 A3 #45105511271（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45105511271)）
-
-`OrderLotProvenanceV202Test` 与 Next Zod/Vitest 检查 Owner/租户隔离、订单成本不 READY 时不开采购来源扫描、冲突/多币种不可任选金额、且响应恒为 `actualBatchCogsVerified=false`。`scripts/smoke_local_lot_cost_provenance_v202.py` 使用 **生产 Java 的同一 SQL**、PG18 TEMP/ROLLBACK 演示隔离时间范围、legacy receipt、QC hold/放行、QC 错连、批次 SKU 冲突、ledger 数量差、多原币/单价。本轮精确 SHA 快 CI/完整 A3 分别 SUCCESS，A3 首次 7/7 包含 PG18 对生产 Java SQL 的隔离负例；任何合成绿灯都不是 Amazon 出库批次来源或 G1 的真实确认。
-
-
-## 最新已确认工程技术证据
-
-- **V198 / `11864a739451f0e91c0bd9639b2c4bfe441b518e`**：[精确代码 `11864a7`](https://github.com/kunlong-luo/merchivra/commit/11864a739451f0e91c0bd9639b2c4bfe441b518e) 的 [完整 A3 #45021678686（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45021678686)，及 [同 SHA 快 CI #45021678580](https://github.com/kunlong-luo/merchivra/actions/runs/45021678580) SUCCESS。首次 `f5bc560` 的 [完整 A3 #45021496225](https://github.com/kunlong-luo/merchivra/actions/runs/45021496225) **FAILED**，原因是老版 `SettlementSourceReviewServiceTest` 构造参数以及旧 Vitest 比较夹具缺少五个新字段；并非放宽判定后通过，现已修正。实际 PostgreSQL 18 阶段先前已通过并有 `PASS V198 real PG18 exact Java SQL` 日志证据。旧 V58/V31 只读比较补齐重复结算归属/重复报告/缺失行与混币检测，Java/Vitest 合同负例及原 SQL 的 PG18 TEMP 表 `ROLLBACK` 验证。修改 `ci.yml` full_suite 跑真实 PG18；V198 修复后的同 SHA 完整 A3 7/7 验证独立成立，与 V197 的历史绿灯互不借用。
+每个 AC 记录：用例编号、构建 SHA、测试环境、输入 fixture、执行人、结果、证据链接、缺陷编号。通过率不能替代高优先级缺陷清零与安全评审。
 
 
-- **V197 / `db9d88be81ec326194242f75596661cb950cbea7`**：[V197 完整 A3 #45020338812（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45020338812)、[同 SHA 快 CI #45020338752](https://github.com/kunlong-luo/merchivra/actions/runs/45020338752)，两者 **SUCCESS**。在退款 V170/V63 只读 API 增加带符号金额/币种/事件/订单跨事务一致性核对及结构化 COGS 阻断码；配套 Java 单测、Next Zod 合同负例与已有页面展开明细。无新迁移，不启用真实 Amazon/Ads，不能仅因测试通过就允许退款库存/COGS 过账。
-
-
-- **V194/V105 / `9cdb9268020bdc9ae0c743e09d5d5775c377ce69`**：[最终完整 A3 #45018945885（run_attempt=1）](https://github.com/kunlong-luo/merchivra/actions/runs/45018945885) **7/7 核心任务 SUCCESS**：真实 PG18/Flyway V105、V103 不可变、V194 NULL-safe 双向配对负例、Session/HTTP、Java/Gradle、Next16/React19/Chromium、Compose 安全与恢复；[同 SHA 快 CI #45018945926](https://github.com/kunlong-luo/merchivra/actions/runs/45018945926) **SUCCESS**。全部只含合成数据，不代表外部 Amazon/银行/税/退款 COGS 核证。
-
-- **V195 / `2136375590abaae2373c565a1de930aa4ce45483`**：[快速 CI #45016097852（run_attempt=1）](https://github.com/kunlong-luo/merchivra/actions/runs/45016097852) **SUCCESS**：Java25、Next16/React19/pnpm/Orval、Vitest、Next 与 Vite 构建、Compose；**PG18 完整 job 在快速 CI 中按策略 SKIPPED**。V195 仅改善会话故障 UI，用户本机 HTTP 500 根因未定位。
-- **V194/V105 前四轮失败历史（已通过第五轮完整复测）**：首次 [A3 #45017612506](https://github.com/kunlong-luo/merchivra/actions/runs/45017612506) 发现旧 V188 对不完整报告期望 200；第二次 [A3 #45017957824](https://github.com/kunlong-luo/merchivra/actions/runs/45017957824) 发现重叠 CHECK 的报错顺序断言；第三次 [A3 #45018224081](https://github.com/kunlong-luo/merchivra/actions/runs/45018224081) **真实证明 V104 CHECK 因 SQL NULL/UNKNOWN 可放行单边指纹**。V105 前进迁移补明确 IS NOT NULL 与双向半指纹负例，最终由上述 `9cdb926` 完整 A3 验证通过；失败历史和复测记录保留。
-- **V194 / `9d4ebadb7abe45369ea55a7bb6c33b09e920d985`**：[快速 CI #45014853040](https://github.com/kunlong-luo/merchivra/actions/runs/45014853040) **SUCCESS**；V104 指纹仍待自己的完整 PG18/Flyway/Owner HTTP/A3，不能借用 V193 成果。
-- **V193 / `600883236a3669f51b6703229447d93499b271cd`**：[完整 A3 #45012495202（run_attempt=2，SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45012495202) 验证其精确 SHA 的 V103 冻结数据库 DML 守护及合成 PG18；**不覆盖**后续 V194/V195。
-- **V192 / `189932197ddeaadf1470f8692aa6be88d5e015c1`**：[完整 A3 #44896004578（run_attempt 2，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/44896004578) 验证真实 PG18 V188 逐订单 SKU 金额守恒，失败的首次验证与修复记录保留；仍无真实费用核验。
-- **V191 / `8dab97147010fdc440ee81abcfa67cd1d1d57261`**：[快速 CI #44882890791](https://github.com/kunlong-luo/merchivra/actions/runs/44882890791) 与 [完整 A3 #44882890834](https://github.com/kunlong-luo/merchivra/actions/runs/44882890834) SUCCESS，完整 A3 **7/7 核心任务成功**；真实 Seller/Ads/银行**未启用**。
-- [GitHub Pages #44882736480](https://github.com/kunlong-luo/merchivra/actions/runs/44882736480) 只验证虚构静态展示构建与隔离，不表示公开 ERP 已上线。
-- **文档提交后的新 HEAD** 必须查该 SHA 的 CI，不能自动继承 V191/V193 业务 SHA 的 A3 结果。文档规则见 [ENG-001](../governance/engineering-standards.md)、[GOV-001](../governance/document-control.md)。
+参见 [验收标准](../requirements/acceptance.md)、[需求追踪](../requirements/traceability.md)、[E2E 场景集](end-to-end-scenarios.md)。TEST-001 原早期测试计划已归并；历史 M0/M2 尚未实施 E2E 的状态不再是现行约束。
 
 ## 本地快速命令
 
@@ -71,121 +55,11 @@ python3 scripts/check_next_runtime_v122.py
 
 **核心限制**：真实费用来源、重复扣费真实性、退款 COGS 回转、外部 WMS 物理实收、跨币种会计政策和银行结算均未因上述合成测试自动核验。不得把 `realizedNetProfit=null` 重写为已确认利润。生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 一律 NO-GO；历史 [V108 CI 策略](../roadmap/mvp-freeze-release-v108.md) 为保留的阶段性记录，不优先于此页。
 
-## V203 销售批次归属声明数量守恒与失效（[精确代码 `3d94550`](https://github.com/kunlong-luo/merchivra/commit/3d94550b9a2ef5a53c15db358b390ed88b60478b) · [同 SHA 快 CI #45116800143 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45116800143) · [完整 A3 #45116800085（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45116800085)）
+## 历史验收索引（非现行策略）
 
-- Java `OrderLotAssignmentIntegrityV203Test` 检查 Owner/no-store、source item 与历史 SKU 映射变更、无声明和状态变更时不得确认实际 COGS，任何前端/后端均不得将本地一致性误当外部证明。
-- 隔离 PostgreSQL 18：`MERCHIVRA_V203_DISPOSABLE_ONLY=true python3 scripts/smoke_sale_lot_assignment_v203.py`，在 Flyway V106 已运行的 disposable 数据库，以 TEMP + ROLLBACK 执行实际数据库触发器和源 SQL 视图；分别验证 item/pick/receipt 三维累计数量、唯一归属、并发锁来源、QC 和出库漂移、撤销不释放已分配数量、不可 UPDATE/DELETE 和布尔硬阻断。生产真实身份/签名/财务入账不在合成验证范围。
-- V203 精确代码提交的快 CI 和完整 A3 7/7 经过 GitHub 核对，包含 Flyway V106 与匿名 HTTP 401；第一次和第二次 A3 的负例测试夹具错误均保留为历史失败，本次真实 PG18 测试修正后已通过。代码 SHA 是 [精确代码 `3d94550`](https://github.com/kunlong-luo/merchivra/commit/3d94550b9a2ef5a53c15db358b390ed88b60478b)，绝不引用 V202 的 green 或将合成验证当成外部真实性。
+具体测试范围、成功/失败/跳过及精确 SHA 统一在 [当前事实](../current-status.md)、各领域专项证据维护；不在策略正文复制历史流水账。以下精确 Git 快照保留原 CI 策略内全部 V191–V222 叙述、首次失败及执行边界（含原有章节标题），以及原 TEST-001：
 
-## V204 签名出库观察（[V204 精确代码 `f89485f`](https://github.com/kunlong-luo/merchivra/commit/f89485fe0b85cb63f7e12614f254c4ba57ed9be9) · [同 SHA 快速 CI #45122956620 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45122956620) · [完整 A3 #45122956610（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45122956610)）
+- [V239 CI 策略完整历史快照](https://github.com/kunlong-luo/merchivra/blob/2c2265036df33f0afc7269ff392eea8a5a5059e4/docs/testing/ci-policy.md)
+- [TEST-001 原文](https://github.com/kunlong-luo/merchivra/blob/2c2265036df33f0afc7269ff392eea8a5a5059e4/docs/testing/test-plan.md)
 
-- Java `SaleLotSignedDispatchV204Test` 在 JDK 25 生成真实 Ed25519 测试公私钥并验证规范化签名，对 claim/source/quantity/external dispatch 字段做篡改负例，验证无证据与跨租户 Owner/no-store 端点仍不把 WMS 观察升级为实际 COGS。
-- `MERCHIVRA_V204_DISPOSABLE_ONLY=true python3 scripts/smoke_signed_sale_dispatch_v204.py` 要求 Flyway V107 已应用且使用 PostgreSQL 18；用 TEMP 阴影表和安装的真实触发器 + 源 SQL 视图检查无密钥证明、唯一归属、防重放、密钥撤销、原 claim 失效、数量漂移、跨租户、禁止删改和数据库 `CHECK(FALSE)` 阻止伪造真实财务信号。纯 SQL 无法独立重算 Ed25519，必须与 Java 真实签名测试组合；全链路应验证未登录 GET 和 POST 均返回 HTTP 401，CSRF 仍启用。
-- V204 精确代码提交已在 GitHub 对应快 CI 与完整 A3 确认 SUCCESS，PG18 真实触发器 + 独立视图日志含明确 `PASS V204`。首次工作流过长导致两个 Actions 运行未创建任何 jobs；将冗长内联注释归档至文档、保留独立 Python V204 smoke 调用后恢复正常。**工作流立即 failure 且 0 jobs 不等于测试失败；必须先核查 YAML/行长/步骤大小，再核查正常任务的真实日志。** 所有通过仅为隔离合成数据，不构成 Amazon/FBA/FBM 或 WMS 外部主体认证。
-
-## V205 证据档案与独立内部复核（[V205 精确代码 `99ef9b9`](https://github.com/kunlong-luo/merchivra/commit/99ef9b988de101f3413e0821817071bcce85c370) · [同 SHA 快速 CI #45132910751 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45132910751) · [完整 A3 #45132910387（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45132910387)）
-
-- Java `DispatchCustodyDossierV205Test` 直接验证危险编号/散列输入、想越级到身份 VERIFIED 的状态、自审/来源签名更新的独立失效逻辑、GET/POST Owner/no-store 接口与无外部证据时实际 COGS 的硬阻断。
-- `MERCHIVRA_V205_DISPOSABLE_ONLY=true python3 scripts/smoke_dispatch_custody_dossier_v205.py`：检查 PG18/Flyway V108 的真实触发器/完整原始 SQL 视图，TEMP 阴影表 + ROLLBACK，不调用生产 WMS/Amazon。覆盖注册来源撤销、签名漂移、数据库快照覆盖伪参数、档案/复核不可变、三类有利益冲突的人不得独立复核、相同交接编号摘要冲突、重复提交、跨租户及实际身份/成本布尔值永假。
-- CI 中加入单行 Python V205 smoke 调用，避免超大 Shell 工作流拒绝创建 jobs；Owner 匿名 HTTP 401/拒绝 POST 和 CSRF 控制不可关闭。精确 SHA 的快 CI 和完整 A3 已成功，完整 A3 7/7 SUCCESS，原始 PG18 job 日志含 `PASS V205 PG18 V108 original capture/review guards and source view`；不等于真实 B2 外部运营主体认证。
-
-## V206 私有原件安全与数据库字节重算（[V206 精确代码 `c85feba`](https://github.com/kunlong-luo/merchivra/commit/c85feba8cf77919e89a1626d9ddc0981f13deb74) · [同 SHA 快速 CI #45138354698 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45138354698) · [完整 A3 #45138354709（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45138354709)）
-
-- Java `DispatchCustodyOriginalV206Test`：复用 V52 文件魔数、SHA-256、2 MiB 输入限制；V137 clamd 失败先阻断，不应尝试读取或写入数据库；测试 Owner/Session/CSRF/no-store、上游来源失效优先、没有两份原件时无法解除外部主体/实际 COGS 阻断。
-- `MERCHIVRA_V206_DISPOSABLE_ONLY=true python3 scripts/smoke_custody_original_content_v206.py`：真实 PostgreSQL18 安装 V109 后，在 TEMP 表上复用原 V109 触发器和源 SQL 视图、整事务回滚；检验 BYTEA 生成散列与读时 SHA-256 独立复算、两份缺一份、非真实魔数 MIME、错误声称散列、同种重复文件、跨租户、来源撤销、不可变及硬性 FALSE 身份/过账约束。CI 除上述脚本外须验证匿名 GET/POST 返回 401、Next/Java/Compose/Chromium 回归。
-- 由于这是安全/财务/数据库变更，该 V206 精确代码 SHA 快 CI 和完整 A3 7/7 已 SUCCESS，PG18 job 原始日志含 `PASS V206 PG18 V109 exact original trigger and source view`，不可套用 V205 结果；绿灯不代表生产 ClamAV、外部法人、承运商、真实平台来源或 G1 审批已经核证。
-
-## V207 法律保全/留存期限复核与私有原件元数据访问审计（[V207 精确代码 `8eb1b86`](https://github.com/kunlong-luo/merchivra/commit/8eb1b86a26caf8f73149e9dab6215e65c9a2574d) · [同 SHA 快速 CI #45140330888 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45140330888) · [完整 A3 #45140331187（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45140331187)）
-
-- Java `DispatchCustodyOriginalGovernanceV207Test` 拒绝删除/解除 hold/外部核验的伪决策、过短/超长理由、过期/超长保留期限、无单文件证据时披露和未授权 Owner 操作；API 仅 no-store 元数据。
-- `MERCHIVRA_V207_DISPOSABLE_ONLY=true python3 scripts/smoke_custody_original_governance_v207.py` 需要应用的**真实 PG18 Flyway V110**，使用安装的 V110 原始触发器和 V109/V110 源视图在 TEMP 中逐条验证默认永久 hold、分离上传人/提案人/复核人、上游证据撤销、跨租户访问、数据库覆盖伪 SHA/长度、禁止假标记二进制外流、不可变提案/复核/审计和永假财务核验，最后 ROLLBACK。
-- 精确 V207 代码 SHA 的完整 A3 已 Java、Next、Chromium、HTTP、Compose、PG18 7/7 SUCCESS，原始 PG18 Job 日志含 `PASS V207 PG18 V110 exact guards and source view`；快 CI 中 PG18 skip 并未计为专项验收。所有合成原件不认证机构和承运商，内部留存审批不能解除保全或执行删除。
-
-## V208 外部签发公钥的密码学完整性与来源撤销（[V208 精确代码 `6678558`](https://github.com/kunlong-luo/merchivra/commit/66785586f1856fc5647c48bbf4a975152a16fce7) · [同 SHA 快速 CI #45150207475 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45150207475) · [完整 A3 #45150207574（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45150207574)）
-
-- Java `CustodyIssuerAttestationV208Test`：运行时真实 Ed25519 公/私钥正例、文档类型/SHA/文件和档案 UUID/公钥篡改负例、换行注入、过界签发时间、未知来源无 COGS、Controller 租户 Owner/no-store；真实签名验证仍不证明外部签发方身份。
-- `MERCHIVRA_V208_DISPOSABLE_ONLY=true python3 scripts/smoke_custody_claimed_issuer_signatures_v208.py`：**真实 PG18 + Flyway V111**，TEMP 表执行原始部署的公钥 review/撤销/签名 snapshot PL/pgSQL 及 V109/V111 完整源视图，ROLLBACK；覆盖双角色分离、来源 key 类型不一致、跨租户、独立导入人、数据库自行冻结 SHA/订单/出库/公钥引用、不可变/重复签名、已撤销密钥与上游签名失效、外部身份/COGS 永假。该 SQL 层不能证明真实 Ed25519，必须依赖 Java 正反例。
-- CI 在合成 PG18 路径插入 V208 smoke 与匿名 GET/POST 401 断言，并通过 Java、Next、Chromium、Compose、真实 HTTP 全 A3 7/7；快 CI 的 PG18 skipped 不等于专项通过。同 V208 代码 SHA 的快速 CI 与完整 A3 7/7 已 SUCCESS；PG18 原始 Job 日志明确 `PASS V208 PG18 V111 exact source capture/key guards/view`，不能用快 CI 中的 PG18 skip 冒充专项验收。外部权威 CA/企业/承运实际核验仍不可宣称。
-
-## V209 部署侧离线证书链与 CRL 失效（[V209 精确代码 `0a9dc09`](https://github.com/kunlong-luo/merchivra/commit/0a9dc0903a92b64d5891c03011f5b3ef85fbc560) · [同 SHA 快速 CI #45155665615 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45155665615) · [完整 A3 #45155665675（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45155665675) · [同 SHA Redis Session 集成 #45155665716 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45155665716)）
-
-- `OfflineIssuerCertificateTrustV209Test`：仅使用 `src/test/resources/v209/` 下的**合成公钥证书和签名 CRL，绝不提交私钥**；固定时钟执行 Java 25 PKIX 对受限根+Ed25519 leaf+DNS SAN+SPKI 哈希+签名 CRL 的技术正例。对同实例 CRL 新签发撤销、CRL 过期、错误 SAN/角色、错误 SPKI、缺失文件、伪造根证书、禁用开关及没有 V208 签名/来源的情况测试失败关闭。生产不可用这些合成根证书。
-- CI 新增 `GET /api/v1/finance/marketplaces/{marketplaceId}/orders/{orderId}/custody-external-trust-readiness` 匿名 401 检验；读操作无新数据库迁移。安全敏感行为仍按精确 SHA 跑 Java25/Next16/Chromium/Compose/HTTP/PG18 A3；不以快速 CI 中的 PostgreSQL skipped 冒充 PG18 联调。同一 V209 SHA 快速 CI、Redis Session 与完整 A3（7/7）已 SUCCESS，后者包括真实 PG18/HTTP 回归、Java PKIX/签名 CRL 合成正反例。由于没有 V209 新迁移，不能声称运行了“V209 Flyway 源触发器”；离线链和 CRL 通过仍不能证明根证书分发来源、真实运营公司、实体签收或净利润。
-
-## V210 全订单退款数量守恒与退款 COGS 风险（[V210 精确代码 `dc7e1b3`](https://github.com/kunlong-luo/merchivra/commit/dc7e1b336bc5d1ac762c2172db657b5961a8bbdd) · [同 SHA 快速 CI #45159869191 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45159869191) · [完整 A3 #45159869175（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45159869175)）
-
-- Java `RefundOrderConservationV210Test`：以两笔 partial refund、原单数量 5、手工退款数量 2+1、USD 来源 -20/-10 验证不重复的原币与未核证历史成本 24 / 声称返仓敏感度 16；跨事件数量 3+3>5、V34/V63 数量/处置漂移、来源金额/订单/币种漂移、V34 孤儿、未做 V63、缺原单数量、正数“退款”、币种隔离和重复 source/item 都须 fail-closed。完整本地人工平衡不自动放开真实 COGS 或利润。
-- `MERCHIVRA_V210_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_order_conservation_v210.py`：真实 PG18、现有 Flyway 不变，直接抽取 V210 Java 三个 SQL text block，在 TEMP 合成测试数据验证**两次全量匹配事件、原币金额不重乘、跨租户/订单、旧/虚构订单行与当前数量更新**；事务末 ROLLBACK。无 V210 新迁移，不能声称新 Flyway 版本验收。
-- 本轮同 SHA Java25、真实 PG18/HTTP、Next16、Chromium、Compose 完整 A3 已 7/7 SUCCESS，PG18 Job 原始日志明确 `PASS V210 PG18 exact full-order LIVE refund source SQL`；V210 没有单独新增 HTTP 匿名 401 smoke，仍由现有 Spring Security 全局 `anyRequest().authenticated()` 和 Controller Owner/no-store 单元测试覆盖，端点级 401 独立回归属后续补充。快 CI 的 PG18 skipped 不算数据库专项。退款真实来源、B2/B3、G1/DEC 与 `realizedNetProfit=null` 不变。
-
-## V211 期间退款跨期/重复快照与 V188/V210 阻断（[V211 代码 `fec6371`](https://github.com/kunlong-luo/merchivra/commit/fec6371386e5f1a550be6b12856d627ad94b515f) · [同 SHA 快速 CI #45165293616 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45165293616) · [完整 A3 #45165293551（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45165293551)）
-
-- Java `PeriodRefundProfitGuardV211Test`：同一订单的本期及下期退款 + 不同原币事件、源 0/2 匹配、超出 V64 冻结订单的旧单退款、V210 新/变更的原币/时间事件、重复源/订单、两个重叠 V64 报表不是实际重复入账、无分类来源不能认 0、Owner/no-store GET。全部真实成本/净利润 null。
-- `MERCHIVRA_V211_DISPOSABLE_ONLY=true python3 scripts/smoke_period_refund_profit_guard_v211.py`：使用本次 Java 服务的**三个原始 SQL**于已安装现有 Flyway 的真实 PG18 TEMP 合成数据中验证事件不因 2 个 MATCHED 关联被放大、USD/EUR 分币、漏归属/错订单/错租户、冻结订单下期退款仍可发现、其他 V64 快照区分本次报表，末尾 ROLLBACK。V211 不新增 Flyway，不能声称 V112 检查。
-- 完整 A3 同一代码 SHA Java25/PG18/HTTP/Next16/Chromium/Compose 7/7；单独新 GET 匿名 401 保护。React/Vitest 以 Zod 断言收入/成本认定字段硬 false/NULL、只在用户点击后获取较重的源核对；快 CI 的 PG18 skipped 不算全链路。真实财务/第三方身份仍未经认证。精确代码 SHA 的 A3 7/7 SUCCESS，PG18 真实日志 `PASS V211 PG18 source-exact period/refund cohort/overlap SQL`；实际执行了三个 Java 原文查询、未匹配/重复关联/跨期测试和匿名 401。快 CI 中 PG18 为 skipped，不得冒充这一结果。
-
-- **GitHub Workflow 维护注意**：本阶段 `ci.yml` 增量膨胀至约 41 KiB 时曾出现 GitHub Actions 在创建 Job 之前失败（0 Job）；删除旧版注释、压缩到约 40 KiB 后恢复正常调度。之后应抽出 PG18/HTTP 专项到受版本控制的脚本，保持 YAML 精简；不能将“0 Job 失败”当作 Java/PG18 已运行的验收结论，也不应依赖未经证实的 GitHub 具体大小上限。
-
-## V212 退款原销售批次与返仓数量包络（[V212 精确代码 `921c2e2`](https://github.com/kunlong-luo/merchivra/commit/921c2e250ad4554349fb290e777c650b279fc259) · [同 SHA 快速 CI #45170646181 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45170646181) · [完整 A3 #45170646128（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45170646128)）
-
-- Java `RefundBatchLineageV212Test`：多退款事件 2+1、同订单原批次认领 2+1 分别 USD/EUR、V171/V172 声称返仓与收货 2；原批次不足、V203 撤销/当前 SKU 失效、pending 不算物理见证、上游 V171 未审核、双包裹超额、重复 V106/V34、无实际退款 COGS 或非 NULL 净利润、Owner/no-store。
-- 真 PG18 通过 `MERCHIVRA_V212_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_batch_lineage_v212.py`：源源码的 V212 3 条 SQL 原文，在 TEMP 合成 V34/V106/V96/V97 上验证两个本地原销售批次不乘法放大、出入库与人工声称的关联、原币成本参考、跨租户/Marketplace/订单排除和读时失效。**V106 integrity 视图在这个专项中是 TEMP 影子，不是对真实 V106 VIEW 的再验证；原 V106/PG18 由 V203 旧专项核验**。所有新测试写入仅在隔离库且 ROLLBACK；V212 无新 Flyway 版本。
-- 同 SHA 快速 CI + 完整 A3 Java25/Next16/Chromium/PG18/HTTP/Compose 7/7，匿名 GET 必须 401。未知不能填 0、不得宣布独立 Amazon/仓库/银行的真实性已完成。
-- **实际验收（V212，代码 `921c2e2`）**：同 SHA [同 SHA 快速 CI #45170646181 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45170646181)、[完整 A3 #45170646128（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45170646128) 均 SUCCESS，A3 7/7。PG18 作业原始日志含 `PASS V212 PG18 exact V34/V106/V96/V97 source SELECT scope`，检查了两原始销售批次 2+1、不同采购原币参考、V171/V172 见证与 pending、租户/订单隔离及来源变更。此脚本用 TEMP 阴影 V106 view，不能代替实际 V106 VIEW/Flyway V106 触发器专项的证明；HTTP 新 GET 匿名 401 断言执行且通过。
-- **CI/Chromium 实际修复**：最初增量后 `ci.yml` 约 40.6 KiB 时 Actions 未创建 Job，不能当作 Java 或 PG18 失败；复用九条 Owner 401 URL 的公共 shell 路径将文件精简至约 39.8 KiB，调度恢复且没有删除任何 401 断言。首次 V212 完整 A3 的 V15 邀请页面检查在 Next 路由短暂卸载间隙返回 `undefined`；将“成员行及邀请表单存在”改为在同一个稳定页面内重试，**保留原 V15 安全检查**，新同 SHA A3 的 Chromium 任务 SUCCESS。避免以后无限向单个 YAML 添加长 HTTP 命令，优先抽脚本，且不能将此现象归因于未经证实的某个 GitHub 硬性字节限制。
-
-## V213 原采购收货跨订单全局容量（[V213 代码 `e560b63`](https://github.com/kunlong-luo/merchivra/commit/e560b63c9c56987811c98b4a793e72bcc69e4fde) · [同 SHA 快速 CI #45177212591 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45177212591) · [完整 A3 #45177212593（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45177212593)）
-
-- `RefundGlobalReceiptCapacityV213Test`：2–3 本地销售订单共享同一收货批次，原 QC 仍足够、不合法跨订单总领取超 QC、历史撤销仍占容量、不同采购价格/币种/接受量快照版本、原单领取超销量、重复/缺失来源、Owner/no-store 和实际 COGS/利润 false/null。
-- `MERCHIVRA_V213_DISPOSABLE_ONLY=true python3 scripts/smoke_refund_global_receipt_capacity_v213.py`：真实 PG18 与 V111 Flyway 前置，使用 Java 真实聚合 SQL 和 TEMP V106 claim/view 影子模拟跨三单共享、USD/EUR、撤销仍占容量、不同租户/价格/ QC 数量漂移，末尾 ROLLBACK。TEMP 视图不是 V106 真触发器或真实采购成本/仓库核证。
-- 同一精确代码 SHA 完整 A3 Java25/Next16/Chromium/PG18/HTTP/Compose 7/7，匿名新 Owner GET 401；快 CI 的 PG18 skipped 不算新数据库专项。避免继续加长已有 YAML，优先用现有脚本。精确代码 SHA A3 7/7 SUCCESS，PG18 Job 实际打印 `PASS V213 PG18 exact global V106 receipt-capacity SQL`，匿名新 GET 401 检查同 SHA 通过。TEMP VIEW 仅用于聚合 SQL 的隔离作用域检查，不能冒称本轮已经用真实外部 WMS/供应商成本或触发器做了核证。
-
-## V218 采购收货费用证据 UI / 新鲜度合成验收
-
-- 每次显式展开、重新核查或重新提交 \`receiptId\`，必须产生新的 TanStack Query \`inspectionRevision\`，复用同一旧数据时不允许短暂显示旧候选原币金额。HTTP 401/403/404/409 均 fail-closed，取消请求需传递 \`AbortSignal\`。
-- 在现有 \`scripts/smoke_browser_layout.mjs\` 里直接使用真实 **Next App Router / Chromium 360px** 和本地合成 API。依次打开采购 V46 收货批次页并选择确切 UUID，财务页先输入无效再输入有效 UUID；仅按需点击后出现一次新的 V216 Owner GET，绝不写入；原币人工候选金额仍不是外部已证 landed cost。
-- 实际浏览器脚本模拟 409/403/404/401 后旧 DOM 金额必须隐藏；切换 Base UI Marketplace 不触发旧收货费用预取，新 Marketplace 无本地来源则显示 UNKNOWN 非零。严格对照请求数量、GET method 和 Scope；仅添加静态/Zod 单测不能代替此浏览器测试。
-- **Mock HTTP 的 403 与 401 只验证前端行为，不证明 Spring Security 实际跨用户/跨租户授权。** 独立 PG18 A3 的实际匿名 401、真实 Tenant/Marketplace SQL Scope 回归另查日志；V219 已在真实 PG18/Spring Session 补足 Owner/非 Owner/跨租户负例（下面有精确 A3 记录）。
-- CJK 字体是截图可读性的 CI 前置依赖。V218 将本地 Runner APT 安装设为快路径 + 有上限的 update/retry（每个外部 APT 调用均有 timeout、单步骤上限 4 分钟）；最终 `fc-match Noto Sans CJK SC` 必须返回真实 Noto CJK 字族，否则浏览器 Job 失败。如 Runner 下载仍阻塞，不允许把未运行的 Chromium/Next 断言宣称 SUCCESS，也不允许通过无条件跳过字体制造假绿色。
-- **V218 实际证据**：[V218 精确提交 `f89fef2`](https://github.com/kunlong-luo/merchivra/commit/f89fef2d14c0ac52dd11b3dc8ed08035867af337) 的 [完整合成 A3 #45306587159（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45306587159) 已在真实隔离 PG18/HTTP/Chromium/Next/Java/Compose 7/7 通过；Chromium 日志分别包含 Vite 和 Next 的 `Chromium responsive UI smoke PASS (synthetic backend only)`。[V218 CI 优化 `c3f7418`](https://github.com/kunlong-luo/merchivra/commit/c3f74185efc56b37ffb0d67459b3490a085c7de2) · [快速 CI #45307894546 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45307894546) · [完整 A3 #45307894610（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45307894610) 的 browser-layout Job 再次 SUCCESS，CJK 安装从 488 秒降至 9 秒，整个 Chromium Job 从 574 秒降至 88 秒；第二轮同 SHA [A3 #45307894610（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45307894610) 也已在真实 PG18/HTTP/Chromium/Java25/Next16/Compose **7/7 全部通过**，并在 PG18 原始日志打印 V215/V216 原币守恒、V92 互斥和匿名 Owner GET 401。 不得使用 V217 的 7/7 冒充 V218，也不得将合成状态响应当作 Spring 真实权限证明。
-
-## V219 真 Session / Owner / PG18 收货权限 A3
-
-- PG18 full-suite 在现有 V216 精确 SQL/匿名 401 和其它 PG18/PITR 检查之后执行 scripts/smoke_receipt_cost_real_http_v219.py。脚本要求 MERCHIVRA_V219_DISPOSABLE_ONLY=true、PG18 Flyway112、已启动的真实 Spring8080，并强校验来自本仓库 main 的 GitHub Actions、固定 localhost CI 数据库/密码、唯一 Bootstrap Owner 和 V219 UUID/登录名未占用（允许其他 CI 合成租户），绝不允许真实环境外部访问。测试在一次性 PG18 提交合成租户、账号、两组市场和收货，且不添加任何非零 V112 手工成本提案。
-- 使用真实 Spring CSRF、两个独立 CookieJar 的登录和 tenant switch；匿名 401、授权 Owner 200+no-store+UNKNOWN、同租户两 Marketplace 合法读、恶意查询 tenantId 忽略、非法 tenant switch 403、A 员工/B Owner 混合身份在 A GET 403/B GET 200、跨 tenant mp/receipt 404、注销独立 401；PG18 日志必须输出 PASS V219 real Spring/PG18 HTTP。
-- 前端使用既有 V144 purgeBusinessSessionCache 移除业务 Query，同时保证 V216 fetch 使用 TanStack AbortSignal，在身份更替中取消未结束请求、无旧缓存复活；不引入第二套 QueryClient。
-- **Mock Chromium 的 403/404 不是真实后端 403/404**。V219 完整 A3 的 PG18 HTTP 实际执行才允许在文档记为真正授权负例；V215/V216 TEMP SQL 已覆盖的仍仅是合成独立归属与本地规则。未有真实外部费用/批次会计凭据前，actualBatchCogs/netProfit 继续 NULL。
-
-- **V219 首次调度和首次 PG18 前置失败（均不可作为真实权限通过证据）**：增加真实 Session/PG18 脚本后，初始 V219 SHA 的 CI/A3 返回 0 jobs/failure，Java、PostgreSQL 和新增 HTTP 脚本根本未执行。维护时改写 YAML 重复的 Flyway 84–90 七项、九项现有 index 和一项 constraint 为逐项 for 循环，必须保证原有测试未减少，然后使用**新精确 SHA** 重新触发。不要把 0 jobs 当作 SQL 业务结论，也不要臆测未获 GitHub 公开确认的 YAML 字节硬限制。调度恢复后完整 7 Job 已创建，但 PG18 的 V219 数据准备在检查全局 tenant/credential 数量时失败：这是脚本与此前已有合成租户的假设冲突，尚未进入 Owner/Staff HTTP 核查。修正为仅校验 CI 固定环境、唯一 Bootstrap Owner 与固定测试 ID 未占用，并将该脚本移至 PG18 全套测试最后，快 CI 单独 py_compile；修复后最终精确代码 SHA `e3c8b27` 已由 [完整 A3 #45311583643（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45311583643) 7/7 SUCCESS、PG18 Job #138168390609 的 `PASS V219 real Spring/PG18 HTTP` 验收，之前失败属于历史排错而不是现行状态。
-
-- **V219 真正权限验收证据**：[快 CI #45311583687 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45311583687) · [完整 A3 #45311583643（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45311583643)，原始 PG18 日志确认独立 JSESSIONID、合法 Owner 200+no-store+UNKNOWN、员工 A（B Owner）403、跨租户/Marketplace 404、租户切换 CSRF 和注销后 401。与 V218 的浏览器 Mock 403 是不同级别的验收，不能因此推导真实 COGS。
-
-## V220 非空 V112 真 Spring/PG18 Owner HTTP 证据
-
-- V219 真 Session/跨租户权限测试成功之后，scripts/smoke_receipt_cost_actual_http_v220.py 在**同一** PG18 disposable 全套末尾运行；强制 GitHub Actions 本仓库 main、固定 loopback 数据库与 CI 密码、PG18 Flyway112 和既有 V219 合成身份。快速 CI py_compile 只是语法检查，不替代实际 PG18。
-- 实表 V91/V112 原触发器生成经独立审核但没有真实外部认证的两条费用提案：一个 USD 100/两个收货原币 40+50=90；另一个 USD 30/本收货原币 10。V165 同一 Marketplace claimed digest 仅潜在重叠，另一 Marketplace 同 SHA 不可混入；同来源活跃 V92 提案必须被数据库触发器阻断。
-- PO 当前币种 USD→EUR 后，真 Owner GET 必须显示 LOCAL_RECEIPT_EVIDENCE_STALE_OR_UNAUDITED 和原币失效 blocker；恢复后新 GET 恢复内部本地守恒、却仍未外部核证。刚好 50 份 unique source/plan 必须 200、完整返回不分页；第 51 份必须返回 HTTP409，不得在错误响应附带前 50 条计划/实际 COGS。员工 403、外租户 404、匿名 401 继续保持。
-- **精确验收**：完整 A3 7 Job 成功且 PG18 原始日志出现 PASS V220 real Spring/PG18 V112 nonempty Owner HTTP 方可宣布 V220 通过。所有业务源为一次性合成，实际 landed cost、refund COGS 与 realizedNetProfit 继续 null，生产 #104 NO-GO。
-
-- **V220 本轮真实成功证据**：[V220 精确代码 `b821ecb`](https://github.com/kunlong-luo/merchivra/commit/b821ecbf0be925f4073c80cff0e146fbaf4b43f0) · [快速 CI #45314064511 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45314064511) · [完整 A3 #45314064469（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45314064469)。实际 PG18 Job #138176547718 原始日志打印 PASS V220 real Spring/PG18 V112 nonempty Owner HTTP，包含真实 V91/V112 审核触发器、V165 同站点潜在碰撞、V92 同来源双重归属拒绝、PO 币种漂移 fail-closed、50 完整 200 / 51 项 409，无局部成本/利润。此为一次性 synthetic CI，不能证明真实 Seller/Ads/银行费用或生产权限。
-
-## V221 V113 committed source epoch 与双 RR ABA PG18 验证
-
-- 新 Flyway V113：一张按 tenant 计数表、15 张输入表各 3 个语句级 transition 触发器（45）和 tenant.status 触发器 1 个。所有版本变更与真实业务 INSERT/UPDATE/DELETE 同一事务，回滚不得增加；已提交 A→B→A 必须留下更高的 epoch。无历史行视为 0，不是已证实费用。
-- V216 将 scope 查询移入每个 RR 事务，取来源、V165 八信号与 V113 epoch 同 PG MVCC 视图；两次版本不同先 409，内容不同仍 409，不返回已过期金额。Java25/Gradle 重点验证**内容相同、版本不同**返回 409，空 population ABA、稳定版本但财务仍 UNKNOWN/UNVERIFIED、scope 在第二个 RR 变化 404。
-- PG18 完整 A3 在 V219/V220 disposable 数据之后执行 scripts/smoke_receipt_read_epoch_v221.py：严格限定本仓库 main GitHub Actions/固定 loopback 数据库/OAuth OFF，验证 V113 46 个触发器、回滚不增长、B 租户变动不污染 A、V91 INSERT+DELETE 源恢复后版本仍增长；使用 advisory lock 对两条真连接同步，确定性交错 A PO USD→EUR→USD，第一 RR 两次 epoch 不变、第二 RR 版本更高；最后真 Spring Owner GET 仍仅未核证的候选原币、realizedNetProfit null。
-- **不要扩大证据范围**：DB 两连接确定性交错 + Java 服务中模拟双快照 409 ≠ 真实 in-flight HTTP 的跨线程强制暂停。V220 的第 51 项 HTTP 409 也不是 ABA 409。需同一精确提交的全套 A3 7/7、PG18 原始输出 PASS V221 PG18 committed tenant epoch，方可标为 V221 已通过。
-
-- **V221 首次 A3 未通过的真实原因**：[A3 #45316142338](https://github.com/kunlong-luo/merchivra/actions/runs/45316142338) 为 6/7，PG18 V113 已安装且 V219/V220 真实 HTTP PASS，V221 双连接持锁测试出现读者 15 秒等待超时；原脚本先在 server pg_sleep 再杀 psql client，不能保证后端马上释放锁。修复为持锁端 `psql` stdin 会话发送显式 pg_advisory_unlock，之后再验证旧/新 RR。首轮不算 V221 验收，必须以新 SHA 和 PASS V221 输出为准。
-
-- **V221 第二轮 PG18 真正 PASS，但全套 A3 尚非 7/7**：[A3 #45316961822](https://github.com/kunlong-luo/merchivra/actions/runs/45316961822)，精确 SHA `97e559c` 的 PG18 Job #138186054911 实际输出 `PASS V221 PG18 committed tenant epoch`，确认真实 advisory unlock、rollback、跨租户隔离、V91 INSERT/DELETE ABA、PG18 两 RR 旧/新 revision 和正常 Owner GET；V219/V220 真 HTTP 同样 PASS。独立 mock-chain Job #138186054740 则在 Docker 构建 Gradle 依赖期间遇 Maven Central `spring-core:7.0.10` HTTP 429，整轮失败。该 429 不属业务代码错误，但完整 A3 必须如实判 FAIL；Dockerfile 仅对 429/502/503/504 的已记录 transient HTTP 响应有界最多三次重试、任何普通构建失败仍立即退出，重跑时需同一精确 SHA 的 Compose 真成功。
-
-- **V221 最终精确合成验证 7/7 PASS**：[V221 精确 A3 提交 `57c6083`](https://github.com/kunlong-luo/merchivra/commit/57c6083391ce3a8186b95b8453cfe53b24096da2)：[快速 CI #45317628784 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45317628784)，[完整 A3 #45317628690（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45317628690)。真实 PG18 Job #138188220198 日志明确打印 `PASS V221 PG18 committed tenant epoch`，包含 **46 个 V113 触发器、事务回滚不增长、租户隔离、V91 INSERT/DELETE ABA 后版本递增、两条 PostgreSQL 连接在 PO USD→EUR→USD 下旧/新 RR 版本不同**；V219/V220 真实 Spring Session/Owner HTTP 同轮再次 PASS。Compose HTTP/CSRF/TLS、Chromium、Java25、Next16 都 SUCCESS。**真实 in-flight HTTP 中途暂停/409 尚未实际交错验证，留 V222；不代表外部 landed cost/COGS/利润或生产 GO。** 本轮 Dockerfile 的 Gradle transient HTTP429/502/503/504 有界重试**不是**屏蔽构建/测试失败；完整 mock-chain 真实 Spring/Next/TLS/CSRF 也 SUCCESS。必须区分 V221 PG18 双数据库连接旧/新 RR 的 ABA 证明、Java 服务在两次快照版本不同的 409 断言，与尚未实现的真实 HTTP in-flight 请求强制交错。
-
-## V222 真正的在途 Spring HTTP ABA 门禁
-
-- 全套 A3 PG18 Job 才能设 `SPRING_PROFILES_ACTIVE=ci-v222`、`MERCHIVRA_CI_V222_READ_BOUNDARY=true`、`MERCHIVRA_V222_DISPOSABLE_ONLY=true`；Spring Test Bean 的 profile/condition 与 @PostConstruct 严格检查 main GitHub Actions、固定本地 PG18/Bootstrap/禁 Amazon OAuth。不允许复制到生产/普通开发配置。只有 UUID 22201 合成 receipt 请求会停顿，正式环境无 Bean。
-- V219/V220/V221 的真实 PG18 验证完成后运行 scripts/smoke_receipt_http_aba_v222.py：真实 Owner Session GET 停在第一 RR 后，通过 pg_locks 未授予 (222,2) 事务锁证明 HTTP 工作者正在阻塞；另一 PG18 会话分别提交 PO USD→EUR→USD、V113 epoch 至少增长 2，释放锁后 HTTP 必须真正 409、错误体不包含 plans/actualBatchCogs/realizedNetProfit。再次请求返回200/no-store/UNKNOWN，跨 Marketplace 不混入。任何等待超时或提前返回均 FAIL。
-- 本测试补的是 V221 尚未做的 HTTP in-flight interleaving，不能以 PG18 SQL MVCC、Java Mockito 409 或 V220 51 份计划 409 替代。只有精确 SHA 的完整 A3 7/7、PG18 原日志 PASS V222 REAL Spring Owner HTTP ABA 才可标记验收。
-
-- **V222 精确 A3 真 HTTP 验收已完成**：[V222 精确验收代码 `4070d9f`](https://github.com/kunlong-luo/merchivra/commit/4070d9f5a499ef0cc97537a00083fdd08309b0bb) · [快速 CI #45318993934 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45318993934) · [完整 A3 #45318994059（run_attempt=1，7/7 SUCCESS）](https://github.com/kunlong-luo/merchivra/actions/runs/45318994059)。PG18 Job #138192661605 原始日志打印 `PASS V222 REAL Spring Owner HTTP ABA`：真正已登录 Owner 的 V216 GET 第一个 RR 已提交、在 ci-v222 专用 advisory xact-lock 上阻塞，另一个数据库连接分两次提交 PO USD→EUR→USD，第二 RR V113 epoch 不同，真实 HTTP409、错误体无旧 plans/actualBatchCogs/realizedNetProfit；新稳定 GET 200/no-store/UNKNOWN，其他 Marketplace 不混入。V219/V220/V221 真实 PG18 回归同轮 PASS。全部仅限 CI 合成数据，正式环境不注册同步 Bean，实际外部 COGS 和净利润未核证。 这是首次真的把一次 Spring Owner HTTP GET 暂停在两个 RR 事务之间的确定性 ABA 回归，和 V221 的纯 PG 两连接、Java Mockito 409 以及 V220 超过 50 条的 409 明确不同。租户级 epoch 的生产吞吐/冲突频率仍未测试。
+原版本的验收链接与源日志仍可逐项追溯。V237 最新完整 A3 以及 V238/V239 快 CI 结果见当前事实；新提交必须独立验收，不继承旧 SHA。

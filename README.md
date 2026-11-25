@@ -11,7 +11,7 @@
 
 ## Current engineering status
 
-V237 full isolated A3 passed (7/7), including the actual PostgreSQL 18 Java Reports service test with a synthetic remote worker. V238 quick CI passed. See [current status](docs/current-status.md).
+V237 full isolated A3 passed (7/7), including the actual PostgreSQL 18 Java Reports service test with a synthetic remote worker. V238 and V239 quick CI passed. See [current status](docs/current-status.md).
 
 ## What the repository directories actually do
 
@@ -47,7 +47,7 @@ Root-level `.env.example`, `.gitignore`, `.editorconfig` configure safe local de
 
 ### Directory maintenance
 
-The 17 retained documentation domains are listed above. Retired paths: `docs/ops/` → [operations](docs/operations/operations.md), `docs/ux/` → [design](docs/design/navigation-and-page-states.md), `docs/diagrams/` → [architecture](docs/architecture/diagram-index.md), `docs/processes/` → [product](docs/product/core-flows.md), `docs/templates/` → [ADR template](docs/architecture/adrs/template.md). Removed duplicates and original versions remain recoverable from Git. The root `ops/` is executable tooling, not retired. [Document control](docs/governance/document-control.md) governs deletions; the CI guard rejects retired paths and undocumented documentation directories.
+The 17 retained documentation domains are listed above. Retired paths: `docs/ops/` → [operations](docs/operations/operations.md), `docs/ux/` → [design](docs/design/navigation-and-page-states.md), `docs/diagrams/` → [architecture](docs/architecture/diagram-index.md), `docs/processes/` → [product](docs/product/core-flows.md), `docs/templates/` → [ADR template](docs/architecture/adrs/template.md). Removed duplicates and original versions remain recoverable from Git. The root `ops/` is executable tooling, not retired. V240 consolidates V181/V181B in [settlement identity](docs/finance/v181-immutable-settlement-line-identity.md), TEST-001 into [CI policy](docs/testing/ci-policy.md), and the early API adoption note into [dependency adoption](docs/architecture/dependency-adoption.md). Historical originals are linked by exact Git SHA from their canonical replacements. [Document control](docs/governance/document-control.md) governs deletions; the CI guard rejects retired paths and undocumented documentation directories.
 
 ## Quick start — isolated local PostgreSQL 18
 

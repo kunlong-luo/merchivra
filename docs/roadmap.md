@@ -617,4 +617,4 @@
 - [x] CI 用 npm ci、重新生成漂移检测和 PG18 真实 Controller 契约比对；Java/React/PG18/Compose 四项成功。
 - [x] 一次性写权限的 Orval 引导工作流已移除，不留后台自动提交 main 的长期入口。
 - [ ] V65 FBA 以及其他 Orders/Finances/Ads 模块还需渐进纳入生成器，不应宣称全部 API 均已自动生成。
-- 架构说明：[V64.1 成熟工具优先 ADR](architecture/mature-tool-first-api-client-2026-11-01.md)。
+- 架构说明：[V64.1 成熟工具优先 ADR](architecture/dependency-adoption.md)。

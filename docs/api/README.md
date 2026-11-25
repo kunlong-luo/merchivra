@@ -44,7 +44,7 @@
 ## 当前已实现的 API 与代码生成
 
 - Spring Boot 4.1.2 MVC 已有 Session/CSRF、租户与 Marketplace 范围的实际业务接口，涉及 Seller/店铺、SKU/Listing、订单、FBA、采购/供应商/仓储、财务、运营异常和员工权限。代码从 `apps/server/src/main/java/org/merchivra/erp/` 的 Controller 与服务实现核查；现有 [核心 API 历史说明](core-read-api.md) 是 V3 的设计/实现记录，不是完整现行列表。
-- **真实 Controller/OpenAPI/Orval 契约已经部分落地**：`apps/web/openapi/finance-profits.json`、`fba-inbound.json`、`ads-reports.json`、`operations-v67.json`；与 `apps/web/orval*.config.ts`、`apps/web/src/generated/` 配套。详见 [Springdoc / Orval 渐进接入方案](../architecture/mature-tool-first-api-client-2026-11-01.md)。这些 JSON 只覆盖对应模块，不能误称“所有 REST API 都已迁移至 Orval”。
+- **真实 Controller/OpenAPI/Orval 契约已经部分落地**：`apps/web/openapi/finance-profits.json`、`fba-inbound.json`、`ads-reports.json`、`operations-v67.json`；与 `apps/web/orval*.config.ts`、`apps/web/src/generated/` 配套。详见 [Springdoc / Orval 渐进接入方案](../architecture/dependency-adoption.md)。这些 JSON 只覆盖对应模块，不能误称“所有 REST API 都已迁移至 Orval”。
 - 实际运行时为 **Spring Security Session + HttpOnly Cookie + CSRF**，不是历史候选 JSON 的 JWT `bearerAuth`；所有请求的服务端权限和原币/来源数据校验仍不可仅依靠 TypeScript 类型。
 - **真实 Amazon Seller/Ads 生产出站与写入依旧默认关闭**；`/api/v1/demo/*` 是单独的合成 Mock 命名空间，见 [Mock 演示指南](../demo.md)。已有 OAuth/Worker 代码不代表真实 Amazon 授权完成。
 - 功能冻结前应按 [当前 P0 计划](../roadmap/current-plan.md)、[工程实施规范](../governance/engineering-standards.md) 与 [P0 采购容量历史审计](../testing/p0-purchasing-read-cap-audit-v108.md) 检查每个实际 Controller/Orval 约束；G1/G2/G3 仍需审批。

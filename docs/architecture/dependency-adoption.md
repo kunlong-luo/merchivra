@@ -1,56 +1,24 @@
-# DEP-001 · 成熟依赖复用决策与 Pagevela 工程经验
+# DEP-001 / V64.1 · 成熟依赖与 API 契约复用
 
-> **2026-11-08 现行补充**：本文件最初来自早期 M0/M2 的依赖评审，具体“还没有某测试/Starter”和 TanStack Router 的候选可能已被后续代码覆盖。当前请以 [V108 开发策略](../roadmap/mvp-freeze-release-v108.md)、[V109 文档中心](../README.md) 和 [BENCH-001 源码对标 / 开源许可决策](open-source-erp-benchmark-2026-11-08.md) 为准：Gradle/Java25/PG18/React19/Next16 候选、官方 Amazon SDK/Orval/TanStack/Base UI 均已选型，**不为对标 Wimoor 另引入 Maven、Vue 或微服务**。
+**CURRENT · 2026-11-25。** 以实际构建文件、[工程规范](../governance/engineering-standards.md)、[API 入口](../api/README.md) 和 [当前事实](../current-status.md) 为准。早期 Vue、npm 锁文件、默认 Vite 及候选 TanStack Router 已不再作为当前指令。
 
-**状态：已在 main 建立第一批基础依赖；并不代表已完成全部技术选型。**
+## 复用边界
 
-参考：[Pagevela](https://github.com/kunlong-luo/pagevela) 的 CI、Vitest、Playwright、依赖更新、并发持久化协调器设计，而不是复制其简历产品业务代码。
+| 领域 | 现行选择 |
+|---|---|
+| 后端 | Java 25、Spring Boot 4.1.2、Gradle Wrapper、MVC/Actuator/JDBC/Validation；PostgreSQL18、Flyway 前向迁移 |
+| 前端 | React19、Next.js 16.4.5 App Router、Node24、pnpm12.20.0；TanStack React Query/Table、Zod、Base UI、Vitest；Vite 仅显式回退或虚构展示 |
+| 外部 API | Amazon 官方 SDK、Springdoc 实际 Controller 合同、Orval 生成客户端；不维护第二份手写通用 SDK |
+| 安全与可靠性 | 复用既有 Session/CSRF/tenant/Marketplace/Owner 与限流机制；Redis 按批准范围使用；禁止把通用重试等同于财务幂等 |
 
-## 直接复用（已在工程落地）
+参考 [Pagevela](https://github.com/kunlong-luo/pagevela) 的集中协调、依赖管理与 CI，而非复制其浏览器数据库/业务代码。ERP 用 [Sync Stream](sync-stream-contract.md) 和 [事务 fencing](consistency-boundaries.md) 保证真实事实作用域。选择新依赖须说明功能缺口、许可证、安全维护和必要负例；成熟库不能替代租户隔离、原币金额、退款双计、数量守恒和 UNKNOWN 与零的业务验证。
 
-| 领域 | 选择 | 为什么 |
-|---|---|---|
-| Java API | **Java 25 LTS + Spring Boot 4.1.2 + Spring MVC / Actuator / JDBC** | 新主线、原生模块化 Starter，继续使用 Gradle Wrapper |
-| 数据层 | PostgreSQL + Flyway | 事务、约束与版本迁移，强业务事实在数据库侧校验 |
-| React HTTP 读取 | TanStack React Query v5 | 成熟的后台刷新/请求状态/缓存，减少自造任务状态 |
-| API 响应校验 | Zod v4 | 对外部 HTTP JSON 进行运行时解析，不只信 TypeScript 类型 |
-| 前端单元测试 | Vitest v5 | 与 Vite 共用转换环境，针对 Schema 边界编写负例 |
-| CI | GitHub Actions | Java 测试与前端类型检查/测试/构建独立执行；最小权限/并发取消 |
-| 更新治理 | GitHub Dependabot | npm、Gradle、GitHub Actions 每周更新，经过 CI 验证 |
+## V64.1 实际契约接入与维护
 
-前端已改为 **React 19**。Pagevela 的 Zustand/Dexie 浏览器本地数据架构不适用于后端多租户财务真实来源，不能直接复制。
+- 首批 Springdoc 从 V61/V64 实际 Controller 导出 9 个操作；生产默认不启用合同导出。明确启用的本地 loopback 才允许导出，具体命令见 [API 入口](../api/README.md) 与 [开发指南](../development.md)。
+- `apps/web/openapi/` 保存已审查合同；`apps/web/orval*.config.ts` 生成 `src/generated/` 的客户端、类型、Query/Mutation。禁止手改生成文件，业务层继续使用 Zod 校验金额、未知来源和租户作用域。
+- 统一 mutator 使用同源 Session、no-store、写请求 CSRF、HTTP 错误处理；调用合同不代表已经获得业务许可。CI 用 pnpm 冻结安装与 `pnpm api:check`，真实 Springdoc 导出与已提交合同漂移在隔离 PG18 验收。
+- 仅生成实际实现的模块；不宣称全部 REST API 已迁移。真实 Amazon Seller/Ads、银行与生产权限仍待独立验收。
+- V64.1 首批生成验收历史 [CI #41293168205](https://github.com/kunlong-luo/merchivra/actions/runs/41293168205)，V67 Validation/运营 API 复用详见 [V67 审查](reuse-audit-v67.md)，技术取舍另见 [源码对标](open-source-erp-benchmark-2026-11-08.md)。
 
-## 待业务页面需要再引入（先不加空依赖）
-
-- **TanStack Query**：已承担 React 服务端状态，无需 Pinia/Redux。跨页筛选如确有复杂需求再考虑 TanStack Router/URL 状态。
-- **TanStack Router（候选）**：业务模块深链/导航状态需要时再引入，始终由服务端 ACL 决定真实授权。
-- **Playwright**：**M0～M2 暂不引入或纳入 CI**。M3 核心订单/库存/财务流程基本稳定后再挑选关键 E2E，M4 Beta 前才考虑主分支门禁及跨浏览器覆盖。参考 [轻量 CI 决策](../testing/ci-policy.md)，不要在开发前期追求 Pagevela 级别的完整测试矩阵。
-- **Spring Security 7**：当前已有最小 Session/CSRF/租户 OWNER 权限实现，尚未通过安全签审、权限矩阵或真实 Amazon 数据验证；**Validation** 在复杂入参 DTO 出现时按需加入官方 starter。
-- **Resilience4j**：明确 SP-API 调用和 operation 限流模型后考虑；不能把通用自动重试当作财务幂等策略。
-- **金额**：服务端使用 Java `BigDecimal` 和 PostgreSQL `NUMERIC`，不要依赖 JavaScript Number 算利润；前端显示层使用 Decimal String + ISO 4217。
-
-## 成熟库也保留必要测试
-
-成熟依赖只能减少**库内部功能**的重复验证，不会替我们验证租户隔离、Amazon 源字段、订单财务双计、库存 UNKNOWN 与 0 区分。保留契约和财务样本测试；重点测对接和业务不变量，而不是重写库的内部单元测试。
-
-## 前端锁文件与工具链更新（2026-10-30）
-
-已通过一次性的 GitHub Actions 运行真实 npm registry 解析并提交 **`apps/web/package-lock.json`**（lockfile v3）。GitHub CI / Docker 统一使用 `npm ci`；一次性工作流已自动删除，不在常规 CI 增加测试负担。当前技术栈为 Node 24 LTS、React 19、Vite 8、TypeScript 6、Vitest 5；后端为 Java 25 + Spring Boot 4.1.2。详细兼容项见 [DEP-002](stack-upgrade-2026-10-30.md)。
-
-锁文件管理：更新依赖时应运行 `cd apps/web && npm install`，**同时提交 package.json 与 package-lock.json**；日常本地构建与 CI 使用 `npm ci`。参考 [Issue #2](https://github.com/kunlong-luo/merchivra/issues/2)。
-
-## Pagevela 复用经验：并发与数据
-
-Pagevela 的集中写入协调器思想可用于 ERP 的 **Sync Stream + lease/fencing epoch**：同一个事实在同一作用域只有一个可信的游标推进协议；不直接复用浏览器 IndexedDB/Web Locks。参见 [ARCH-003](consistency-boundaries.md) / [SYNC-002](sync-stream-contract.md)。
-
-## 版权与许可
-
-只借鉴公开工程策略，不直接复制 Pagevela 的品牌、UI 或业务文件；第三方依赖需确认 MIT/Apache 等许可证和后续安全更新策略。GitHub Actions 的依赖检查按可用版本升级，生产部署前固定操作 action SHA 和容器镜像 digest。
-
-## Superseding decision (2026-10-31): React-only
-
-The maintainer explicitly chose **React 19.3** over Vue. The earlier "Vue remains" decision is superseded. Replace TanStack Vue Query with TanStack React Query; keep Vite 8, TypeScript 6, Zod and Vitest; remove Vue SFC and related build dependencies. No requirement to migrate Spring Boot or PostgreSQL. [ADR](react-migration-2026-10-31.md).
-
-## V67 核验与复用决策（2026-11-01）
-
-详见 [V67 成熟组件复用审查](reuse-audit-v67.md)。本轮已经引入 Spring Boot 官方 Validation Starter，并把运营异常 API 切到实际 Controller OpenAPI + Orval；其余候选在实际业务触发前不安装，避免“为了不造轮子而堆轮子”。
+历史原文：[DEP-001](https://github.com/kunlong-luo/merchivra/blob/2c2265036df33f0afc7269ff392eea8a5a5059e4/docs/architecture/dependency-adoption.md)、[V64.1](https://github.com/kunlong-luo/merchivra/blob/2c2265036df33f0afc7269ff392eea8a5a5059e4/docs/architecture/mature-tool-first-api-client-2026-11-01.md)；旧 npm/Vite 命令仅作历史追溯，禁止直接执行。正常开发在 main，使用 pnpm 和 Gradle；生产 #104 NO-GO。

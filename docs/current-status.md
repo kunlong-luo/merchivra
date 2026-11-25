@@ -1,6 +1,6 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-24 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238 快 CI 成功，V239 文档结构归并待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-24 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238 快 CI 成功，V239 快 CI 成功；V240 文档内部归并待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 核心项目状态
 
@@ -29,12 +29,15 @@
 - V235 [SHA bbdeed878892](https://github.com/kunlong-luo/merchivra/commit/bbdeed878892db67c40dc737972235d443c60078)：授权失效、版本改变、401/403 清除游标且不自动重试，网络错误有界重试，Owner restart 锁定版本。[CI #45392374653](https://github.com/kunlong-luo/merchivra/actions/runs/45392374653) SUCCESS。
 - V236 首次 [SHA 9ddce626c205](https://github.com/kunlong-luo/merchivra/commit/9ddce626c20540c66e7765a64315a02389f85df7) 的 [CI #45394392278](https://github.com/kunlong-luo/merchivra/actions/runs/45394392278) Java/Next SUCCESS，Compose 因移动运维手册的残余链接 FAILURE、PG18 SKIPPED；后续 [SHA 0988f5f2ed92](https://github.com/kunlong-luo/merchivra/commit/0988f5f2ed92022776b3d7b96b78ed85a9f7fb6e) 的 [CI #45394458129](https://github.com/kunlong-luo/merchivra/actions/runs/45394458129) 与 [A3 #45394460077](https://github.com/kunlong-luo/merchivra/actions/runs/45394460077) FAILURE（0 jobs，未取得具体拒绝诊断）。
 - V237 修复旧链接与独立 JUnit 非跳过守卫；完整 A3 7/7。PG18 job #138459187403 实际输出 PASS V236 actual PG18 Java service test executed (not skipped); remote worker synthetic。真实 JdbcTemplate/事务/vault/start/step/fenced import 验证旧缺版本任务暂停、Owner restart、旧 token 清除、grant/role 变化拒绝旧入库、重新启动后新版本及摘要冻结。并非真实 Amazon 网络或所有 tenant/member/Marketplace 输入 ABA 证明。
-- V238 合并 UX 文档，精确快 CI 成功；V239 将图纸索引、业务流程、ADR 模板移入已有领域并统一目录守卫。删除旧路径，不删除实际业务代码、迁移或独立验收证据；V239 快 CI 待验收。详见 [目录治理](../README.zh-CN.md)。
+- V238 合并 UX 文档，精确快 CI 成功；V239 将图纸索引、业务流程、ADR 模板移入已有领域并统一目录守卫。删除旧路径，不删除实际业务代码、迁移或独立验收证据；V239 快 CI 已通过（Java/Next/Compose，PG18 SKIPPED）。详见 [目录治理](../README.zh-CN.md)。
+
+V240 归并 V181/V181B、TEST-001/TEST-003、DEP-001/V64.1；删除三份重复入口，现行 CI 策略移除重复历史流水账，精确原文由各正式入口链接。仅文档及守卫修改，未增加真实财务证据；本轮快速 CI 待验收。
 
 ## 最近精确验收（切勿混用不同 SHA 的 CI）
 
 | 阶段 | 精确代码 / 测试 | 技术证明边界 |
 | --- | --- | --- |
+| V239 | [SHA 2c2265036df3](https://github.com/kunlong-luo/merchivra/commit/2c2265036df33f0afc7269ff392eea8a5a5059e4) · [CI #45399334898](https://github.com/kunlong-luo/merchivra/actions/runs/45399334898)（SUCCESS） | 17 个领域目录与迁移守卫，快 CI PG18 SKIPPED |
 | **V237** | [SHA c6ef07a3250a](https://github.com/kunlong-luo/merchivra/commit/c6ef07a3250aa52922f35ae7ee2f075083c94047) · [A3 #45398094170](https://github.com/kunlong-luo/merchivra/actions/runs/45398094170)（7/7 SUCCESS） · [CI #45398093903](https://github.com/kunlong-luo/merchivra/actions/runs/45398093903)（SUCCESS） | 真 PG18 Java 服务回归实际执行，远程 Worker mock；快 CI PG18 SKIPPED |
 | V238 | [SHA 96d5d21a1c76](https://github.com/kunlong-luo/merchivra/commit/96d5d21a1c76773bdbc97cdc5d921da7c9ab8310) · [CI #45398539716](https://github.com/kunlong-luo/merchivra/actions/runs/45398539716)（SUCCESS） | 设计文档合并，Java/Next/Compose 通过，PG18 SKIPPED |
 | **V234** | [SHA `42ea8c9b4fad`](https://github.com/kunlong-luo/merchivra/commit/42ea8c9b4fadb6bcdb9a1446cb943c5518338e85) · [A3 #45386913964](https://github.com/kunlong-luo/merchivra/actions/runs/45386913964)（7/7 SUCCESS） · [CI #45386913906](https://github.com/kunlong-luo/merchivra/actions/runs/45386913906)（SUCCESS） | 实际 PG18 V116 两连接 ABA、rollback/reinsert、行锁、旧任务版本差异、冻结报告版本；未验证真实 Seller 或第三方签发 |
