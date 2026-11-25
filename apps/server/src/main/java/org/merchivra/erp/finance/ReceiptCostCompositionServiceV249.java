@@ -443,11 +443,37 @@ public class ReceiptCostCompositionServiceV249 {
             decision==null?null:decision.actor().toString(),false,false,null,null);
     }
 
+    // V268: PostgreSQL RR can reject an ON CONFLICT loser with SQLSTATE
+    // 40001. Retry the ENTIRE independent transaction, never just the insert.
+    // All current snapshot/actor/revocation checks run again before any receipt.
+    // No retry for business conflicts, authorization, lock timeout, or other SQL errors.
+    private CompensationReceipt compensationWrite(
+        org.springframework.transaction.support.TransactionCallback<CompensationReceipt> work) {
+        for(int attempt=1;;attempt++) {
+            try {
+                return captureTx.execute(work);
+            } catch(RuntimeException failure) {
+                boolean serialization=false;
+                for(Throwable cause=failure;cause!=null;cause=cause.getCause()) {
+                    if(cause instanceof java.sql.SQLException sql && "40001".equals(sql.getSQLState())) {
+                        serialization=true;
+                        break;
+                    }
+                    if(cause.getCause()==cause)break;
+                }
+                if(!serialization)throw failure;
+                if(attempt>=3)
+                    throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Compensation snapshot changed concurrently; reload before retry",failure);
+            }
+        }
+    }
+
     CompensationReceipt recordRefundCompensation(UUID tenant,UUID marketplace,UUID event,
         UUID item,String expected,UUID actor,String reason) {
         compensationInput(tenant,marketplace,event,item,actor,expected);
         String note=RefundRecoveryService.reason(reason);
-        return captureTx.execute(ignored->{
+        return compensationWrite(ignored->{
             recovery.requireCurrentOwner(tenant,actor);
             var snapshot=compensationSnapshot(tenant,marketplace,event,item);
             if(!expected.equals(snapshot.preview().proposalSha256()))throw compensationConflict();
@@ -473,7 +499,7 @@ public class ReceiptCostCompositionServiceV249 {
         UUID item,String expected,UUID actor,String reason) {
         compensationInput(tenant,marketplace,event,item,actor,expected);
         String note=RefundRecoveryService.reason(reason);
-        return captureTx.execute(ignored->{
+        return compensationWrite(ignored->{
             recovery.requireCurrentOwner(tenant,actor);
             var snapshot=compensationSnapshot(tenant,marketplace,event,item);
             if(!expected.equals(snapshot.preview().proposalSha256()))throw compensationConflict();

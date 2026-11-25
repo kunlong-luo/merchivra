@@ -194,6 +194,7 @@ class ReceiptCostCompositionPg18V250Test {
         var second=new ReceiptCostCompositionPg18V250Test();
         second.db=db;second.write=write;second.service=service;second.recovery=recovery;
         second.crossClaimRace();
+        System.out.println("PASS V268 actual PG18 concurrent compensation request and approval, whole RR retry, conflicting reason hold");
         System.out.println("PASS V267 actual PG18 compensation approval revalidation, revoked approver and new revision");
         System.out.println("PASS V266 actual PG18 immutable compensation request and independent approval, idempotent replay, no activation");
         System.out.println("PASS V265 actual PG18 same-coordinate compensation dry run, deterministic identity and no release");
@@ -604,11 +605,33 @@ class ReceiptCostCompositionPg18V250Test {
             service.previewApprovedRefundCompensation(tenant,market,event,itemA,digest)).getStatusCode().value());
         // New V63 revision yields a separate proposal/approval; never edits history.
         String freshDigest=service.previewRefundCompensation(tenant,market,event,itemA).proposalSha256();
-        service.recordRefundCompensation(tenant,market,event,itemA,freshDigest,maker,requestReason);
-        var freshApproval=service.approveRefundCompensation(tenant,market,event,itemA,freshDigest,
-            compensationApprover,approvalReason);
+        // V268: both service transactions take an RR snapshot BEFORE the
+        // table lock is released; one insert must compete with the other.
+        var requests=raceCompensation("finance_refund_compensation_proposal_v123",
+            ()->service.recordRefundCompensation(tenant,market,event,itemA,freshDigest,maker,requestReason),
+            ()->service.recordRefundCompensation(tenant,market,event,itemA,freshDigest,maker,requestReason));
+        assertEquals(requests.getFirst(),requests.getLast());
+        assertEquals("LOCAL_PROPOSAL_RECORDED",requests.getFirst().state());
+        var approvals=raceCompensation("finance_refund_compensation_approval_v123",
+            ()->service.approveRefundCompensation(tenant,market,event,itemA,freshDigest,compensationApprover,approvalReason),
+            ()->service.approveRefundCompensation(tenant,market,event,itemA,freshDigest,compensationApprover,approvalReason));
+        var freshApproval=approvals.getFirst();
+        assertEquals(freshApproval,approvals.getLast());
+        assertEquals("LOCAL_APPROVAL_RECORDED_NOT_ACTIVATED",freshApproval.state());
         assertEquals(freshApproval,service.previewApprovedRefundCompensation(tenant,market,event,itemA,freshDigest));
         assertEquals(2,db.queryForObject("SELECT count(*) FROM finance_refund_compensation_approval_v123 WHERE tenant_id=?",Integer.class,tenant));
+        assertEquals(2,db.queryForObject("SELECT count(*) FROM finance_refund_compensation_proposal_v123 WHERE tenant_id=?",Integer.class,tenant));
+        // A genuinely different reason must still conflict after a full retry.
+        approveRefund(event);
+        String thirdDigest=service.previewRefundCompensation(tenant,market,event,itemA).proposalSha256();
+        service.recordRefundCompensation(tenant,market,event,itemA,thirdDigest,maker,requestReason);
+        var conflicting=raceCompensation("finance_refund_compensation_approval_v123",
+            ()->approvalOutcome(event,thirdDigest,approvalReason),
+            ()->approvalOutcome(event,thirdDigest,"V268 competing approval reason"));
+        assertEquals(1,conflicting.stream().filter("APPROVED"::equals).count());
+        assertEquals(1,conflicting.stream().filter("CONFLICT"::equals).count());
+        assertEquals(3,db.queryForObject("SELECT count(*) FROM finance_refund_compensation_approval_v123 WHERE tenant_id=?",Integer.class,tenant));
+        assertEquals(3,db.queryForObject("SELECT count(*) FROM finance_refund_compensation_proposal_v123 WHERE tenant_id=?",Integer.class,tenant));
         assertEquals(409,assertThrows(ResponseStatusException.class,()->
             service.approveRefundCompensation(tenant,market,event,itemA,digest,compensationApprover,approvalReason)).getStatusCode().value());
         assertEquals(409,assertThrows(ResponseStatusException.class,()->
@@ -625,6 +648,50 @@ class ReceiptCostCompositionPg18V250Test {
         assertEquals(404,assertThrows(ResponseStatusException.class,
             ()->service.readWholeOrderRefundReservations(UUID.randomUUID(),market,sale)).getStatusCode().value());
     }
+    private String approvalOutcome(UUID event,String digest,String reason) {
+        try {
+            service.approveRefundCompensation(tenant,market,event,itemA,digest,compensationApprover,reason);
+            return "APPROVED";
+        } catch(ResponseStatusException conflict) {
+            if(conflict.getStatusCode().value()!=409)throw conflict;
+            return "CONFLICT";
+        }
+    }
+
+    private <T> List<T> raceCompensation(String table,java.util.concurrent.Callable<T> a,
+        java.util.concurrent.Callable<T> b) throws Exception {
+        if(!List.of("finance_refund_compensation_proposal_v123",
+            "finance_refund_compensation_approval_v123").contains(table))
+            throw new IllegalArgumentException("Only disposable compensation tables");
+        try(var gate=connection();var pool=Executors.newFixedThreadPool(2)) {
+            gate.setAutoCommit(false);
+            int pid;
+            try(var stmt=gate.createStatement();var rs=stmt.executeQuery("SELECT pg_backend_pid()")){
+                rs.next();pid=rs.getInt(1);
+            }
+            try(var stmt=gate.createStatement()){stmt.execute("LOCK TABLE "+table+" IN SHARE MODE");}
+            var first=pool.submit(a);
+            var second=pool.submit(b);
+            boolean waiting=false;
+            try {
+                long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(15);
+                while(System.nanoTime()<deadline) {
+                    Integer blocked=db.queryForObject("""
+                        SELECT count(*) FROM pg_stat_activity
+                        WHERE datname=current_database() AND ?=ANY(pg_blocking_pids(pid))
+                        """,Integer.class,pid);
+                    if(blocked!=null&&blocked>=2){waiting=true;break;}
+                    if(first.isDone()||second.isDone())break;
+                    Thread.sleep(40);
+                }
+                assertTrue(waiting,"Both real RR service connections must wait on the insert table lock");
+            } finally {
+                gate.rollback();
+            }
+            return List.of(first.get(30,TimeUnit.SECONDS),second.get(30,TimeUnit.SECONDS));
+        }
+    }
+
     private Connection connection() throws SQLException {
         return DriverManager.getConnection("jdbc:postgresql://127.0.0.1:5432/merchivra",
             "merchivra","ci_disposable_database_password");

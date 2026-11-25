@@ -1,6 +1,6 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7；V259 快 CI 通过；V260 完整 A3 7/7；V261/V262 完整 A3 通过；V263 快 CI 通过、A3 取消；V264 完整 A3 通过；V265 快 CI 通过、A3 未回填；V266 完整 A3 7/7；V267 补偿批准复核待 A3。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7；V259 快 CI 通过；V260 完整 A3 7/7；V261/V262 完整 A3 通过；V263 快 CI 通过、A3 取消；V264 完整 A3 通过；V265/V266/V267 完整 A3 通过；V268 补偿并发重试待 A3。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 核心项目状态
 
@@ -157,3 +157,8 @@ V266：追加 Flyway V123 不可变同区间补偿提案及单独批准表；主
 V266 [代码 d39c2e79c15f](https://github.com/kunlong-luo/merchivra/commit/d39c2e79c15fcb4ed185473172f9b114611f4d71) [快 CI #45579559372 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45579559372) [完整 A3 #45579559266 SUCCESS 7/7](https://github.com/kunlong-luo/merchivra/actions/runs/45579559266)，实际 PG18 job #139085964217 成功。
 
 V267：同 RR 独立预检已记录的 V123 补偿批准，复算 V265/V63、核对当前 proposal SHA、payload、review revision/digest、双方 Owner、审批人与 V63/当前 V34/V35 作者独立、批准时间不早于请求、请求/批准后 OWNER_REVOKED 记录。record/approve 幂等重读复用同一门禁；撤销后恢复资格不能复活原批准，重新 V63 复核产生新的提案与批准，保留原记录。V250 实际 PG18 新增未批准、正常重复读、跨租户、账号禁用、审核人撤销恢复、复审新 ID 场景，强制 marker；待新 A3。无新迁移/API/UI、无激活令牌或实际释放、替换。不是全域授权不可重用版本或并发撤销线性化；V266 RR 并发幂等仍需两连接回归、整单补偿守恒及 G1/DEC 授权。旧预留继续 HOLD，actualRefundCogsReversal/realizedNetProfit=null。
+
+
+V265 [代码 9b8218f9064c](https://github.com/kunlong-luo/merchivra/commit/9b8218f9064c70ac340ba03f06b5ef9c859b5772) [快 CI #45578849046 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45578849046) [A3 #45578849118 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45578849118)。V267 [代码 f6ad63c11e52](https://github.com/kunlong-luo/merchivra/commit/f6ad63c11e52719432e6516574b34618adb83357) [快 CI #45583165883 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45583165883) [A3 #45583165906 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45583165906)。
+
+V268：V123 请求/批准独立 REQUIRES_NEW RR 写事务仅对 PostgreSQL SQLSTATE 40001 完整重试，最多3次总尝试，每次重新计算当前 V265/V63、角色与撤销状态、原指纹及幂等 actor/reason；耗尽返回409，业务冲突/权限/其他 SQL 异常不重试。不降低隔离级别，不重复记录；无激活/释放/替换。V250 PG18 夹具使用独立 gate 连接 SHARE table lock 强制两真实 service RR insert 等待，pg_blocking_pids 证实并发，同请求/同批准返回同 receipt、不同批准理由只一成功一409，并检查行数；新 JUnit marker 强制，待 A3。此为本地合成并发契约，不是全域授权线性化或补偿全单守恒、正式会计批准。后续需全单只读补偿组合与跨事件/批次守恒，E1/G1 外部真实材料优先，actualRefundCogsReversal/realizedNetProfit=null。

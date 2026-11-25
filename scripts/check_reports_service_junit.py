@@ -49,7 +49,8 @@ if __name__ == "__main__":
                 'PASS V264 actual PG18 current global Owner and audited revocation gates, stale pending reopen',
                 'PASS V265 actual PG18 same-coordinate compensation dry run, deterministic identity and no release',
                 'PASS V266 actual PG18 immutable compensation request and independent approval, idempotent replay, no activation',
-                'PASS V267 actual PG18 compensation approval revalidation, revoked approver and new revision'))
+                'PASS V267 actual PG18 compensation approval revalidation, revoked approver and new revision',
+                'PASS V268 actual PG18 concurrent compensation request and approval, whole RR retry, conflicting reason hold'))
     except (OSError, ET.ParseError, ValueError) as exc:
         sys.exit(f"FAIL isolated PG18 service JUnit evidence: {exc}")
     print("PASS V236 actual PG18 Java service test executed (not skipped); remote worker synthetic")
@@ -77,3 +78,5 @@ if __name__ == "__main__":
     print("PASS V266 actual PG18 compensation persistence JUnit marker verified (not skipped)")
 
     print("PASS V267 actual PG18 compensation approval revalidation JUnit marker verified (not skipped)")
+
+    print("PASS V268 actual PG18 concurrent compensation JUnit marker verified (not skipped)")
