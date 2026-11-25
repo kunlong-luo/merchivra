@@ -117,6 +117,92 @@ class CostAllocationEngineTest {
         assertThrows(IllegalArgumentException.class,()->
             CostAllocationEngine.evaluate("100","USD","SKU",tooMany));
     }
+    @Test void receiptCostPartitionsConserveSixDecimalTailAndAreOrderIndependent() {
+        var a=new CostAllocationEngine.ReceiptRange(UUID.randomUUID(),0,1);
+        var b=new CostAllocationEngine.ReceiptRange(UUID.randomUUID(),1,2);
+        var c=new CostAllocationEngine.ReceiptRange(UUID.randomUUID(),2,3);
+        var full=CostAllocationEngine.partitionReceiptAmount("100","USD",3,List.of(c,a,b));
+        assertEquals(List.of("33.333333","33.333333","33.333334"),
+            full.shares().stream().map(CostAllocationEngine.ReceiptShare::candidateAmount).toList());
+        assertEquals("100.000000",full.allocatedAmount());
+        assertEquals("0.000000",full.unallocatedAmount());
+        assertEquals(3,full.allocatedQuantity());
+        assertEquals(full,CostAllocationEngine.partitionReceiptAmount(
+            "100.000000","USD",3,List.of(a,b,c)));
+        var partial=CostAllocationEngine.partitionReceiptAmount("100","USD",3,List.of(c,a));
+        assertEquals("66.666667",partial.allocatedAmount());
+        assertEquals("33.333333",partial.unallocatedAmount());
+        assertEquals(1,partial.unallocatedQuantity());
+        // Later claims may fill an explicit gap, never shift previously assigned ranges.
+        assertEquals(full.shares().getLast(),partial.shares().getLast());
+    }
+    @Test void splittingOriginalSaleRangeForRefundConservesItsOriginalCost() {
+        var sold=new CostAllocationEngine.ReceiptRange(UUID.randomUUID(),2,7);
+        var returned=new CostAllocationEngine.ReceiptRange(UUID.randomUUID(),2,4);
+        var retained=new CostAllocationEngine.ReceiptRange(UUID.randomUUID(),4,7);
+        var original=CostAllocationEngine.partitionReceiptAmount("17.000001","EUR",9,List.of(sold));
+        var split=CostAllocationEngine.partitionReceiptAmount("17.000001","EUR",9,List.of(returned,retained));
+        assertEquals(original.allocatedAmount(),split.allocatedAmount());
+        assertEquals(original.unallocatedAmount(),split.unallocatedAmount());
+        assertEquals(5,split.allocatedQuantity());
+        // A caller must supply proven original positions; this is NOT proof of return.
+    }
+    @Test void receiptRangeArithmeticHandlesTinyAmountsZeroAndMaximumBasis() {
+        var all=CostAllocationEngine.partitionReceiptAmount("0.000001","USD",3,List.of(
+            new CostAllocationEngine.ReceiptRange(UUID.randomUUID(),0,2),
+            new CostAllocationEngine.ReceiptRange(UUID.randomUUID(),2,3)));
+        assertEquals("0.000000",all.shares().getFirst().candidateAmount());
+        assertEquals("0.000001",all.shares().getLast().candidateAmount());
+        var empty=CostAllocationEngine.partitionReceiptAmount("10","USD",1,List.of());
+        assertEquals("10.000000",empty.unallocatedAmount());
+        assertEquals(1,empty.unallocatedQuantity());
+        var zero=CostAllocationEngine.partitionReceiptAmount("0","USD",1,List.of(
+            new CostAllocationEngine.ReceiptRange(UUID.randomUUID(),0,1)));
+        assertEquals("0.000000",zero.allocatedAmount());
+        var big=CostAllocationEngine.partitionReceiptAmount("99999999999999.999999","USD",
+            Integer.MAX_VALUE,List.of(new CostAllocationEngine.ReceiptRange(
+                UUID.randomUUID(),0,Integer.MAX_VALUE)));
+        assertEquals("99999999999999.999999",big.allocatedAmount());
+        assertEquals(0,big.unallocatedQuantity());
+    }
+    @Test void rejectOverlappingDuplicateOrOutOfBoundsReceiptRanges() {
+        UUID id=UUID.randomUUID();
+        var a=new CostAllocationEngine.ReceiptRange(id,0,2);
+        for(var bad:List.of(
+            List.of(a,new CostAllocationEngine.ReceiptRange(UUID.randomUUID(),1,3)),
+            List.of(a,new CostAllocationEngine.ReceiptRange(id,2,3)),
+            List.of(new CostAllocationEngine.ReceiptRange(id,-1,1)),
+            List.of(new CostAllocationEngine.ReceiptRange(id,1,1)),
+            List.of(new CostAllocationEngine.ReceiptRange(id,0,4)))) {
+            assertThrows(IllegalArgumentException.class,()->CostAllocationEngine
+                .partitionReceiptAmount("10","USD",3,bad));
+        }
+        assertThrows(IllegalArgumentException.class,()->CostAllocationEngine
+            .partitionReceiptAmount("0.0000001","USD",3,List.of()));
+        assertThrows(IllegalArgumentException.class,()->CostAllocationEngine
+            .partitionReceiptAmount("10","USD",0,List.of()));
+    }
+    @Test void receiptPartitionMatchesIndependentIntegerMicroUnitOracle() {
+        // Fixed seed makes failures reproducible. Compare against BigInteger
+        // quotient/remainder arithmetic, independent of BigDecimal division.
+        var random=new java.util.Random(246);
+        for(int trial=0;trial<500;trial++) {
+            int basis=1+random.nextInt(1000);
+            long micros=random.nextLong(1_000_000_000L);
+            var total=java.math.BigInteger.valueOf(micros);
+            int start=random.nextInt(basis),end=start+1+random.nextInt(basis-start);
+            var range=new CostAllocationEngine.ReceiptRange(new UUID(0,trial+1),start,end);
+            var value=CostAllocationEngine.partitionReceiptAmount(
+                BigDecimal.valueOf(micros,6).toPlainString(),"USD",basis,List.of(range));
+            var denominator=java.math.BigInteger.valueOf(basis);
+            var expected=total.multiply(java.math.BigInteger.valueOf(end)).divide(denominator)
+                .subtract(total.multiply(java.math.BigInteger.valueOf(start)).divide(denominator));
+            assertEquals(new BigDecimal(expected,6).toPlainString(),value.allocatedAmount());
+            assertEquals(new BigDecimal(total.subtract(expected),6).toPlainString(),
+                value.unallocatedAmount());
+            assertEquals(basis,value.allocatedQuantity()+value.unallocatedQuantity());
+        }
+    }
     @Test void separateSourceAndAllocationOwnersMustReview() {
         UUID source=UUID.randomUUID(),proposer=UUID.randomUUID(),checker=UUID.randomUUID();
         CostAllocationService.independent(source,proposer,checker);

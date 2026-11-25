@@ -22,6 +22,62 @@ public final class CostAllocationEngine {
                           int lineCount, boolean fullyAllocated,
                           boolean externalCostVerified, boolean recognizedProfitAllowed) {}
 
+    /**
+     * V246 arithmetic only: one immutable receipt cost amount, an explicitly
+     * chosen quantity denominator, and caller-supplied non-overlapping
+     * half-open unit ranges. Never invent receipt/dispatch/return identities.
+     * No FX, capitalization policy, external evidence, or ledger permission.
+     */
+    public record ReceiptRange(UUID claimId,int fromInclusive,int toExclusive) {}
+    public record ReceiptShare(UUID claimId,int fromInclusive,int toExclusive,
+        String candidateAmount) {}
+    public record ReceiptPartition(String currency,String sourceAmount,int basisQuantity,
+        int allocatedQuantity,int unallocatedQuantity,String allocatedAmount,
+        String unallocatedAmount,List<ReceiptShare> shares) {}
+
+    public static ReceiptPartition partitionReceiptAmount(String amount,String currency,
+        int basisQuantity,List<ReceiptRange> ranges) {
+        if(currency==null||!currency.matches("[A-Z]{3}")||basisQuantity<=0
+            ||ranges==null||ranges.size()>1000||amount==null
+            ||!amount.matches("[0-9]{1,14}(?:[.][0-9]{1,6})?"))
+            throw new IllegalArgumentException("Invalid receipt amount or quantity basis");
+        BigDecimal total=new BigDecimal(amount).setScale(6);
+        var sorted=new java.util.ArrayList<ReceiptRange>();
+        Set<UUID> ids=new HashSet<>();
+        for(var range:ranges) {
+            if(range==null||range.claimId()==null||!ids.add(range.claimId())
+                ||range.fromInclusive()<0||range.toExclusive()<=range.fromInclusive()
+                ||range.toExclusive()>basisQuantity)
+                throw new IllegalArgumentException("Invalid or duplicate receipt claim range");
+            sorted.add(range);
+        }
+        sorted.sort(java.util.Comparator.comparingInt(ReceiptRange::fromInclusive));
+        var shares=new java.util.ArrayList<ReceiptShare>();
+        int lastEnd=0,quantity=0;
+        BigDecimal allocated=BigDecimal.ZERO.setScale(6);
+        for(var range:sorted) {
+            if(range.fromInclusive()<lastEnd)
+                throw new IllegalArgumentException("Overlapping receipt claim ranges");
+            // Difference of cumulative floors, not independently rounded unit
+            // prices: adjacent slices telescope exactly back to original amount.
+            BigDecimal share=receiptPrefix(total,basisQuantity,range.toExclusive())
+                .subtract(receiptPrefix(total,basisQuantity,range.fromInclusive()));
+            allocated=allocated.add(share);
+            quantity=Math.addExact(quantity,range.toExclusive()-range.fromInclusive());
+            shares.add(new ReceiptShare(range.claimId(),range.fromInclusive(),
+                range.toExclusive(),share.toPlainString()));
+            lastEnd=range.toExclusive();
+        }
+        return new ReceiptPartition(currency,total.toPlainString(),basisQuantity,
+            quantity,basisQuantity-quantity,allocated.toPlainString(),
+            total.subtract(allocated).toPlainString(),List.copyOf(shares));
+    }
+
+    private static BigDecimal receiptPrefix(BigDecimal total,int basis,int boundary) {
+        return total.multiply(BigDecimal.valueOf(boundary))
+            .divide(BigDecimal.valueOf(basis),6,java.math.RoundingMode.DOWN);
+    }
+
     public static BigDecimal positive(String amount) {
         if(amount==null||!amount.matches("[0-9]{1,14}(?:[.][0-9]{1,6})?"))
             throw new IllegalArgumentException("Cost amount must be exact positive decimal");

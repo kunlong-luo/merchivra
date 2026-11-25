@@ -1,6 +1,6 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 历史 COGS 输入门禁待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 批次区间分摊候选算法待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 核心项目状态
 
@@ -41,12 +41,15 @@ V243：V216 收货费用原币归属核对不再使用仅 EXISTS 的审核判断
 
 V244：V243 的 Python PG18 TEMP 脚本三处 SQL dollar-quote 分隔符为单个美元符号，已纠正；PG18 日志确认 SQL 语法失败。 保留原负例并扩展 V220 真 Owner HTTP：追加重复 STAGED 事件后原计划审计 hold，原币归属金额保持 40/90，其他计划碰撞状态不变，实际成本/利润 null。无业务 API、Flyway 或历史数据改写。完整 A3 已通过，PG18 日志确认 V243 SQL 负例与 V244 真实 HTTP hold。
 
-V245：V29 历史 COGS 计算拒绝零候选携带成本值、重复/空 item ID、负数或超 NUMERIC(20,6) 单位价；独立调用用只读 RR 事务固定订单头与明细读取，外层事务隔离仍由调用者决定。整单不完整则 provisionalCost=null，重复或超 1000 行返回 409。未改变外部成本、实际采购批次 COGS 或利润认定。详见 [V29 契约](finance/order-cost-readiness-v29.md)。新增 Java 负例，快 CI 待验收。
+V245：V29 历史 COGS 计算拒绝零候选携带成本值、重复/空 item ID、负数或超 NUMERIC(20,6) 单位价；独立调用用只读 RR 事务固定订单头与明细读取，外层事务隔离仍由调用者决定。整单不完整则 provisionalCost=null，重复或超 1000 行返回 409。未改变外部成本、实际采购批次 COGS 或利润认定。详见 [V29 契约](finance/order-cost-readiness-v29.md)。新增 Java 负例，快 CI 已通过。
+
+V246：复用 CostAllocationEngine 增加原币批次金额区间分摊候选算法，累计六位小数向下取整差值保证同一原金额/分母上的连续区间金额守恒；拒绝重叠/重复/越界，保留缺口金额和数量。支持原范围内子区间重算及500组独立整数微单位回归。详见 [V112 领域契约](finance/v215-receipt-cost-claim-and-v92-exclusivity.md)。这是纯 Java 算术，未接应用服务/API/UI、未持久化真实区间、不保证跨调用唯一归属、未批准会计政策。快 CI 待验收。
 
 ## 最近精确验收（切勿混用不同 SHA 的 CI）
 
 | 阶段 | 精确代码 / 测试 | 技术证明边界 |
 | --- | --- | --- |
+| V245 | [SHA 8a40eb91562e](https://github.com/kunlong-luo/merchivra/commit/8a40eb91562ec0ab19707a641285f4296ec1baca) · [CI #45559136844](https://github.com/kunlong-luo/merchivra/actions/runs/45559136844)（SUCCESS） | Java/React/Compose 成功，PG18 SKIPPED，无独立完整 A3 |
 | **V244** | [SHA 3ec2c68b44d7](https://github.com/kunlong-luo/merchivra/commit/3ec2c68b44d7290688f25db83aa2b4dc45f02056) · [CI #45557992334](https://github.com/kunlong-luo/merchivra/actions/runs/45557992334)（SUCCESS） · [A3 #45557992299](https://github.com/kunlong-luo/merchivra/actions/runs/45557992299)（7/7 SUCCESS） | PG18 job #139014636905：PASS V243 PG18 exact receipt audit cardinality, missing stage and self-review；PASS V244 real Owner HTTP duplicate source audit holds original receipt cost |
 | V243 | [SHA 7d9a29c6772b](https://github.com/kunlong-luo/merchivra/commit/7d9a29c6772bb0ada9cc64ea834276d2b65a9067) · [CI #45557483634](https://github.com/kunlong-luo/merchivra/actions/runs/45557483634)（SUCCESS） · [A3 #45557483520](https://github.com/kunlong-luo/merchivra/actions/runs/45557483520)（FAILURE） | PG18 job #139013261860 的 Start actual Spring Boot 步骤失败，V244 修复脚本分隔符 |
 | V242 | [SHA 42c9112c53e8](https://github.com/kunlong-luo/merchivra/commit/42c9112c53e8b650e82b8c78dcb2da08531e1957) · [CI #45557051859](https://github.com/kunlong-luo/merchivra/actions/runs/45557051859)（SUCCESS） · [A3 #45557051970](https://github.com/kunlong-luo/merchivra/actions/runs/45557051970)（完整 A3 7/7 SUCCESS） | 原币解析及私有字节摘要；快 CI PG18 SKIPPED |

@@ -30,9 +30,9 @@
 
 [已审核来源的单笔订单贡献额](order-contribution-v33.md) 将 V29 的完整历史 COGS 仅与 V28 已核平并经人工确认属于该订单的 LIVE Finances 分类金额结合；拒绝对退款或未核实调整推断利润，真实来源未齐前不得叫净利润。
 
-## V245 · 历史 COGS 计算输入一致性（待验收）
+## V245 · 历史 COGS 计算输入一致性（快 CI 已通过）
 
 - 每条当前订单项必须具有非空且唯一的来源 item ID；重复或超过既有 1000 行上限返回 HTTP 409，而不是双重计算或输出部分总额。映射与历史成本候选均须恰好一条；零候选即使携带值也不得计入 COGS，沿用 V200 的多候选阻断。
 - 历史单位成本必须非负、可无损表示为 NUMERIC(20,6)，不接受负数、超范围或额外有效小数位；已明确录入的零价仍只作为人工参考，不等于外部核证零成本。缺失或错误的任何一行令整体 provisionalCost 为 null。
 - 独立 V29 调用在 read-only REPEATABLE_READ 事务中查询订单头、业务日期、有效期映射和成本行；如果已有外层事务则沿用其隔离级别，本规则不保证所有上游组合接口跨查询的一致性。无新的会计或外部来源认证，不得将预览升级成实际批次 COGS、净利润。
-- Java 回归覆盖零候选携带值、重复身份、非法单位价、事务声明；本轮快 CI 待验收，V200 真 PG18 SQL 契约不变。
+- Java 回归覆盖零候选携带值、重复身份、非法单位价、事务声明；精确 [V245 SHA 8a40eb91562e](https://github.com/kunlong-luo/merchivra/commit/8a40eb91562ec0ab19707a641285f4296ec1baca) 快 CI [#45559136844](https://github.com/kunlong-luo/merchivra/actions/runs/45559136844) SUCCESS；PG18 SKIPPED，V200 真 PG18 SQL 契约不变。
