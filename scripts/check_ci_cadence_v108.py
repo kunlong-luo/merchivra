@@ -40,6 +40,20 @@ assert "run: pnpm run build:vite" in browser
 assert "pnpm run api:check" in ci and "pnpm run test" in ci
 assert "compose-deployment-config:" in ci
 assert "pg18-migrations:" in ci
+# Keep the long PG18 suite out of YAML run scalars; prevent accidental omission.
+assert "run: bash scripts/run_pg18_full_ci.sh" in ci
+pg18 = load("scripts/run_pg18_full_ci.sh")
+for required in (
+    "MERCHIVRA_V203_DISPOSABLE_ONLY=true python3 scripts/smoke_sale_lot_assignment_v203.py",
+    "MERCHIVRA_V248_DISPOSABLE_ONLY=true python3 scripts/smoke_sale_lot_range_race_v248.py",
+    "MERCHIVRA_V236_DISPOSABLE_ONLY=true MERCHIVRA_V250_DISPOSABLE_ONLY=true",
+    "ReceiptCostCompositionPg18V250Test.actualPg18ReceiptCostsAndSaleRangesConserveAmounts",
+    "python3 scripts/check_reports_service_junit.py",
+    "MERCHIVRA_SPAPI_OAUTH_ENABLED",
+    "ci_disposable_database_password",
+):
+    assert required in pg18, required
+assert "ReceiptCostCompositionPg18V250Test.actualPg18ReceiptCostsAndSaleRangesConserveAmounts" not in ci
 
 for name, contents in (("browser", browser), ("compose", chain)):
     header = contents.split("jobs:", 1)[0]

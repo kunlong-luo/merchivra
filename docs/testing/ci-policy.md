@@ -63,3 +63,7 @@ python3 scripts/check_next_runtime_v122.py
 - [TEST-001 原文](https://github.com/kunlong-luo/merchivra/blob/2c2265036df33f0afc7269ff392eea8a5a5059e4/docs/testing/test-plan.md)
 
 原版本的验收链接与源日志仍可逐项追溯。V248 最新确认完整 A3 以及 V238–V249 快 CI 结果见当前事实；新提交必须独立验收，不继承旧 SHA。
+
+### V251 · 完整 PG18 脚本维护
+
+`.github/workflows/ci.yml` 完整 PG18 job 调用 [scripts/run_pg18_full_ci.sh](../../scripts/run_pg18_full_ci.sh)。长 YAML `run` 标量原命令及顺序保留，增加精确一次性 CI 数据库/主分支/授权 OFF 环境检查、退出清理、快 CI 的 `bash -n` 与关键调用守卫。V250 两个工作流失败且无 job，未获得拒绝注释，不能确定根因；外置是预防性修复。原 V236/V250 JUnit XML 的成功和不跳过条件仍强制。新验收必须核对精确 SHA 和实际日志。
