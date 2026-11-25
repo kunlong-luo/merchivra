@@ -10,6 +10,11 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
 import java.util.List;
@@ -118,7 +123,7 @@ class ReceiptCostCompositionPg18V250Test {
         assertThrows(org.springframework.dao.DataAccessException.class,
             ()->db.update("DELETE FROM finance_original_cost_basis_v119 WHERE tenant_id=? AND claim_id=?",tenant,claimA));
         UUID event=seedRefund(itemA),rival=seedRefund(itemA);
-        reserveRefund(claimA,stored.sha256(),event,0,1);
+        raceReservation(claimA,stored.sha256(),event,0,1,claimA,stored.sha256(),rival,0,1,false,null);
         assertThrows(org.springframework.dao.DataAccessException.class,
             ()->reserveRefund(claimA,stored.sha256(),rival,0,1));
         assertThrows(org.springframework.dao.DataAccessException.class,
@@ -131,6 +136,19 @@ class ReceiptCostCompositionPg18V250Test {
             SELECT count(*) FROM finance_refund_cost_slice_v119
             WHERE tenant_id=? AND claim_id=? AND order_item_id=? AND review_revision=1 AND review_quantity=1
             """,Integer.class,tenant,claimA,itemA));
+        var current=service.readRefundReservations(tenant,market,receipt,claimA);
+        assertEquals("LOCAL_RESERVATIONS_CURRENT_UNVERIFIED",current.state());
+        assertEquals("14.999999",current.replay().refundCandidateAmount());
+        assertNull(current.replay().actualRefundCogsReversal());
+        db.update("UPDATE finance_refund_item_review SET revision=2,reviewed_at=clock_timestamp() WHERE tenant_id=? AND event_id=?",tenant,rival);
+        assertReservationHold("REFUND_REVIEW_OR_LINK_STALE");
+        // Restore only in synthetic test; equality alone is not ABA protection.
+        db.update("""
+            UPDATE finance_refund_item_review r SET revision=s.review_revision,reviewed_at=s.review_at
+            FROM finance_refund_cost_slice_v119 s WHERE r.tenant_id=s.tenant_id
+              AND r.event_id=s.refund_event_id AND s.tenant_id=? AND s.claim_id=?
+            """,tenant,claimA);
+        assertEquals(current,service.readRefundReservations(tenant,market,receipt,claimA));
         assertEquals(404,assertThrows(ResponseStatusException.class,
             ()->service.prepareRefundBasis(tenant,market,receipt,UUID.randomUUID())).getStatusCode().value());
         assertEquals(401,http(HttpClient.newHttpClient(),candidatePath(),null,null).statusCode());
@@ -139,6 +157,7 @@ class ReceiptCostCompositionPg18V250Test {
             ()->service.preview(UUID.randomUUID(),market,receipt)).getStatusCode().value());
         db.update("UPDATE erp_purchase_order_line SET unit_cost=11 WHERE tenant_id=? AND id=?",tenant,pol);
         hold("ORIGINAL_CLAIM_OR_RANGE_INCOMPLETE_OR_STALE");
+        assertReservationHold("REFUND_REVIEW_OR_LINK_STALE");
         assertHttpHold(client,"ORIGINAL_CLAIM_OR_RANGE_INCOMPLETE_OR_STALE");
         assertEquals(409,assertThrows(ResponseStatusException.class,
             ()->service.prepareRefundBasis(tenant,market,receipt,claimA)).getStatusCode().value());
@@ -166,6 +185,10 @@ class ReceiptCostCompositionPg18V250Test {
         var csrf=readJson(http(client,"/api/v1/auth/csrf",null,null));
         assertEquals(204,http(client,"/api/v1/auth/logout","",csrf.path("token").asText()).statusCode());
         assertEquals(401,http(client,candidatePath(),null,null).statusCode());
+        var second=new ReceiptCostCompositionPg18V250Test();
+        second.db=db;second.write=write;second.service=service;
+        second.crossClaimRace();
+        System.out.println("PASS V257 actual PG18 refund races: rollback release, committed cross-claim quantity rejection, review and cost drift hold");
         System.out.println("PASS V256 actual PG18 immutable local cost basis and refund reservation duplicate, overlap and bounds rejected");
         System.out.println("PASS V255 actual PG18 scoped candidate capture and original refund slice replay, price drift hold");
         System.out.println("PASS V254 actual Owner HTTP nonempty receipt candidate 45/30/15, exact shares, drift/recovery, hold and logout");
@@ -248,6 +271,79 @@ class ReceiptCostCompositionPg18V250Test {
             assertTrue(d.path(key).isNull(),key);
         for(String key:List.of("components","saleShares"))
             assertTrue(d.path(key).isArray()&&d.path(key).isEmpty(),key);
+    }
+
+    private void assertReservationHold(String reason) {
+        var held=service.readRefundReservations(tenant,market,receipt,claimA);
+        assertEquals("LOCAL_RESERVATIONS_HOLD",held.state());
+        assertNull(held.replay());
+        assertTrue(held.blockers().contains(reason),held.blockers().toString());
+        assertEquals(1,held.reservedRows());
+    }
+    private void crossClaimRace() throws Exception {
+        write.executeWithoutResult(ignored->seed(true));
+        expense(market,"INBOUND_FREIGHT","20","10","a");
+        expense(market,"IMPORT_DUTY","10","5","b");
+        bind(claimA,0,1);bind(claimB,2,3);
+        var a=service.persistRefundBasis(tenant,market,receipt,claimA,maker);
+        var b=service.persistRefundBasis(tenant,market,receipt,claimB,maker);
+        UUID event=seedRefund(itemA);
+        raceReservation(claimA,a.sha256(),event,0,1,claimB,b.sha256(),event,2,3,true,
+            "V119: refund item quantity exceeded");
+        assertEquals(1,db.queryForObject("""
+            SELECT count(*) FROM finance_refund_cost_slice_v119 WHERE tenant_id=? AND refund_event_id=?
+            """,Integer.class,tenant,event));
+        assertEquals("LOCAL_RESERVATIONS_CURRENT_UNVERIFIED",
+            service.readRefundReservations(tenant,market,receipt,claimA).state());
+    }
+    private Connection connection() throws SQLException {
+        return DriverManager.getConnection("jdbc:postgresql://127.0.0.1:5432/merchivra",
+            "merchivra","ci_disposable_database_password");
+    }
+    private void insertReservation(Connection c,UUID claim,String digest,UUID event,int from,int to)
+            throws SQLException {
+        try(var p=c.prepareStatement("""
+            INSERT INTO finance_refund_cost_slice_v119
+              (tenant_id,claim_id,basis_sha256,refund_event_id,unit_from,unit_to,recorded_by)
+            VALUES (?,?,?,?,?,?,?)
+            """)){
+            p.setObject(1,tenant);p.setObject(2,claim);p.setString(3,digest);p.setObject(4,event);
+            p.setInt(5,from);p.setInt(6,to);p.setObject(7,maker);p.executeUpdate();
+        }
+    }
+    private void raceReservation(UUID a,String da,UUID ea,int fa,int ta,
+        UUID b,String dbasis,UUID eb,int fb,int tb,boolean commit,String expected) throws Exception {
+        try(var first=connection();var rival=connection();var pool=Executors.newSingleThreadExecutor()){
+            first.setAutoCommit(false);
+            first.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+            rival.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED);
+            try(var p=rival.createStatement()){p.execute("SET lock_timeout='15s'");}
+            int pid;
+            try(var p=rival.createStatement();var rs=p.executeQuery("SELECT pg_backend_pid()")){
+                rs.next();pid=rs.getInt(1);
+            }
+            insertReservation(first,a,da,ea,fa,ta);
+            var future=pool.submit(()->{
+                try{insertReservation(rival,b,dbasis,eb,fb,tb);return "SUCCESS";}
+                catch(SQLException e){return e.getMessage();}
+            });
+            boolean waiting=false;
+            try {
+                long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(10);
+                while(System.nanoTime()<deadline){
+                    if(Boolean.TRUE.equals(db.queryForObject("SELECT cardinality(pg_blocking_pids(?))>0",Boolean.class,pid))){
+                        waiting=true;break;
+                    }
+                    Thread.sleep(40);
+                }
+                assertTrue(waiting,"V257 rival must wait on a real PostgreSQL lock");
+            } finally {
+                if(commit&&waiting)first.commit();else first.rollback();
+            }
+            String outcome=future.get(20,TimeUnit.SECONDS);
+            if(commit)assertTrue(outcome.contains(expected),outcome);
+            else assertEquals("SUCCESS",outcome);
+        }
     }
 
     private UUID seedRefund(UUID item) {
@@ -339,7 +435,9 @@ class ReceiptCostCompositionPg18V250Test {
         });
     }
 
-    private void seed() {
+    private void seed(){seed(false);}
+    private void seed(boolean sameItem) {
+        UUID position2=UUID.randomUUID(),pickLine2=UUID.randomUUID();
         db.update("INSERT INTO tenant(id,name) VALUES (?,?)",tenant,"V250 DISPOSABLE");
         for(UUID user:List.of(maker,reviewer)) {
             db.update("INSERT INTO app_user(id,identity_ref) VALUES (?,?)",user,"local:v250:"+user);
@@ -409,8 +507,12 @@ class ReceiptCostCompositionPg18V250Test {
             INSERT INTO erp_local_lot_position
               (id,tenant_id,request_key,receipt_id,warehouse_id,product_sku_id,bin_id,
                placed_quantity,remaining_quantity,reason,created_by)
-            VALUES (?,?,?,?,?,?,?,3,1,'V250 synthetic placement',?)
-            """,position,tenant,UUID.randomUUID(),receipt,warehouse,sku,bin,maker);
+            VALUES (?,?,?,?,?,?,?,?,1,'V250 synthetic placement',?)
+            """,position,tenant,UUID.randomUUID(),receipt,warehouse,sku,bin,sameItem?2:3,maker);
+        if(sameItem)db.update("""
+            INSERT INTO erp_local_lot_position(id,tenant_id,request_key,receipt_id,warehouse_id,product_sku_id,bin_id,placed_quantity,remaining_quantity,reason,created_by)
+            VALUES (?,?,?,?,?,?,?,1,0,'V257 split placement',?)
+            """,position2,tenant,UUID.randomUUID(),receipt,warehouse,sku,bin,maker);
         db.update("""
             INSERT INTO erp_local_stock_operation
               (id,tenant_id,request_key,operation_type,source_warehouse_id,product_sku_id,
@@ -425,8 +527,9 @@ class ReceiptCostCompositionPg18V250Test {
             """,pick,tenant,UUID.randomUUID(),warehouse,sku,op,maker);
         db.update("""
             INSERT INTO erp_local_lot_pick_line(id,tenant_id,pick_id,position_id,quantity)
-            VALUES (?,?,?,?,2)
-            """,pickLine,tenant,pick,position);
+            VALUES (?,?,?,?,?)
+            """,pickLine,tenant,pick,position,sameItem?1:2);
+        if(sameItem)db.update("INSERT INTO erp_local_lot_pick_line(id,tenant_id,pick_id,position_id,quantity) VALUES (?,?,?,?,1)",pickLine2,tenant,pick,position2);
         db.update("""
             INSERT INTO erp_local_stock_movement
               (id,tenant_id,warehouse_id,product_sku_id,operation_id,movement_type,quantity,actor_user_id)
@@ -438,19 +541,20 @@ class ReceiptCostCompositionPg18V250Test {
               fulfillment_status_raw,data_origin,order_time,source_updated_at,items_observation)
             VALUES (?,?,?,'V250-SYNTHETIC-ORDER','SHIPPED','LIVE',now(),now(),'OBSERVED')
             """,sale,tenant,market);
-        for(UUID item:List.of(itemA,itemB))
+        for(UUID item:sameItem?List.of(itemA):List.of(itemA,itemB))
             db.update("""
                 INSERT INTO order_item(id,tenant_id,sales_order_id,external_item_id,seller_sku_raw,
                   quantity,data_origin,source_updated_at,is_current)
-                VALUES (?,?,?,?, 'V250-SKU',1,'LIVE',now(),true)
-                """,item,tenant,sale,"V250-ITEM-"+item);
+                VALUES (?,?,?,?, 'V250-SKU',?,'LIVE',now(),true)
+                """,item,tenant,sale,"V250-ITEM-"+item,sameItem?2:1);
         for(UUID claim:List.of(claimA,claimB))
             db.update("""
                 INSERT INTO finance_sale_lot_claim_v106
                   (id,tenant_id,marketplace_id,sales_order_id,order_item_id,pick_line_id,
                    receipt_id,assigned_quantity,external_dispatch_ref,external_payload_sha256,recorded_by)
                 VALUES (?,?,?,?,?,?,?,1,?,?,?)
-                """,claim,tenant,market,sale,claim.equals(claimA)?itemA:itemB,pickLine,
+                """,claim,tenant,market,sale,sameItem||claim.equals(claimA)?itemA:itemB,
+                sameItem&&claim.equals(claimB)?pickLine2:pickLine,
                 receipt,"V250-DISPATCH-"+claim,"d".repeat(64),maker);
         assertEquals(2,db.queryForObject("""
             SELECT count(*) FROM finance_sale_lot_integrity_v106

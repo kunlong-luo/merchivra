@@ -76,3 +76,7 @@ PG18 作业原始日志记录 `PASS V212 PG18 exact V34/V106/V96/V97 source SELE
 ## V256 · Flyway V119 不可变本地成本观察与退款区间预留（待验收）
 
 新增 `finance_original_cost_basis_v119`，每租户/原 V117 claim 一次性保存 V255 规范 payload 与 SHA-256、记录者/数据库时间。V249 包内 persistRefundBasis 使用独立可写 RR 同快照生成并插入；无 HTTP 入口、无回填。数据库独立核验摘要、原 scope、数量区间、PO 参考额、V112 费用行/原币/状态、来源唯一/数量与精确微单位金额；不能代替 V216 全审计或外部签证。`finance_refund_cost_slice_v119` 绑定快照摘要、实际本地 V34 RESTOCKED_CLAIMED review、V21 匹配 LIVE PRODUCT_REFUND（测试 LIVE 仅合成标签），数据库覆盖 review revision/quantity/time、item 和 recorded_at。READ COMMITTED + 原 item 行锁跨原认领串行，拒绝重叠/重复 event-claim、超原销售区间、同 event/item 超已审核数量；更新/删除拒绝，历史不释放。V250 实际 PG18 扩展持久化、重复、重叠、越界、删除回归，JUnit marker 强制；尚无双连接 V119 竞争、跨 claim 数量负例、读时失效检查、真实返仓证据、退款事件完整性或实际过账。原观察不是销售时历史 COGS；未来 V34 revision/撤销/关联变化必须读时 hold；不得把预约金额放进利润。
+
+## V257 · 退款预留竞争及读取失效（待验收）
+
+V255 [CI #45569211952](https://github.com/kunlong-luo/merchivra/actions/runs/45569211952) SUCCESS / [A3 #45569211987](https://github.com/kunlong-luo/merchivra/actions/runs/45569211987) 7/7，PG18 job #139051534636 原日志确认 V255 marker。V257 不修改 V119，真实 V250 夹具使用两 JDBC 连接、pg_blocking_pids 确认锁等待：先回滚同区间使竞争者成功；另同 item/不同 pick line 认领，先提交后同 event 另一认领超审核数量拒绝。包内 readRefundReservations 同 RR 比对存储 payload/SHA 与当前重算，核 V34 revision/quantity/time/disposition、V21 关联/来源、同 event/item peer 认领状态与数量，重放或 HOLD/null；不释放预留。仅单 claim 读取，无 HTTP/UI；其他 claim 完整成本不逐一重算，review ABA/恢复仍可能绕过相等检查，无全量退款或物理证明，不入账。JUnit marker 强制，新 A3 待验收。

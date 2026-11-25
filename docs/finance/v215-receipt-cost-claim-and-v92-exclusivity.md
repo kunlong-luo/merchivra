@@ -63,3 +63,5 @@ V253 [快 CI #45568099720](https://github.com/kunlong-luo/merchivra/actions/runs
 V255 从 V249 同一 RR 观察准备原认领成本候选快照（不是历史过账），复用逐来源 V246 算术计算显式退款子区间；[退款原批次契约](v212-refund-original-sale-lot-quantity-envelope.md) 维护版本、摘要、守恒与缺失持久化/外部物理证明限制。不新增 HTTP/UI，实际回转、利润保持 null。
 
 V256/Flyway V119 为 V255 同快照候选增加一次性不可变存储与退款区间预留，规则和限制见 [退款原批次契约](v212-refund-original-sale-lot-quantity-envelope.md)。不修改 V112/V117 或财务过账，不开放写接口。
+
+V257 在 V249 同 RR 内重新读取 V119 预留并核对当前 V255 成本指纹及退款审核，失效 HOLD/null；真实双连接和跨认领测试见 [V212 退款契约](v212-refund-original-sale-lot-quantity-envelope.md)。

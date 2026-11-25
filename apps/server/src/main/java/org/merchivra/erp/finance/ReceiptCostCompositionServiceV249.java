@@ -113,6 +113,85 @@ public class ReceiptCostCompositionServiceV249 {
             }
     }
 
+    record ReservedSlice(UUID event,int from,int to,boolean current) {}
+    record RefundReservationRead(String state,String basisSha256,int reservedRows,
+        RefundOriginalCostSliceEngineV255.Replay replay,List<String> blockers) {}
+
+    // Same RR snapshot, never release stale reservations or post a reversal.
+    RefundReservationRead readRefundReservations(UUID tenant,UUID marketplace,UUID receipt,UUID claimId) {
+        if(tenant==null||marketplace==null||receipt==null||claimId==null)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        return read.execute(ignored->{
+            var stored=jdbc.query("""
+                SELECT btrim(b.basis_sha256),b.canonical_payload
+                FROM finance_original_cost_basis_v119 b
+                JOIN finance_sale_lot_claim_v106 c ON c.tenant_id=b.tenant_id AND c.id=b.claim_id
+                WHERE b.tenant_id=? AND c.marketplace_id=? AND c.receipt_id=? AND c.id=?
+                """,(rs,n)->List.of(rs.getString(1),rs.getString(2)),tenant,marketplace,receipt,claimId);
+            if(stored.size()!=1)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            String digest=stored.getFirst().getFirst();
+            var rows=jdbc.query("""
+                SELECT s.refund_event_id,s.unit_from,s.unit_to,
+                  coalesce(r.revision=s.review_revision AND r.reviewed_quantity=s.review_quantity
+                    AND r.reviewed_at=s.review_at AND r.disposition='RESTOCKED_CLAIMED'
+                    AND r.sales_order_id=c.sales_order_id
+                    AND f.source_family='SPAPI_FINANCES' AND f.data_origin='LIVE'
+                    AND f.category='PRODUCT_REFUND' AND f.amount<0
+                    AND f.seller_marketplace_id=c.marketplace_id
+                    AND l.state='MATCHED' AND l.order_id=c.sales_order_id
+                    AND NOT EXISTS (
+                      SELECT 1 FROM finance_refund_cost_slice_v119 peer
+                      LEFT JOIN finance_sale_lot_integrity_v106 v
+                        ON v.tenant_id=peer.tenant_id AND v.claim_id=peer.claim_id
+                      WHERE peer.tenant_id=s.tenant_id AND peer.refund_event_id=s.refund_event_id
+                        AND peer.order_item_id=s.order_item_id AND (
+                          v.integrity_state IS DISTINCT FROM 'LOCAL_LINK_INTACT_UNVERIFIED'
+                          OR peer.review_revision<>s.review_revision OR peer.review_quantity<>s.review_quantity
+                          OR peer.review_at<>s.review_at))
+                    AND (SELECT coalesce(sum(p.unit_to::bigint-p.unit_from),0)
+                         FROM finance_refund_cost_slice_v119 p
+                         WHERE p.tenant_id=s.tenant_id AND p.refund_event_id=s.refund_event_id
+                           AND p.order_item_id=s.order_item_id)<=r.reviewed_quantity,false) AS current
+                FROM finance_refund_cost_slice_v119 s
+                JOIN finance_sale_lot_claim_v106 c ON c.tenant_id=s.tenant_id AND c.id=s.claim_id
+                LEFT JOIN finance_refund_item_review r ON r.tenant_id=s.tenant_id
+                  AND r.event_id=s.refund_event_id AND r.external_item_id=c.snapshot_external_item_id
+                LEFT JOIN finance_source_event f ON f.tenant_id=s.tenant_id AND f.id=s.refund_event_id
+                LEFT JOIN finance_event_link_review l ON l.tenant_id=f.tenant_id AND l.event_id=f.id
+                WHERE s.tenant_id=? AND s.claim_id=? ORDER BY s.unit_from LIMIT 1001
+                """,(rs,n)->new ReservedSlice(rs.getObject(1,UUID.class),rs.getInt(2),
+                    rs.getInt(3),rs.getBoolean(4)),tenant,claimId);
+            if(rows.isEmpty()||rows.size()>1000)
+                return reservationHold(digest,rows.size(),"RESERVATION_POPULATION_EMPTY_OR_UNBOUNDED");
+            if(rows.stream().anyMatch(s->!s.current()))
+                return reservationHold(digest,rows.size(),"REFUND_REVIEW_OR_LINK_STALE");
+            RefundOriginalCostSliceEngineV255.Basis fresh;
+            try {
+                fresh=captureBasis(tenant,marketplace,receipt,claimId);
+            } catch(ResponseStatusException invalid) {
+                if(invalid.getStatusCode().value()!=409&&invalid.getStatusCode().value()!=404)throw invalid;
+                return reservationHold(digest,rows.size(),"ORIGINAL_COST_CANDIDATE_NOT_CURRENT");
+            }
+            if(!digest.equals(fresh.sha256())||
+                !stored.getFirst().get(1).equals(RefundOriginalCostSliceEngineV255.canonicalPayload(fresh)))
+                return reservationHold(digest,rows.size(),"ORIGINAL_COST_FINGERPRINT_CHANGED");
+            try {
+                var slices=rows.stream().map(s->new RefundOriginalCostSliceEngineV255.Slice(
+                    s.event(),fresh.identity().orderItemId(),s.from(),s.to(),s.to()-s.from(),
+                    "RESTOCKED_CLAIMED")).toList();
+                var replay=RefundOriginalCostSliceEngineV255.replay(fresh.identity(),digest,fresh,slices);
+                return new RefundReservationRead("LOCAL_RESERVATIONS_CURRENT_UNVERIFIED",digest,
+                    rows.size(),replay,replay.blockerCodes());
+            } catch(IllegalArgumentException invalid) {
+                return reservationHold(digest,rows.size(),"RESERVATION_REPLAY_INCONSISTENT");
+            }
+        });
+    }
+    private static RefundReservationRead reservationHold(String digest,int rows,String reason) {
+        return new RefundReservationRead("LOCAL_RESERVATIONS_HOLD",digest,rows,null,
+            List.of(reason,"EXTERNAL_PHYSICAL_RETURN_AND_G1_UNVERIFIED"));
+    }
+
     private Candidate readCandidate(UUID tenant,UUID marketplace,UUID receipt) {
             var source=audit.snapshot(tenant,marketplace,receipt);
             var claims=jdbc.query(CLAIM_SQL,(rs,n)->new Claim(
