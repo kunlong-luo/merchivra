@@ -123,7 +123,9 @@ public class ReceiptCostCompositionServiceV249 {
             }
     }
 
-    record ReservedSlice(UUID event,int from,int to,boolean current) {}
+    record ReservedSlice(UUID event,int from,int to,boolean commonValid,boolean versionCurrent) {}
+    private record CompensationSliceKey(UUID claim,UUID event) {}
+    private record CompensationSelection(CompensationCoordinate coordinate,UUID item) {}
     record RefundReservationRead(String state,String basisSha256,int reservedRows,
         RefundOriginalCostSliceEngineV255.Replay replay,List<String> blockers,
         RefundOriginalCostSliceEngineV255.Basis basis) {}
@@ -138,6 +140,12 @@ public class ReceiptCostCompositionServiceV249 {
 
     private RefundReservationRead readRefundReservationsSnapshot(UUID tenant,UUID marketplace,
         UUID receipt,UUID claimId,boolean allowEmpty,Map<UUID,Candidate> cache) {
+        return readRefundReservationsSnapshot(tenant,marketplace,receipt,claimId,allowEmpty,cache,Map.of(),new HashSet<>());
+    }
+
+    private RefundReservationRead readRefundReservationsSnapshot(UUID tenant,UUID marketplace,
+        UUID receipt,UUID claimId,boolean allowEmpty,Map<UUID,Candidate> cache,
+        Map<CompensationSliceKey,CompensationSelection> selected,HashSet<CompensationSliceKey> consumed) {
             var stored=jdbc.query("""
                 SELECT btrim(b.basis_sha256),b.canonical_payload
                 FROM finance_original_cost_basis_v119 b
@@ -148,9 +156,8 @@ public class ReceiptCostCompositionServiceV249 {
             String digest=stored.getFirst().getFirst();
             var rows=jdbc.query("""
                 SELECT s.refund_event_id,s.unit_from,s.unit_to,
-                  coalesce(r.evidence_revision_v121=s.review_evidence_revision_v122
-                    AND r.revision=s.review_revision AND r.reviewed_quantity=s.review_quantity
-                    AND r.reviewed_at=s.review_at AND r.disposition='RESTOCKED_CLAIMED'
+                  coalesce(r.reviewed_quantity=s.review_quantity
+                    AND r.disposition='RESTOCKED_CLAIMED'
                     AND r.sales_order_id=c.sales_order_id
                     AND f.source_family='SPAPI_FINANCES' AND f.data_origin='LIVE'
                     AND f.category='PRODUCT_REFUND' AND f.amount<0
@@ -169,7 +176,9 @@ public class ReceiptCostCompositionServiceV249 {
                     AND (SELECT coalesce(sum(p.unit_to::bigint-p.unit_from),0)
                          FROM finance_refund_cost_slice_v119 p
                          WHERE p.tenant_id=s.tenant_id AND p.refund_event_id=s.refund_event_id
-                           AND p.order_item_id=s.order_item_id)<=r.reviewed_quantity,false) AS current
+                           AND p.order_item_id=s.order_item_id)<=r.reviewed_quantity,false) AS common_valid,
+                  coalesce(r.evidence_revision_v121=s.review_evidence_revision_v122
+                    AND r.revision=s.review_revision AND r.reviewed_at=s.review_at,false) AS version_current
                 FROM finance_refund_cost_slice_v119 s
                 JOIN finance_sale_lot_claim_v106 c ON c.tenant_id=s.tenant_id AND c.id=s.claim_id
                 LEFT JOIN finance_refund_item_review r ON r.tenant_id=s.tenant_id
@@ -178,11 +187,24 @@ public class ReceiptCostCompositionServiceV249 {
                 LEFT JOIN finance_event_link_review l ON l.tenant_id=f.tenant_id AND l.event_id=f.id
                 WHERE s.tenant_id=? AND s.claim_id=? ORDER BY s.unit_from LIMIT 1001
                 """,(rs,n)->new ReservedSlice(rs.getObject(1,UUID.class),rs.getInt(2),
-                    rs.getInt(3),rs.getBoolean(4)),tenant,claimId);
+                    rs.getInt(3),rs.getBoolean(4),rs.getBoolean(5)),tenant,claimId);
             if((rows.isEmpty()&&!allowEmpty)||rows.size()>1000)
                 return reservationHold(digest,rows.size(),"RESERVATION_POPULATION_EMPTY_OR_UNBOUNDED");
-            if(rows.stream().anyMatch(s->!s.current()))
-                return reservationHold(digest,rows.size(),"REFUND_REVIEW_OR_LINK_STALE");
+            for(var row:rows) {
+                var key=new CompensationSliceKey(claimId,row.event());
+                if(!row.commonValid())return reservationHold(digest,rows.size(),"REFUND_REVIEW_OR_LINK_STALE");
+                var selection=selected.get(key);
+                if(row.versionCurrent()) {
+                    if(selection!=null)return reservationHold(digest,rows.size(),"COMPENSATION_TARGET_NOT_STALE");
+                } else {
+                    if(selection==null)return reservationHold(digest,rows.size(),"REFUND_REVIEW_OR_LINK_STALE");
+                    var coordinate=selection.coordinate();
+                    if(!receipt.toString().equals(coordinate.receiptId())||!digest.equals(coordinate.basisSha256())
+                        ||row.from()!=coordinate.fromInclusive()||row.to()!=coordinate.toExclusive()
+                        ||!consumed.add(key))
+                        return reservationHold(digest,rows.size(),"COMPENSATION_COORDINATE_MISMATCH");
+                }
+            }
             RefundOriginalCostSliceEngineV255.Basis fresh;
             try {
                 fresh=captureBasis(tenant,marketplace,receipt,claimId,
@@ -202,6 +224,13 @@ public class ReceiptCostCompositionServiceV249 {
                     s.event(),fresh.identity().orderItemId(),s.from(),s.to(),s.to()-s.from(),
                     "RESTOCKED_CLAIMED")).toList();
                 var replay=RefundOriginalCostSliceEngineV255.replay(fresh.identity(),digest,fresh,slices);
+                for(var e:replay.events()) {
+                    var selection=selected.get(new CompensationSliceKey(claimId,e.refundEventId()));
+                    if(selection!=null&&(!fresh.identity().orderItemId().equals(selection.item())
+                        ||!fresh.currency().equals(selection.coordinate().currency())
+                        ||!e.candidateAmount().equals(selection.coordinate().candidateAmount())))
+                        return reservationHold(digest,rows.size(),"COMPENSATION_REPLAY_AMOUNT_MISMATCH");
+                }
                 return new RefundReservationRead("LOCAL_RESERVATIONS_CURRENT_UNVERIFIED",digest,
                     rows.size(),replay,replay.blockerCodes(),fresh);
             } catch(IllegalArgumentException invalid) {
@@ -552,7 +581,24 @@ public class ReceiptCostCompositionServiceV249 {
     OrderRefundRead readWholeOrderRefundReservations(UUID tenant,UUID marketplace,UUID order) {
         if(tenant==null||marketplace==null||order==null)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
-        return read.execute(ignored->{
+        return read.execute(ignored->wholeOrderRefundSnapshot(tenant,marketplace,order,List.of(),false));
+    }
+
+    // V269 explicit approved compensation simulation; never called by normal
+    // reads, never activates a proposal or releases a V119 coordinate.
+    record OrderCompensationChoice(UUID eventId,UUID orderItemId,String proposalSha256) {}
+    OrderRefundRead previewWholeOrderRefundCompensation(UUID tenant,UUID marketplace,UUID order,
+        List<OrderCompensationChoice> choices) {
+        if(tenant==null||marketplace==null||order==null||choices==null||choices.isEmpty()||choices.size()>20
+            ||choices.stream().anyMatch(c->c==null||c.eventId()==null||c.orderItemId()==null
+                ||c.proposalSha256()==null||!c.proposalSha256().matches("[0-9a-f]{64}")))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        var frozen=List.copyOf(choices);
+        return read.execute(ignored->wholeOrderRefundSnapshot(tenant,marketplace,order,frozen,true));
+    }
+
+    private OrderRefundRead wholeOrderRefundSnapshot(UUID tenant,UUID marketplace,UUID order,
+        List<OrderCompensationChoice> choices,boolean simulation) {
             var scope=jdbc.queryForList("""
                 SELECT o.external_order_id FROM sales_order o
                 JOIN tenant t ON t.id=o.tenant_id AND t.status='ACTIVE'
@@ -700,6 +746,27 @@ public class ReceiptCostCompositionServiceV249 {
                     return orderHold(order,marketplace,"REFUND_AMOUNT_NOT_BALANCED_IN_ORIGINAL_CURRENCY");
                 }
             }
+            var selected=new HashMap<CompensationSliceKey,CompensationSelection>();
+            var consumed=new HashSet<CompensationSliceKey>();
+            var choiceKeys=new HashSet<EventItem>();
+            for(var choice:choices) {
+                var key=new EventItem(choice.eventId(),choice.orderItemId());
+                if(!expected.containsKey(key)||!choiceKeys.add(key))
+                    return orderHold(order,marketplace,"COMPENSATION_SELECTION_SCOPE_OR_DUPLICATE");
+                var snapshot=compensationSnapshot(tenant,marketplace,choice.eventId(),choice.orderItemId());
+                if(!order.equals(snapshot.order())||
+                    !choice.proposalSha256().equals(snapshot.preview().proposalSha256()))
+                    return orderHold(order,marketplace,"COMPENSATION_SELECTION_STALE");
+                var request=currentRequest(tenant,marketplace,choice.eventId(),choice.orderItemId(),snapshot);
+                var decision=storedDecision(tenant,choice.proposalSha256());
+                requireCurrentCompensationDecision(tenant,choice.eventId(),choice.proposalSha256(),snapshot,request,decision);
+                for(var coordinate:snapshot.preview().coordinates()) {
+                    var sliceKey=new CompensationSliceKey(UUID.fromString(coordinate.claimId()),choice.eventId());
+                    if(selected.putIfAbsent(sliceKey,new CompensationSelection(coordinate,choice.orderItemId()))!=null
+                        ||selected.size()>1000)
+                        return orderHold(order,marketplace,"COMPENSATION_SELECTION_COORDINATE_DUPLICATE_OR_UNBOUNDED");
+                }
+            }
             var cache=new HashMap<UUID,Candidate>();
             var reserved=new HashMap<EventItem,Long>();
             var sums=new java.util.TreeMap<String,CurrencySum>();
@@ -707,7 +774,7 @@ public class ReceiptCostCompositionServiceV249 {
             for(var c:claims) {
                 RefundReservationRead row;
                 try {
-                    row=readRefundReservationsSnapshot(tenant,marketplace,c.receipt(),c.id(),true,cache);
+                    row=readRefundReservationsSnapshot(tenant,marketplace,c.receipt(),c.id(),true,cache,selected,consumed);
                 } catch(ResponseStatusException unavailable) {
                     if(unavailable.getStatusCode().value()!=404&&unavailable.getStatusCode().value()!=409)throw unavailable;
                     return orderHold(order,marketplace,"ORIGINAL_COST_BASIS_MISSING_OR_CONFLICT");
@@ -726,6 +793,8 @@ public class ReceiptCostCompositionServiceV249 {
                         reserved.merge(new EventItem(event.refundEventId(),c.item()),(long)event.quantity(),Long::sum);
                 }
             }
+            if(!consumed.equals(selected.keySet()))
+                return orderHold(order,marketplace,"COMPENSATION_SELECTION_COVERAGE_INCOMPLETE");
             if(!expected.equals(reserved))
                 return orderHold(order,marketplace,"REFUND_EVENT_ITEM_RESERVATION_COVERAGE_INCOMPLETE");
             // V261: expensive V63 recomputations are explicitly bounded.
@@ -750,11 +819,13 @@ public class ReceiptCostCompositionServiceV249 {
                 e.getValue().original.toPlainString(),e.getValue().refund.toPlainString(),
                 e.getValue().original.subtract(e.getValue().refund).toPlainString())).toList();
             long quantity=expected.values().stream().mapToLong(Long::longValue).sum();
-            return new OrderRefundRead("LOCAL_ORDER_REFUND_COST_CANDIDATE_UNVERIFIED",
+            return new OrderRefundRead(simulation?"LOCAL_ORDER_COMPENSATION_SIMULATION_UNVERIFIED":
+                "LOCAL_ORDER_REFUND_COST_CANDIDATE_UNVERIFIED",
                 order.toString(),marketplace.toString(),claims.size(),events.size(),quantity,quantity,currencies,
-                List.of("EXTERNAL_REFUND_POPULATION_UNVERIFIED","ORIGINAL_SALE_TIME_COST_UNVERIFIED",
+                simulation?List.of("COMPENSATION_NOT_ACTIVATED","EXTERNAL_REFUND_POPULATION_UNVERIFIED",
+                    "ORIGINAL_SALE_TIME_COST_UNVERIFIED","EXTERNAL_PHYSICAL_RETURN_AND_G1_UNVERIFIED"):
+                    List.of("EXTERNAL_REFUND_POPULATION_UNVERIFIED","ORIGINAL_SALE_TIME_COST_UNVERIFIED",
                     "EXTERNAL_PHYSICAL_RETURN_AND_G1_UNVERIFIED"),false,null,null);
-        });
     }
 
     private Candidate readCandidate(UUID tenant,UUID marketplace,UUID receipt) {

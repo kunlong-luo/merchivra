@@ -194,6 +194,7 @@ class ReceiptCostCompositionPg18V250Test {
         var second=new ReceiptCostCompositionPg18V250Test();
         second.db=db;second.write=write;second.service=service;second.recovery=recovery;
         second.crossClaimRace();
+        System.out.println("PASS V269 actual PG18 whole-order compensation simulation, explicit approval, no activation and conservation");
         System.out.println("PASS V268 actual PG18 concurrent compensation request and approval, whole RR retry, conflicting reason hold");
         System.out.println("PASS V267 actual PG18 compensation approval revalidation, revoked approver and new revision");
         System.out.println("PASS V266 actual PG18 immutable compensation request and independent approval, idempotent replay, no activation");
@@ -632,6 +633,26 @@ class ReceiptCostCompositionPg18V250Test {
         assertEquals(1,conflicting.stream().filter("CONFLICT"::equals).count());
         assertEquals(3,db.queryForObject("SELECT count(*) FROM finance_refund_compensation_approval_v123 WHERE tenant_id=?",Integer.class,tenant));
         assertEquals(3,db.queryForObject("SELECT count(*) FROM finance_refund_compensation_proposal_v123 WHERE tenant_id=?",Integer.class,tenant));
+        // V269: explicit same-snapshot compensation simulation of stale A +
+        // current B. Both original claims and both refund events count once.
+        var choice=new ReceiptCostCompositionServiceV249.OrderCompensationChoice(event,itemA,thirdDigest);
+        var simulation=service.previewWholeOrderRefundCompensation(tenant,market,sale,List.of(choice));
+        assertEquals("LOCAL_ORDER_COMPENSATION_SIMULATION_UNVERIFIED",simulation.state());
+        assertEquals(full.currencies(),simulation.currencies());
+        assertEquals(2,simulation.originalClaimRows());
+        assertEquals(2,simulation.sourceRefundEvents());
+        assertEquals(2,simulation.reviewedRefundUnits());
+        assertEquals(2,simulation.reservedRefundUnits());
+        assertTrue(simulation.blockers().contains("COMPENSATION_NOT_ACTIVATED"));
+        assertFalse(simulation.refundCogsReversalAllowed());
+        assertNull(simulation.actualRefundCogsReversal());
+        assertNull(simulation.realizedNetProfit());
+        assertEquals(simulation,service.previewWholeOrderRefundCompensation(tenant,market,sale,List.of(choice)));
+        assertTrue(service.previewWholeOrderRefundCompensation(tenant,market,sale,List.of(choice,choice)).currencies().isEmpty());
+        var oldChoice=new ReceiptCostCompositionServiceV249.OrderCompensationChoice(event,itemA,digest);
+        assertTrue(service.previewWholeOrderRefundCompensation(tenant,market,sale,List.of(oldChoice)).currencies().isEmpty());
+        assertEquals(404,assertThrows(ResponseStatusException.class,()->
+            service.previewWholeOrderRefundCompensation(UUID.randomUUID(),market,sale,List.of(choice))).getStatusCode().value());
         assertEquals(409,assertThrows(ResponseStatusException.class,()->
             service.approveRefundCompensation(tenant,market,event,itemA,digest,compensationApprover,approvalReason)).getStatusCode().value());
         assertEquals(409,assertThrows(ResponseStatusException.class,()->
@@ -643,6 +664,7 @@ class ReceiptCostCompositionPg18V250Test {
         assertEquals(2,db.queryForObject("SELECT count(*) FROM finance_refund_cost_slice_v119 WHERE tenant_id=?",Integer.class,tenant));
         db.update("UPDATE finance_refund_item_review SET revision=2,reviewed_at=clock_timestamp() WHERE tenant_id=? AND event_id=?",tenant,next);
         var stale=service.readWholeOrderRefundReservations(tenant,market,sale);
+        assertTrue(service.previewWholeOrderRefundCompensation(tenant,market,sale,List.of(choice)).currencies().isEmpty());
         assertEquals("LOCAL_ORDER_REFUND_COST_HOLD",stale.state());
         assertTrue(stale.currencies().isEmpty());
         assertEquals(404,assertThrows(ResponseStatusException.class,

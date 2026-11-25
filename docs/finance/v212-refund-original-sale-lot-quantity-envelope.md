@@ -152,3 +152,10 @@ V265 [代码 9b8218f9064c](https://github.com/kunlong-luo/merchivra/commit/9b821
 ## V268 · 补偿并发整事务重试（待验收）
 
 V268：V123 请求/批准独立 REQUIRES_NEW RR 写事务仅对 PostgreSQL SQLSTATE 40001 完整重试，最多3次总尝试，每次重新计算当前 V265/V63、角色与撤销状态、原指纹及幂等 actor/reason；耗尽返回409，业务冲突/权限/其他 SQL 异常不重试。不降低隔离级别，不重复记录；无激活/释放/替换。V250 PG18 夹具使用独立 gate 连接 SHARE table lock 强制两真实 service RR insert 等待，pg_blocking_pids 证实并发，同请求/同批准返回同 receipt、不同批准理由只一成功一409，并检查行数；新 JUnit marker 强制，待 A3。此为本地合成并发契约，不是全域授权线性化或补偿全单守恒、正式会计批准。后续需全单只读补偿组合与跨事件/批次守恒，E1/G1 外部真实材料优先，actualRefundCogsReversal/realizedNetProfit=null。
+
+
+V268 [代码 bfbc124ca446](https://github.com/kunlong-luo/merchivra/commit/bfbc124ca446ce63b3b8fb0afac25baf1e1f1ec0) [快 CI #45586332715 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45586332715)，[A3 #45586332750](https://github.com/kunlong-luo/merchivra/actions/runs/45586332750) 核对时未结束。
+
+## V269 · 显式整单补偿守恒模拟（待验收）
+
+V269：内部显式选择最多20个已批准 event/item/proposal SHA，在单 RR 复用 V258–V267 整单人口/原币/历史 SKU/原成本及审核校验；V123 当前批准复核后仅对精确 stale claim/event 原坐标模拟补偿，保留其余 V119 通用条件、旧 peer 一致、原成本 digest、原区间与逐事件金额，必须逐一消费所有选定坐标、整单 event/item 数量守恒、原币成本守恒。普通读取仍无选择、stale HOLD；模拟结果单独标识 LOCAL_ORDER_COMPENSATION_SIMULATION_UNVERIFIED、COMPENSATION_NOT_ACTIVATED，未批准、缺覆盖、重复/过期/跨租户或其他证据失效不得产生完整候选，部分业务异常仍以403/404/409传播。V250 PG18 夹具两 claim 两事件，旧 A 已批准补偿 + 当前 B，正例与旧指纹/重复/跨租户/另一个 stale 负例，强制 marker，待 A3。没有写入、释放、替换、激活、公开 API/UI 或正式会计回转；未新增迁移。不是实际外部完整性、全域授权 ABA 或跨期会计批准，actualRefundCogsReversal/realizedNetProfit=null。
