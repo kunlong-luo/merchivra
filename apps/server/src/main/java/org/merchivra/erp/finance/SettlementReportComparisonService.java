@@ -235,6 +235,54 @@ public class SettlementReportComparisonService {
         if(directionBucketConflict)return "ORDER_DIRECTION_AMOUNT_DIFFERENCE";
         return "SOURCE_AMOUNTS_AGREE_UNVERIFIED";
     }
+    // V273: distinct diagnostic, not a V56 approval gate. One RR snapshot
+    // with V272 and current V28 rules. No classification write or posting.
+    static final String CATEGORY_SQL="""
+        WITH target AS (
+          SELECT id,tenant_id,seller_marketplace_id,statement_currency,settlement_reference
+          FROM spapi_settlement_report WHERE tenant_id=? AND seller_marketplace_id=? AND id=?
+        )
+        SELECT true AS report_side,line.external_order_id AS order_ref,
+          line.transaction_type,line.amount_type,line.amount_description,
+          NULL::text AS category,line.signed_amount AS amount
+        FROM target r JOIN spapi_settlement_report_line line ON line.tenant_id=r.tenant_id AND line.report_id=r.id
+        WHERE line.currency_code=r.statement_currency
+        UNION ALL
+        SELECT false,f.external_order_id,NULL::text,NULL::text,NULL::text,
+          rule.category,b.original_amount
+        FROM target r JOIN finance_transaction_reference ref ON ref.tenant_id=r.tenant_id
+          AND ref.reference_kind='SETTLEMENT_ID' AND ref.reference_value=r.settlement_reference
+        JOIN finance_source_event f ON f.tenant_id=ref.tenant_id AND f.id=ref.event_id
+          AND f.seller_marketplace_id=r.seller_marketplace_id AND f.source_family='SPAPI_FINANCES'
+          AND f.data_origin='LIVE' AND f.currency_code=r.statement_currency
+        JOIN finance_transaction_breakdown b ON b.tenant_id=f.tenant_id AND b.event_id=f.id
+          AND b.is_leaf AND b.currency_code=f.currency_code
+        LEFT JOIN finance_breakdown_rule rule ON rule.tenant_id=f.tenant_id
+          AND rule.seller_marketplace_id=f.seller_marketplace_id AND rule.source_type=b.source_type
+          AND rule.state='ACTIVE'
+        LIMIT 30001
+        """;
+
+    @org.springframework.transaction.annotation.Transactional(readOnly=true,
+        isolation=org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
+    public SettlementCategoryPreviewV273.Preview previewCategories(UUID tenant,UUID marketplace,UUID reportId,
+        List<SettlementCategoryPreviewV273.Mapping> input) {
+        final java.util.Map<SettlementCategoryPreviewV273.ReportType,String> mappings;
+        try {mappings=SettlementCategoryPreviewV273.validate(input);}
+        catch(IllegalArgumentException invalid) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,"Invalid explicit report category mapping");
+        }
+        var comparison=compare(tenant,marketplace,reportId);
+        if(!"SOURCE_AMOUNTS_AGREE_UNVERIFIED".equals(comparison.state()))
+            return SettlementCategoryPreviewV273.blocked(comparison.state(),comparison.currency(),"SOURCE_COMPARISON_HOLD");
+        var rows=jdbc.query(CATEGORY_SQL,(rs,n)->new SettlementCategoryPreviewV273.SourceRow(
+            rs.getBoolean("report_side"),rs.getString("order_ref"),
+            new SettlementCategoryPreviewV273.ReportType(rs.getString("transaction_type"),
+                rs.getString("amount_type"),rs.getString("amount_description")),
+            rs.getString("category"),rs.getBigDecimal("amount")),tenant,marketplace,reportId);
+        return SettlementCategoryPreviewV273.evaluate(comparison.state(),comparison.currency(),rows,mappings);
+    }
+
     private static String money(BigDecimal value) {
         return value==null?null:value.toPlainString();
     }

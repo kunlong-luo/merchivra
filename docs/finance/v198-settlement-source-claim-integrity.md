@@ -54,3 +54,20 @@ V271 [代码 6a17618dfbd2](https://github.com/kunlong-luo/merchivra/commit/6a176
 ## V272 · 末级明细与正负方向守恒（待验收）
 
 V272：现有 V198/V271 比较单 SQL 快照对每笔精确 Settlement ID、同 tenant/marketplace/currency LIVE Finances 事件核验 1–2000 个末级明细、非 NULL 金额/原币一致、末级净额等于事件净额；父节点不计入金额。缺口 FINANCES_LEAF_COVERAGE_INCOMPLETE，覆盖后按原始订单参考（NULL 单独）+金额正负方向核对 Reports 明细与 Finances leaf 合计，差异 ORDER_DIRECTION_AMOUNT_DIFFERENCE。零额无正负方向，仍由 V271 分组覆盖约束。保留旧阻断优先级、V56 审批仅允许 SOURCE_AMOUNTS_AGREE_UNVERIFIED。V272 指纹含当前全部拆分节点的 path/parent/type/amount/currency/is_leaf，旧指纹失效，未回填；前端 Zod 和提示同步；Java/Vitest 及 V198 真 PG18 TEMP 回归待 A3。此为金额方向守恒，不把正数一律认定商品收入、负数一律认定佣金，不凭名称猜测跨来源费用分类；同方向类别抵消、逐行身份、item/SKU 归属、实际原件与会计批准仍未解决。缺历史拆分的审核会阻断，须合法重新获取完整来源。独立 Redis smoke V270 失败具体原因未核实，不改测试或宣称修复。realizedNetProfit=null、OAuth OFF、#104 NO-GO。
+
+
+V272 [代码 75abfb7b8993](https://github.com/kunlong-luo/merchivra/commit/75abfb7b8993d2c47042504c82d15d8499df02cf) [快 CI #45615522059 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45615522059)，[只读 Pages #45615522250 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45615522250)，[完整 A3 #45615522448](https://github.com/kunlong-luo/merchivra/actions/runs/45615522448) 核对时仍运行中。
+
+## V273 · 显式跨来源费用分类预检（待验收）
+
+V273：新 POST category-comparison-preview（Owner Session/CSRF/no-store，只读 RR），复用 V272 全源比较及现有 V28 ACTIVE Finances leaf source_type 分类，Reports 显式输入完整 transaction_type/amount_type/amount_description 三元组映射（最多200，不预设 Amazon 对应关系）。按原始 order_ref（NULL 单独）+V28 category+金额方向（含零）独立比较，任一缺映射、UNCLASSIFIED、未使用映射或超限（30000行）不给类别总额；完全映射后报告冲突分组数和原币分类双方合计，不暴露订单编号。相同方向类别抵消可识别，但 V28 现有五类仍粗粒度，同一类内部佣金/其他子费用不能区分。映射仅为本次请求假设，不持久化、不写入 V28、没有独立批准/版本审计或接入 V56 审批门禁；mappingApproved/bankVerified/ledgerPosted=false，realizedNetProfit=null。未新增迁移、前端 UI 或第三方依赖。JUnit 合成金额反例及既有 V198 真 PG18 TEMP SQL 扩展验证站点/租户、当前 ACTIVE、末级和未映射，待 A3；真实 HTTP 授权和真实财务样本未验收。V270 Redis smoke 失败仍未修复。
+
+### 本地 Owner API 合同
+
+`POST /api/v1/finance/marketplaces/{marketplaceId}/reports/{reportId}/category-comparison-preview`，使用现有 Session Cookie/CSRF 与 JSON 请求数组。不接受 tenantId。下面仅为合成类型演示，真实映射须根据合法原件和财务政策复核，不可视为 Amazon 官方分类：
+
+```json
+[{"reportType":{"transactionType":"Order","amountType":"ItemFees","amountDescription":"Commission"},"category":"AMAZON_FEE"}]
+```
+
+实际请求需覆盖该报告全部原始类型组合，Finances 末级分类由当前 V28 ACTIVE 规则读取。`CATEGORY_MAPPING_INCOMPLETE` 不返回局部总额；`ORDER_CATEGORY_AMOUNT_DIFFERENCE` 表示按订单/类别/方向至少一个分组差异，汇总两侧金额仍可能抵消。`LOCAL_CATEGORY_AMOUNTS_AGREE_UNVERIFIED` 只说明给定映射下本地金额相符。无授权、无真实外部证据、无会计签署时禁止把结果用作正式利润。尚无持久化映射与 UI，后续基于真实原件设计独立审核、版本及失效契约，而非自动批准。

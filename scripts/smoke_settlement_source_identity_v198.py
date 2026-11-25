@@ -21,6 +21,10 @@ match = re.search(r"static final String COMPARISON_SQL=\"\"\"\s*(.*?)\s*\"\"\";"
 if not match:
     raise SystemExit("Unable to find exact settlement comparison SQL")
 query = match.group(1)
+category_match = re.search(r'static final String CATEGORY_SQL="""\s*(.*?)\s*""";', java, re.S)
+if not category_match or category_match.group(1).count("?") != 3:
+    raise SystemExit("Unable to find exact V273 category SQL")
+category_query = category_match.group(1)
 if query.count("?") != 3:
     raise SystemExit("Unexpected comparison parameter shape; do not guess scope")
 
@@ -36,6 +40,7 @@ third = "00000000-0000-4000-8000-000000000809"
 
 for value in (tenant, market, report):
     query = query.replace("?", "'" + value + "'::uuid", 1)
+    category_query = category_query.replace("?", "'" + value + "'::uuid", 1)
 
 commands = [r"""
 BEGIN;
@@ -237,6 +242,39 @@ commands.append(f"""
 DELETE FROM finance_transaction_breakdown WHERE event_id='{first}' AND is_leaf;
 """)
 check("V272 parent alone does not prove coverage", "leaf_coverage_conflict")
+commands.append(f"""
+ALTER TABLE spapi_settlement_report_line ADD COLUMN transaction_type text,
+ ADD COLUMN amount_type text, ADD COLUMN amount_description text;
+ALTER TABLE finance_transaction_breakdown ADD COLUMN source_type text;
+CREATE TEMP TABLE finance_breakdown_rule (
+ tenant_id uuid,seller_marketplace_id uuid,source_type text,category text,state text
+) ON COMMIT DROP;
+UPDATE spapi_settlement_report_line SET transaction_type='Order',amount_type='ItemFees',
+ amount_description='Commission' WHERE report_id='{report}' AND line_number=2;
+INSERT INTO finance_transaction_breakdown
+ (tenant_id,event_id,source_path,original_amount,currency_code,is_leaf,source_type) VALUES
+ ('{tenant}','{first}','0.0',20,'USD',true,'Principal'),
+ ('{tenant}','{first}','0.1',-2.50,'USD',true,'Commission');
+INSERT INTO finance_breakdown_rule VALUES
+ ('{tenant}','{market}','Principal','PRODUCT_SALES','ACTIVE'),
+ ('{tenant}','{market}','Commission','AMAZON_FEE','INACTIVE'),
+ ('{tenant}','{other_market}','Commission','FBA_FEE','ACTIVE'),
+ ('{other_tenant}','{market}','Commission','FBA_FEE','ACTIVE');
+CREATE TEMP VIEW v273_categories AS {category_query};
+DO $ BEGIN
+ IF (SELECT count(*) FROM v273_categories)<>4
+    OR (SELECT count(*) FROM v273_categories WHERE NOT report_side AND category='PRODUCT_SALES')<>1
+    OR (SELECT count(*) FROM v273_categories WHERE NOT report_side AND category IS NULL)<>1
+    OR (SELECT count(*) FROM v273_categories WHERE report_side AND amount_description='Commission')<>1
+ THEN RAISE EXCEPTION 'V273 exact category scope or mapping failure'; END IF;
+END $;
+UPDATE finance_breakdown_rule SET state='ACTIVE'
+ WHERE tenant_id='{tenant}' AND seller_marketplace_id='{market}' AND source_type='Commission';
+DO $ BEGIN
+ IF (SELECT count(*) FROM v273_categories WHERE NOT report_side AND category='AMAZON_FEE')<>1
+ THEN RAISE EXCEPTION 'V273 active rule not applied'; END IF;
+END $;
+""")
 commands.append("ROLLBACK;\n")
 result = subprocess.run(
     ["psql", "-X", "-h", "127.0.0.1", "-U", "merchivra", "-d", "merchivra",
@@ -252,3 +290,5 @@ print("PASS V198 real PG18 exact Java SQL: unique source claim, report identity,
 print("PASS V271 real PG18 exact Java SQL: order buckets, offsetting errors, NULL and absent zero bucket")
 
 print("PASS V272 real PG18 exact Java SQL: gross direction and leaf coverage")
+
+print("PASS V273 real PG18 exact category SQL: current active rule, scope, leaf-only and unmapped coverage")

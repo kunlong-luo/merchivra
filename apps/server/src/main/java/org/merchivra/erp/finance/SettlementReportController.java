@@ -48,6 +48,16 @@ public class SettlementReportController {
             .body(comparisons.compare(tenants.currentTenant(auth,req),marketplaceId,reportId));
     }
 
+    /** Ephemeral local mapping, Owner/CSRF, no persistence or approval. */
+    @org.springframework.web.bind.annotation.PostMapping("/{reportId}/category-comparison-preview")
+    public ResponseEntity<SettlementCategoryPreviewV273.Preview> categoryPreview(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID marketplaceId,
+        @PathVariable UUID reportId,
+        @org.springframework.web.bind.annotation.RequestBody List<SettlementCategoryPreviewV273.Mapping> mapping) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore())
+            .body(comparisons.previewCategories(tenants.currentTenant(auth,req),marketplaceId,reportId,mapping));
+    }
+
     @GetMapping("/{reportId}/review")
     public ResponseEntity<SettlementReportImportService.Review> review(
         Authentication auth,HttpServletRequest req,@PathVariable UUID marketplaceId,
