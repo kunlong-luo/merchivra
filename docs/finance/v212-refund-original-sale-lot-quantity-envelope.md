@@ -68,3 +68,7 @@ PG18 作业原始日志记录 `PASS V212 PG18 exact V34/V106/V96/V97 source SELE
 下一阶段 V213 优先继续实际财务成本的证据完整性与计算准入：**从真实物流/退货返回原销售批次的逐件映射、独立仓库签收、入库最终含税成本、物流与银行结算、跨期间 G1 决议**，以及已实现多次退款的金额/数量唯一归属。不先得到真实外部来源和 G1 会计批准就不能发布真实退款回转或非 NULL 净利润。
 
 **正式评分 70/100，真实 Amazon Seller/Ads OAuth OFF，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) NO-GO，`realizedNetProfit=null`。**
+
+## V255 · 原认领成本候选版本与退款子区间（内部观察，待验收）
+
+`ReceiptCostCompositionServiceV249.prepareRefundBasis` 在同一独立只读 RR 中重算 V249、读取 V106 租户/Marketplace/receipt/claim/order/item 作用域，提取 V117 原销售区间、原币、数量分母、PO/头程/关税各 receipt 原金额与 claim 分摊；缺失/失效/撤销/费用 hold 拒绝，不另查当前 SKU 均价。`RefundOriginalCostSliceEngineV255` 对固定版本和上述字段做规范 SHA-256，逐来源独立复算原认领金额；退款重放必须显式提供期望作用域、原指纹和同一认领下全部拟议退款子区间。原 receipt 前缀差分复用 V246，禁止重复 event、重叠/越界、错误 item、数量不符、NOT_RESTOCKED 或空集合；同一 event 在同一 claim 仅允许一个连续区间。逐事件及剩余金额守恒，仍只返回未核证候选，实际回转与利润 null。V255 没有持久化快照、完整退款人口/事件存在性或跨调用全局唯一归属证明；RESTOCKED_CLAIMED 仍只是人工声称，SHA 不是签名或销售发生时会计事实。不得依据事后 capture 伪造历史成本。后续需不可变版本保存、V34/V210/V212/V213 原事件/返仓证据和数据库级退款区间守卫；E1/E3/E5 未通过前不可记账。单元回归和 V250 实际 PG18 scope/capture/价格漂移及 replay marker 待新 A3。

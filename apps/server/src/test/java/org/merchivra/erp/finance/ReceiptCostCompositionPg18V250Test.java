@@ -98,6 +98,17 @@ class ReceiptCostCompositionPg18V250Test {
         assertNull(result.actualBatchCogs());
         assertNull(result.realizedNetProfit());
         assertHttpCandidate(client);
+        var basis=service.prepareRefundBasis(tenant,market,receipt,claimA);
+        assertEquals(itemA,basis.identity().orderItemId());
+        assertEquals(sale,basis.identity().salesOrderId());
+        assertEquals("14.999999",basis.originalCandidateAmount());
+        var proposed=List.of(new RefundOriginalCostSliceEngineV255.Slice(
+            UUID.randomUUID(),itemA,0,1,1,"RESTOCKED_CLAIMED"));
+        var replay=RefundOriginalCostSliceEngineV255.replay(basis.identity(),basis.sha256(),basis,proposed);
+        assertEquals("14.999999",replay.refundCandidateAmount());
+        assertNull(replay.actualRefundCogsReversal());
+        assertEquals(404,assertThrows(ResponseStatusException.class,
+            ()->service.prepareRefundBasis(tenant,market,receipt,UUID.randomUUID())).getStatusCode().value());
         assertEquals(401,http(HttpClient.newHttpClient(),candidatePath(),null,null).statusCode());
         // An independent current read cannot borrow foreign tenant receipts.
         assertEquals(404,assertThrows(ResponseStatusException.class,
@@ -105,6 +116,12 @@ class ReceiptCostCompositionPg18V250Test {
         db.update("UPDATE erp_purchase_order_line SET unit_cost=11 WHERE tenant_id=? AND id=?",tenant,pol);
         hold("ORIGINAL_CLAIM_OR_RANGE_INCOMPLETE_OR_STALE");
         assertHttpHold(client,"ORIGINAL_CLAIM_OR_RANGE_INCOMPLETE_OR_STALE");
+        assertEquals(409,assertThrows(ResponseStatusException.class,
+            ()->service.prepareRefundBasis(tenant,market,receipt,claimA)).getStatusCode().value());
+        // A prior local observation can still be arithmetically replayed,
+        // but must never become a fresh or verified refund cost.
+        assertEquals(replay,RefundOriginalCostSliceEngineV255.replay(
+            basis.identity(),basis.sha256(),basis,proposed));
         db.update("UPDATE erp_purchase_order_line SET unit_cost=10 WHERE tenant_id=? AND id=?",tenant,pol);
         assertEquals(result,service.preview(tenant,market,receipt));
         assertHttpCandidate(client);
@@ -125,6 +142,7 @@ class ReceiptCostCompositionPg18V250Test {
         var csrf=readJson(http(client,"/api/v1/auth/csrf",null,null));
         assertEquals(204,http(client,"/api/v1/auth/logout","",csrf.path("token").asText()).statusCode());
         assertEquals(401,http(client,candidatePath(),null,null).statusCode());
+        System.out.println("PASS V255 actual PG18 scoped candidate capture and original refund slice replay, price drift hold");
         System.out.println("PASS V254 actual Owner HTTP nonempty receipt candidate 45/30/15, exact shares, drift/recovery, hold and logout");
         System.out.println("PASS V250 actual PG18 V249 composition: PO freight duty 45/30/15, original source shares, missing range/duty, drift, retraction and cross-marketplace hold");
     }

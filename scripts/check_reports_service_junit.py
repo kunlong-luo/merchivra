@@ -37,7 +37,8 @@ if __name__ == "__main__":
         verify(REPORT.with_name('TEST-org.merchivra.erp.finance.ReceiptCostCompositionPg18V250Test.xml'),
                'actualPg18ReceiptCostsAndSaleRangesConserveAmounts',
                ('PASS V250 actual PG18 V249 composition:',
-                'PASS V254 actual Owner HTTP nonempty receipt candidate'))
+                'PASS V254 actual Owner HTTP nonempty receipt candidate',
+                'PASS V255 actual PG18 scoped candidate capture'))
     except (OSError, ET.ParseError, ValueError) as exc:
         sys.exit(f"FAIL isolated PG18 service JUnit evidence: {exc}")
     print("PASS V236 actual PG18 Java service test executed (not skipped); remote worker synthetic")
@@ -45,3 +46,4 @@ if __name__ == "__main__":
 
     print("PASS V250 actual PG18 composition JUnit marker verified (not skipped)")
     print("PASS V254 actual nonempty Owner HTTP JUnit marker verified (not skipped)")
+    print("PASS V255 actual PG18 original candidate replay JUnit marker verified (not skipped)")

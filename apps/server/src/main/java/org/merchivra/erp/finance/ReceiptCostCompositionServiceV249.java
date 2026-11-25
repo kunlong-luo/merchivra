@@ -58,7 +58,37 @@ public class ReceiptCostCompositionServiceV249 {
     public Candidate preview(UUID tenant,UUID marketplace,UUID receipt) {
         if(tenant==null||marketplace==null||receipt==null)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
+        return read.execute(ignored->readCandidate(tenant,marketplace,receipt));
+    }
+
+    // Capture a versioned LOCAL observation for exactly one persisted claim.
+    // Not a sale-time posting, no persistence, no external proof. Identity
+    // and candidate amounts share the same independent RR snapshot.
+    public RefundOriginalCostSliceEngineV255.Basis prepareRefundBasis(
+        UUID tenant,UUID marketplace,UUID receipt,UUID claimId) {
+        if(tenant==null||marketplace==null||receipt==null||claimId==null)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST);
         return read.execute(ignored->{
+            var candidate=readCandidate(tenant,marketplace,receipt);
+            var identities=jdbc.query("""
+                SELECT sales_order_id,order_item_id FROM finance_sale_lot_claim_v106
+                WHERE tenant_id=? AND marketplace_id=? AND receipt_id=? AND id=?
+                """,(rs,n)->new RefundOriginalCostSliceEngineV255.Identity(
+                    tenant,marketplace,receipt,claimId,
+                    rs.getObject("sales_order_id",UUID.class),
+                    rs.getObject("order_item_id",UUID.class)),
+                tenant,marketplace,receipt,claimId);
+            if(identities.size()!=1)throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            try {
+                return RefundOriginalCostSliceEngineV255.capture(identities.getFirst(),candidate);
+            } catch(IllegalArgumentException invalid) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Cannot capture intact original local cost candidate",invalid);
+            }
+        });
+    }
+
+    private Candidate readCandidate(UUID tenant,UUID marketplace,UUID receipt) {
             var source=audit.snapshot(tenant,marketplace,receipt);
             var claims=jdbc.query(CLAIM_SQL,(rs,n)->new Claim(
                 rs.getObject("id",UUID.class),rs.getObject("marketplace_id",UUID.class),
@@ -83,7 +113,6 @@ public class ReceiptCostCompositionServiceV249 {
                 throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Receipt candidate amount or identity inconsistent",invalid);
             }
-        });
     }
 
     private static Candidate hold(String reason) {
