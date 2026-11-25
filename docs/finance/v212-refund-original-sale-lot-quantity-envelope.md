@@ -110,3 +110,10 @@ V261：单 RR 全单候选在 V259 金额、V260 SKU 和 V119 预留完整后，
 ## V262 · V34/V35 不可重用行版本与 V63 指纹升级（待验收）
 
 V262：追加 Flyway V121，V34/V35 每行增加数据库全局序列不可重用版本；任何实际 UPDATE/INSERT（含恢复原值、删除重建、伪造旧版本）重分配，完全 no-op 保持，回滚不改变已提交版本。V63 证据摘要显式版本化并绑定同 RR 的两组有界行版本，旧 V63 指纹不能自动升级，必须重新发起并独立审批。V250 真实 PG18 夹具增加金额/作者/数量 ABA、撤回重建（携旧版本）、no-op、rollback 和复审恢复，JUnit marker 强制；V261 既有审计负例保留。仅覆盖 V34/V35 行生命周期，不涵盖 SKU/成本/源分类/订单/授权 ABA、管理员篡改序列或 V119 预留版本；不改历史迁移或原金额，不增加 API/UI。V261 CI/A3 尚未最终核对，V262 待独立 A3。真实返仓与外部来源/G1 缺失，实际回转与 realizedNetProfit=null。
+
+
+V261 [代码 e76e520fe904](https://github.com/kunlong-luo/merchivra/commit/e76e520fe904ec8b2e630b83447eef5a1196f151) [快 CI #45576590997 CANCELLED](https://github.com/kunlong-luo/merchivra/actions/runs/45576590997)，[A3 #45576590955](https://github.com/kunlong-luo/merchivra/actions/runs/45576590955) 核对时仍运行，6 个 job 成功、PG18 未结束。V262 [代码 40071cb9a80d](https://github.com/kunlong-luo/merchivra/commit/40071cb9a80d2f0cdc37ccba92280a427d4f6f30) [快 CI #45576841371 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45576841371)，[A3 #45576841081](https://github.com/kunlong-luo/merchivra/actions/runs/45576841081) 待最终核对。
+
+## V263 · V119 预留与 V34 证据版本（待验收）
+
+V263：Flyway V122 追加 V119 不可变预留的 V34 evidence_revision_v121 捕获列。V119 原有 READ COMMITTED 订单行锁与源/审核行共享锁继续有效，按触发器名字顺序在既有捕获后核实身份并覆盖调用者版本；同 event/item 旧/不同版本 peer 阻断新预留。读取同 RR 比较捕获版本和当前 V34 版本及 peer，旧 NULL 一律 HOLD、不回填、不释放区间。V34 ABA 即使 V63 新复审也不能恢复原预留；V35 更新仍由 V63 重审处理，不绑定到早于 V35 的 V119 捕获。V250 PG18 增加版本匹配和永久 HOLD 回归，保留其他正例与竞争测试；新 marker 强制，待 A3。无撤销/替换协议，历史预留可能需后续经批准的补偿契约；不覆盖源/SKU/成本/授权 ABA，现行 Owner 资格待补，真实外部原件/返仓/G1 缺失。无新 API/UI、旧迁移不改，actualRefundCogsReversal/realizedNetProfit=null。

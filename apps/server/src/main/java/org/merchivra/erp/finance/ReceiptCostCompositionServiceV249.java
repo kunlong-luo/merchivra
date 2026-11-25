@@ -148,7 +148,8 @@ public class ReceiptCostCompositionServiceV249 {
             String digest=stored.getFirst().getFirst();
             var rows=jdbc.query("""
                 SELECT s.refund_event_id,s.unit_from,s.unit_to,
-                  coalesce(r.revision=s.review_revision AND r.reviewed_quantity=s.review_quantity
+                  coalesce(r.evidence_revision_v121=s.review_evidence_revision_v122
+                    AND r.revision=s.review_revision AND r.reviewed_quantity=s.review_quantity
                     AND r.reviewed_at=s.review_at AND r.disposition='RESTOCKED_CLAIMED'
                     AND r.sales_order_id=c.sales_order_id
                     AND f.source_family='SPAPI_FINANCES' AND f.data_origin='LIVE'
@@ -162,6 +163,7 @@ public class ReceiptCostCompositionServiceV249 {
                       WHERE peer.tenant_id=s.tenant_id AND peer.refund_event_id=s.refund_event_id
                         AND peer.order_item_id=s.order_item_id AND (
                           v.integrity_state IS DISTINCT FROM 'LOCAL_LINK_INTACT_UNVERIFIED'
+                          OR peer.review_evidence_revision_v122 IS DISTINCT FROM s.review_evidence_revision_v122
                           OR peer.review_revision<>s.review_revision OR peer.review_quantity<>s.review_quantity
                           OR peer.review_at<>s.review_at))
                     AND (SELECT coalesce(sum(p.unit_to::bigint-p.unit_from),0)

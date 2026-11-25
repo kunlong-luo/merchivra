@@ -118,7 +118,7 @@ class ReceiptCostCompositionPg18V250Test {
         var replay=RefundOriginalCostSliceEngineV255.replay(basis.identity(),basis.sha256(),basis,proposed);
         assertEquals("14.999999",replay.refundCandidateAmount());
         assertNull(replay.actualRefundCogsReversal());
-        assertEquals(2,db.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE version IN ('119','120') AND success",Integer.class));
+        assertEquals(4,db.queryForObject("SELECT count(*) FROM flyway_schema_history WHERE version IN ('119','120','121','122') AND success",Integer.class));
         var stored=service.persistRefundBasis(tenant,market,receipt,claimA,maker);
         assertEquals(basis,stored);
         assertEquals(basis.sha256(),db.queryForObject("""
@@ -148,13 +148,13 @@ class ReceiptCostCompositionPg18V250Test {
         assertNull(current.replay().actualRefundCogsReversal());
         db.update("UPDATE finance_refund_item_review SET revision=2,reviewed_at=clock_timestamp() WHERE tenant_id=? AND event_id=?",tenant,rival);
         assertReservationHold("REFUND_REVIEW_OR_LINK_STALE");
-        // Restore only in synthetic test; equality alone is not ABA protection.
+        // V263: restoring the legacy fields must not restore reservation validity.
         db.update("""
             UPDATE finance_refund_item_review r SET revision=s.review_revision,reviewed_at=s.review_at
             FROM finance_refund_cost_slice_v119 s WHERE r.tenant_id=s.tenant_id
               AND r.event_id=s.refund_event_id AND s.tenant_id=? AND s.claim_id=?
             """,tenant,claimA);
-        assertEquals(current,service.readRefundReservations(tenant,market,receipt,claimA));
+        assertReservationHold("REFUND_REVIEW_OR_LINK_STALE");
         assertEquals(404,assertThrows(ResponseStatusException.class,
             ()->service.prepareRefundBasis(tenant,market,receipt,UUID.randomUUID())).getStatusCode().value());
         assertEquals(401,http(HttpClient.newHttpClient(),candidatePath(),null,null).statusCode());
@@ -194,6 +194,7 @@ class ReceiptCostCompositionPg18V250Test {
         var second=new ReceiptCostCompositionPg18V250Test();
         second.db=db;second.write=write;second.service=service;second.recovery=recovery;
         second.crossClaimRace();
+        System.out.println("PASS V263 actual PG18 immutable reservation quantity version capture and ABA permanent hold");
         System.out.println("PASS V262 actual PG18 nonreusable refund evidence revisions, ABA, recreation, no-op and rollback");
         System.out.println("PASS V261 actual PG18 V63 review required, stale revision, author independence and duplicate audit hold");
         System.out.println("PASS V260 actual PG18 historical SKU mapping missing and remapped hold, V259 amount coverage");
@@ -419,12 +420,8 @@ class ReceiptCostCompositionPg18V250Test {
         assertTrue(db.queryForObject("SELECT evidence_revision_v121 FROM finance_refund_amount_allocation WHERE tenant_id=? AND event_id=?",Long.class,tenant,event)>before);
         assertIndependentHold();
         approveRefund(event);
-        // V34 quantity ABA, same application revision and timestamp.
-        db.update("UPDATE finance_refund_item_review SET reviewed_quantity=2 WHERE tenant_id=? AND event_id=?",tenant,event);
-        db.update("UPDATE finance_refund_item_review SET reviewed_quantity=1 WHERE tenant_id=? AND event_id=?",tenant,event);
-        assertIndependentHold();
-        approveRefund(event);
-        assertEquals(first.currencies(),service.readWholeOrderRefundReservations(tenant,market,sale).currencies());
+        // V34 ABA is tested after all positive reservation scenarios: unlike
+        // V35 money review, immutable V119 coordinates cannot be refreshed.
         // Missing/duplicated V63 audit must not be masked by a current digest.
         UUID duplicate=UUID.randomUUID();
         db.update("""
@@ -462,6 +459,27 @@ class ReceiptCostCompositionPg18V250Test {
         assertEquals(List.of(new ReceiptCostCompositionServiceV249.OrderRefundCurrency(
             "USD","30.000000","30.000000","0.000000")),full.currencies());
         assertEquals(2,full.reservedRefundUnits());
+        // DB-captured tokens must match their V34 population, including the
+        // second claim after the independent connection race.
+        assertEquals(2,db.queryForObject("""
+            SELECT count(*) FROM finance_refund_cost_slice_v119 s
+            JOIN finance_sale_lot_claim_v106 c ON c.tenant_id=s.tenant_id AND c.id=s.claim_id
+            JOIN finance_refund_item_review v ON v.tenant_id=s.tenant_id
+              AND v.event_id=s.refund_event_id AND v.external_item_id=c.snapshot_external_item_id
+            WHERE s.tenant_id=? AND s.review_evidence_revision_v122=v.evidence_revision_v121
+            """,Integer.class,tenant));
+        // V34 ABA invalidates both V63 review and permanently reserved slice.
+        db.update("UPDATE finance_refund_item_review SET reviewed_quantity=2 WHERE tenant_id=? AND event_id=?",tenant,event);
+        db.update("UPDATE finance_refund_item_review SET reviewed_quantity=1 WHERE tenant_id=? AND event_id=?",tenant,event);
+        assertEquals("STALE",recovery.preview(tenant,market,event).state());
+        assertReservationHold("REFUND_REVIEW_OR_LINK_STALE");
+        approveRefund(event);
+        assertEquals("REVIEWED",recovery.preview(tenant,market,event).state());
+        var abaHold=service.readWholeOrderRefundReservations(tenant,market,sale);
+        assertTrue(abaHold.blockers().contains("ORIGINAL_COST_BASIS_OR_RESERVATION_STALE"));
+        assertTrue(abaHold.currencies().isEmpty());
+        assertNull(abaHold.actualRefundCogsReversal());
+        assertEquals(2,db.queryForObject("SELECT count(*) FROM finance_refund_cost_slice_v119 WHERE tenant_id=?",Integer.class,tenant));
         db.update("UPDATE finance_refund_item_review SET revision=2,reviewed_at=clock_timestamp() WHERE tenant_id=? AND event_id=?",tenant,next);
         var stale=service.readWholeOrderRefundReservations(tenant,market,sale);
         assertEquals("LOCAL_ORDER_REFUND_COST_HOLD",stale.state());
