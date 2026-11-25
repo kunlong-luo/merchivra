@@ -35,3 +35,7 @@ V215 第一次完整 A3 #45295153716 在精确 `7515edd` 的 PostgreSQL 18 专�
 V246 精确 [SHA 8ab8a93a53b3](https://github.com/kunlong-luo/merchivra/commit/8ab8a93a53b348a7a329e0292b992007bd426efb) [CI #45560785767](https://github.com/kunlong-luo/merchivra/actions/runs/45560785767) SUCCESS，PG18 SKIPPED。V247 的本地显式坐标契约见 [V106/V117](v203-sale-to-lot-link-integrity-contract.md)；不改变 V112 来源金额、审批或实际利润门禁。
 
 V247 的完整 A3 PG18 失败，V248 以追加 V118 修正区间触发器别名并补真实双连接回归；参见 [V106/V117/V118](v203-sale-to-lot-link-integrity-contract.md)。V112 金额与 V246 分摊的业务集成留待区间验收及 E1/E3/E5 证据，不以测试代替成本认证。
+
+## V249 · PO 原价、头程、关税与销售区间组合（内部候选，待验收）
+
+`ReceiptCostCompositionServiceV249` 在独立 REQUIRES_NEW/read-only RR 快照复用 V216 单次 source/碰撞读取、V106 全历史 claim（含撤销）、V117 区间及 V246 算术。单次快照不是 V216 独立双读实时校验，不为外部源签证。跨站点 claim/费用、缺失/撤销/失效区间、收货与验收数量不同、不同 PO 单价/原币、缺少头程或关税、V216 审核/冲突 hold、PAYMENT_AND_FX 均阻断整体候选金额；没有合法零费用证明时不把缺失记零。每个原始来源只分摊 V112 当前收货归属金额，不使用全来源金额；PO 参考价乘同一数量分母。每来源分别按 V246 分摊后加总，保留每来源及每 claim 候选值、未分配金额。未冻结外部费用组合版本、未提供 API/UI/持久化/退款过账；实际成本及净利润恒 null。Java 回归涵盖逐来源尾差、缺费用、碰撞、跨站点、缺区间、拒收和重叠；数据库服务路径尚待真实 PG18 集成回归。

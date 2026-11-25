@@ -105,7 +105,8 @@ public class ReceiptCostIntegrityServiceV216 {
         Map<UUID,CostIdentityReconciliationService.Preview> overlaps,
         long committedEvidenceRevision) {}
 
-    private Snapshot snapshot(UUID tenant,UUID marketplace,UUID receipt) {
+    // Package-local reuse by the V249 single-snapshot candidate calculator.
+    Snapshot snapshot(UUID tenant,UUID marketplace,UUID receipt) {
         return tx.execute(ignored -> {
             // Scope and evidence must share the SAME RR snapshot. An outer
             // non-transactional scope check could be stale before the scan.
