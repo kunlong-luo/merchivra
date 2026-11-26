@@ -1,6 +1,6 @@
 import {describe,expect,it} from 'vitest'
 import {WORKBENCH_VIEWS,workbenchPath,viewFromWorkbenchPath,
- isWorkbenchView,coreSectionForView} from './workbench-routes'
+ isWorkbenchView,coreSectionForView,resolveWorkbenchView} from './workbench-routes'
 
 describe('V100: route canonicalization and live-data boundaries',()=>{
  it('supports every known Next module with a stable deep link',()=>{
@@ -23,6 +23,14 @@ describe('V100: route canonicalization and live-data boundaries',()=>{
    expect(viewFromWorkbenchPath(path)).toBeNull()
   }
   expect(isWorkbenchView('admin')).toBe(false)
+ })
+ it('V286 renders only committed Next routes and preserves local fallback and role boundaries',()=>{
+  expect(resolveWorkbenchView('finance','purchasing',true,true,false)).toBe('finance')
+  expect(resolveWorkbenchView('purchasing','finance',true,true,false)).toBe('purchasing')
+  expect(resolveWorkbenchView('orders','finance',false,true,false)).toBe('finance')
+  expect(resolveWorkbenchView('finance','finance',true,false,true)).toBe('core')
+  expect(resolveWorkbenchView('finance','finance',false,false,false)).toBe('core')
+  expect(resolveWorkbenchView('overview','core',true,true,true)).toBe('connections')
  })
  it('binds Orders, Listing and FBA URLs to true tenant-scoped Core tables',()=>{
   expect(coreSectionForView('orders')).toBe('orders')

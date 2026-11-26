@@ -29,3 +29,14 @@ export function coreSectionForView(view:WorkbenchView):
  if(view==='inventory')return 'inventory'
  return null
 }
+
+/** V286: a Next route is authoritative; a pending local navigation cannot mount
+ * a second business view before the router commits. Staff never see Owner modules.
+ * The OAuth callback marker preserves its existing read-only connections view.
+ */
+export function resolveWorkbenchView(route:WorkbenchView,local:WorkbenchView,
+ routeNavigation:boolean,isOwner:boolean,pendingOAuth:boolean):WorkbenchView{
+ if(!isOwner)return 'core'
+ if(routeNavigation)return pendingOAuth?'connections':route
+ return local
+}

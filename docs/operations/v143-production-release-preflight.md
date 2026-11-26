@@ -132,3 +132,13 @@ V285：实际调整 Next App Router 结构，将唯一持久 Portal 提升至 `a
 ## V285 复评（2026-11-26）
 
 维持 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维8/10。V284 快 CI 成功但 Next 分类专项失败；V285 修复重复工作台结构尚未通过专项及精确 SHA 完整 A3，不提高分值。评分为定性成熟度而非生产准入。#104 OPEN/BLOCKED；真实 E1–E5、DEC/G1、G2/G3 目标证据与签署未完成，realizedNetProfit=null、Seller/Ads OAuth OFF。已验收基线可受控本地/隔离合成试用，私有预生产仅有条件验证，最新主线不能宣称 RC 已通过，正式商业生产 NO-GO。
+
+
+V285 [SHA d8598a984d15](https://github.com/kunlong-luo/merchivra/commit/d8598a984d15c4307b61bc1b106dda6210424c98) [快 CI #45746763737 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45746763737) [只读 Pages #45746763489 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45746763489)；[独立 Chromium #45746763553 FAILURE](https://github.com/kunlong-luo/merchivra/actions/runs/45746763553) [job #139664594040](https://github.com/kunlong-luo/merchivra/actions/runs/45746763553/job/139664594040) 确认 checkout 精确 SHA。Next 日志仍为报告列表一次 GET、无分类子请求、空选中值，记录六组重复选项；不能仅凭选项数组断定六个 select 或六个 Portal，前序单 Portal 检查未报错。V285 结构修复尚不足以证明问题解决，实际根因未完全确认。V280 r2 A3 7/7 及 V281 Redis 专项仍为已验收历史基线。
+
+V286：继续修正实际应用的双重视图来源：Next 只按已提交路径决定工作区，不再由点击时乐观本地 setActiveView 与 effect 回写交替渲染；Vite 保留本地视图，非 Owner 始终仅渲染 core 并在 Next 替换路径，Owner 保留既有 OAuth pending_verification 页面提示（不启用授权）。抽出纯 resolveWorkbenchView，增加 Vitest 角色/路径优先级回归，工作区增加当前视图语义标识。Chromium 要求唯一 Portal/报告 section/select 且归属当前 finance 工作区，并逐一记录实际 select 数量、可见性、hidden/inert、归属根及选项，保留唯一性、金额、实际 HTTP、写入精确体及审批失效检查；新增离开财务、历史后退/前进、单一根实例及不保留选择/不重放写入断言。未放宽重复控件门禁、未修改超时、未改变后端/依赖/迁移。V286 仍需快 CI 与实际 Chromium 证明，若失败需依据新逐实例诊断继续排查，不能宣称根因已完全确认。
+
+
+## V286 复评（2026-11-26）
+
+维持 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维8/10。V285 快 CI/Pages 成功但浏览器专项失败；V286 新提交待验收，不增加分值。#104 OPEN/BLOCKED；真实 E1–E5、DEC/G1、G2/G3 目标证明及签署未完成，realizedNetProfit=null、Seller/Ads OAuth OFF。已验收基线可受控本地/隔离合成试用，最新主线未获得 RC 完整验收；私有预生产仅限有条件验证，正式生产 NO-GO。评分是定性成熟度而不是上线许可。

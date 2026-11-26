@@ -1819,8 +1819,14 @@ async function main() {
         // the native select has reset, never repeat a write action.
         const reportChoice=`(() => {
           if(location.pathname!=='/finance')return false
+          const roots=[...document.querySelectorAll('.next-workbench')]
+          if(roots.length!==1)return false
+          const active=roots[0].querySelector('.workspace[data-workbench-view="finance"]')
+          if(!active)return false
+          const sections=[...document.querySelectorAll('section[aria-label="Amazon 结算报告来源核对"]')]
+          if(sections.length!==1||!active.contains(sections[0]))return false
           const selects=[...document.querySelectorAll('#reports-selected')]
-          if(selects.length!==1)return false
+          if(selects.length!==1||!sections[0].contains(selects[0]))return false
           const el=selects[0]
           if(!el.getClientRects().length||el.closest('[hidden],[inert],[aria-hidden="true"]')
               ||!Array.from(el.options).some(o=>o.value===${JSON.stringify(v282Report)}))return false
@@ -1840,7 +1846,18 @@ async function main() {
             requests:v282Requests,dom:await evaluate(send,`(() => {
               const report=document.querySelector('section[aria-label="Amazon 结算报告来源核对"]')
               return {route:location.pathname,selected:document.querySelector('#reports-selected')?.value,
-                options:[...document.querySelectorAll('#reports-selected option')].map(o=>o.value),
+                roots:[...document.querySelectorAll('.next-workbench')].map(el=>({
+                  visible:!!el.getClientRects().length,persistent:el.dataset.v285Persistent,
+                  views:[...el.querySelectorAll('.workspace')].map(w=>w.dataset.workbenchView)
+                })),
+                sections:document.querySelectorAll('section[aria-label="Amazon 结算报告来源核对"]').length,
+                selects:[...document.querySelectorAll('#reports-selected')].map(el=>({
+                  value:el.value,visible:!!el.getClientRects().length,
+                  hidden:!!el.closest('[hidden],[inert],[aria-hidden="true"]'),
+                  view:el.closest('.workspace')?.dataset.workbenchView,
+                  inPortal:!!el.closest('.next-workbench'),
+                  options:[...el.options].map(o=>o.value)
+                })),
                 current:report?.textContent?.slice(-1600),
                 panel:document.querySelector(${JSON.stringify(v282Panel)})?.textContent?.slice(0,1200)}
             })()`)
@@ -1957,6 +1974,31 @@ async function main() {
         await evaluate(send,
           "document.querySelector('.v106-finance-events-table')?.scrollIntoView({block:'center'})")
         await screenshot(send,'v106-finance-table-360.png')
+        // V286: navigate away/back/forward via history without remounting the
+        // session root; re-entering finance must not retain selected evidence.
+        const goPurchasing=async()=>evaluate(send,`(() => {
+          const link=document.querySelector('.next-workbench .nav-link[href="/purchasing"]')
+          if(!link)throw Error('Missing V286 purchasing link')
+          link.click()
+        })()`)
+        const routeReady=(route,view)=>`location.pathname===${JSON.stringify(route)} &&
+          document.querySelectorAll('.next-workbench').length===1 &&
+          document.querySelectorAll('.next-workbench .workspace').length===1 &&
+          document.querySelector('.next-workbench .workspace')?.dataset.workbenchView===${JSON.stringify(view)} &&
+          document.querySelector('.next-workbench')?.dataset.v285Persistent==='yes'`
+        await goPurchasing()
+        await waitFor(send,routeReady('/purchasing','purchasing'),'V286 committed purchasing route')
+        assert.equal(await evaluate(send,"document.querySelectorAll('#reports-selected').length"),0)
+        await evaluate(send,'history.back()')
+        await waitFor(send,routeReady('/finance','finance'),'V286 history back to finance')
+        await waitFor(send,"document.querySelectorAll('#reports-selected').length===1 && document.querySelector('#reports-selected')?.value===''",
+          'V286 re-entry one report selector, no retained selection')
+        assert.equal(await evaluate(send,'!!document.querySelector('+JSON.stringify(v282Panel)+')'),false)
+        await evaluate(send,'history.forward()')
+        await waitFor(send,routeReady('/purchasing','purchasing'),'V286 history forward to purchasing')
+        assert.equal(await evaluate(send,"document.querySelectorAll('#reports-selected').length"),0)
+        assert.equal(v282Writes.length,3,'V286 navigation must not replay writes')
+        console.log('PASS V286 committed route, persistent session root, history back/forward, no retained category selection or replay')
       }
       // Synthetic connected Marketplace must expose a LIVE-gated operations
       // panel outside the local Demo tools. This does not call Amazon.

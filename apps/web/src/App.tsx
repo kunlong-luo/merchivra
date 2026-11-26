@@ -1,7 +1,7 @@
 import {useEffect,useState} from 'react'
 import {useMutation,useQuery,useQueryClient} from '@tanstack/react-query'
 import type {AuthViewer} from './lib/auth'
-import type {WorkbenchView} from './lib/workbench-routes'
+import {resolveWorkbenchView,type WorkbenchView} from './lib/workbench-routes'
 import NextWorkbenchNavigation from './components/NextWorkbenchNavigation'
 import CoreWorkspace from './CoreWorkspace'
 import BusinessOverviewWorkspace from './BusinessOverviewWorkspace'
@@ -40,27 +40,20 @@ export default function App({viewer,signingOut,onLogout,initialView='core',
  routeNavigation=false,onNavigate}:{viewer:AuthViewer;signingOut:boolean;
  onLogout:()=>void;initialView?:View;routeNavigation?:boolean;
  onNavigate?:(view:View,mode?:'push'|'replace')=>void}){
- const [activeView,setActiveView]=useState<View>(() => typeof window !== 'undefined' &&
-  new URLSearchParams(window.location.search).get('amazon_oauth') === 'pending_verification'
-  ? 'connections' : initialView),[accountId,setAccountId]=useState(''),[syncMessage,setSyncMessage]=useState('')
+ const pendingOAuth=typeof window!=='undefined'&&
+  new URLSearchParams(window.location.search).get('amazon_oauth')==='pending_verification'
+ const [localView,setLocalView]=useState<View>(()=>pendingOAuth?'connections':initialView)
+ const [accountId,setAccountId]=useState(''),[syncMessage,setSyncMessage]=useState('')
+ const activeView=resolveWorkbenchView(initialView,localView,routeNavigation,viewer.isOwner,pendingOAuth)
  const [fbaFocus,setFbaFocus]=useState<{marketplaceId:string;lineId:string}|null>(null)
  const navigate=(view:View,mode:'push'|'replace'='push')=>{
-  setActiveView(view)
+  // Next only renders the committed path. Vite alone uses local view state.
   if(routeNavigation)onNavigate?.(view,mode)
+  else setLocalView(view)
  }
  useEffect(()=>{
-  if(!routeNavigation)return
-  if(!viewer.isOwner&&initialView!=='core'){
-   setActiveView('core')
+  if(routeNavigation&&!viewer.isOwner&&initialView!=='core')
    onNavigate?.('core','replace')
-   return
-  }
-  if(new URLSearchParams(window.location.search).get('amazon_oauth')==='pending_verification'
-     &&viewer.isOwner){
-   setActiveView('connections')
-   return
-  }
-  setActiveView(initialView)
  },[initialView,routeNavigation,viewer.isOwner,onNavigate])
  const openFbaException=(marketplaceId:string,lineId:string)=>{
   setFbaFocus({marketplaceId,lineId})
@@ -87,7 +80,7 @@ export default function App({viewer,signingOut,onLogout,initialView='core',
  const recent=overview.data?.orders.filter(a=>a.accountId===accountId)??[]
  const title=nav.find(n=>n.key===activeView)?.label??'经营总览'
  const status=ping.isPending?'连接检查中':ping.isError?'API 不可用':ping.data?.status==='ok'?'API 已连接':'API 状态异常'
- return <div className="workspace"><a className="skip-link" href="#main-content">跳转到主要内容</a>
+ return <div className="workspace" data-workbench-view={activeView}><a className="skip-link" href="#main-content">跳转到主要内容</a>
  {routeNavigation?
  <NextWorkbenchNavigation active={activeView} isOwner={viewer.isOwner}
    isDemo={demo} onNavigate={view=>navigate(view)}/>:
