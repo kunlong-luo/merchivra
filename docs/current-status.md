@@ -1,6 +1,6 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7；V259 快 CI 通过；V260 完整 A3 7/7；V261/V262 完整 A3 通过；V263 快 CI 通过、A3 取消；V264 完整 A3 通过；V265/V266/V267 完整 A3 通过；V268/V269 完整 A3 通过；V270 完整 A3 通过、独立 Redis smoke 启动失败；V271 完整 A3 通过；V272 完整 A3 通过；V273 A3 6/7（PG18 失败）；V274 快 CI 通过、未触发 A3；V275 分类 SQL 通过但 A3 6/7（补偿唯一键竞争）；V276 快 CI 通过；V277 完整 A3 7/7 通过；V278 分类审批 HTTP 待 A3。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7；V259 快 CI 通过；V260 完整 A3 7/7；V261/V262 完整 A3 通过；V263 快 CI 通过、A3 取消；V264 完整 A3 通过；V265/V266/V267 完整 A3 通过；V268/V269 完整 A3 通过；V270 完整 A3 通过、独立 Redis smoke 启动失败；V271 完整 A3 通过；V272 完整 A3 通过；V273 A3 6/7（PG18 失败）；V274 快 CI 通过、未触发 A3；V275 分类 SQL 通过但 A3 6/7（补偿唯一键竞争）；V276 快 CI 通过；V277 完整 A3 7/7 通过；V278 快 CI 通过、A3 待核；V279 分类工作台待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 核心项目状态
 
@@ -212,3 +212,21 @@ V277：修复 V123 请求双唯一约束仲裁漏洞，INSERT 使用无目标 ON
 V276 [快 CI #45618870958 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45618870958)；V277 [代码 73485ed88c03](https://github.com/kunlong-luo/merchivra/commit/73485ed88c03249905d94b2c41e6383e96c5da46) [快 CI #45619345494 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45619345494) [完整 A3 #45619345828 SUCCESS 7/7](https://github.com/kunlong-luo/merchivra/actions/runs/45619345828)，PG18 job #139223062078 成功，含 V277 强制并发 JUnit marker 及 V125 TEMP SQL；历史 V273/V275 失败仍保留。
 
 V278：开放 V276 本地分类审核 HTTP（Owner Session/CSRF、no-store、tenant/actor 服务端解析），明确选择 report/mapping/evidence SHA；GET 当前有效审核、POST request/approve，复用 V125 记录及当前证据/角色/撤销门禁，不新增审批状态或 DB 迁移。CannotSerializeTransactionException 映射409要求重新加载，而非自动重试；其他错误不伪装成成功。新增 V250 实际 Spring HTTP/PG18 合成报告、真实 DB 交易/拆分/规则夹具及两个独立 Owner session，覆盖 draft/preview/request/approve/current、匿名、缺 CSRF、无申请、旧指纹、同人、跨站点、规则 revision 变化及不可激活字段，并强制 V278 JUnit marker，待新 A3。尚无专门 staff/跨租户 HTTP 新用例（复用既有权限边界）、前端、审核重开、V56 门禁、实际激活或真实 Amazon/银行/会计验证；mappingActivated/bankVerified/ledgerPosted=false、realizedNetProfit=null。Redis 独立 smoke 失败仍待修复；真实 Seller/Ads OAuth OFF，#104 NO-GO。
+
+
+V278 [代码 a36377ae452c](https://github.com/kunlong-luo/merchivra/commit/a36377ae452ccd928d5ebe7b671b1f9d91953353) [快 CI #45741837204 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45741837204)；[完整 A3 #45741837209](https://github.com/kunlong-luo/merchivra/actions/runs/45741837209) 核对时仍运行，基线、Java、Next、Chromium、Compose 成功，真实 PG18/HTTP 未结束。最新完整验收仍 V277。
+
+V279：在既有结算报告工作台中新增费用分类操作区，复用 React/Next 工作台及现有 Zod、CSRF、Session API。可从可见前100行提取不同原始三元组（不猜分类）、手工补充/删除类型、最多200项、明确 NULL 语义；保存 V274 不可变版本、按 SHA 加载（第二 Owner 可加载同一草稿）、重新核算 V275、查看未映射数/未分类数/差异分组与原币双方金额，调用 V278 本地申请、批准、当前读取。编辑/切换报告或证据错误清除旧结果；409 明示无当前有效审核或失效，不假称尚未提交；需重新核算。Zod 强制 false/null 与响应身份，禁止自审批响应、错误摘要等；新增 Vitest 反例。全量类型自动发现、草稿列表、当前操作者主动前端独立性识别、审核重开、新工作台 Chromium 手动验收尚未实现；服务端仍执行全部权限/覆盖校验。仅使用合成测试，不是财务批准或激活。为避免抢占 V278 完整 A3 本轮不修改 A3 workflow；V279 快 CI 待核，独立完整 A3 需后续触发。真实 Seller/Ads OAuth OFF，realizedNetProfit=null，#104 NO-GO。
+
+
+### 2026-11-26 · V279 上线复评（仍 NO-GO）
+
+沿用 V231 六维评分 18/20 架构、18/20 业务、10/25 真实利润、14/15 安全、9/10 前端、7/10 测试运维 = **76/100**；V279 前端及 V278 专门 HTTP 尚未完整验收，不提升评分。评分非上线许可，即便90+也须独立完成 #104 G1/G2/G3。V277 完整 A3 7/7 是隔离合成工程证据，不是目标部署证明。
+
+| 发布层级 | 当前结论 | 条件 |
+| --- | --- | --- |
+| 受控本地试用 / 隔离合成测试 | 可 | 最新变更仍需 CI；OAuth OFF、无真实业务写入、私有环境 |
+| 私有预生产环境验证 | 有条件可测试 | 不连接真实 Amazon，不使用未审核真实数据；目标 TLS/Session/权限、备份/恢复和告警演练；不称正式上线 |
+| 真实店铺生产运营 | NO-GO | E1–E5、DEC/G1 财务签署、G2 真实安全、G3 真实目标恢复/告警和独立变更批准；单独批准真实 OAuth |
+
+[Issue #104](https://github.com/kunlong-luo/merchivra/issues/104) 核对仍 OPEN/BLOCKED。优先执行：1) 真实单笔合法报告/Finances/银行回单、采购头程关税、退款 COGS 与完整 SKU/订单/期间净利润复算及 G1；2) 目标 TLS/Session/KMS/ClamAV/租户隔离及 G2；3) 实际 PG18 加密离站备份、PITR、RPO/RTO 与值班 ACK/G3。Redis 独立 smoke 启动问题未确认修复。目标证据与签署不公开、不伪造；未签署不部署生产或启用真实授权。

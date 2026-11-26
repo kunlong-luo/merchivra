@@ -4,6 +4,7 @@ import {compareSettlementReport} from './lib/settlement-comparison'
 import SettlementReportScanPanel from './SettlementReportScanPanel'
 import SettlementSourceReviewPanel from './SettlementSourceReviewPanel'
 import ManualBankPanel from './ManualBankPanel'
+import SettlementCategoryPanelV279 from './SettlementCategoryPanelV279'
 import {listSettlementReports,listSettlementReportLines,reviewSettlementReport} from './lib/settlement-reports'
 
 export default function SettlementReportsPanel({tenantId,marketplaceId,connected}:{tenantId:string;marketplaceId:string;connected:boolean}){
@@ -99,6 +100,8 @@ export default function SettlementReportsPanel({tenantId,marketplaceId,connected
       <td>{r.orderId??'无订单号'}</td><td>{r.currency} {r.signedAmount}</td>
      </tr>)}</tbody></table></div>}
    <p className="panel-caption">最多显示前 100 行；CSV/TSV 的其他字段未被持久化。该报表不得直接与同笔 Finances 交易金额相加。</p>
+   {lines.data&&<SettlementCategoryPanelV279 key={tenantId+':'+marketplaceId+':'+selected}
+    marketplaceId={marketplaceId} reportId={selected} lines={lines.data} lineCount={current.lineCount}/>}
   </div>}
  </section>
 }

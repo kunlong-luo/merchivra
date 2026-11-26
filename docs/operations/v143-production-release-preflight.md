@@ -56,3 +56,16 @@ docker compose --env-file /secure-ops/merchivra.env \
 Compose CI 会解析现有的实际生产覆盖层+Next App Router+可选 Redis，使用 `.env.example` 和没有任何真实外部审批的场景运行 V143 预检，要求 HTTP 之外的静态控制**明确以 2 拒绝**。仅上传**不含 secret、仅有检查代码与状态**的 `v143-release-preflight-blocked` 7 天保留 JSON 作为失败关闭的证据，不能上传合成批准书。
 
 由于 V143 不更改 ERP/Flyway 业务逻辑，继承 V142 真实 PostgreSQL 18 时间点恢复、内网 Alertmanager 送达、V141 磁盘/WAL、V140 原件治理分页、Java 25、Next/React Chromium 与 Compose 全套 A3。新里程碑应在**合并后的同一主线 SHA**验证全部 7 个作业。绿色 A3 只证明代码与**拒绝上线安全门禁**有效；不意味着通过任何业务/生产签署。真实 Amazon Seller/Ads OAuth、外部写入以及原件删除仍保持关闭。
+
+
+### 2026-11-26 · V279 上线复评（仍 NO-GO）
+
+沿用 V231 六维评分 18/20 架构、18/20 业务、10/25 真实利润、14/15 安全、9/10 前端、7/10 测试运维 = **76/100**；V279 前端及 V278 专门 HTTP 尚未完整验收，不提升评分。评分非上线许可，即便90+也须独立完成 #104 G1/G2/G3。V277 完整 A3 7/7 是隔离合成工程证据，不是目标部署证明。
+
+| 发布层级 | 当前结论 | 条件 |
+| --- | --- | --- |
+| 受控本地试用 / 隔离合成测试 | 可 | 最新变更仍需 CI；OAuth OFF、无真实业务写入、私有环境 |
+| 私有预生产环境验证 | 有条件可测试 | 不连接真实 Amazon，不使用未审核真实数据；目标 TLS/Session/权限、备份/恢复和告警演练；不称正式上线 |
+| 真实店铺生产运营 | NO-GO | E1–E5、DEC/G1 财务签署、G2 真实安全、G3 真实目标恢复/告警和独立变更批准；单独批准真实 OAuth |
+
+[Issue #104](https://github.com/kunlong-luo/merchivra/issues/104) 核对仍 OPEN/BLOCKED。优先执行：1) 真实单笔合法报告/Finances/银行回单、采购头程关税、退款 COGS 与完整 SKU/订单/期间净利润复算及 G1；2) 目标 TLS/Session/KMS/ClamAV/租户隔离及 G2；3) 实际 PG18 加密离站备份、PITR、RPO/RTO 与值班 ACK/G3。Redis 独立 smoke 启动问题未确认修复。目标证据与签署不公开、不伪造；未签署不部署生产或启用真实授权。

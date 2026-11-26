@@ -126,3 +126,12 @@ V278：开放 V276 本地分类审核 HTTP（Owner Session/CSRF、no-store、ten
 - `GET` 基准路径：仅返回当前有效审核记录；无申请、旧证据或已审计撤销导致 409，不可直接当作已批准。404 为不存在/不在所选范围；403 为权限或独立性拒绝。所有写请求携带既有 Session CSRF。409 重新预检，不能编辑旧记录；同证据撤销后的重开机制未实现。
 
 批准仅为本地证据记录，不会使 V56 自动批准、不产生会计凭证或实际利润。当前尚无前端操作入口。
+
+
+V278 [代码 a36377ae452c](https://github.com/kunlong-luo/merchivra/commit/a36377ae452ccd928d5ebe7b671b1f9d91953353) [快 CI #45741837204 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45741837204)；[完整 A3 #45741837209](https://github.com/kunlong-luo/merchivra/actions/runs/45741837209) 核对时仍运行，基线、Java、Next、Chromium、Compose 成功，真实 PG18/HTTP 未结束。最新完整验收仍 V277。
+
+## V279 · 费用分类操作工作台（待验收）
+
+V279：在既有结算报告工作台中新增费用分类操作区，复用 React/Next 工作台及现有 Zod、CSRF、Session API。可从可见前100行提取不同原始三元组（不猜分类）、手工补充/删除类型、最多200项、明确 NULL 语义；保存 V274 不可变版本、按 SHA 加载（第二 Owner 可加载同一草稿）、重新核算 V275、查看未映射数/未分类数/差异分组与原币双方金额，调用 V278 本地申请、批准、当前读取。编辑/切换报告或证据错误清除旧结果；409 明示无当前有效审核或失效，不假称尚未提交；需重新核算。Zod 强制 false/null 与响应身份，禁止自审批响应、错误摘要等；新增 Vitest 反例。全量类型自动发现、草稿列表、当前操作者主动前端独立性识别、审核重开、新工作台 Chromium 手动验收尚未实现；服务端仍执行全部权限/覆盖校验。仅使用合成测试，不是财务批准或激活。为避免抢占 V278 完整 A3 本轮不修改 A3 workflow；V279 快 CI 待核，独立完整 A3 需后续触发。真实 Seller/Ads OAuth OFF，realizedNetProfit=null，#104 NO-GO。
+
+操作入口：财务 → Amazon 结算报告 → 选择报告 → 费用分类核对与审核。可见原始类型仅取前100行，必要时维护者在受控原件核对剩余类型并手工添加；最终后端拒绝缺映射。两位 Owner 通过同一报告/映射 SHA 重新核算，不传入 tenantId/actor，不将审核记录当作会计签署。无草稿列表，需保留该版本 SHA。
