@@ -43,3 +43,8 @@ V278 [代码 a36377ae452c](https://github.com/kunlong-luo/merchivra/commit/a3637
 ## V280 复评（2026-11-26）
 
 沿用原六维定性成熟度：架构18/20、**业务19/20（+1）**、真实全成本/净利润10/25、安全14/15、前端9/10、测试运维7/10，合计 **77/100**。唯一加分基于 V278 精确 SHA 的完整 A3 7/7 及 PG18 JUnit 非跳过 marker，证明两位独立 Owner 可以经真实 Spring HTTP 完成分类保存、预检、申请、批准、规则修订后拒绝旧证据的本地业务闭环；V279 快 CI 和 Pages 已通过，但不额外加前端分，V280 待验收不计分。真实 E1–E5、DEC/G1 会计签署、G2/G3 目标证明仍缺，#104 OPEN/BLOCKED；`realizedNetProfit=null`、OAuth OFF。受控本地/隔离测试可进行，私有预生产仅有条件验证，正式生产 NO-GO；评分不是上线许可。
+
+
+## V281 复评（2026-11-26）
+
+维持 V280 **77/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维7/10。V280 r2 快 CI/Pages 成功但完整 A3 尚未核实；V281 定位历史 Redis 构建429并强化验收，但未取得独立运行通过证据，不加分。生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 仍 OPEN/BLOCKED。受控本地及隔离合成测试可进行；私有预生产只用于有条件验证，不能真实生产运营。真实 E1–E5 与 DEC/G1、G2/G3 目标独立签署未完成，`realizedNetProfit=null`、Seller/Ads OAuth OFF；评分不是上线批准。

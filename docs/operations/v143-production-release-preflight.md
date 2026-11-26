@@ -74,3 +74,13 @@ Compose CI 会解析现有的实际生产覆盖层+Next App Router+可选 Redis�
 ## V280 复评（2026-11-26）
 
 沿用原六维定性成熟度：架构18/20、**业务19/20（+1）**、真实全成本/净利润10/25、安全14/15、前端9/10、测试运维7/10，合计 **77/100**。唯一加分基于 V278 精确 SHA 的完整 A3 7/7 及 PG18 JUnit 非跳过 marker，证明两位独立 Owner 可以经真实 Spring HTTP 完成分类保存、预检、申请、批准、规则修订后拒绝旧证据的本地业务闭环；V279 快 CI 和 Pages 已通过，但不额外加前端分，V280 待验收不计分。真实 E1–E5、DEC/G1 会计签署、G2/G3 目标证明仍缺，#104 OPEN/BLOCKED；`realizedNetProfit=null`、OAuth OFF。受控本地/隔离测试可进行，私有预生产仅有条件验证，正式生产 NO-GO；评分不是上线许可。
+
+
+V280 [r2 SHA 07fccfb4be98](https://github.com/kunlong-luo/merchivra/commit/07fccfb4be98cdaee4d46f592c804dd8c5826d75) [快 CI #45742981287 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45742981287) [只读 Pages #45742981345 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45742981345)，[完整 A3 #45742981332](https://github.com/kunlong-luo/merchivra/actions/runs/45742981332) 核对时 pending。原 V280 快 CI cancelled（被新版取代），原 A3 运行中；不能继承新版验收。V270 [Redis #45588988904](https://github.com/kunlong-luo/merchivra/actions/runs/45588988904) [job #139117867603](https://github.com/kunlong-luo/merchivra/actions/runs/45588988904/job/139117867603) 完整日志已核实：初始 checkout 网络错误后恢复，server Dockerfile 的 Gradle bootJar 三次均因 Maven Central HTTP 429（Boot buildpack-platform/loader-tools、commons-compress、spring-core 等 classpath）失败。容器启动及 Redis quota/login/restart/outage 未执行；不能推断 Redis Session 业务缺陷或已通过。
+
+V281：只修改现有 Redis 独立 smoke workflow/script，不改变生产应用、Compose 权限、依赖版本或镜像 Dockerfile。拆分当前 SHA server/web 构建和 no-build 启动，server Dockerfile 原三次有限重试不变，外层仅对官方 artifact GET/HEAD 429/502/503/504 再冷却90秒、最多额外一次整体构建；其他失败不吞掉、不复用旧镜像。用 Compose --wait 与 PG18/Redis/Next 健康链，核对 server/web 镜像 revision 标签与当前 GitHub SHA（标签不是供应链签名），明确 Seller/OAuth/写入 OFF。Redis namespace scan 完整消费，重启核对 StartedAt 已变化、健康就绪及同一 cookie 的 userId/activeTenantId；私有临时 cookie/身份文件，始终清理。断 Redis 后检查容器已停止、匿名 ping 可访问，旧认证 cookie 必须实际返回 401/403/500/502/503/504，网络断开不计为通过；增强故障诊断，不输出配置/凭据。Redis 8/noeviction、原 GCRA 测试保留。独立 smoke 新 SHA 待验收；外部仓库持续限流仍可能失败。为保留 V280 r2 A3 不修改 milestone workflow；V281 独立 smoke 不能替代生产 TLS/KMS/恢复/财务签署。
+
+
+## V281 复评（2026-11-26）
+
+维持 V280 **77/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维7/10。V280 r2 快 CI/Pages 成功但完整 A3 尚未核实；V281 定位历史 Redis 构建429并强化验收，但未取得独立运行通过证据，不加分。生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 仍 OPEN/BLOCKED。受控本地及隔离合成测试可进行；私有预生产只用于有条件验证，不能真实生产运营。真实 E1–E5 与 DEC/G1、G2/G3 目标独立签署未完成，`realizedNetProfit=null`、Seller/Ads OAuth OFF；评分不是上线批准。

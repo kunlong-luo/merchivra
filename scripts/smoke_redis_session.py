@@ -49,13 +49,22 @@ if a.stage == "login":
     code, me = call("/api/v1/auth/me")
     assert code == 200 and me.get("isOwner"), ("me", code)
     assert any(c.name in ("JSESSIONID", "SESSION") for c in jar), "Missing Session cookie"
+    # Restrict the disposable cookie and identity files before writing.
+    os.umask(0o077)
     jar.save(ignore_discard=True, ignore_expires=True)
+    identity = {k: me[k] for k in ("userId", "activeTenantId")}
+    Path(a.cookies + ".identity").write_text(json.dumps(identity), encoding="utf-8")
     print("PASS Redis-backed local login and CSRF; cookie persisted for test")
 elif a.stage == "persisted":
     code, me = call("/api/v1/auth/me")
     assert code == 200 and me.get("isOwner"), ("Redis session missing after backend restart", code)
-    print("PASS same authenticated session after Java backend restart")
+    expected = json.loads(Path(a.cookies + ".identity").read_text(encoding="utf-8"))
+    assert {k: me[k] for k in expected} == expected, "Session identity changed"
+    print("PASS same authenticated session identity after Java backend restart")
 else:
     code, _ = call("/api/v1/auth/me")
-    assert code != 200, "FAILED CLOSED: Redis outage must never authorize a cached or in-memory session"
+    # Require an actual denial/error response, not transport failure or an
+    # unrelated redirect/404. The workflow also proves anonymous ping works.
+    assert code in (401, 403, 500, 502, 503, 504), ("Expected explicit Redis outage denial", code)
+    assert not (isinstance(_, dict) and _.get("isOwner")), "Outage returned authorized identity"
     print("PASS Redis unavailable: prior authenticated cookie does not receive authorized data")

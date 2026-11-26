@@ -6,6 +6,8 @@ on:
     paths:
       - .github/workflows/redis-session-smoke.yml
       - apps/server/build.gradle
+      - apps/server/Dockerfile
+      - apps/web/Dockerfile.next
       - apps/server/src/main/resources/application.yml
       - 'apps/server/src/main/java/org/merchivra/erp/security/RedisSessionConfiguration.java'
       - 'apps/server/src/main/java/org/merchivra/erp/spapi/RedisSpApiRateLimiter.java'
@@ -39,23 +41,48 @@ jobs:
               + "MERCHIVRA_BOOTSTRAP_PASSWORD=" + secrets.token_urlsafe(32) + "\n"
               + "MERCHIVRA_REDIS_SESSIONS_ENABLED=true\n"
               + "MERCHIVRA_SPAPI_ENABLED=false\n"
+              + "MERCHIVRA_SPAPI_OAUTH_ENABLED=false\n"
+              + "MERCHIVRA_SPAPI_ALLOW_WRITES=false\n"
               + "MERCHIVRA_SPAPI_RATE_LIMIT_ENABLED=false\n"
           )
           PY
-      - name: Start isolated Redis 8, PG18, Spring Boot and Nginx
+      - name: Build current Spring Boot image (bounded artifact repository retry)
         shell: bash
         run: |
           set -euo pipefail
-          docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache up -d --build postgres redis server web
-          ready=0
-          for i in $(seq 1 120); do
-            if curl -fsS http://127.0.0.1:3000/api/v1/ping >/dev/null 2>&1; then
-              ready=1
-              break
+          # V281: historical failure was Maven Central 429 during build,
+          # not Redis startup. Dockerfile already retries Gradle three times.
+          # Retry the entire server build only once, after a longer cooldown,
+          # and only for the known transient artifact response. Never reuse an
+          # old tag, skip build, change repository, or ignore compilation errors.
+          export MERCHIVRA_BUILD_REVISION="$GITHUB_SHA"
+          for attempt in 1 2; do
+            if docker compose --progress plain --env-file .env -f deploy/compose.yaml --profile optional-cache build server > /tmp/merchivra-redis-build.log 2>&1; then
+              cat /tmp/merchivra-redis-build.log
+              exit 0
             fi
-            sleep 2
+            cat /tmp/merchivra-redis-build.log
+            if [ "$attempt" = 2 ] || ! grep -Eq 'Could not (GET|HEAD).*https://(repo\.maven\.apache\.org/maven2|plugins\.gradle\.org/m2)/.*Received status code (429|502|503|504)' /tmp/merchivra-redis-build.log; then
+              exit 1
+            fi
+            echo 'Transient official artifact repository response; retrying server image build once after 90s.'
+            sleep 90
           done
-          test "$ready" = 1
+      - name: Build current Next.js image
+        run: MERCHIVRA_BUILD_REVISION="$GITHUB_SHA" docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache build web
+      - name: Start isolated Redis 8, PG18, Spring Boot and Next.js
+        shell: bash
+        run: |
+          set -euo pipefail
+          compose=(docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache)
+          "${compose[@]}" up -d --no-build --wait --wait-timeout 240 postgres redis server web
+          for service in server web; do
+            cid=$("${compose[@]}" ps -q "$service")
+            test -n "$cid"
+            test "$(docker inspect --format '{{index .Config.Labels "org.opencontainers.image.revision"}}' "$cid")" = "$GITHUB_SHA"
+          done
+          curl -fsS --max-time 10 http://127.0.0.1:3000/api/v1/ping >/dev/null
+          curl -fsS --max-time 10 http://127.0.0.1:8080/actuator/health >/dev/null
           # Guard against accidentally testing Redis 7 with a Redis 8 label.
           docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache exec -T redis \
             redis-cli INFO server | tr -d '\r' | grep -F 'redis_version:8.'
@@ -71,27 +98,47 @@ jobs:
           source .env
           set +a
           python3 scripts/smoke_redis_session.py --stage login
+          # Consume the entire scan to avoid an early grep/SIGPIPE failure.
           docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache exec -T redis \
-            redis-cli --scan --pattern 'merchivra:session:v1:*' | grep -q .
+            redis-cli --scan --pattern 'merchivra:session:v1:*' | grep . >/dev/null
       - name: Restart Java and prove same cookie remains valid
         shell: bash
         run: |
-          docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache restart server
+          set -euo pipefail
+          compose=(docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache)
+          cid=$("${compose[@]}" ps -q server)
+          before=$(docker inspect --format '{{.State.StartedAt}}' "$cid")
+          "${compose[@]}" restart server
+          after=$(docker inspect --format '{{.State.StartedAt}}' "$cid")
+          test "$before" != "$after"
+          ready=0
           for i in $(seq 1 80); do
-            if curl -fsS http://127.0.0.1:3000/api/v1/ping >/dev/null 2>&1; then break; fi
+            if curl -fsS --max-time 5 http://127.0.0.1:3000/api/v1/ping >/dev/null 2>&1 && \
+               curl -fsS --max-time 5 http://127.0.0.1:8080/actuator/health >/dev/null 2>&1; then
+              ready=1; break
+            fi
             sleep 2
           done
+          test "$ready" = 1
           python3 scripts/smoke_redis_session.py --stage persisted
       - name: Redis unavailable must deny access to existing session
         shell: bash
         run: |
-          docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache stop redis
+          set -euo pipefail
+          compose=(docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache)
+          redis_id=$("${compose[@]}" ps -q redis)
+          "${compose[@]}" stop redis
+          test "$(docker inspect --format '{{.State.Running}}' "$redis_id")" = false
+          # A dead HTTP server cannot count as Redis fail-closed evidence.
+          curl -fsS --max-time 10 http://127.0.0.1:3000/api/v1/ping >/dev/null
           python3 scripts/smoke_redis_session.py --stage outage
       - name: Diagnostics
         if: failure()
-        run: docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache logs --no-color --tail=120 server redis
+        run: |
+          docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache ps -a
+          docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache logs --no-color --tail=120 postgres server redis web
       - name: Always remove disposable project volumes and cookies
         if: always()
         run: |
           docker compose --env-file .env -f deploy/compose.yaml --profile optional-cache down -v --remove-orphans
-          rm -f /tmp/merchivra-ci-redis-cookies.txt
+          rm -f /tmp/merchivra-ci-redis-cookies.txt /tmp/merchivra-ci-redis-cookies.txt.identity /tmp/merchivra-redis-build.log
