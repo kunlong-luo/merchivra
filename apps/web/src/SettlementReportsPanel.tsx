@@ -23,7 +23,8 @@ export default function SettlementReportsPanel({tenantId,marketplaceId,connected
   queryFn:()=>listSettlementReportLines(marketplaceId,selected),
   enabled:!!selected,retry:false,staleTime:30000})
  const types=useQuery({queryKey:['finance','reports',tenantId,marketplaceId,selected,'category-types'],
-  queryFn:()=>getCategoryTypes(marketplaceId,selected),enabled:!!selected,retry:false,staleTime:30000})
+  queryFn:()=>getCategoryTypes(marketplaceId,selected),enabled:!!selected,retry:false,staleTime:30000,
+  refetchOnWindowFocus:false,refetchOnReconnect:false})
  return <section className="panel full-panel" aria-label="Amazon 结算报告来源核对">
   <div className="panel-heading"><div>
    <h2>Amazon 结算报告 · 来源明细</h2>
@@ -105,7 +106,7 @@ export default function SettlementReportsPanel({tenantId,marketplaceId,connected
    <p className="panel-caption">最多显示前 100 行；CSV/TSV 的其他字段未被持久化。该报表不得直接与同笔 Finances 交易金额相加。</p>
    <div className="core-tools" aria-label="完整结算费用类型">
     <button type="button" className="refresh-button" disabled={types.isFetching}
-     onClick={()=>void types.refetch()}>刷新完整费用类型（核算需重新执行）</button>
+     onClick={()=>void types.refetch()}>刷新完整费用类型（清空编辑，需重新核算）</button>
     {types.isFetching?<p>读取完整报告费用类型…</p>:
      types.isError?<p className="setup-error" role="alert">完整类型读取失败；请刷新后重试，不能使用截断明细替代。</p>:
      types.data?.state==='REPORT_TYPES_READY'?

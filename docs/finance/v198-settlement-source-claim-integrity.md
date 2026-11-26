@@ -141,3 +141,5 @@ V278 [代码 a36377ae452c](https://github.com/kunlong-luo/merchivra/commit/a3637
 ## V280 · 完整报告类型发现（待验收）
 
 V280：新增 Owner no-store GET `/api/v1/finance/marketplaces/{marketplaceId}/reports/{reportId}/category-types`，在一个 RR 事务检查报告声明行数、实际行数（1–10000）及原币，然后按精确原始类型三元组全量 GROUP BY，读取最多201组以检测超出200项映射契约；每组 rowCount、NULL 保留，无猜测分类或金额。非全量、混币、超限、不可映射类型均返回 HOLD 状态及空数组，跨 Marketplace 404。前端不再从前100行初始化映射，使用全量查询及 Zod 覆盖/身份/重复校验，刷新重新挂载工作台并清除旧证据；原明细表保持100行。新增 Java/Vitest 反例；V250 实际 HTTP 夹具扩为101行、最后一行佣金、两类完整映射及复用 V278 双人审核，强制 V280 JUnit marker；触发完整 A3 待核。无迁移、依赖、真实 API 授权、财务激活、审批重开或正式入账；独立 Redis 启动失败尚未排除。
+
+V280 补正：类型初始化使用泛型保留原明细测试夹具额外字段；完整类型查询不在窗口聚焦/网络重连时自动刷新，避免清空未保存的编辑。用户明确刷新会清空编辑与旧证据；以新精确 SHA 的 r2 完整 A3 为准，原运行不作为该 SHA 的验收证据。

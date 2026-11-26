@@ -18,7 +18,7 @@ export const mappingArray=z.array(mapping).min(1).max(200).refine(
  '原始类型组合不能重复')
 export type Mapping=z.infer<typeof mapping>
 export type EditorRow={transactionType:string;amountType:string;amountDescription:string;category:string}
-export function rowsFromVisibleLines(lines:readonly Pick<SettlementReportLine,'transactionType'|'amountType'|'amountDescription'>[]):EditorRow[]{
+export function rowsFromVisibleLines<T extends Pick<SettlementReportLine,'transactionType'|'amountType'|'amountDescription'>>(lines:readonly T[]):EditorRow[]{
  const rows=new Map<string,EditorRow>()
  for(const l of lines){
   const row={transactionType:l.transactionType??'',amountType:l.amountType??'',
