@@ -22,9 +22,16 @@
 
 - 先核对当前代码/迁移/API/测试与 [当前事实](docs/current-status.md)，只实现真正缺口，复用已有链路。
 - 每次明确输入、原币、租户、未知/冲突、兼容性和正反例。财务、权限、库存、数据库和跨进程变更按 [CI/A3 分层规范](docs/testing/ci-policy.md) 验收；仅 disposable PG18 可执行破坏性合成脚本。
-- 每次记录精确 SHA、实际通过/失败/跳过的任务，不能继承旧 SHA 的绿灯。当前最新已验收评分 [V231 76/100](docs/governance/project-scorecard-v231-2026-11-24.md)，真实利润10/25；不因版本数、重复 UI、内部自述或文档数量自动加分。V232/E1 及后续真实关卡以当前计划为准。
+- 每次记录精确 SHA、实际通过/失败/跳过的任务，不能继承旧 SHA 的绿灯。评分只引用 [当前评分记录](docs/governance/project-scorecard-v231-2026-11-24.md) 的最新复评，不在本规则硬编码当前分数；不因版本数、重复 UI、内部自述或文档数量自动加分。V232/E1 及后续真实关卡以当前计划为准。
 - 更新权威入口，不重复创建规则文件：事实进 current-status、计划进 current-plan、规范进 ENG-001，历史版本与精确 CI 进专项证据。具体删留遵循 [文档控制](docs/governance/document-control.md)，目录作用见[根 README](README.zh-CN.md)。禁止重建旧 `Agent.md`。
 - 本地默认 Next 3000 + Spring 8080 + PG18；单独前端启动不会启动后端。401 未登录、403 权限不足、5xx/连接异常服务未准备；不得禁用鉴权或暴露 Actuator。UI 需验证移动/桌面、键盘、加载/空/错误/权限状态，见 [DESIGN.md](DESIGN.md) 与 [开发指南](docs/development.md)。
+
+## 单任务会话（强制）
+
+- 新会话先读本文件、[当前任务](docs/roadmap/current-plan.md)、[当前事实](docs/current-status.md)，核对 main HEAD 与该代码 SHA 的 Actions，禁止依赖旧聊天或直接递增 V 编号。
+- 优先续办未 VERIFIED 的当前任务；同一会话只处理一个任务。按目标、范围、验收和依赖执行，未经维护者批准不越界。提交前核对 HEAD，不 force push。
+- 会话退出前更新任务状态及交接：准确代码 SHA/可定位提交、变更边界、CI 成败及跳过、阻塞、唯一下一动作；没有完成验收写 IMPLEMENTED_PENDING_VERIFICATION 或 FAILED/BLOCKED，不称 VERIFIED。只在 VERIFIED 后领取下一编号。CI 可跨会话完成；新会话必须复核，不重做已经证明的工作。
+- 历史验收只在领域文档、精确 Git 快照及 Actions 保留，入口不复制流水账。详细状态定义和关闭规则见 [GOV-001](docs/governance/document-control.md)。
 
 ## 查阅顺序
 

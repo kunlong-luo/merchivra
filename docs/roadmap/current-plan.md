@@ -1,14 +1,31 @@
 # Merchivra · 唯一现行 P0 执行计划
 
-**CURRENT · 2026-11-25 · V287：修复财务面板 React 同级 key 冲突。**
+**CURRENT · 2026-11-26 · 单任务会话队列。** 以 [AGENTS.md](../../AGENTS.md) 为规则，[当前事实](../current-status.md) 为验收事实；main / Gradle / pnpm，#104 NO-GO，realizedNetProfit=null。优先级不代表生产授权。
 
-> **北极星**：对 Amazon Seller ERP 的每笔订单、退款、SKU、采购批次及每个原币费用来源建立可以由独立第三方验证的记录，覆盖全成本/真实库存 COGS，最后在经批准的 G1/DEC 会计政策下生成可审计期间净利润。不能为了显示一个数字填补 UNKNOWN 为0。项目仍为 pre-alpha、`realizedNetProfit=null`，真实 Seller/Ads OAuth OFF，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
+## 当前任务
 
-**现行技术与开发约束**：`main` 直接提交，Java25/Spring Boot4.1.2/**Gradle**/PostgreSQL 18、React19/**Next.js 16.4.5 默认**、Node24/**pnpm 12.20.0 唯一 JS 包管理器**；Vite 只作明确回退。规范见 [AGENTS.md](../../AGENTS.md) 与 [ENG-001](../governance/engineering-standards.md)。
+### V289 · V287 财务 key 修复的类型检查与真实浏览器验收
 
-## 已验收基线与现行 P0
+- Task: V289
+- State: READY
+- Priority: P0
+- Basis: V287 `ca11f7a93d2b0b7bcff7bb5447e5b45436b51ba5`
+- 目标：修复 TS2591 而不扩大运行时类型权限、不删除 AST 检查，证明财务面板唯一且原分类操作可用。
+- 范围：`apps/web/src/lib/finance-panel-keys-v287.test.ts`；仅在日志证明必要时修改最小相关测试/业务代码。保留所有 V287 key 修复、V285/V286 路由和权限边界。
+- 不做：新业务模块、无证据路由重构、依赖升级、真实 OAuth/财务激活。
+- 复现：[V287 快 CI](https://github.com/kunlong-luo/merchivra/actions/runs/45806323293)；Typecheck TS2591 `node:fs`；[Chromium](https://github.com/kunlong-luo/merchivra/actions/runs/45806323382) 在构建失败，业务场景未执行。
+- 验收：同一代码 SHA 快 CI（含 AST Vitest、TypeScript、Next/Vite）、独立 Chromium（分页后唯一报告面板与 selector，101行/2组、保存/申请、拒绝自审、新证据及跨站点、历史前进后退）全部成功；Pages 为只读演示，不替代浏览器；记录失败/跳过、精确 SHA 和 run URL。
+- 当前阻塞：尚未修正类型；真实浏览器结果未知。
+- 后续：只有 V289 VERIFIED 后才领取 V290；如失败，续同一 V289，不另增版本。
 
-[V231 76/100](../governance/project-scorecard-v231-2026-11-24.md) 是最新完整 A3 已验收评分，真实利润 10/25；V194/V195 等旧版本详细结果只在[当前事实及精确验收](../current-status.md)和领域证据维护，不在计划重复。V232/V233 原始报告授权保护已进入代码，V233 快 CI 成功、PG18 跳过，V234 实际数据库回归及完整 A3 已通过。
+## 后续队列（一次只领取一项）
+
+| ID | 状态 | 前置 | 验收标准 |
+| --- | --- | --- | --- |
+| V289 | READY | V287 | 本节全部验收 |
+| V290 | QUEUED | V289 VERIFIED | 精确候选 SHA 完整 A3 7/7、登录退出/缓存隔离及非法路由回归；记录 RC 工程验收，不自动上线 |
+| V291 | BLOCKED | 维护者提供合法真实样本/授权 | E1–E5 单一真实订单/批次/结算及独立复算、G1/DEC 批准；未证不激活 |
+| V292 | BLOCKED | 目标环境及负责人 | G2/G3 实际安全、备份恢复及告警签署；#104 独立发布决定 |
 
 ### V232 执行顺序及真实验收（BLOCKED：未取得外部原件/签署）
 
@@ -24,16 +41,9 @@
 
 **执行约束**：维护者尚未提供合法真实材料；不得在公开 Git 中保存发票、银行流水、客户信息、令牌或签署原件，不得擅自开启 Seller/Ads OAuth。先核对已有适配器/证据模型，仅针对真实样本揭示的可验证缺口追加最小代码和负例（签发方不可信/撤销、原件改动、跨租户、重复行、退款超量、结算差异、会计批准缺失）。无样本时可做合成契约回归，但不能宣称 E1–E5 已完成，不能自动把内部复核升级为外部核证。
 
-**评分闸门**：V231 76/100 与真实利润 10/25 仍为最新已验收基线；V232 未通过上述真实证据关卡前不发布新评分。合成 CI 通过只证明工程契约，不能代替会计签署。保持 `realizedNetProfit=null`、Seller/Ads OAuth OFF、#104 NO-GO。真实材料须由维护者在合法本地环境取得，独立财务人员签署，不由开发代理代签。
+****评分闸门**：工程成熟度依据独立新验收证据调整；真实利润10/25仅凭真实财务证据调整。评分不得替代 G1/G2/G3，保持 realizedNetProfit=null、Seller/Ads OAuth OFF、#104 NO-GO。
 
-### 当前执行：V287 财务面板 React key 冲突修复
+## 任务生命周期与文档规则
 
-- V258/V260/V261/V262 完整 A3 成功；V263 快 CI 成功、A3 取消；V264 快 CI 及完整 A3 成功；V265/V266/V267/V268/V269/V270/V271 快 CI 与完整 A3 成功；V270 独立 Redis smoke 已核实为 Gradle 构建阶段 Maven Central 429，运行测试未开始；V281 独立复验成功（Redis 8.10.1、真实 Session/GCRA/断连）。各 SHA、运行与历史失败见[当前事实](../current-status.md)和[退款领域证据](../finance/v212-refund-original-sale-lot-quantity-envelope.md)。
-- V277/V278/V280 r2 完整 A3 7/7 通过，V280 101行真实 HTTP marker 已核；V281 Redis 独立验收通过。V286 快 CI/只读 Pages 成功但 Chromium 确认单一 finance workspace 内重复面板。V287 [修复](../finance/v198-settlement-source-claim-integrity.md) 为各财务组件使用独立稳定 key，AST 守卫及分页后 DOM 唯一性回归，待快 CI/独立 Chromium；后续如失败先定位具体组件，不再盲目改路由。通过后精确发布 SHA 完整 A3。真实 E1–E5、G1/DEC 与 G2/G3 按[生产准入](../operations/v143-production-release-preflight.md) V283 私有交接顺序办理，不扩张无关功能。
-- 优先取得 E1 合法真实采购/头程费用或银行结算样本，受控本地提供原始字节、官方签发渠道或可信签章、原币金额/币种、不可变单据/行键、关联订单/批次/付款以及独立复核。外部原件及隐私不得进入公开 Git；无真实样本和 G1/DEC 签署前维持全部实际利润阻断。
-
-## 文档清理规则
-
-- 现行入口只保留 [当前状态](../current-status.md)、本计划、[工程规范](../governance/engineering-standards.md)、[AGENTS](../../AGENTS.md)、[文档控制](../governance/document-control.md)及具体运行指引。旧历史计划 [`docs/roadmap.md`](../roadmap.md)、[V108](mvp-freeze-release-v108.md)标记 ARCHIVE，**不再重用其“下一步”**。
-- 核对 [docs/README.md](../README.md) 和根 [README 中文](../../README.zh-CN.md)的每个目录用途。真实财务、Flyway、历史 A3 证据、脚本和回退资产保留；真正重复草稿删除，Git 历史可恢复。
-- 每次代码和文档变更提交 `main`，记录**精确代码 SHA**、完整 A3 的成功/失败/跳过、同一 SHA 快速 CI；不复制“上一轮 7/7”冒充本轮。历史 V194/V195 技术事实保留在域文档与 Git，不需要堆积在本计划顶部几百行。
+READY → IN_PROGRESS → IMPLEMENTED_PENDING_VERIFICATION → VERIFIED；FAILED/BLOCKED 可续同一 ID。会话结束必须记录当前任务状态、代码 SHA（或可确定的最后任务提交）、测试运行/失败/跳过、未完成项和唯一下一动作。只有全部验收 VERIFIED 才称任务完成。未完成也可以关会话，下一会话恢复同一 ID。不要将提交成功视为任务关闭。
+现行事实、现行队列与长期规范分开；历史证据保留领域文档或精确 Git 快照。详细见 [文档控制](../governance/document-control.md)。

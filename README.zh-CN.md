@@ -4,14 +4,14 @@
 
 **技术基线（2026-11-24）**：Java 25、Spring Boot 4.1.2、**Gradle**、PostgreSQL 18/Flyway；React 19、**Next.js 16.4.5 App Router**、Node 24、**pnpm 12.20.0（唯一前端包管理器，不用 npm）**。默认使用 Next.js；Vite/Nginx 仅供明确回退与 GitHub Pages **虚构展示**，不得误认为默认正式前端。
 
-- 现行独立成熟度评分：**[V231 76/100](docs/governance/project-scorecard-v231-2026-11-24.md)**（历史 V230 [75/100](docs/governance/project-scorecard-v230-2026-11-24.md)）。该分数不是生产就绪度，也不是真实净利润已核证的比例。
+- 独立成熟度：[当前状态](docs/current-status.md) 与[评分记录](docs/governance/project-scorecard-v231-2026-11-24.md)，不是生产就绪比例。
 - **真实净利润仍不能确认**：`realizedNetProfit=null`；真实 Amazon Seller/Ads OAuth **关闭**，真实银行、货代、关税、独立 WMS、退款实际 COGS 与 G1/DEC 财务口径未核证；生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
 
 [English](README.md) · [当前事实](docs/current-status.md) · [唯一现行 P0 计划](docs/roadmap/current-plan.md) · [文档中心](docs/README.md) · [开发指南](docs/development.md) · [工程规范](docs/governance/engineering-standards.md) · [安全](SECURITY.md)
 
-## 当前工程状态
+## 新会话如何继续开发
 
-V237 完整隔离 A3 7/7 通过，实际 PostgreSQL18 Java Reports 服务回归未跳过，远程 Worker 为合成模拟；V238–V240 快速 CI 通过；V241 完整 A3 7/7 已通过；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7 已通过；V245 快 CI 通过；V246 快 CI 通过；V247 快 CI 通过、A3 6/7（PG18 别名冲突）；V248 完整 A3 7/7；V249 快 CI 通过；V250 快 CI/A3 均未启动 job；V251 快 CI 成功、A3 shell 变量失败；V252 完整 A3 7/7（实际 PG18 组合及 Owner HTTP 空状态）；V253 完整 A3 7/7；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 快 CI 通过、A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7 已通过；V259 V35 金额/商品覆盖快 CI 通过（未见完整 A3）；V260 历史 SKU/批次门禁完整 A3 7/7；V261/V262 完整 A3 通过；V263 快 CI 通过、A3 取消；V264 完整 A3 通过；V265/V266/V267 完整 A3 通过；V268/V269 完整 A3 通过；V270 本地结算核对完整 A3 通过（独立 Redis Session smoke 启动失败）；V271 原始订单分组门禁完整 A3 通过；V272 完整 A3 通过；V273 快 CI 通过、A3 6/7（PG18 失败）；V274 快 CI 通过、未触发 A3；V275 分类 SQL 回归通过但 A3 6/7（退款补偿并发唯一键失败）；V276 快 CI 通过；V277 并发修复完整 A3 7/7 通过；V278 完整 A3 7/7 通过；V279 工作台快 CI 与只读 Pages 通过；V280 r2 完整 A3 7/7 通过；V281 Redis 独立验收通过；V282 快 CI 节奏检查及 Next Chromium 类型发现失败；V283 快 CI/只读 Pages 通过但 Next 分类选择仍超时；V284 快 CI 通过但 Chromium 发现重复报告控件；V285 快 CI/只读 Pages 通过但 Chromium 仍超时；V286 快 CI/只读 Pages 通过但 Chromium 确认同工作台重复面板；V287 修复同级 React key 冲突待验收，未开放释放/替换或正式回转。见[当前事实](docs/current-status.md)。
+先读 [AGENTS.md](AGENTS.md)、[现行任务队列](docs/roadmap/current-plan.md)、[当前事实](docs/current-status.md)，核对 main 和 Actions；优先续办未验收任务。一个任务一个会话，结束前持久化交接；只有全部验收成功才关闭任务。详见[文档控制](docs/governance/document-control.md)。无需旧聊天历史。
 
 ## 一、仓库根目录：保留哪些，分别有什么用？
 
@@ -34,7 +34,7 @@ V237 完整隔离 A3 7/7 通过，实际 PostgreSQL18 Java Reports 服务回归�
 | 文档目录 | 用途；当前入口与归档规则 |
 | --- | --- |
 | `docs/roadmap/` | **现行唯一计划**：[current-plan.md](docs/roadmap/current-plan.md)；V108 和历史 A3 计划为旧证据。[docs/roadmap.md](docs/roadmap.md) 是标明“历史归档”的旧版本，**不能作为现行计划** |
-| `docs/governance/` | 文档控制、[工程规范](docs/governance/engineering-standards.md)、G1/DEC 签署状态、分版本评分与历史审计；现行评分见 [V231 76/100](docs/governance/project-scorecard-v231-2026-11-24.md) |
+| `docs/governance/` | 文档控制、[工程规范](docs/governance/engineering-standards.md)、G1/DEC 签署状态、分版本评分与历史审计；现行评分见 [现行评分记录](docs/governance/project-scorecard-v231-2026-11-24.md) |
 | `docs/finance/` | 费用/结算/归属/退款 COGS、外部证据限制与利润核算的 Vxxx 实际证明；[V230 分类费用缺口清单](docs/finance/v230-external-source-proof-dossier-and-owner-workflow.md) |
 | `docs/testing/`、`docs/deployment/`、`docs/api/` | 精确 SHA 的 A3/CI、PG18 部署和备份安全、真实 Springdoc/Orval API 接入规则 |
 | `docs/architecture/` | 架构、[图纸索引](docs/architecture/diagram-index.md)、ADR 与 [ADR 模板](docs/architecture/adrs/template.md) |
@@ -88,4 +88,3 @@ Java 测试为 `./apps/server/gradlew -p apps/server --no-daemon test`；文档�
 
 首笔真实结算样本请在受控本地使用 Gradle `checkLocalSettlementSample`，见 [V60/V270 操作步骤](docs/finance/manual-bank-payout-v60.md)。核对器无需数据库、OAuth 或上传；金额相符不代表外部认证。
 
-**V287 上线复评：78/100（V281 Redis 独立验收 +1，真实利润仍10/25）。** 受控本地/合成试用可进行；私有预生产仅限有条件验证；生产仍 NO-GO，详见[上线门禁](docs/operations/v143-production-release-preflight.md)。

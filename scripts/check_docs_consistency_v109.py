@@ -189,10 +189,25 @@ for path, content in (("AGENTS.md", agents), ("engineering", engineering)):
         errors.append(f"DOC-196 runtime policy missing: {path}")
 if "直接提交" not in governance or "文档控制" not in governance:
     errors.append("Document control must specify direct main and canonical authority")
-if "V194" not in runtime or "V195" not in runtime or "#45016097852" not in runtime:
-    errors.append("Current status has not recorded the V194/V195 exact quick-CI evidence")
-if "V194" not in active_plan or "V195" not in active_plan or "A3" not in audit_196:
-    errors.append("Active plan and docs audit must retain outstanding validation gaps")
+# V288: require a durable historical snapshot instead of copying the old log.
+if not re.search(r"github\.com/kunlong-luo/merchivra/blob/[0-9a-f]{40}/docs/current-status\.md", runtime):
+    errors.append("Current facts must retain an exact historical status snapshot")
+if "A3" not in audit_196:
+    errors.append("Docs audit must retain historical validation gaps")
+def task_fields(content):
+    task = re.search(r"^- Task: (V[0-9]+)$", content, re.M)
+    state = re.search(r"^- State: ([A-Z_]+)$", content, re.M)
+    return (task.group(1) if task else None, state.group(1) if state else None)
+task, state = task_fields(active_plan)
+if not task or state not in {"READY","IN_PROGRESS","IMPLEMENTED_PENDING_VERIFICATION","FAILED","BLOCKED","VERIFIED"}:
+    errors.append("Active task ID or state missing/invalid")
+if task_fields(runtime) != (task, state):
+    errors.append("Current facts and plan task/state disagree")
+if len(runtime.encode("utf-8")) > 24000:
+    errors.append("Current facts must be concise; archive exact historical evidence")
+for token in ("Basis:", "验收", "下一动作"):
+    if token not in runtime or token not in active_plan:
+        errors.append(f"Missing handoff field: {token}")
 if "realizedNetProfit=null" not in agents or "realizedNetProfit=null" not in engineering:
     errors.append("Canonical Agent and engineering rules must preserve unknown net-profit semantics")
 

@@ -1,6 +1,10 @@
 # Merchivra 文档中心 · 唯一现行入口
 
-> **CURRENT · 2026-11-25 / V237 完整 A3 7/7；V238–V240 快 CI 通过；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 通过；V246 快 CI 通过；V247 A3 6/7；V248 完整 A3 7/7；V249 快 CI 通过；V250 工作流未启动；V251 A3 失败；V252 完整 A3 7/7；V253 完整 A3 7/7；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7；V257 快 CI 通过；V258 完整 A3 7/7；V259 快 CI 通过；V260 完整 A3 7/7；V261/V262 完整 A3 通过；V263 快 CI 通过、A3 取消；V264 完整 A3 通过；V265/V266/V267 完整 A3 通过；V268/V269 完整 A3 通过；V270 完整 A3 通过、独立 Redis smoke 启动失败；V271 完整 A3 通过；V272 完整 A3 通过；V273 A3 6/7（PG18 失败）；V274 快 CI 通过、未触发 A3；V275 分类 SQL 通过但 A3 6/7（补偿唯一键竞争）；V276 快 CI 通过；V277 完整 A3 7/7 通过；V278 完整 A3 7/7 通过；V279 快 CI/只读 Pages 通过；V280 r2 完整 A3 7/7 通过；V281 Redis 独立验收通过；V282 快 CI 节奏检查及 Next Chromium 类型发现失败；V283 快 CI/只读 Pages 通过、Next 分类选择仍超时；V284 快 CI 通过、Chromium 发现重复报告控件；V285 快 CI/只读 Pages 通过、Chromium 仍超时；V286 快 CI/只读 Pages 通过、Chromium 重复面板失败；V287 同级 React key 冲突修复待验收；现行六维评分78/100。** Java 25/Spring Boot 4.1.2/**Gradle**/PostgreSQL 18、React19/**Next.js 16.4.5**/Node24/**pnpm 12.20.0 唯一包管理器**。本仓库仍是 **pre-alpha**；真实 Seller/Ads OAuth 关闭，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**；`realizedNetProfit=null`。所有现行代码和文档直接维护在 `main`，本入口不把本地手工账单或模拟 CI 冒充真实净利润。
+> **CURRENT · 文档导航。** 实时任务见 [现行计划](roadmap/current-plan.md)，事实与评分见 [当前事实](current-status.md)。main / Java25 / Gradle / PostgreSQL18 / React19 / Next.js16 / pnpm；pre-alpha，realizedNetProfit=null，Seller/Ads OAuth OFF，#104 NO-GO。
+
+## 新会话入口
+
+先读 [AGENTS.md](../AGENTS.md)、[任务队列](roadmap/current-plan.md)、[当前事实](current-status.md)，核实 main 和 Actions；不依赖旧聊天。详细交接规则见 [GOV-001](governance/document-control.md)。
 
 ## 先读这些权威文档
 
@@ -8,7 +12,7 @@
 | --- | --- |
 | 项目实际实现了什么，哪些验收与生产阻断还存在 | [当前事实与精确 SHA](current-status.md) |
 | 下一阶段哪些 P0 应先做，完成标准是什么 | [唯一现行计划](roadmap/current-plan.md) |
-| 最新项目成熟度、为什么不是 90 分 | **[V231 最新独立六维 76/100 评分](governance/project-scorecard-v231-2026-11-24.md)**；[V230 75分](governance/project-scorecard-v230-2026-11-24.md)、[V229 74分](governance/project-scorecard-v229-2026-11-24.md)、[V228 73分](governance/project-scorecard-v228-2026-11-24.md) 都是**历史** |
+| 最新项目成熟度、为什么不是 90 分 | [当前事实](current-status.md) · [评分记录](governance/project-scorecard-v231-2026-11-24.md) |
 | 代理/工程实现应遵守的强制规则 | [唯一 AGENTS.md](../AGENTS.md) · [ENG-001 工程实施规范](governance/engineering-standards.md) |
 | 文档状态、为何保留旧 CI/PR/失败记录以及何时能称 VERIFIED | [GOV-001 文档控制](governance/document-control.md) · [DOC-196 审计](governance/docs-audit-2026-11-22.md) · [V191 历史审计](governance/docs-audit-v191.md) |
 | 本地如何运行以及 Session HTTP 500 的友好处理 | [开发和诊断](development.md) · [独立 spark-db/Compose 安全](deployment/local-spark-db.md) |
