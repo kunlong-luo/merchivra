@@ -18,7 +18,7 @@ export const mappingArray=z.array(mapping).min(1).max(200).refine(
  '原始类型组合不能重复')
 export type Mapping=z.infer<typeof mapping>
 export type EditorRow={transactionType:string;amountType:string;amountDescription:string;category:string}
-export function rowsFromVisibleLines(lines:readonly SettlementReportLine[]):EditorRow[]{
+export function rowsFromVisibleLines(lines:readonly Pick<SettlementReportLine,'transactionType'|'amountType'|'amountDescription'>[]):EditorRow[]{
  const rows=new Map<string,EditorRow>()
  for(const l of lines){
   const row={transactionType:l.transactionType??'',amountType:l.amountType??'',
@@ -37,6 +37,18 @@ const blocked=z.object({mappingApproved:z.literal(false),bankVerified:z.literal(
 export const mappingDraft=blocked.extend({reportId:z.string().uuid(),mappingSha256:hash,
  state:z.literal('LOCAL_IMMUTABLE_MAPPING_DRAFT'),mappings:mappingArray})
 const count=z.number().int().nonnegative()
+export const categoryTypes=z.object({
+ reportId:z.string().uuid(),
+ state:z.enum(['REPORT_TYPES_READY','REPORT_TYPE_COVERAGE_HOLD','REPORT_TYPE_LIMIT_EXCEEDED','REPORT_TYPE_UNMAPPABLE']),
+ expectedRows:count,actualRows:count,
+ types:z.array(reportType.extend({rowCount:z.number().int().positive()})).max(200),
+ mappingApproved:z.literal(false),bankVerified:z.literal(false)
+}).refine(x=>x.state==='REPORT_TYPES_READY'?
+ x.expectedRows===x.actualRows&&x.actualRows>=1&&x.actualRows<=10000&&
+ x.types.reduce((sum,t)=>sum+t.rowCount,0)===x.actualRows&&
+ new Set(x.types.map(t=>JSON.stringify([t.transactionType,t.amountType,t.amountDescription]))).size===x.types.length:
+ x.types.length===0,'类型覆盖或身份不完整')
+export type CategoryType=z.infer<typeof categoryTypes>['types'][number]
 const decimal=z.string().regex(/^-?\d+(\.\d+)?$/)
 export const categoryPreview=blocked.extend({
  state:z.enum(['SOURCE_COMPARISON_HOLD','CATEGORY_POPULATION_UNBOUNDED','CATEGORY_POPULATION_INCOMPLETE',
@@ -81,6 +93,12 @@ async function call<T>(url:string,schema:z.ZodType<T>,body?:unknown):Promise<T>{
  return schema.parse(await response.json())
 }
 function requireIdentity(ok:boolean){if(!ok)throw new Error('返回的报告或证据身份不一致，请刷新。')}
+export async function getCategoryTypes(mp:string,report:string){
+ const result=await call('/api/v1/finance/marketplaces/'+encodeURIComponent(mp)+
+  '/reports/'+encodeURIComponent(report)+'/category-types',categoryTypes)
+ requireIdentity(result.reportId===report)
+ return result
+}
 export async function saveMapping(mp:string,report:string,rows:Mapping[]){
  const result=await call(root(mp,report),mappingDraft,mappingArray.parse(rows))
  requireIdentity(result.reportId===report)

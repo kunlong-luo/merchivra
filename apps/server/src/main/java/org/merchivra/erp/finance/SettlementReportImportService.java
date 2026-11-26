@@ -178,6 +178,52 @@ public class SettlementReportImportService {
                 rs.getString(7).trim()),tenant,marketplace,reportId);
     }
 
+    public record CategoryType(String transactionType,String amountType,String amountDescription,long rowCount) {}
+    public record CategoryTypes(UUID reportId,String state,long expectedRows,long actualRows,
+        List<CategoryType> types,boolean mappingApproved,boolean bankVerified) {}
+    private record TypeCoverage(long expected,long actual,long foreignCurrency) {}
+    // V280: inspect every staged report line, not the display-only first 100.
+    // Both queries share one read-only RR snapshot. Never disclose partial types.
+    @Transactional(readOnly=true,isolation=org.springframework.transaction.annotation.Isolation.REPEATABLE_READ)
+    public CategoryTypes categoryTypes(UUID tenant,UUID marketplace,UUID reportId) {
+        var coverage=jdbc.query("""
+            SELECT r.line_count,count(l.line_number),
+              count(l.line_number) FILTER (WHERE l.currency_code<>r.statement_currency)
+            FROM spapi_settlement_report r
+            JOIN tenant t ON t.id=r.tenant_id AND t.status='ACTIVE'
+            LEFT JOIN spapi_settlement_report_line l ON l.tenant_id=r.tenant_id AND l.report_id=r.id
+            WHERE r.tenant_id=? AND r.seller_marketplace_id=? AND r.id=?
+            GROUP BY r.line_count
+            """,(rs,n)->new TypeCoverage(rs.getLong(1),rs.getLong(2),rs.getLong(3)),
+            tenant,marketplace,reportId).stream().findFirst().orElseThrow(()->
+                new ResponseStatusException(HttpStatus.NOT_FOUND,"Report not found"));
+        if(coverage.actual()!=coverage.expected()||coverage.actual()<1||coverage.actual()>10000||coverage.foreignCurrency()!=0)
+            return new CategoryTypes(reportId,"REPORT_TYPE_COVERAGE_HOLD",coverage.expected(),coverage.actual(),List.of(),false,false);
+        var rows=jdbc.query("""
+            SELECT l.transaction_type,l.amount_type,l.amount_description,count(*)
+            FROM spapi_settlement_report_line l
+            JOIN spapi_settlement_report r ON r.tenant_id=l.tenant_id AND r.id=l.report_id
+            WHERE r.tenant_id=? AND r.seller_marketplace_id=? AND r.id=?
+            GROUP BY l.transaction_type,l.amount_type,l.amount_description
+            ORDER BY l.transaction_type NULLS FIRST,l.amount_type NULLS FIRST,l.amount_description NULLS FIRST
+            LIMIT 201
+            """,(rs,n)->new CategoryType(rs.getString(1),rs.getString(2),rs.getString(3),rs.getLong(4)),
+            tenant,marketplace,reportId);
+        return finishCategoryTypes(reportId,coverage.expected(),coverage.actual(),rows);
+    }
+    static CategoryTypes finishCategoryTypes(UUID reportId,long expected,long actual,List<CategoryType> rows) {
+        String state="REPORT_TYPES_READY";
+        if(rows.size()>200)state="REPORT_TYPE_LIMIT_EXCEEDED";
+        else if(expected!=actual||actual<1||actual>10000||rows.stream().mapToLong(CategoryType::rowCount).sum()!=actual
+            ||rows.stream().anyMatch(r->r.rowCount()<1))
+            state="REPORT_TYPE_COVERAGE_HOLD";
+        else if(rows.stream().anyMatch(r->!SettlementCategoryPreviewV273.validReportType(
+            new SettlementCategoryPreviewV273.ReportType(r.transactionType(),r.amountType(),r.amountDescription()))))
+            state="REPORT_TYPE_UNMAPPABLE";
+        return new CategoryTypes(reportId,state,expected,actual,
+            "REPORT_TYPES_READY".equals(state)?List.copyOf(rows):List.of(),false,false);
+    }
+
     public Review review(UUID tenant,UUID marketplace,UUID reportId) {
         return jdbc.query("""
             SELECT COUNT(*) row_count,COALESCE(SUM(l.signed_amount),0) signed_total,

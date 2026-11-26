@@ -195,6 +195,7 @@ class ReceiptCostCompositionPg18V250Test {
         second.db=db;second.write=write;second.service=service;second.recovery=recovery;
         second.crossClaimRace();
         second.categoryReviewHttp();
+        System.out.println("PASS V280 actual Owner HTTP full report type discovery beyond first 100 and scope");
         System.out.println("PASS V278 actual Owner HTTP category draft, evidence, independent review and stale hold");
         System.out.println("PASS V269 actual PG18 whole-order compensation simulation, explicit approval, no activation and conservation");
         System.out.println("PASS V268 actual PG18 concurrent compensation request and approval, whole RR retry, conflicting reason hold");
@@ -273,17 +274,23 @@ class ReceiptCostCompositionPg18V250Test {
                 INSERT INTO spapi_settlement_report(id,tenant_id,seller_marketplace_id,amazon_report_id,
                     report_document_id,report_type,state,source_origin,document_sha256,settlement_reference,
                     statement_currency,declared_net,line_count)
-                VALUES (?,?,?,?,?,'GET_V2_SETTLEMENT_REPORT_DATA_FLAT_FILE_V2','IMPORTED','LIVE',?,?,'USD',20,1)
+                VALUES (?,?,?,?,?,'GET_V2_SETTLEMENT_REPORT_DATA_FLAT_FILE_V2','IMPORTED','LIVE',?,?,'USD',18,101)
                 """,report,tenant,market,"V278-"+report,"V278-DOC-"+report,"a".repeat(64),settlement);
             db.update("""
                 INSERT INTO spapi_settlement_report_line(tenant_id,report_id,line_number,transaction_type,
                     amount_type,amount_description,external_order_id,signed_amount,currency_code)
-                VALUES (?,?,1,'Order','ItemPrice','Principal','V278-ORDER',20,'USD')
+                SELECT ?,?,n,'Order','ItemPrice','Principal','V278-ORDER',0.20,'USD'
+                FROM generate_series(1,100) n
+                """,tenant,report);
+            db.update("""
+                INSERT INTO spapi_settlement_report_line(tenant_id,report_id,line_number,transaction_type,
+                    amount_type,amount_description,external_order_id,signed_amount,currency_code)
+                VALUES (?,?,101,'Order','ItemFees','Commission','V278-ORDER',-2,'USD')
                 """,tenant,report);
             db.update("""
                 INSERT INTO finance_source_event(id,tenant_id,seller_marketplace_id,source_family,source_event_key,
                     data_origin,category,amount,currency_code,posted_at,external_order_id,source_type)
-                VALUES (?,?,?,'SPAPI_FINANCES',?,'LIVE','PRODUCT_SALES',20,'USD',now(),'V278-ORDER','V278_SALE')
+                VALUES (?,?,?,'SPAPI_FINANCES',?,'LIVE','PRODUCT_SALES',18,'USD',now(),'V278-ORDER','V278_SALE')
                 """,event,tenant,market,"V278-"+event);
             db.update("""
                 INSERT INTO finance_transaction_reference(tenant_id,event_id,reference_kind,reference_value)
@@ -297,11 +304,34 @@ class ReceiptCostCompositionPg18V250Test {
                 INSERT INTO finance_breakdown_rule(id,tenant_id,seller_marketplace_id,source_type,category,state,updated_by)
                 VALUES (?,?,?,'V278_PRINCIPAL','PRODUCT_SALES','ACTIVE',?)
                 """,rule,tenant,market,maker);
+            db.update("""
+                INSERT INTO finance_transaction_breakdown(tenant_id,event_id,source_path,source_type,original_amount,currency_code,is_leaf)
+                VALUES (?,?,'1','V280_COMMISSION',-2,'USD',true)
+                """,tenant,event);
+            db.update("""
+                INSERT INTO finance_breakdown_rule(id,tenant_id,seller_marketplace_id,source_type,category,state,updated_by)
+                VALUES (?,?,?,'V280_COMMISSION','AMAZON_FEE','ACTIVE',?)
+                """,UUID.randomUUID(),tenant,market,maker);
         });
         var makerClient=loginFixtureOwner();
         var checkerClient=loginFixtureOwner(checkerLogin);
-        String root="/api/v1/finance/marketplaces/"+market+"/reports/"+report+"/category-mapping-drafts";
+        String reportPath="/api/v1/finance/marketplaces/"+market+"/reports/"+report;
+        String typesPath=reportPath+"/category-types";
+        assertEquals(100,readJson(http(makerClient,reportPath+"/lines",null,null)).size());
+        var types=readJson(http(makerClient,typesPath,null,null));
+        assertEquals("REPORT_TYPES_READY",types.path("state").asText());
+        assertEquals(101,types.path("actualRows").asInt());
+        assertEquals(101,types.path("expectedRows").asInt());
+        assertEquals(2,types.path("types").size());
+        assertTrue(types.path("types").toString().contains("Commission"));
+        assertEquals(100,types.path("types").get(1).path("rowCount").asInt());
+        assertFalse(types.path("mappingApproved").asBoolean());
+        assertEquals(401,http(HttpClient.newHttpClient(),typesPath,null,null).statusCode());
+        assertEquals(404,http(makerClient,typesPath.replace(market.toString(),market2.toString()),null,null).statusCode());
+        String root=reportPath+"/category-mapping-drafts";
         String mappingJson="[{\"reportType\":{\"transactionType\":\"Order\",\"amountType\":\"ItemPrice\",\"amountDescription\":\"Principal\"},\"category\":\"PRODUCT_SALES\"}]";
+        mappingJson=mappingJson.substring(0,mappingJson.length()-1)+
+            ",{\"reportType\":{\"transactionType\":\"Order\",\"amountType\":\"ItemFees\",\"amountDescription\":\"Commission\"},\"category\":\"AMAZON_FEE\"}]";
         var draft=readJson(categoryPost(makerClient,root,mappingJson,true));
         String mapping=draft.path("mappingSha256").asText();
         assertTrue(mapping.matches("[0-9a-f]{64}"));

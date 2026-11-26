@@ -29,6 +29,10 @@ public final class SettlementCategoryPreviewV273 {
     private static boolean field(String s,int max) {
         return s==null||(!s.isBlank()&&s.length()<=max&&s.matches("[A-Za-z0-9 _./+()\\-]+"));
     }
+    static boolean validReportType(ReportType k) {
+        return k!=null&&k.transactionType()!=null&&field(k.transactionType(),100)
+            &&field(k.amountType(),100)&&field(k.amountDescription(),160);
+    }
     static Map<ReportType,String> validate(List<Mapping> input) {
         if(input==null||input.isEmpty()||input.size()>200)throw new IllegalArgumentException("Mapping count");
         var result=new HashMap<ReportType,String>();
@@ -36,8 +40,7 @@ public final class SettlementCategoryPreviewV273 {
             if(mapping==null||mapping.reportType()==null||mapping.category()==null||
                 !CATEGORIES.contains(mapping.category()))throw new IllegalArgumentException("Mapping invalid");
             var k=mapping.reportType();
-            if(k.transactionType()==null||!field(k.transactionType(),100)||!field(k.amountType(),100)
-                ||!field(k.amountDescription(),160)||result.putIfAbsent(k,mapping.category())!=null)
+            if(!validReportType(k)||result.putIfAbsent(k,mapping.category())!=null)
                 throw new IllegalArgumentException("Invalid or duplicate report type");
         }
         return Map.copyOf(result);

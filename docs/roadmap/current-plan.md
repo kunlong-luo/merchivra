@@ -1,6 +1,6 @@
 # Merchivra · 唯一现行 P0 执行计划
 
-**CURRENT · 2026-11-25 · V279：费用分类工作台及生产准入评估。**
+**CURRENT · 2026-11-25 · V280：上线收敛与完整报告类型发现。**
 
 > **北极星**：对 Amazon Seller ERP 的每笔订单、退款、SKU、采购批次及每个原币费用来源建立可以由独立第三方验证的记录，覆盖全成本/真实库存 COGS，最后在经批准的 G1/DEC 会计政策下生成可审计期间净利润。不能为了显示一个数字填补 UNKNOWN 为0。项目仍为 pre-alpha、`realizedNetProfit=null`，真实 Seller/Ads OAuth OFF，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
 
@@ -26,10 +26,10 @@
 
 **评分闸门**：V231 76/100 与真实利润 10/25 仍为最新已验收基线；V232 未通过上述真实证据关卡前不发布新评分。合成 CI 通过只证明工程契约，不能代替会计签署。保持 `realizedNetProfit=null`、Seller/Ads OAuth OFF、#104 NO-GO。真实材料须由维护者在合法本地环境取得，独立财务人员签署，不由开发代理代签。
 
-### 当前执行：V279 费用分类工作台与上线门禁
+### 当前执行：V280 上线收敛与完整类型发现
 
 - V258/V260/V261/V262 完整 A3 成功；V263 快 CI 成功、A3 取消；V264 快 CI 及完整 A3 成功；V265/V266/V267/V268/V269/V270/V271 快 CI 与完整 A3 成功；V270 独立 Redis Session smoke 容器启动失败，需核实日志后修复。各 SHA、运行与历史失败见[当前事实](../current-status.md)和[退款领域证据](../finance/v212-refund-original-sale-lot-quantity-envelope.md)。
-- V277 完整 A3 7/7 通过；V278 快 CI 通过、完整 A3 待核。V279 [费用分类工作台](../finance/v198-settlement-source-claim-integrity.md) 复用原页面、显示未映射与金额差异、保存/加载 SHA、重新核算及本地双人审核，待 CI/A3；先核对 V278、再验证 V279 浏览器与真实 HTTP。后续优先完整类型发现、真实 E1–E5 原件与利润复算、目标 G2/G3，不再以功能版本数替代上线证据。
+- V277/V278 完整 A3 7/7 通过，V278 真实 HTTP 双人审核 marker 已核；V279 快 CI 与只读 Pages 成功。V280 [完整报告类型发现](../finance/v198-settlement-source-claim-integrity.md) 修复前100行截断导致遗漏，后端全量及前端接入、101行真实 HTTP 回归待 A3。下一阶段优先针对工作台浏览器验收、Redis 独立 smoke、真实 E1–E5 样本与利润复算、实际 G2/G3；不再以版本数替代上线证据。
 - 优先取得 E1 合法真实采购/头程费用或银行结算样本，受控本地提供原始字节、官方签发渠道或可信签章、原币金额/币种、不可变单据/行键、关联订单/批次/付款以及独立复核。外部原件及隐私不得进入公开 Git；无真实样本和 G1/DEC 签署前维持全部实际利润阻断。
 
 ## 文档清理规则

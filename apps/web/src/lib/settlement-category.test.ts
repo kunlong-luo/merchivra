@@ -1,5 +1,5 @@
 import {afterEach,describe,expect,it,vi} from 'vitest'
-import {categoryReview,savedPreview,rowsFromVisibleLines,editorMappings,writeCategoryReview} from './settlement-category'
+import {categoryReview,savedPreview,rowsFromVisibleLines,editorMappings,writeCategoryReview,categoryTypes,getCategoryTypes} from './settlement-category'
 const report='11111111-1111-4111-8111-111111111111',market='22222222-2222-4222-8222-222222222222'
 const mapping='a'.repeat(64),evidence='b'.repeat(64)
 const requestedBy='33333333-3333-4333-8333-333333333333'
@@ -7,6 +7,28 @@ const record={mappingSha256:mapping,evidenceSha256:evidence,state:'LOCAL_CATEGOR
  requestedBy,approvedBy:null,mappingActivated:false,bankVerified:false,ledgerPosted:false,realizedNetProfit:null}
 describe('V279 category workflow boundaries',()=>{
  afterEach(()=>vi.unstubAllGlobals())
+ it('accepts complete discovery, rejects truncated or duplicate coverage and partial HOLD',()=>{
+  const a={transactionType:'Order',amountType:null,amountDescription:'Principal',rowCount:100}
+  const b={transactionType:'Order',amountType:'ItemFees',amountDescription:'Commission',rowCount:1}
+  const full={reportId:report,state:'REPORT_TYPES_READY',expectedRows:101,actualRows:101,
+   types:[a,b],mappingApproved:false,bankVerified:false}
+  expect(categoryTypes.parse(full).types).toHaveLength(2)
+  expect(()=>categoryTypes.parse({...full,types:[a]})).toThrow()
+  expect(()=>categoryTypes.parse({...full,types:[a,{...a,rowCount:1}]})).toThrow()
+  expect(()=>categoryTypes.parse({...full,state:'REPORT_TYPE_LIMIT_EXCEEDED'})).toThrow()
+  expect(categoryTypes.parse({...full,state:'REPORT_TYPE_LIMIT_EXCEEDED',types:[]}).types).toEqual([])
+ })
+ it('loads full types from scoped no-store GET and rejects wrong report',async()=>{
+  const data={reportId:report,state:'REPORT_TYPES_READY',expectedRows:1,actualRows:1,
+   types:[{transactionType:'Order',amountType:null,amountDescription:null,rowCount:1}],
+   mappingApproved:false,bankVerified:false}
+  const fetchMock=vi.fn().mockResolvedValue({ok:true,json:async()=>data})
+  vi.stubGlobal('fetch',fetchMock)
+  expect((await getCategoryTypes(market,report)).types).toHaveLength(1)
+  expect(fetchMock.mock.calls[0][0]).toBe('/api/v1/finance/marketplaces/'+market+'/reports/'+report+'/category-types')
+  expect(fetchMock.mock.calls[0][1].cache).toBe('no-store')
+  await expect(getCategoryTypes(market,market)).rejects.toThrow('身份')
+ })
  it('does not guess classifications from visible lines and preserves null',()=>{
   const line={lineNumber:1,transactionType:'Order',amountType:null,amountDescription:'Principal',
    orderId:null,signedAmount:'20.00',currency:'USD'}

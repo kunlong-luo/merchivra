@@ -36,3 +36,10 @@
 ## V279 复评补充（2026-11-26，不改 V231 历史评分）
 
 V277 完整 A3 通过，V278 快 CI 通过、完整 A3 待核，V279 实际工作台待验收；维持六维 76/100，真实利润 10/25。工程证据不能替代真实 E1–E5/G1/G2/G3；生产 NO-GO。当前发布分层与具体阻塞见 [V143 生产准入](../operations/v143-production-release-preflight.md)。
+
+
+V278 [代码 a36377ae452c](https://github.com/kunlong-luo/merchivra/commit/a36377ae452ccd928d5ebe7b671b1f9d91953353) [快 CI #45741837204 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45741837204) [完整 A3 #45741837209 SUCCESS 7/7](https://github.com/kunlong-luo/merchivra/actions/runs/45741837209)，实际 PG18 job #139648487996 日志确认 PASS V278 actual category review HTTP JUnit marker verified (not skipped)。V279 [代码 f1994297ab75](https://github.com/kunlong-luo/merchivra/commit/f1994297ab754597b1a3b2b47358336605f392c2) [快 CI #45742309207 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45742309207) [只读 Pages #45742309241 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45742309241)，未单独 A3 或专项分类 UI Chromium 验收。
+
+## V280 复评（2026-11-26）
+
+沿用原六维定性成熟度：架构18/20、**业务19/20（+1）**、真实全成本/净利润10/25、安全14/15、前端9/10、测试运维7/10，合计 **77/100**。唯一加分基于 V278 精确 SHA 的完整 A3 7/7 及 PG18 JUnit 非跳过 marker，证明两位独立 Owner 可以经真实 Spring HTTP 完成分类保存、预检、申请、批准、规则修订后拒绝旧证据的本地业务闭环；V279 快 CI 和 Pages 已通过，但不额外加前端分，V280 待验收不计分。真实 E1–E5、DEC/G1 会计签署、G2/G3 目标证明仍缺，#104 OPEN/BLOCKED；`realizedNetProfit=null`、OAuth OFF。受控本地/隔离测试可进行，私有预生产仅有条件验证，正式生产 NO-GO；评分不是上线许可。

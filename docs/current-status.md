@@ -1,13 +1,13 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7；V259 快 CI 通过；V260 完整 A3 7/7；V261/V262 完整 A3 通过；V263 快 CI 通过、A3 取消；V264 完整 A3 通过；V265/V266/V267 完整 A3 通过；V268/V269 完整 A3 通过；V270 完整 A3 通过、独立 Redis smoke 启动失败；V271 完整 A3 通过；V272 完整 A3 通过；V273 A3 6/7（PG18 失败）；V274 快 CI 通过、未触发 A3；V275 分类 SQL 通过但 A3 6/7（补偿唯一键竞争）；V276 快 CI 通过；V277 完整 A3 7/7 通过；V278 快 CI 通过、A3 待核；V279 分类工作台待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7；V259 快 CI 通过；V260 完整 A3 7/7；V261/V262 完整 A3 通过；V263 快 CI 通过、A3 取消；V264 完整 A3 通过；V265/V266/V267 完整 A3 通过；V268/V269 完整 A3 通过；V270 完整 A3 通过、独立 Redis smoke 启动失败；V271 完整 A3 通过；V272 完整 A3 通过；V273 A3 6/7（PG18 失败）；V274 快 CI 通过、未触发 A3；V275 分类 SQL 通过但 A3 6/7（补偿唯一键竞争）；V276 快 CI 通过；V277 完整 A3 7/7 通过；V278 完整 A3 7/7 通过；V279 快 CI/只读 Pages 通过；V280 全量类型发现待 A3。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 核心项目状态
 
 | 项目 | 当前可独立证实的状态 |
 | --- | --- |
 | 代码主线与栈 | **`main` 直接开发**；Java 25 / Spring Boot 4.1.2 / **Gradle** / PostgreSQL 18 Flyway；React 19 / **Next.js 16.4.5** 默认 / Node 24 / **pnpm 12.20.0 唯一前端包管理器**。Vite 只为明确回退或虚构 Pages |
-| 独立成熟度 | **[76/100（V231）](governance/project-scorecard-v231-2026-11-24.md)**；V230 75、V229 74、V228 73、V200 70 均为历史评分 |
+| 独立成熟度 | **[77/100（V280 复评，V278 已验收）](governance/project-scorecard-v231-2026-11-24.md#v280-复评2026-11-26)**；V231 76；V230 75、V229 74、V228 73、V200 70 均为历史评分 |
 | 真实全成本与净利润 | **10/25 的真实性子分不变**；`realizedNetProfit=null`、`bankReconciled=false`、`externallyVerified=false`，未取得真正完整可审计的 SKU/订单/整期净利润 |
 | Amazon Seller / Ads | 模拟、本地安全 API 框架/契约已存在，但**真实 OAuth 授权 OFF**；实际 Seller/Ads/Finances/Settlement 未取得可独立验证的完整凭证 |
 | 真实费用与退款 COGS | V91 手工声明和本地 Maker/Checker、结算行关联、来源归属和文件摘要声明**不等于**第三方原始签发证明；外仓实收、真实运输/关税/支付、退货批次成本冲回以及 DEC-06/07/08/G1 未签署 |
@@ -230,3 +230,13 @@ V279：在既有结算报告工作台中新增费用分类操作区，复用 Rea
 | 真实店铺生产运营 | NO-GO | E1–E5、DEC/G1 财务签署、G2 真实安全、G3 真实目标恢复/告警和独立变更批准；单独批准真实 OAuth |
 
 [Issue #104](https://github.com/kunlong-luo/merchivra/issues/104) 核对仍 OPEN/BLOCKED。优先执行：1) 真实单笔合法报告/Finances/银行回单、采购头程关税、退款 COGS 与完整 SKU/订单/期间净利润复算及 G1；2) 目标 TLS/Session/KMS/ClamAV/租户隔离及 G2；3) 实际 PG18 加密离站备份、PITR、RPO/RTO 与值班 ACK/G3。Redis 独立 smoke 启动问题未确认修复。目标证据与签署不公开、不伪造；未签署不部署生产或启用真实授权。
+
+
+V278 [代码 a36377ae452c](https://github.com/kunlong-luo/merchivra/commit/a36377ae452ccd928d5ebe7b671b1f9d91953353) [快 CI #45741837204 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45741837204) [完整 A3 #45741837209 SUCCESS 7/7](https://github.com/kunlong-luo/merchivra/actions/runs/45741837209)，实际 PG18 job #139648487996 日志确认 PASS V278 actual category review HTTP JUnit marker verified (not skipped)。V279 [代码 f1994297ab75](https://github.com/kunlong-luo/merchivra/commit/f1994297ab754597b1a3b2b47358336605f392c2) [快 CI #45742309207 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45742309207) [只读 Pages #45742309241 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45742309241)，未单独 A3 或专项分类 UI Chromium 验收。
+
+V280：新增 Owner no-store GET `/api/v1/finance/marketplaces/{marketplaceId}/reports/{reportId}/category-types`，在一个 RR 事务检查报告声明行数、实际行数（1–10000）及原币，然后按精确原始类型三元组全量 GROUP BY，读取最多201组以检测超出200项映射契约；每组 rowCount、NULL 保留，无猜测分类或金额。非全量、混币、超限、不可映射类型均返回 HOLD 状态及空数组，跨 Marketplace 404。前端不再从前100行初始化映射，使用全量查询及 Zod 覆盖/身份/重复校验，刷新重新挂载工作台并清除旧证据；原明细表保持100行。新增 Java/Vitest 反例；V250 实际 HTTP 夹具扩为101行、最后一行佣金、两类完整映射及复用 V278 双人审核，强制 V280 JUnit marker；触发完整 A3 待核。无迁移、依赖、真实 API 授权、财务激活、审批重开或正式入账；独立 Redis 启动失败尚未排除。
+
+
+## V280 复评（2026-11-26）
+
+沿用原六维定性成熟度：架构18/20、**业务19/20（+1）**、真实全成本/净利润10/25、安全14/15、前端9/10、测试运维7/10，合计 **77/100**。唯一加分基于 V278 精确 SHA 的完整 A3 7/7 及 PG18 JUnit 非跳过 marker，证明两位独立 Owner 可以经真实 Spring HTTP 完成分类保存、预检、申请、批准、规则修订后拒绝旧证据的本地业务闭环；V279 快 CI 和 Pages 已通过，但不额外加前端分，V280 待验收不计分。真实 E1–E5、DEC/G1 会计签署、G2/G3 目标证明仍缺，#104 OPEN/BLOCKED；`realizedNetProfit=null`、OAuth OFF。受控本地/隔离测试可进行，私有预生产仅有条件验证，正式生产 NO-GO；评分不是上线许可。

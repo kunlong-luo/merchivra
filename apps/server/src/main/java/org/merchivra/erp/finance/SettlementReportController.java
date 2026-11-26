@@ -40,6 +40,13 @@ public class SettlementReportController {
             .body(imports.lines(tenants.currentTenant(auth,req),marketplaceId,reportId));
     }
 
+    @GetMapping("/{reportId}/category-types")
+    public ResponseEntity<SettlementReportImportService.CategoryTypes> categoryTypes(
+        Authentication auth,HttpServletRequest req,@PathVariable UUID marketplaceId,@PathVariable UUID reportId) {
+        return ResponseEntity.ok().cacheControl(CacheControl.noStore()).body(
+            imports.categoryTypes(tenants.currentTenant(auth,req),marketplaceId,reportId));
+    }
+
     @GetMapping("/{reportId}/finance-comparison")
     public ResponseEntity<SettlementReportComparisonService.Comparison> comparison(
         Authentication auth,HttpServletRequest req,@PathVariable UUID marketplaceId,

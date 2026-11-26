@@ -1,8 +1,7 @@
 import {useState} from 'react'
-import type {SettlementReportLine} from './lib/settlement-reports'
-import {categories,categoryLabels,rowsFromVisibleLines,editorMappings,saveMapping,loadMapping,
+ import {categories,categoryLabels,rowsFromVisibleLines,editorMappings,saveMapping,loadMapping,
  previewMapping,readCategoryReview,writeCategoryReview,CategoryHttpError,
- type EditorRow,type Draft,type Preview,type Review} from './lib/settlement-category'
+ type CategoryType,type EditorRow,type Draft,type Preview,type Review} from './lib/settlement-category'
 
 const states:Record<string,string>={
  SOURCE_COMPARISON_HOLD:'来源核对尚未满足条件',
@@ -13,10 +12,10 @@ const states:Record<string,string>={
  LOCAL_CATEGORY_AMOUNTS_AGREE_UNVERIFIED:'本地分类金额一致，尚未经外部核证'
 }
 const blank=():EditorRow=>({transactionType:'',amountType:'',amountDescription:'',category:''})
-export default function SettlementCategoryPanelV279({marketplaceId,reportId,lines,lineCount}:{
- marketplaceId:string;reportId:string;lines:readonly SettlementReportLine[];lineCount:number
+export default function SettlementCategoryPanelV279({marketplaceId,reportId,sourceTypes,lineCount}:{
+ marketplaceId:string;reportId:string;sourceTypes:readonly CategoryType[];lineCount:number
 }){
- const [rows,setRows]=useState<EditorRow[]>(()=>rowsFromVisibleLines(lines))
+ const [rows,setRows]=useState<EditorRow[]>(()=>rowsFromVisibleLines(sourceTypes))
  const [lookup,setLookup]=useState('')
  const [draft,setDraft]=useState<Draft|null>(null)
  const [preview,setPreview]=useState<Preview|null>(null)
@@ -63,8 +62,8 @@ export default function SettlementCategoryPanelV279({marketplaceId,reportId,line
   <h3>费用分类核对与审核</h3>
   <p className="setup-hint">显式选择 Reports 原始类型组合，Finances 使用当前已配置的 V28 规则。
    本地审核不代表银行到账、会计批准或实际利润。请勿在理由中填写敏感资料。</p>
-  <p>当前可见 {lines.length} / {lineCount} 行。{lines.length<lineCount?
-   '这里只显示部分来源；请根据受控原件补充未显示的类型组合，最终由后端完整核验。':'最终仍由后端完整核验。'}
+  <p>已从服务端完整读取 {lineCount} 行的 {sourceTypes.length} 个原始类型组合，不受明细表前 100 行限制。
+   每个组合的行数已核对；最终仍由后端重新验证金额及证据。
    空白费用类型或描述表示原始 NULL；不自动猜测分类。</p>
   <fieldset disabled={busy}>
    <legend>报告类型映射（最多 200 项）</legend>
@@ -88,7 +87,7 @@ export default function SettlementCategoryPanelV279({marketplaceId,reportId,line
    <div className="sandbox-actions">
     <button type="button" className="refresh-button" disabled={rows.length>=200}
      onClick={()=>{reset();setRows(v=>[...v,blank()])}}>添加类型组合</button>
-    <button type="button" className="text-button" onClick={()=>{reset();setRows(rowsFromVisibleLines(lines))}}>重新加载可见类型（清空编辑）</button>
+    <button type="button" className="text-button" onClick={()=>{reset();setRows(rowsFromVisibleLines(sourceTypes))}}>重置为完整类型（清空编辑）</button>
     <button type="button" className="primary-button" disabled={!rows.length||rows.some(r=>!r.category||!r.transactionType)}
      onClick={()=>void run(async()=>{reset();const d=await saveMapping(marketplaceId,reportId,editorMappings(rows));adopt(d);await recompute(d)})}>保存草稿并核算</button>
    </div>
