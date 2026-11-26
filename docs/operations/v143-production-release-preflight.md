@@ -94,3 +94,21 @@ V282：复用 `scripts/smoke_browser_layout.mjs` 现有 Chromium/CDP 与 localho
 ## V282 复评（2026-11-26）
 
 原六维 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、**测试运维8/10（+1）**。唯一新增分值基于 V281 精确 SHA 已完成且日志可核的独立 Redis 8 运行验收，消除长期未运行的 Session/配额专项证据缺口；不是生产环境证明。V280 r2 A3 与 V282 浏览器尚待核，不加分。真实 E1–E5、DEC/G1、G2/G3 目标环境签署仍缺；#104 OPEN/BLOCKED、realizedNetProfit=null、Seller/Ads OAuth OFF。可受控本地/隔离测试，有条件私有预生产验证，不批准商业生产。
+
+
+V280 r2 [完整 A3 #45742981332 7/7](https://github.com/kunlong-luo/merchivra/actions/runs/45742981332)，七个 job 均 SUCCESS；[PG18 job #139654014988](https://github.com/kunlong-luo/merchivra/actions/runs/45742981332/job/139654014988) 日志确认 `PASS V280 actual full report type discovery JUnit marker verified (not skipped)`。V281 独立 Redis 通过证据保持。V282 [快 CI #45743906965](https://github.com/kunlong-luo/merchivra/actions/runs/45743906965) 的 [Compose job #139655319948](https://github.com/kunlong-luo/merchivra/actions/runs/45743906965/job/139655319948) 失败于 V108 cadence AssertionError: browser；[Chromium #45743907063 job #139655232452](https://github.com/kunlong-luo/merchivra/actions/runs/45743907063/job/139655232452) Vite 阶段通过，Next 阶段在 `V282 full type discovery` 超时，未证明后续保存/审核等动作成功；原因尚未确证。
+
+V283：修正 V108 快速 CI cadence guard，要求 Chromium 的 main push 路径精确等于四个测试契约文件，禁止无过滤 push、常规前端文件自动全量触发及 PR；Compose 和 PG18 原集中测试门禁保留。修正 V282 Chromium 断言：为完整类型覆盖加入明确语义标签，要求选中精确 report、101行/2组覆盖文字（仅归一空白）、两个分类控件且实际 `/category-types` GET；失败记录仅合成请求路径/DOM 摘要及截图，仍抛出超时。动作等待真实可操作（包括 fieldset disabled），自审403必须出现实际 alert 而非静态说明，新证据必须重新 GET 审核。未删原独立性或金额断言，未改变服务端财务门禁。针对浏览器超时尚未证实根因/修复效果，本轮自动触发快 CI 与独立 Chromium 待核，不重跑已通过的 V280 精确 SHA 全 A3。无数据库迁移、依赖或真实 API 调用。
+
+
+## V283 复评（2026-11-26）
+
+维持 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维8/10。V280 r2 完整 A3 与101行真实 HTTP 合成回归通过，确认此前技术闭环但业务评分已19/20；V282 发现新浏览器回归失败，V283 尚未通过，不增加前端或运维分。不以工程合成数据证明实际利润。#104 仍 OPEN/BLOCKED，真实 E1–E5、DEC/G1、目标 G2/G3 未验收；realizedNetProfit=null、Seller/Ads OAuth OFF。受控本地/隔离合成测试可以；私有预生产仅有条件验证；正式商业生产 NO-GO。
+
+### V283 私有验收交接顺序（不是授权指令）
+
+1. 固定已通过的精确源码 SHA、镜像 ID、Flyway 版本和受控目标；先完成 V283 浏览器与快速 CI，记录失败/修复/复测。只用隔离合成数据，不把 Pages 当目标服务。
+2. 业务/财务负责人准备一个真实结算周期的脱敏订单及 SKU、Reports 原始文件、Finances 拆分、Ads 费用、采购与头程/关税/仓储、退款实收和银行回单，在受控本地保存原件及独立签发证明。遵循 `docs/security/seller-oauth.md` 和其后继安全契约；OAuth 需另行批准，勿直接改变默认 OFF。不得上传 Token、客户资料、银行账号、原始财务文件至公开 Git/CI/Issue。
+3. 先用既有 V270 本地原件核对（见财务来源契约），随后独立验证 E1–E5 归属及金额守恒、退款 COGS、订单/SKU/期间净利润，确认 G1/DEC-06/07/08；缺失不是零。不得把分类一致或本地审批视为外部真伪/银行到账认证。
+4. 目标环境另做 G2 TLS/Session/CSRF/角色/KMS/AV、G3 真实 PG18 异地加密备份/PITR/告警 ACK，记录签署人及实际结果；现有 V281 Redis 仅隔离运行证据，不替代目标 G2/G3。
+5. 执行现有只读 V143 预检并由独立发布负责人签署，任何未满足项保留 NO-GO；无签署不开放真实 OAuth 或生产部署。

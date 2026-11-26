@@ -56,3 +56,8 @@ V278 [代码 a36377ae452c](https://github.com/kunlong-luo/merchivra/commit/a3637
 
 
 V281 [代码 cb9bb88eea15](https://github.com/kunlong-luo/merchivra/commit/cb9bb88eea150384fa87a121c60e2a11d4bf42cf) [快 CI #45743424984 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45743424984)，[独立 Redis smoke #45743425032](https://github.com/kunlong-luo/merchivra/actions/runs/45743425032) [job #139653656144 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45743425032/job/139653656144) 实际日志 redis_version:8.10.1、GCRA PASS、真实登录/CSRF、重启后同一 userId/tenantId、断 Redis 后旧 cookie 不授权均通过；无生产凭据。V280 r2 [完整 A3 #45742981332](https://github.com/kunlong-luo/merchivra/actions/runs/45742981332) 核查时5项通过，PG18及完整 HTTP 尚运行。
+
+
+## V283 复评（2026-11-26）
+
+维持 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维8/10。V280 r2 完整 A3 与101行真实 HTTP 合成回归通过，确认此前技术闭环但业务评分已19/20；V282 发现新浏览器回归失败，V283 尚未通过，不增加前端或运维分。不以工程合成数据证明实际利润。#104 仍 OPEN/BLOCKED，真实 E1–E5、DEC/G1、目标 G2/G3 未验收；realizedNetProfit=null、Seller/Ads OAuth OFF。受控本地/隔离合成测试可以；私有预生产仅有条件验证；正式商业生产 NO-GO。

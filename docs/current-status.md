@@ -1,6 +1,6 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7；V259 快 CI 通过；V260 完整 A3 7/7；V261/V262 完整 A3 通过；V263 快 CI 通过、A3 取消；V264 完整 A3 通过；V265/V266/V267 完整 A3 通过；V268/V269 完整 A3 通过；V270 完整 A3 通过、独立 Redis smoke 启动失败；V271 完整 A3 通过；V272 完整 A3 通过；V273 A3 6/7（PG18 失败）；V274 快 CI 通过、未触发 A3；V275 分类 SQL 通过但 A3 6/7（补偿唯一键竞争）；V276 快 CI 通过；V277 完整 A3 7/7 通过；V278 完整 A3 7/7 通过；V279 快 CI/只读 Pages 通过；V280 r2 快 CI/只读 Pages 通过、A3 待核；V281 Redis 独立验收通过；V282 分类工作台 Chromium 专项回归待核。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7；V259 快 CI 通过；V260 完整 A3 7/7；V261/V262 完整 A3 通过；V263 快 CI 通过、A3 取消；V264 完整 A3 通过；V265/V266/V267 完整 A3 通过；V268/V269 完整 A3 通过；V270 完整 A3 通过、独立 Redis smoke 启动失败；V271 完整 A3 通过；V272 完整 A3 通过；V273 A3 6/7（PG18 失败）；V274 快 CI 通过、未触发 A3；V275 分类 SQL 通过但 A3 6/7（补偿唯一键竞争）；V276 快 CI 通过；V277 完整 A3 7/7 通过；V278 完整 A3 7/7 通过；V279 快 CI/只读 Pages 通过；V280 r2 完整 A3 7/7 通过；V281 Redis 独立验收通过；V282 快 CI 节奏检查及 Next Chromium 类型发现失败；V283 修复及诊断待核。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 核心项目状态
 
@@ -264,3 +264,13 @@ V282：复用 `scripts/smoke_browser_layout.mjs` 现有 Chromium/CDP 与 localho
 原六维 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、**测试运维8/10（+1）**。唯一新增分值基于 V281 精确 SHA 已完成且日志可核的独立 Redis 8 运行验收，消除长期未运行的 Session/配额专项证据缺口；不是生产环境证明。V280 r2 A3 与 V282 浏览器尚待核，不加分。真实 E1–E5、DEC/G1、G2/G3 目标环境签署仍缺；#104 OPEN/BLOCKED、realizedNetProfit=null、Seller/Ads OAuth OFF。可受控本地/隔离测试，有条件私有预生产验证，不批准商业生产。
 
 V282 补充：独立 Chromium 工作流新增仅浏览器测试契约文件变更的 main push 触发，不对每次 TSX/CSS 修改执行完整浏览器，也不修改/取消现有 A3；验收以最新精确 SHA 为准。
+
+
+V280 r2 [完整 A3 #45742981332 7/7](https://github.com/kunlong-luo/merchivra/actions/runs/45742981332)，七个 job 均 SUCCESS；[PG18 job #139654014988](https://github.com/kunlong-luo/merchivra/actions/runs/45742981332/job/139654014988) 日志确认 `PASS V280 actual full report type discovery JUnit marker verified (not skipped)`。V281 独立 Redis 通过证据保持。V282 [快 CI #45743906965](https://github.com/kunlong-luo/merchivra/actions/runs/45743906965) 的 [Compose job #139655319948](https://github.com/kunlong-luo/merchivra/actions/runs/45743906965/job/139655319948) 失败于 V108 cadence AssertionError: browser；[Chromium #45743907063 job #139655232452](https://github.com/kunlong-luo/merchivra/actions/runs/45743907063/job/139655232452) Vite 阶段通过，Next 阶段在 `V282 full type discovery` 超时，未证明后续保存/审核等动作成功；原因尚未确证。
+
+V283：修正 V108 快速 CI cadence guard，要求 Chromium 的 main push 路径精确等于四个测试契约文件，禁止无过滤 push、常规前端文件自动全量触发及 PR；Compose 和 PG18 原集中测试门禁保留。修正 V282 Chromium 断言：为完整类型覆盖加入明确语义标签，要求选中精确 report、101行/2组覆盖文字（仅归一空白）、两个分类控件且实际 `/category-types` GET；失败记录仅合成请求路径/DOM 摘要及截图，仍抛出超时。动作等待真实可操作（包括 fieldset disabled），自审403必须出现实际 alert 而非静态说明，新证据必须重新 GET 审核。未删原独立性或金额断言，未改变服务端财务门禁。针对浏览器超时尚未证实根因/修复效果，本轮自动触发快 CI 与独立 Chromium 待核，不重跑已通过的 V280 精确 SHA 全 A3。无数据库迁移、依赖或真实 API 调用。
+
+
+## V283 复评（2026-11-26）
+
+维持 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维8/10。V280 r2 完整 A3 与101行真实 HTTP 合成回归通过，确认此前技术闭环但业务评分已19/20；V282 发现新浏览器回归失败，V283 尚未通过，不增加前端或运维分。不以工程合成数据证明实际利润。#104 仍 OPEN/BLOCKED，真实 E1–E5、DEC/G1、目标 G2/G3 未验收；realizedNetProfit=null、Seller/Ads OAuth OFF。受控本地/隔离合成测试可以；私有预生产仅有条件验证；正式商业生产 NO-GO。

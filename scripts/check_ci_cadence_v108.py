@@ -63,7 +63,21 @@ for name, contents in (("browser", browser), ("compose", chain)):
     assert "workflow_dispatch:" in header, name
     assert "workflow_call:" in header, name
     assert "pull_request:" not in header, name
-    assert "push:" not in header, name
+    if name == "compose":
+        assert "push:" not in header, name
+    else:
+        # V282/V283: browser contract changes warrant an independent run.
+        # Exact allowlist; no generic frontend/source or unfiltered main push.
+        trigger = header.split("\non:\n", 1)[1].split("\npermissions:", 1)[0]
+        assert trigger.strip() == """workflow_dispatch:
+  workflow_call:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/browser-layout-smoke.yml
+      - scripts/smoke_browser_layout.mjs
+      - scripts/chrome_devtools_port.mjs
+      - scripts/chrome_devtools_port.test.mjs""", "unexpected browser trigger cadence"
 
 assert "pull_request:" not in pages
 assert "if: github.event_name" not in pages
@@ -76,4 +90,4 @@ assert "full_suite: true" in milestone
 assert 'test "$GITHUB_REF_NAME" = "main"' in milestone
 assert "真实" in policy and "PG18" in policy
 
-print("PASS V189: direct-main quick CI; full PG18/Chromium/Compose on milestone")
+print("PASS V283: direct-main quick CI; full PG18/Compose on milestone; Chromium on milestone or exact test-contract changes")

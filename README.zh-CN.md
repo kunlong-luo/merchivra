@@ -11,7 +11,7 @@
 
 ## 当前工程状态
 
-V237 完整隔离 A3 7/7 通过，实际 PostgreSQL18 Java Reports 服务回归未跳过，远程 Worker 为合成模拟；V238–V240 快速 CI 通过；V241 完整 A3 7/7 已通过；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7 已通过；V245 快 CI 通过；V246 快 CI 通过；V247 快 CI 通过、A3 6/7（PG18 别名冲突）；V248 完整 A3 7/7；V249 快 CI 通过；V250 快 CI/A3 均未启动 job；V251 快 CI 成功、A3 shell 变量失败；V252 完整 A3 7/7（实际 PG18 组合及 Owner HTTP 空状态）；V253 完整 A3 7/7；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 快 CI 通过、A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7 已通过；V259 V35 金额/商品覆盖快 CI 通过（未见完整 A3）；V260 历史 SKU/批次门禁完整 A3 7/7；V261/V262 完整 A3 通过；V263 快 CI 通过、A3 取消；V264 完整 A3 通过；V265/V266/V267 完整 A3 通过；V268/V269 完整 A3 通过；V270 本地结算核对完整 A3 通过（独立 Redis Session smoke 启动失败）；V271 原始订单分组门禁完整 A3 通过；V272 完整 A3 通过；V273 快 CI 通过、A3 6/7（PG18 失败）；V274 快 CI 通过、未触发 A3；V275 分类 SQL 回归通过但 A3 6/7（退款补偿并发唯一键失败）；V276 快 CI 通过；V277 并发修复完整 A3 7/7 通过；V278 完整 A3 7/7 通过；V279 工作台快 CI 与只读 Pages 通过；V280 r2 快 CI/只读 Pages 通过、A3 待核；V281 Redis 8 独立会话/配额/重启/断连验收通过；V282 分类工作台 Chromium 专项回归待验收，未开放释放/替换或正式回转。见[当前事实](docs/current-status.md)。
+V237 完整隔离 A3 7/7 通过，实际 PostgreSQL18 Java Reports 服务回归未跳过，远程 Worker 为合成模拟；V238–V240 快速 CI 通过；V241 完整 A3 7/7 已通过；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7 已通过；V245 快 CI 通过；V246 快 CI 通过；V247 快 CI 通过、A3 6/7（PG18 别名冲突）；V248 完整 A3 7/7；V249 快 CI 通过；V250 快 CI/A3 均未启动 job；V251 快 CI 成功、A3 shell 变量失败；V252 完整 A3 7/7（实际 PG18 组合及 Owner HTTP 空状态）；V253 完整 A3 7/7；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 快 CI 通过、A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7 已通过；V259 V35 金额/商品覆盖快 CI 通过（未见完整 A3）；V260 历史 SKU/批次门禁完整 A3 7/7；V261/V262 完整 A3 通过；V263 快 CI 通过、A3 取消；V264 完整 A3 通过；V265/V266/V267 完整 A3 通过；V268/V269 完整 A3 通过；V270 本地结算核对完整 A3 通过（独立 Redis Session smoke 启动失败）；V271 原始订单分组门禁完整 A3 通过；V272 完整 A3 通过；V273 快 CI 通过、A3 6/7（PG18 失败）；V274 快 CI 通过、未触发 A3；V275 分类 SQL 回归通过但 A3 6/7（退款补偿并发唯一键失败）；V276 快 CI 通过；V277 并发修复完整 A3 7/7 通过；V278 完整 A3 7/7 通过；V279 工作台快 CI 与只读 Pages 通过；V280 r2 完整 A3 7/7 通过；V281 Redis 独立验收通过；V282 快 CI 节奏检查及 Next Chromium 类型发现失败；V283 精确触发契约与浏览器诊断修复待验收，未开放释放/替换或正式回转。见[当前事实](docs/current-status.md)。
 
 ## 一、仓库根目录：保留哪些，分别有什么用？
 
@@ -88,4 +88,4 @@ Java 测试为 `./apps/server/gradlew -p apps/server --no-daemon test`；文档�
 
 首笔真实结算样本请在受控本地使用 Gradle `checkLocalSettlementSample`，见 [V60/V270 操作步骤](docs/finance/manual-bank-payout-v60.md)。核对器无需数据库、OAuth 或上传；金额相符不代表外部认证。
 
-**V282 上线复评：78/100（V281 Redis 独立验收 +1，真实利润仍10/25）。** 受控本地/合成试用可进行；私有预生产仅限有条件验证；生产仍 NO-GO，详见[上线门禁](docs/operations/v143-production-release-preflight.md)。
+**V283 上线复评：78/100（V281 Redis 独立验收 +1，真实利润仍10/25）。** 受控本地/合成试用可进行；私有预生产仅限有条件验证；生产仍 NO-GO，详见[上线门禁](docs/operations/v143-production-release-preflight.md)。

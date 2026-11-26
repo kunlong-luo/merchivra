@@ -212,6 +212,7 @@ const v282Mappings=v282Types.map(({rowCount,...reportType},i)=>({reportType,
 const v282Blocked={mappingApproved:false,bankVerified:false,ledgerPosted:false,realizedNetProfit:null}
 let v282Revision=false,v282Saved=false,v282Requested=false
 const v282Writes=[]
+const v282Requests=[]
 let v105RequestedOpsFilter=null
 const respond = (res, value, code = 200) => {
   res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
@@ -270,6 +271,7 @@ const server = createServer(async (req, res) => {
   }])
   if(mode==='finance'&&url.pathname.startsWith(v282Path+'/')){
     const path=url.pathname.slice(v282Path.length)
+    v282Requests.push({path,method:req.method})
     if(path==='/lines')return respond(res,Array.from({length:100},(_,i)=>({
       lineNumber:i+1,transactionType:'Order',amountType:'ItemPrice',amountDescription:'Principal',
       orderId:'V282-SYNTHETIC-ORDER',signedAmount:'0.20',currency:'USD'
@@ -1561,12 +1563,12 @@ async function main() {
         // self-approval denied, new evidence and Marketplace scope reset.
         const v282Panel='section[aria-label="费用分类核对与审核"]'
         const v282Has=value=>'document.querySelector('+JSON.stringify(v282Panel)+')?.textContent?.includes('+JSON.stringify(value)+')'
-        const v282Click=async label=>evaluate(send,`(() => {
+        const v282Click=async label=>waitFor(send,`(() => {
           const b=[...document.querySelectorAll(${JSON.stringify(v282Panel)}+' button')]
             .find(x=>x.textContent.trim()===${JSON.stringify(label)})
-          if(!b||b.disabled)throw Error('Missing/enabled V282 button '+${JSON.stringify(label)})
-          b.click()
-        })()`)
+          if(!b||b.matches(':disabled'))return false
+          b.click();return true
+        })()`,'V282 enabled action '+label)
         const v282Set=async (selector,value,kind)=>evaluate(send,`(() => {
           const el=document.querySelector(${JSON.stringify(selector)})
           if(!el)throw Error('Missing V282 control')
@@ -1577,7 +1579,25 @@ async function main() {
         await waitFor(send,'!!document.querySelector('+JSON.stringify('#reports-selected option[value="'+v282Report+'"]')+')',
           'V282 report available')
         await v282Set('#reports-selected',v282Report,'select')
-        await waitFor(send,v282Has('101 行的 2 个原始类型组合'),'V282 full type discovery')
+        try {
+          await waitFor(send,`document.querySelector('#reports-selected')?.value===${JSON.stringify(v282Report)} &&
+            document.querySelector(${JSON.stringify(v282Panel)}+' [aria-label="完整类型覆盖"]')?.textContent?.replace(/\\s+/g,' ').includes('101 行的 2 个原始类型组合') &&
+            document.querySelectorAll(${JSON.stringify(v282Panel)}+' select[aria-label^="财务类别 "]').length===2`,
+            'V282 selected report and full type discovery')
+        } catch(error) {
+          console.error('V283 category fixture diagnostics',JSON.stringify({
+            requests:v282Requests,dom:await evaluate(send,`(() => {
+              const report=document.querySelector('section[aria-label="Amazon 结算报告来源核对"]')
+              return {selected:document.querySelector('#reports-selected')?.value,
+                current:report?.textContent?.slice(-1600),
+                panel:document.querySelector(${JSON.stringify(v282Panel)})?.textContent?.slice(0,1200)}
+            })()`)
+          }))
+          await screenshot(send,'v283-category-discovery-failure-360.png')
+          throw error
+        }
+        assert.ok(v282Requests.some(x=>x.method==='GET'&&x.path==='/category-types'),
+          'V283 actual browser must request complete types endpoint')
         assert.equal(await evaluate(send,`document.querySelector(${JSON.stringify(v282Panel)}+' input[aria-label="原始描述 1"]').value`),'Commission')
         assert.equal(await evaluate(send,`document.querySelector(${JSON.stringify(v282Panel)}+' select[aria-label="财务类别 1"]').value`),'')
         await v282Set(v282Panel+' select[aria-label="财务类别 1"]','AMAZON_FEE','select')
@@ -1593,7 +1613,8 @@ async function main() {
         await screenshot(send,'v282-category-request-360.png')
         await v282Set('#category-review-reason','V282 synthetic review rationale','textarea')
         await v282Click('独立 Owner 批准')
-        await waitFor(send,v282Has('独立审批人'),'V282 self approval denied')
+        await waitFor(send,`document.querySelector(${JSON.stringify(v282Panel)}+' [role="alert"]')?.textContent?.includes('独立审批人')`,
+          'V282 actual self approval denial alert')
         assert.equal(await evaluate(send,v282Has(v282Evidence)),false,'old evidence cleared on rejection')
         v282Revision=true
         await v282Click('重新核算当前证据')
@@ -1601,6 +1622,8 @@ async function main() {
         await waitFor(send,v282Has('当前没有有效审核记录'),'V282 no review on new evidence')
         assert.equal(await evaluate(send,v282Has('等待独立 Owner 审核')),false)
         assert.equal(v282Writes.length,3)
+        assert.ok(v282Requests.some(x=>x.method==='GET'&&x.path.endsWith('/reviews/'+v282NewEvidence)),
+          'V283 new evidence review must be fetched rather than using stale state')
         assert.deepEqual(v282Writes[0].body,v282Mappings)
         assert.deepEqual(v282Writes[1].body,{reason:'V282 synthetic review rationale'})
         assert.ok(v282Writes[2].path.endsWith('/reviews/'+v282Evidence+'/approve'))

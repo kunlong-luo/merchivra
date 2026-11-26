@@ -62,7 +62,7 @@ export default function SettlementCategoryPanelV279({marketplaceId,reportId,sour
   <h3>费用分类核对与审核</h3>
   <p className="setup-hint">显式选择 Reports 原始类型组合，Finances 使用当前已配置的 V28 规则。
    本地审核不代表银行到账、会计批准或实际利润。请勿在理由中填写敏感资料。</p>
-  <p>已从服务端完整读取 {lineCount} 行的 {sourceTypes.length} 个原始类型组合，不受明细表前 100 行限制。
+  <p aria-label="完整类型覆盖">已从服务端完整读取 {lineCount} 行的 {sourceTypes.length} 个原始类型组合，不受明细表前 100 行限制。
    每个组合的行数已核对；最终仍由后端重新验证金额及证据。
    空白费用类型或描述表示原始 NULL；不自动猜测分类。</p>
   <fieldset disabled={busy}>
