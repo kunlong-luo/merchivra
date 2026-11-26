@@ -197,6 +197,21 @@ const v107Ledger=[
   movementType:'PURCHASE_RECEIPT',reason:null,
   createdAt:'2026-11-08T04:00:00Z'}
 ]
+// V282: wholly synthetic category workbench; real HTTP/PG18 lives in V278/V280.
+const v282Report='82828282-8282-4282-8282-828282828282'
+const v282Mapping='a'.repeat(64),v282Evidence='b'.repeat(64),v282NewEvidence='c'.repeat(64)
+const v282Root='/api/v1/finance/marketplaces/'+market+'/reports'
+const v282Path=v282Root+'/'+v282Report
+const v282Draft=v282Path+'/category-mapping-drafts'
+const v282Types=[
+ {transactionType:'Order',amountType:'ItemFees',amountDescription:'Commission',rowCount:1},
+ {transactionType:'Order',amountType:'ItemPrice',amountDescription:'Principal',rowCount:100}
+]
+const v282Mappings=v282Types.map(({rowCount,...reportType},i)=>({reportType,
+ category:i===0?'AMAZON_FEE':'PRODUCT_SALES'}))
+const v282Blocked={mappingApproved:false,bankVerified:false,ledgerPosted:false,realizedNetProfit:null}
+let v282Revision=false,v282Saved=false,v282Requested=false
+const v282Writes=[]
 let v105RequestedOpsFilter=null
 const respond = (res, value, code = 200) => {
   res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' })
@@ -245,6 +260,71 @@ const server = createServer(async (req, res) => {
   if(url.pathname==='/api/v1/auth/csrf')
     return respond(res,{token:'V104_DISPOSABLE_BROWSER_CSRF_ONLY_12345',
       headerName:'X-CSRF-TOKEN'})
+  // V282 fixture scoped to the finance route and this exact report. The
+  // visible 100 lines do not contain the Commission type at row 101.
+  if(mode==='finance'&&url.pathname===v282Root)return respond(res,[{
+    id:v282Report,marketplaceId:market,reportId:'V282-SYNTHETIC-REPORT',
+    documentId:'V282-SYNTHETIC-DOC',documentSha256:'d'.repeat(64),
+    settlementReference:'V282-SYNTHETIC-SETTLEMENT',statementCurrency:'USD',
+    declaredNet:'18.00',lineCount:101,importedAt:'2026-11-26T00:00:00Z'
+  }])
+  if(mode==='finance'&&url.pathname.startsWith(v282Path+'/')){
+    const path=url.pathname.slice(v282Path.length)
+    if(path==='/lines')return respond(res,Array.from({length:100},(_,i)=>({
+      lineNumber:i+1,transactionType:'Order',amountType:'ItemPrice',amountDescription:'Principal',
+      orderId:'V282-SYNTHETIC-ORDER',signedAmount:'0.20',currency:'USD'
+    })))
+    if(path==='/review')return respond(res,{rowCount:101,signedLineTotal:'18.00',currency:'USD',
+      distinctOrderReferences:1,bankVerified:false,reconciledToFinances:false})
+    if(path==='/finance-comparison')return respond(res,{
+      reportId:v282Report,settlementId:'V282-SYNTHETIC-SETTLEMENT',currency:'USD',
+      reportedNet:'18.00',reportLinesNet:'18.00',financesNet:'18.00',
+      financeTransactionCount:1,otherCurrencyTransactionCount:0,expectedReportLineCount:101,
+      actualReportLineCount:101,foreignCurrencyReportLineCount:0,multiplyReferencedFinancesEventCount:0,
+      otherReportSameSettlementCount:0,state:'SOURCE_AMOUNTS_AGREE_UNVERIFIED',reconciled:false,bankVerified:false
+    })
+    if(path==='/source-review')return respond(res,{state:'NOT_REQUESTED',
+      sourceState:'SOURCE_AMOUNTS_AGREE_UNVERIFIED',requestedBy:null,decidedBy:null,
+      requestedAt:null,decidedAt:null,version:0,evidenceCurrent:false,bankVerified:false,ledgerPosted:false})
+    if(path==='/category-types')return respond(res,{reportId:v282Report,state:'REPORT_TYPES_READY',
+      expectedRows:101,actualRows:101,types:v282Types,mappingApproved:false,bankVerified:false})
+    const draft={...v282Blocked,reportId:v282Report,mappingSha256:v282Mapping,
+      state:'LOCAL_IMMUTABLE_MAPPING_DRAFT',mappings:v282Mappings}
+    const currentEvidence=v282Revision?v282NewEvidence:v282Evidence
+    const review={mappingSha256:v282Mapping,evidenceSha256:currentEvidence,
+      state:'LOCAL_CATEGORY_REVIEW_REQUESTED',requestedBy:account,approvedBy:null,
+      mappingActivated:false,bankVerified:false,ledgerPosted:false,realizedNetProfit:null}
+    if(req.method==='POST'&&path.startsWith('/category-mapping-drafts')){
+      if(req.headers['x-csrf-token']!=='V104_DISPOSABLE_BROWSER_CSRF_ONLY_12345')
+        return respond(res,{error:'fixture CSRF rejected'},403)
+      let raw='';for await(const chunk of req)raw+=chunk
+      let body;try{body=JSON.parse(raw)}catch{return respond(res,{error:'bad JSON'},400)}
+      v282Writes.push({path,body})
+      if(url.pathname===v282Draft){
+        if(JSON.stringify(body)!==JSON.stringify(v282Mappings))
+          return respond(res,{error:'fixture exact types required'},400)
+        v282Saved=true;return respond(res,draft)
+      }
+      if(path==='/category-mapping-drafts/'+v282Mapping+'/reviews/'+currentEvidence+'/request'
+          &&v282Saved&&!v282Revision&&body.reason==='V282 synthetic review rationale'){
+        v282Requested=true;return respond(res,review)
+      }
+      if(path.endsWith('/approve'))return respond(res,{error:'self review rejected'},403)
+      return respond(res,{error:'stale evidence'},409)
+    }
+    if(v282Saved&&path==='/category-mapping-drafts/'+v282Mapping)return respond(res,draft)
+    if(v282Saved&&path==='/category-mapping-drafts/'+v282Mapping+'/preview')return respond(res,{
+      mappingSha256:v282Mapping,evidenceSha256:currentEvidence,mappingApproved:false,
+      preview:{...v282Blocked,state:'LOCAL_CATEGORY_AMOUNTS_AGREE_UNVERIFIED',
+        sourceState:'SOURCE_AMOUNTS_AGREE_UNVERIFIED',currency:'USD',unmappedReportRows:0,
+        unmappedFinanceLeaves:0,unusedMappings:0,mismatchedBuckets:0,categoryTotals:[
+          {category:'AMAZON_FEE',direction:-1,reports:'-2.00',finances:'-2.00'},
+          {category:'PRODUCT_SALES',direction:1,reports:'20.00',finances:'20.00'}
+        ]}
+    })
+    if(path.includes('/reviews/'))return v282Requested&&!v282Revision&&path.endsWith(v282Evidence)?
+      respond(res,review):respond(res,{error:'no current review'},409)
+  }
   // V254 synthetic browser-only contract; no actual external costs.
   const v254Match=url.pathname.match(/^\/api\/v1\/finance\/marketplaces\/([^/]+)\/purchase-receipts\/([^/]+)\/cost-composition-candidate$/)
   if(v254Match){
@@ -1477,6 +1557,55 @@ async function main() {
         await waitFor(send,
           "document.querySelectorAll('.v106-finance-events-table tbody tr').length===50",
           'V106 50-row first finance event page')
+        // V282 real rendered workbench: full types, save + preview, request,
+        // self-approval denied, new evidence and Marketplace scope reset.
+        const v282Panel='section[aria-label="费用分类核对与审核"]'
+        const v282Has=value=>'document.querySelector('+JSON.stringify(v282Panel)+')?.textContent?.includes('+JSON.stringify(value)+')'
+        const v282Click=async label=>evaluate(send,`(() => {
+          const b=[...document.querySelectorAll(${JSON.stringify(v282Panel)}+' button')]
+            .find(x=>x.textContent.trim()===${JSON.stringify(label)})
+          if(!b||b.disabled)throw Error('Missing/enabled V282 button '+${JSON.stringify(label)})
+          b.click()
+        })()`)
+        const v282Set=async (selector,value,kind)=>evaluate(send,`(() => {
+          const el=document.querySelector(${JSON.stringify(selector)})
+          if(!el)throw Error('Missing V282 control')
+          const proto=${kind==='select'?'HTMLSelectElement':'HTMLTextAreaElement'}.prototype
+          Object.getOwnPropertyDescriptor(proto,'value').set.call(el,${JSON.stringify(value)})
+          el.dispatchEvent(new Event(${JSON.stringify(kind==='select'?'change':'input')},{bubbles:true}))
+        })()`)
+        await waitFor(send,'!!document.querySelector('+JSON.stringify('#reports-selected option[value="'+v282Report+'"]')+')',
+          'V282 report available')
+        await v282Set('#reports-selected',v282Report,'select')
+        await waitFor(send,v282Has('101 行的 2 个原始类型组合'),'V282 full type discovery')
+        assert.equal(await evaluate(send,`document.querySelector(${JSON.stringify(v282Panel)}+' input[aria-label="原始描述 1"]').value`),'Commission')
+        assert.equal(await evaluate(send,`document.querySelector(${JSON.stringify(v282Panel)}+' select[aria-label="财务类别 1"]').value`),'')
+        await v282Set(v282Panel+' select[aria-label="财务类别 1"]','AMAZON_FEE','select')
+        await v282Set(v282Panel+' select[aria-label="财务类别 2"]','PRODUCT_SALES','select')
+        await v282Click('保存草稿并核算')
+        await waitFor(send,v282Has('当前没有有效审核记录'),'V282 draft saved and previewed')
+        assert.equal(await evaluate(send,v282Has('USD -2.00')),true)
+        assert.equal(await evaluate(send,v282Has(v282Evidence)),true)
+        await v282Set('#category-review-reason','V282 synthetic review rationale','textarea')
+        await v282Click('提交分类审核')
+        await waitFor(send,v282Has('等待独立 Owner 审核'),'V282 request saved')
+        await evaluate(send,`document.querySelector(${JSON.stringify(v282Panel)})?.scrollIntoView({block:'start'})`)
+        await screenshot(send,'v282-category-request-360.png')
+        await v282Set('#category-review-reason','V282 synthetic review rationale','textarea')
+        await v282Click('独立 Owner 批准')
+        await waitFor(send,v282Has('独立审批人'),'V282 self approval denied')
+        assert.equal(await evaluate(send,v282Has(v282Evidence)),false,'old evidence cleared on rejection')
+        v282Revision=true
+        await v282Click('重新核算当前证据')
+        await waitFor(send,v282Has(v282NewEvidence),'V282 recomputed current evidence')
+        await waitFor(send,v282Has('当前没有有效审核记录'),'V282 no review on new evidence')
+        assert.equal(await evaluate(send,v282Has('等待独立 Owner 审核')),false)
+        assert.equal(v282Writes.length,3)
+        assert.deepEqual(v282Writes[0].body,v282Mappings)
+        assert.deepEqual(v282Writes[1].body,{reason:'V282 synthetic review rationale'})
+        assert.ok(v282Writes[2].path.endsWith('/reviews/'+v282Evidence+'/approve'))
+        await evaluate(send,`document.querySelector(${JSON.stringify(v282Panel)})?.scrollIntoView({block:'start'})`)
+        await screenshot(send,'v282-category-current-evidence-360.png')
         // V218: real Next Chromium click/HTTP validation against the
         // isolated V216-shaped source-exact finance read, not mere Zod tests.
         const v218Panel='section[aria-label="V217 原采购收货单人工费用与跨来源身份核对"]'
@@ -1725,6 +1854,9 @@ async function main() {
         assert.ok(v106FinanceQueries.some(q=>
           q.marketplaceId===v106OtherMarket&&q.beforeAt===null&&q.beforeId===null),
           'V106 second Marketplace must issue a distinct server request without stale cursor')
+        await waitFor(send,'!document.querySelector('+JSON.stringify(v282Panel)+')',
+          'V282 old report and category evidence unmounted on Marketplace switch')
+        console.log('PASS V282 Chromium category full types, exact draft/request, self approval rejection, new evidence and scope reset')
         // V218: switching Marketplace resets explicit selection AND costs.
         // There must be no new request until the operator submits again.
         const v218BeforeSwitchRequests=v218Queries.length

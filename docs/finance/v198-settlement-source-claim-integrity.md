@@ -143,3 +143,8 @@ V278 [代码 a36377ae452c](https://github.com/kunlong-luo/merchivra/commit/a3637
 V280：新增 Owner no-store GET `/api/v1/finance/marketplaces/{marketplaceId}/reports/{reportId}/category-types`，在一个 RR 事务检查报告声明行数、实际行数（1–10000）及原币，然后按精确原始类型三元组全量 GROUP BY，读取最多201组以检测超出200项映射契约；每组 rowCount、NULL 保留，无猜测分类或金额。非全量、混币、超限、不可映射类型均返回 HOLD 状态及空数组，跨 Marketplace 404。前端不再从前100行初始化映射，使用全量查询及 Zod 覆盖/身份/重复校验，刷新重新挂载工作台并清除旧证据；原明细表保持100行。新增 Java/Vitest 反例；V250 实际 HTTP 夹具扩为101行、最后一行佣金、两类完整映射及复用 V278 双人审核，强制 V280 JUnit marker；触发完整 A3 待核。无迁移、依赖、真实 API 授权、财务激活、审批重开或正式入账；独立 Redis 启动失败尚未排除。
 
 V280 补正：类型初始化使用泛型保留原明细测试夹具额外字段；完整类型查询不在窗口聚焦/网络重连时自动刷新，避免清空未保存的编辑。用户明确刷新会清空编辑与旧证据；以新精确 SHA 的 r2 完整 A3 为准，原运行不作为该 SHA 的验收证据。
+
+
+V281 [代码 cb9bb88eea15](https://github.com/kunlong-luo/merchivra/commit/cb9bb88eea150384fa87a121c60e2a11d4bf42cf) [快 CI #45743424984 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45743424984)，[独立 Redis smoke #45743425032](https://github.com/kunlong-luo/merchivra/actions/runs/45743425032) [job #139653656144 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45743425032/job/139653656144) 实际日志 redis_version:8.10.1、GCRA PASS、真实登录/CSRF、重启后同一 userId/tenantId、断 Redis 后旧 cookie 不授权均通过；无生产凭据。V280 r2 [完整 A3 #45742981332](https://github.com/kunlong-luo/merchivra/actions/runs/45742981332) 核查时5项通过，PG18及完整 HTTP 尚运行。
+
+V282：复用 `scripts/smoke_browser_layout.mjs` 现有 Chromium/CDP 与 localhost 合成 API，新增费用分类工作台专项流程：报告101行而可见100行、全量两个原始类型（第101行佣金）、无自动分类、精确映射及 CSRF 保存、原币预检与当前证据、申请写入、模拟自审批403、清除旧证据、重算新证据与跨 Marketplace 清除面板；保存两个360px截图。断言针对真实 DOM 操作及合成请求，不能替代 V278/V280 真实 HTTP 或真实 Amazon 财务验真。未新增前端框架/依赖、迁移、业务激活或正式会计功能。V282 专项浏览器尚待独立运行；不改 A3 工作流，保留 V280 r2 完整验收。

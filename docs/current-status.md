@@ -1,13 +1,13 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7；V259 快 CI 通过；V260 完整 A3 7/7；V261/V262 完整 A3 通过；V263 快 CI 通过、A3 取消；V264 完整 A3 通过；V265/V266/V267 完整 A3 通过；V268/V269 完整 A3 通过；V270 完整 A3 通过、独立 Redis smoke 启动失败；V271 完整 A3 通过；V272 完整 A3 通过；V273 A3 6/7（PG18 失败）；V274 快 CI 通过、未触发 A3；V275 分类 SQL 通过但 A3 6/7（补偿唯一键竞争）；V276 快 CI 通过；V277 完整 A3 7/7 通过；V278 完整 A3 7/7 通过；V279 快 CI/只读 Pages 通过；V280 r2 快 CI/只读 Pages 通过、A3 待核；V281 Redis 构建限流与会话回归强化待独立验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7；V259 快 CI 通过；V260 完整 A3 7/7；V261/V262 完整 A3 通过；V263 快 CI 通过、A3 取消；V264 完整 A3 通过；V265/V266/V267 完整 A3 通过；V268/V269 完整 A3 通过；V270 完整 A3 通过、独立 Redis smoke 启动失败；V271 完整 A3 通过；V272 完整 A3 通过；V273 A3 6/7（PG18 失败）；V274 快 CI 通过、未触发 A3；V275 分类 SQL 通过但 A3 6/7（补偿唯一键竞争）；V276 快 CI 通过；V277 完整 A3 7/7 通过；V278 完整 A3 7/7 通过；V279 快 CI/只读 Pages 通过；V280 r2 快 CI/只读 Pages 通过、A3 待核；V281 Redis 独立验收通过；V282 分类工作台 Chromium 专项回归待核。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 核心项目状态
 
 | 项目 | 当前可独立证实的状态 |
 | --- | --- |
 | 代码主线与栈 | **`main` 直接开发**；Java 25 / Spring Boot 4.1.2 / **Gradle** / PostgreSQL 18 Flyway；React 19 / **Next.js 16.4.5** 默认 / Node 24 / **pnpm 12.20.0 唯一前端包管理器**。Vite 只为明确回退或虚构 Pages |
-| 独立成熟度 | **[77/100（V280 复评，V278 已验收）](governance/project-scorecard-v231-2026-11-24.md#v280-复评2026-11-26)**；V231 76；V230 75、V229 74、V228 73、V200 70 均为历史评分 |
+| 独立成熟度 | **[78/100（V282 复评，V281 Redis 已验收）](governance/project-scorecard-v231-2026-11-24.md#v282-复评2026-11-26)**；V280 77；V231 76；V230 75、V229 74、V228 73、V200 70 均为历史评分 |
 | 真实全成本与净利润 | **10/25 的真实性子分不变**；`realizedNetProfit=null`、`bankReconciled=false`、`externallyVerified=false`，未取得真正完整可审计的 SKU/订单/整期净利润 |
 | Amazon Seller / Ads | 模拟、本地安全 API 框架/契约已存在，但**真实 OAuth 授权 OFF**；实际 Seller/Ads/Finances/Settlement 未取得可独立验证的完整凭证 |
 | 真实费用与退款 COGS | V91 手工声明和本地 Maker/Checker、结算行关联、来源归属和文件摘要声明**不等于**第三方原始签发证明；外仓实收、真实运输/关税/支付、退货批次成本冲回以及 DEC-06/07/08/G1 未签署 |
@@ -252,3 +252,13 @@ V281：只修改现有 Redis 独立 smoke workflow/script，不改变生产应�
 ## V281 复评（2026-11-26）
 
 维持 V280 **77/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维7/10。V280 r2 快 CI/Pages 成功但完整 A3 尚未核实；V281 定位历史 Redis 构建429并强化验收，但未取得独立运行通过证据，不加分。生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) 仍 OPEN/BLOCKED。受控本地及隔离合成测试可进行；私有预生产只用于有条件验证，不能真实生产运营。真实 E1–E5 与 DEC/G1、G2/G3 目标独立签署未完成，`realizedNetProfit=null`、Seller/Ads OAuth OFF；评分不是上线批准。
+
+
+V281 [代码 cb9bb88eea15](https://github.com/kunlong-luo/merchivra/commit/cb9bb88eea150384fa87a121c60e2a11d4bf42cf) [快 CI #45743424984 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45743424984)，[独立 Redis smoke #45743425032](https://github.com/kunlong-luo/merchivra/actions/runs/45743425032) [job #139653656144 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45743425032/job/139653656144) 实际日志 redis_version:8.10.1、GCRA PASS、真实登录/CSRF、重启后同一 userId/tenantId、断 Redis 后旧 cookie 不授权均通过；无生产凭据。V280 r2 [完整 A3 #45742981332](https://github.com/kunlong-luo/merchivra/actions/runs/45742981332) 核查时5项通过，PG18及完整 HTTP 尚运行。
+
+V282：复用 `scripts/smoke_browser_layout.mjs` 现有 Chromium/CDP 与 localhost 合成 API，新增费用分类工作台专项流程：报告101行而可见100行、全量两个原始类型（第101行佣金）、无自动分类、精确映射及 CSRF 保存、原币预检与当前证据、申请写入、模拟自审批403、清除旧证据、重算新证据与跨 Marketplace 清除面板；保存两个360px截图。断言针对真实 DOM 操作及合成请求，不能替代 V278/V280 真实 HTTP 或真实 Amazon 财务验真。未新增前端框架/依赖、迁移、业务激活或正式会计功能。V282 专项浏览器尚待独立运行；不改 A3 工作流，保留 V280 r2 完整验收。
+
+
+## V282 复评（2026-11-26）
+
+原六维 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、**测试运维8/10（+1）**。唯一新增分值基于 V281 精确 SHA 已完成且日志可核的独立 Redis 8 运行验收，消除长期未运行的 Session/配额专项证据缺口；不是生产环境证明。V280 r2 A3 与 V282 浏览器尚待核，不加分。真实 E1–E5、DEC/G1、G2/G3 目标环境签署仍缺；#104 OPEN/BLOCKED、realizedNetProfit=null、Seller/Ads OAuth OFF。可受控本地/隔离测试，有条件私有预生产验证，不批准商业生产。
