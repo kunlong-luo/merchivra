@@ -2001,11 +2001,14 @@ async function main() {
         await waitFor(send,"document.querySelectorAll('#reports-selected').length===1 && document.querySelector('#reports-selected')?.value===''",
           'V286 re-entry one report selector, no retained selection')
         assert.equal(await evaluate(send,'!!document.querySelector('+JSON.stringify(v282Panel)+')'),false)
+        assert.equal(await evaluate(send,"document.querySelectorAll('section[aria-label=\"Amazon 结算报告来源核对\"]').length"),1,
+          'V289 history back cannot leave an orphaned report section')
         await evaluate(send,'history.forward()')
         await waitFor(send,routeReady('/purchasing','purchasing'),'V286 history forward to purchasing')
         assert.equal(await evaluate(send,"document.querySelectorAll('#reports-selected').length"),0)
         assert.equal(v282Writes.length,3,'V286 navigation must not replay writes')
         console.log('PASS V286 committed route, persistent session root, history back/forward, no retained category selection or replay')
+        console.log('PASS V289 finance reconciliation and full category browser journey, including unique history re-entry')
       }
       // Synthetic connected Marketplace must expose a LIVE-gated operations
       // panel outside the local Demo tools. This does not call Amazon.

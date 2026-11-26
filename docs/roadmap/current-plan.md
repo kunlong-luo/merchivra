@@ -7,7 +7,7 @@
 ### V289 · V287 财务 key 修复的类型检查与真实浏览器验收
 
 - Task: V289
-- State: READY
+- State: IMPLEMENTED_PENDING_VERIFICATION
 - Priority: P0
 - Basis: V287 `ca11f7a93d2b0b7bcff7bb5447e5b45436b51ba5`
 - 目标：修复 TS2591 而不扩大运行时类型权限、不删除 AST 检查，证明财务面板唯一且原分类操作可用。
@@ -15,14 +15,15 @@
 - 不做：新业务模块、无证据路由重构、依赖升级、真实 OAuth/财务激活。
 - 复现：[V287 快 CI](https://github.com/kunlong-luo/merchivra/actions/runs/45806323293)；Typecheck TS2591 `node:fs`；[Chromium](https://github.com/kunlong-luo/merchivra/actions/runs/45806323382) 在构建失败，业务场景未执行。
 - 验收：同一代码 SHA 快 CI（含 AST Vitest、TypeScript、Next/Vite）、独立 Chromium（分页后唯一报告面板与 selector，101行/2组、保存/申请、拒绝自审、新证据及跨站点、历史前进后退）全部成功；Pages 为只读演示，不替代浏览器；记录失败/跳过、精确 SHA 和 run URL。
-- 当前阻塞：尚未修正类型；真实浏览器结果未知。
+- 已实施：Vite `?raw` 导入实际 JSX 文本，保留 AST；Chromium 增加历史回退唯一性及 V289 marker。提交 `fix(v289): use Vite raw source for finance key regression`，parent `fb9c2baa6da13f507db2b56c6bfe211b1e767ab5`。
+- 当前阻塞：同一精确代码 SHA 快 CI、独立 Chromium 尚未确认。下一动作是核对实际 Actions，不重复写已提交代码。
 - 后续：只有 V289 VERIFIED 后才领取 V290；如失败，续同一 V289，不另增版本。
 
 ## 后续队列（一次只领取一项）
 
 | ID | 状态 | 前置 | 验收标准 |
 | --- | --- | --- | --- |
-| V289 | READY | V287 | 本节全部验收 |
+| V289 | IMPLEMENTED_PENDING_VERIFICATION | V287 | 本节全部验收 |
 | V290 | QUEUED | V289 VERIFIED | 精确候选 SHA 完整 A3 7/7、登录退出/缓存隔离及非法路由回归；记录 RC 工程验收，不自动上线 |
 | V291 | BLOCKED | 维护者提供合法真实样本/授权 | E1–E5 单一真实订单/批次/结算及独立复算、G1/DEC 批准；未证不激活 |
 | V292 | BLOCKED | 目标环境及负责人 | G2/G3 实际安全、备份恢复及告警签署；#104 独立发布决定 |
@@ -41,7 +42,7 @@
 
 **执行约束**：维护者尚未提供合法真实材料；不得在公开 Git 中保存发票、银行流水、客户信息、令牌或签署原件，不得擅自开启 Seller/Ads OAuth。先核对已有适配器/证据模型，仅针对真实样本揭示的可验证缺口追加最小代码和负例（签发方不可信/撤销、原件改动、跨租户、重复行、退款超量、结算差异、会计批准缺失）。无样本时可做合成契约回归，但不能宣称 E1–E5 已完成，不能自动把内部复核升级为外部核证。
 
-****评分闸门**：工程成熟度依据独立新验收证据调整；真实利润10/25仅凭真实财务证据调整。评分不得替代 G1/G2/G3，保持 realizedNetProfit=null、Seller/Ads OAuth OFF、#104 NO-GO。
+**评分闸门**：工程成熟度依据独立新验收证据调整；真实利润10/25仅凭真实财务证据调整。评分不得替代 G1/G2/G3，保持 realizedNetProfit=null、Seller/Ads OAuth OFF、#104 NO-GO。
 
 ## 任务生命周期与文档规则
 

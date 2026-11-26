@@ -1,4 +1,6 @@
-import {readFileSync} from 'node:fs'
+// V289: Vite/Vitest raw source import uses existing vite/client types.
+// Keep Node filesystem APIs out of the browser TypeScript project.
+import workspaceSource from '../FinanceWorkspace.tsx?raw'
 import ts from 'typescript'
 import {describe,expect,it} from 'vitest'
 
@@ -8,7 +10,7 @@ import {describe,expect,it} from 'vitest'
 describe('V287 FinanceWorkspace reconciliation keys',()=>{
  it('uses distinct named namespaces for all explicitly keyed business components',()=>{
   const source=ts.createSourceFile('FinanceWorkspace.tsx',
-   readFileSync(new URL('../FinanceWorkspace.tsx',import.meta.url),'utf8'),
+   workspaceSource,
    ts.ScriptTarget.Latest,true,ts.ScriptKind.TSX)
   const keys=new Map<string,string>()
   const visit=(node:ts.Node)=>{

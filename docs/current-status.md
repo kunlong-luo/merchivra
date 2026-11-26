@@ -1,14 +1,16 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-26 · V288 交接制度建立，V289 代码任务待领取。** 这是当前快照，不是版本流水账。每次开工先核对实际 main HEAD 与 Actions；本页可能滞后于正在运行的 CI。任务顺序仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-26 · V288 交接制度建立，V289 已提交修复、待验收。** 这是当前快照，不是版本流水账。每次开工先核对实际 main HEAD 与 Actions；本页可能滞后于正在运行的 CI。任务顺序仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 当前任务交接
 
 - Task: V289
-- State: READY
+- State: IMPLEMENTED_PENDING_VERIFICATION
 - Basis: `ca11f7a93d2b0b7bcff7bb5447e5b45436b51ba5`（V287 代码；本轮文档提交不改变业务代码）
-- 下一动作：修复 `apps/web/src/lib/finance-panel-keys-v287.test.ts` 的 Node 类型检查错误，保留 AST 与浏览器断言；按 [任务验收](roadmap/current-plan.md#当前任务) 执行。
-- 最新事实：V287 快 CI、Chromium、Pages 均失败，Chromium 未进入业务场景。Java/Compose 通过，PG18 跳过。
+- 任务提交定位：`fix(v289): use Vite raw source for finance key regression`（parent `fb9c2baa6da13f507db2b56c6bfe211b1e767ab5`，在 main 历史定位精确代码 SHA；禁止将父提交当作当前代码）。
+- 已实施：用现有 Vite `?raw` 导入替代 `node:fs`，AST 检查不变；Chromium 增加历史回退报告 section 唯一性及完整旅程 marker，不扩大类型权限、无新依赖。
+- 下一动作：核对该任务提交精确 SHA 的快 CI、独立 Chromium 与 Pages；失败则读取具体 job 日志并续办 V289，通过才领取 V290。按 [任务验收](roadmap/current-plan.md#当前任务) 执行。
+- 最新已知运行事实：V287 快 CI、Chromium、Pages 均失败，Chromium 未进入业务场景。Java/Compose 通过，PG18 跳过。V288 文档提交 `fb9c2baa6da13f507db2b56c6bfe211b1e767ab5` [快 CI #45809197904](https://github.com/kunlong-luo/merchivra/actions/runs/45809197904) 已排队（新提交可能取代）；V289 精确运行结果尚未取得。
 - 已知失败：[`#45806323293`](https://github.com/kunlong-luo/merchivra/actions/runs/45806323293) [React job #139862446987](https://github.com/kunlong-luo/merchivra/actions/runs/45806323293/job/139862446987) Typecheck TS2591（`node:fs`）；[Chromium #45806323382](https://github.com/kunlong-luo/merchivra/actions/runs/45806323382) 在 Vite 构建失败；[Pages #45806323270](https://github.com/kunlong-luo/merchivra/actions/runs/45806323270) 在静态编译失败，部署跳过。
 - 旧浏览器缺陷：V286 [#45748172708](https://github.com/kunlong-luo/merchivra/actions/runs/45748172708) 单 Portal 内七个结算面板/六个 select；V287 已修复12处同级 key，运行效果未验证。不得再盲目调整路由。
 
