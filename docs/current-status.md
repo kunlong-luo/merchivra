@@ -262,3 +262,5 @@ V282：复用 `scripts/smoke_browser_layout.mjs` 现有 Chromium/CDP 与 localho
 ## V282 复评（2026-11-26）
 
 原六维 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、**测试运维8/10（+1）**。唯一新增分值基于 V281 精确 SHA 已完成且日志可核的独立 Redis 8 运行验收，消除长期未运行的 Session/配额专项证据缺口；不是生产环境证明。V280 r2 A3 与 V282 浏览器尚待核，不加分。真实 E1–E5、DEC/G1、G2/G3 目标环境签署仍缺；#104 OPEN/BLOCKED、realizedNetProfit=null、Seller/Ads OAuth OFF。可受控本地/隔离测试，有条件私有预生产验证，不批准商业生产。
+
+V282 补充：独立 Chromium 工作流新增仅浏览器测试契约文件变更的 main push 触发，不对每次 TSX/CSS 修改执行完整浏览器，也不修改/取消现有 A3；验收以最新精确 SHA 为准。

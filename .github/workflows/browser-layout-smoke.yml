@@ -1,10 +1,17 @@
-# V108: full Vite + Next Chromium run is a manually triggered milestone
-# or called by milestone-validation.yml, not every TSX/CSS push.
+# V108/V282: run the full Vite + Next Chromium suite at milestones,
+# manually, or when the browser test contract itself changes (not every TSX/CSS push).
 name: Optional Chromium responsive UI smoke
 
 on:
   workflow_dispatch:
   workflow_call:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/browser-layout-smoke.yml
+      - scripts/smoke_browser_layout.mjs
+      - scripts/chrome_devtools_port.mjs
+      - scripts/chrome_devtools_port.test.mjs
 
 permissions:
   contents: read
