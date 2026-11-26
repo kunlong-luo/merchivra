@@ -1,4 +1,2 @@
-import Portal from './portal'
-
-/** Next.js App Router. This page includes NO user data in server HTML. */
-export default function Home(){return <Portal initialView="overview"/>}
+/** Route marker. The single persistent authenticated workspace is mounted in RootLayout. */
+export default function Home(){return null}

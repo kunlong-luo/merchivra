@@ -1555,6 +1555,11 @@ async function main() {
           'V218 closing purchasing selection releases cost evidence UI')
         // V106: the finance scope is selected with Base UI, and rows are
         // server-cursor pages. Verify there is no cross-Marketplace mixing.
+        // V285: the Next layout owns one persistent Portal and QueryClient.
+        // Mark the DOM root before the route transition; hidden cached pages
+        // must never create an additional authenticated workspace.
+        assert.equal(await evaluate(send,"document.querySelectorAll('.next-workbench').length"),1)
+        await evaluate(send,"document.querySelector('.next-workbench').dataset.v285Persistent='yes'")
         mode='finance'
         await evaluate(send,`(() => {const link=[...document.querySelectorAll('.nav-link')]
           .find(x=>x.getAttribute('href')==='/finance' && x.textContent.includes('利润与成本报表'));
@@ -1787,6 +1792,10 @@ async function main() {
           "document.querySelectorAll('.v106-finance-events-table tbody tr').length===50 && " +
           "document.querySelector('.v106-finance-pager')?.textContent?.includes('第 1 页')",
           'V106 previous finance page restores correct 50-row dataset')
+        assert.equal(await evaluate(send,"document.querySelectorAll('.next-workbench').length"),1,
+          'V285 one portal across cached Next routes')
+        assert.equal(await evaluate(send,"document.querySelector('.next-workbench').dataset.v285Persistent"),'yes',
+          'V285 layout survives client navigation without replacing session root')
         // V282 real rendered workbench: full types, save + preview, request,
         // self-approval denied, new evidence and Marketplace scope reset.
         const v282Panel='section[aria-label="费用分类核对与审核"]'
@@ -1810,8 +1819,11 @@ async function main() {
         // the native select has reset, never repeat a write action.
         const reportChoice=`(() => {
           if(location.pathname!=='/finance')return false
-          const el=document.querySelector('#reports-selected')
-          if(!el||!Array.from(el.options).some(o=>o.value===${JSON.stringify(v282Report)}))return false
+          const selects=[...document.querySelectorAll('#reports-selected')]
+          if(selects.length!==1)return false
+          const el=selects[0]
+          if(!el.getClientRects().length||el.closest('[hidden],[inert],[aria-hidden="true"]')
+              ||!Array.from(el.options).some(o=>o.value===${JSON.stringify(v282Report)}))return false
           if(el.value!==${JSON.stringify(v282Report)}) {
             Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype,'value').set.call(el,${JSON.stringify(v282Report)})
             el.dispatchEvent(new Event('change',{bubbles:true}))
@@ -1836,6 +1848,10 @@ async function main() {
           await screenshot(send,'v283-category-discovery-failure-360.png')
           throw error
         }
+        assert.equal(await evaluate(send,"document.querySelectorAll('#reports-selected').length"),1,
+          'V285 report select must be unique across all DOM, including hidden routes')
+        assert.equal(await evaluate(send,"document.querySelectorAll('section[aria-label=\"费用分类核对与审核\"]').length"),1,
+          'V285 only one category workspace')
         assert.ok(v282Requests.some(x=>x.method==='GET'&&x.path==='/reports'),'V284 reports list requested')
         assert.ok(v282Requests.some(x=>x.method==='GET'&&x.path==='/category-types'),
           'V283 actual browser must request complete types endpoint')
@@ -1899,7 +1915,9 @@ async function main() {
           'V106 second Marketplace must issue a distinct server request without stale cursor')
         await waitFor(send,'!document.querySelector('+JSON.stringify(v282Panel)+')',
           'V282 old report and category evidence unmounted on Marketplace switch')
-        console.log('PASS V282 Chromium category full types, exact draft/request, self approval rejection, new evidence and scope reset')
+        assert.equal(await evaluate(send,"document.querySelectorAll('.next-workbench').length"),1)
+        assert.equal(await evaluate(send,"document.querySelector('.next-workbench').dataset.v285Persistent"),'yes')
+        console.log('PASS V285 single persistent Next workspace; V282 Chromium category full types, exact draft/request, self approval rejection, new evidence and scope reset')
         // V218: switching Marketplace resets explicit selection AND costs.
         // There must be no new request until the operator submits again.
         const v218BeforeSwitchRequests=v218Queries.length

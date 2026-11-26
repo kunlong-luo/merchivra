@@ -1,5 +1,6 @@
 import type {Metadata,Viewport} from 'next'
 import type {ReactNode} from 'react'
+import Portal from './portal'
 import '../src/style.css'
 import './design-system.css'
 import '../src/visual-refresh.css'
@@ -12,5 +13,5 @@ export const viewport:Viewport={
   width:'device-width',initialScale:1
 }
 export default function RootLayout({children}:{children:ReactNode}){
-  return <html lang="zh-CN"><body>{children}</body></html>
+  return <html lang="zh-CN"><body><Portal/>{children}</body></html>
 }

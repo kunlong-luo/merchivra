@@ -122,3 +122,13 @@ V284：将原 V282 分类专项旅程移动至既有财务页面明细分页和�
 ## V284 复评（2026-11-26）
 
 维持 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维8/10。V283 快 CI 失败已修复并通过、Pages 成功，但专门 Next 分类旅程仍失败，V284 修复未验收，不提高评分。当前主线不应称发布候选已通过。#104 OPEN/BLOCKED；真实 E1–E5、DEC/G1、G2/G3 目标证据及签署未完成，realizedNetProfit=null、Seller/Ads OAuth OFF。可以使用已验收基线在受控本地/隔离合成环境试用；私有预生产仅有条件验证；正式生产 NO-GO。下一个可验证目标是独立 Chromium 全绿及精确发布 SHA 完整验收，随后真实财务与目标基础设施；评分不替代上线批准。
+
+
+V284 [SHA b6d51157f980](https://github.com/kunlong-luo/merchivra/commit/b6d51157f980b52f2b52aaa9d147a60d2758bfe5) [快 CI #45745780681 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45745780681)；[Chromium #45745780588 FAILURE](https://github.com/kunlong-luo/merchivra/actions/runs/45745780588) [job #139661363183](https://github.com/kunlong-luo/merchivra/actions/runs/45745780588/job/139661363183) Next 日志：两次报告列表 GET、没有分类子请求；DOM 有六组相同报告选项，首个 select 仍空。确认重复 DOM 控件是实际观察到的缺陷。代码检查发现每个缓存路由页面分别挂载 Portal/QueryClient/Root，且各 Portal 使用全局 pathname 渲染同一当前视图，符合重复控件现象；是否为唯一根因及修复效果仍待浏览器复验。V280 r2 A3 7/7 和 V281 Redis 独立运行证据保持。
+
+V285：实际调整 Next App Router 结构，将唯一持久 Portal 提升至 `app/layout.tsx`，根路径及 `[view]` 页面仅为路由标记/合法路径校验（非法路径保留 notFound）；不再在每个缓存页面生成独立 QueryClient/Root。Portal 使用当前 pathname，单一 Root 负责 Session 验证及 V144 缓存清理；无有效路由不渲染工作台。Vite 回退、后端权限、OAuth、财务门禁不变。Chromium 新增跨路由同一 DOM 根实例标记和唯一 Portal/报告选择/分类工作台断言（包含隐藏 DOM），只操作唯一可见且非 inert/hidden 控件，保留 V282/V283/V284 所有金额、实际 HTTP、精确写入、拒绝审批、旧证据与跨 Marketplace 检查。未将测试重复点击作为应用修复，不放宽原断言；目前没有完整验证新结构的返回/前进、登录退出及非法路由，须验证本轮浏览器和快 CI，再对精确发布 SHA 做完整 A3。无新增依赖、迁移、真实数据或生产授权。
+
+
+## V285 复评（2026-11-26）
+
+维持 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维8/10。V284 快 CI 成功但 Next 分类专项失败；V285 修复重复工作台结构尚未通过专项及精确 SHA 完整 A3，不提高分值。评分为定性成熟度而非生产准入。#104 OPEN/BLOCKED；真实 E1–E5、DEC/G1、G2/G3 目标证据与签署未完成，realizedNetProfit=null、Seller/Ads OAuth OFF。已验收基线可受控本地/隔离合成试用，私有预生产仅有条件验证，最新主线不能宣称 RC 已通过，正式商业生产 NO-GO。
