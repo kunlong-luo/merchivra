@@ -7,15 +7,15 @@
 ### V290 · 精确候选 SHA 完整 A3 与 RC 工程验收
 
 - Task: V290
-- State: READY
+- State: IMPLEMENTED_PENDING_VERIFICATION
 - Priority: P0
-- Basis: V289 `6583c63e57cfc0c7279e2f64dd1989719d23696b`，已 VERIFIED (synthetic)；[验收记录](../current-status.md#最近已关闭任务v289--verified-synthetic)。实际候选以领取时核实的 main SHA 为准。
+- Basis: V289 `6583c63e57cfc0c7279e2f64dd1989719d23696b`，已 VERIFIED (synthetic)；领取时 main `7a2471e1fe4d2982d4a3e45bfaa9f10ee5cdb1f3` 快 CI [#45809895628](https://github.com/kunlong-luo/merchivra/actions/runs/45809895628) SUCCESS（run_attempt=1）。候选定位：唯一提交标题 `ci(v290): select release candidate A3 and record pending verification`、parent 为领取时 main。见[当前事实](../current-status.md#当前任务交接)。
 - 目标：取得精确候选的完整 A3 7/7，并核实登录退出、缓存隔离及非法路由回归；形成 RC 工程验收结论，不自动上线。
 - 范围：复用 [完整 A3 工作流](https://github.com/kunlong-luo/merchivra/actions/workflows/milestone-validation.yml)、已有 Session/CSRF、Next/Vite 和合成 fixture；先核对覆盖，只有具体日志或验收缺口证明必要时才补最小代码/测试。
 - 不做：重复 V289 已验证修复、无依据重构、升级依赖、真实 OAuth/银行接入、解锁利润或生产发布。
 - 依赖：V289 VERIFIED；有权启动 Actions 的维护者/执行环境和一次性合成 PG18。
 - 验收：同一精确候选 SHA 完整 A3 7/7，实际 PG18/Flyway、HTTP、Chromium、Compose/mock chain 与登录退出/缓存隔离/非法路由回归有明确非跳过证据；记录 run URL、run_attempt、各 job 成败/跳过及日志标记。失败续 V290；成功只确认 RC 工程范围。
-- 下一动作：新会话领取 V290，核对 main HEAD 与交接文档提交快 CI，再启动或复用该精确候选 SHA 的完整 A3；不得把 V289 快 CI 当完整 A3。当前未启动 V290。
+- 下一动作：核对上述候选精确 SHA 的快 CI、完整 A3 运行与全部 job/log marker；候选通过前不得关闭 V290。连接不支持手动 dispatch，故复用已存在的 milestone 路径变更触发器（只更新 V290 标签，不改测试/触发范围）；若未出现运行，由维护者在同一候选 main HEAD 手动运行 V290-A3-release-candidate。旧 SHA 绿灯不能继承。
 - 后续：V290 VERIFIED 后按队列处理 V291；缺真实材料时保持 BLOCKED。
 
 ## 后续队列（一次只领取一项）
@@ -23,7 +23,7 @@
 | ID | 状态 | 前置 | 验收标准 |
 | --- | --- | --- | --- |
 | V289 | VERIFIED | V287 | 快 CI、独立 Chromium、Pages 全部成功，见当前事实 |
-| V290 | READY | V289 VERIFIED | 精确候选 SHA 完整 A3 7/7、登录退出/缓存隔离及非法路由回归；记录 RC 工程验收，不自动上线 |
+| V290 | IMPLEMENTED_PENDING_VERIFICATION | V289 VERIFIED | 精确候选 SHA 完整 A3 7/7、登录退出/缓存隔离及非法路由回归；记录 RC 工程验收，不自动上线 |
 | V291 | BLOCKED | 维护者提供合法真实样本/授权 | E1–E5 单一真实订单/批次/结算及独立复算、G1/DEC 批准；未证不激活 |
 | V292 | BLOCKED | 目标环境及负责人 | G2/G3 实际安全、备份恢复及告警签署；#104 独立发布决定 |
 

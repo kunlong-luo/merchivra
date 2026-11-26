@@ -88,3 +88,8 @@ V281 [代码 cb9bb88eea15](https://github.com/kunlong-luo/merchivra/commit/cb9bb
 ## V289 复评（2026-11-26）
 
 维持 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维8/10。V289 [精确代码 `6583c63e57cfc0c7279e2f64dd1989719d23696b`](https://github.com/kunlong-luo/merchivra/commit/6583c63e57cfc0c7279e2f64dd1989719d23696b) 的 [快 CI #45809305462](https://github.com/kunlong-luo/merchivra/actions/runs/45809305462)、[独立 Chromium #45809305581](https://github.com/kunlong-luo/merchivra/actions/runs/45809305581)、[只读 Pages #45809305362](https://github.com/kunlong-luo/merchivra/actions/runs/45809305362) 全部 SUCCESS（run_attempt=1）；实际日志确认 AST 1 项及完整 V289 浏览器旅程 marker。消除已知回归但恢复既有能力，不新增评分，完整 A3/PG18 尚未验收。V290 READY，见 [当前事实](../current-status.md) 与 [当前任务](../roadmap/current-plan.md)。真实 E1–E5、DEC/G1、目标 G2/G3 缺失，#104 OPEN / NO-GO，`realizedNetProfit=null`、Seller/Ads OAuth OFF；受控本地/隔离合成验证可用，私有预生产仅限有条件验证，不批准正式商业生产。评分不是上线许可。
+
+
+## V290 待验收复评（2026-11-26）
+
+维持 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维8/10。领取时 main `7a2471e1fe4d2982d4a3e45bfaa9f10ee5cdb1f3` [快 CI #45809895628](https://github.com/kunlong-luo/merchivra/actions/runs/45809895628) SUCCESS（run_attempt=1；PG18、JaCoCo、完整 Next HTTP 跳过）；V290 只更新既有 A3 验收标识及交接，候选新快 CI、完整 A3 和专项日志尚待核实，不新增评分。候选定位及唯一下一动作见[当前事实](../current-status.md)与[当前任务](../roadmap/current-plan.md)。真实 E1–E5、DEC/G1、目标 G2/G3 缺失，#104 OPEN / NO-GO，realizedNetProfit=null、Seller/Ads OAuth OFF；已验收基线可受控本地及隔离合成验证，私有预生产仅有条件验证，正式商业生产 NO-GO。评分不是上线许可。

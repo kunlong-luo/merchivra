@@ -1,15 +1,17 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-26 · V289 合成验收通过；V290 待领取。** 这是当前快照，不是版本流水账。每次开工先核对实际 main HEAD 与 Actions；本页可能滞后于正在运行的 CI。任务顺序仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-26 · V290 候选已提交，完整验收待核。** 这是当前快照，不是版本流水账。每次开工先核对实际 main HEAD 与 Actions；本页可能滞后于正在运行的 CI。任务顺序仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 当前任务交接
 
 - Task: V290
-- State: READY
-- Basis: `6583c63e57cfc0c7279e2f64dd1989719d23696b`（V289 已验收代码；下次开工重新核对实际 main HEAD）。
-- 本会话只关闭 V289，不实施 V290。
-- 下一动作：领取 V290，核对 main 与精确候选 SHA，手动启动 [完整 A3](https://github.com/kunlong-luo/merchivra/actions/workflows/milestone-validation.yml)，核实 7/7 及登录退出/缓存隔离/非法路由专项；不继承 V289 快 CI 或历史完整 A3。见 [当前任务](roadmap/current-plan.md#当前任务)。
-- 文档交接提交单独核实快 CI；本会话环境无法直接克隆仓库（DNS 不可用），提交前未本地执行两项文档/CI 守卫，不伪造通过。
+- State: IMPLEMENTED_PENDING_VERIFICATION
+- Basis: `7a2471e1fe4d2982d4a3e45bfaa9f10ee5cdb1f3`（领取时 main HEAD；V289 交接文档快 CI 已独立核实）。
+- 候选：本次唯一提交标题 `ci(v290): select release candidate A3 and record pending verification`，parent 为上述 Basis；下一会话以实际 Git SHA 与 Actions head_sha 确认。仅改里程碑标识及三个权威文档，无业务代码、测试逻辑、授权或触发范围改变。
+- 基线快 CI [#45809895628](https://github.com/kunlong-luo/merchivra/actions/runs/45809895628) SUCCESS（run_attempt=1，精确 Basis）：Java/Gradle、Next/Vite、Compose 静态检查（含 cadence/文档守卫）成功；PG18 job、JaCoCo、Next 完整 HTTP smoke 跳过。不是候选的新 CI。
+- 源码核查：`scripts/smoke_next_session_csrf_v101.py` 已断言真实 Session/CSRF、no-store、匿名客户端隔离、11 路由无 SSR 私密信息、非法路由 404、退出后 401；`scripts/smoke_browser_layout.mjs` 已断言 V286/V289 持久根、前后导航及无遗留选择/重放。复用完整 A3 原有 7 job 结构，未重复实现。
+- 当前 GitHub 连接没有 workflow_dispatch 写入能力；采用现行 milestone 工作流自带 main 路径变更触发器，更新默认 run-name、实际日志标识和可选里程碑为 V290-A3-release-candidate。未扩大 CI cadence。候选的运行 ID、run_attempt、7/7 job 和日志 marker 未取得前一律待验证；未本地执行守卫，须以候选 CI 为准。
+- 唯一下一动作：查询候选精确 SHA 的快 CI 和完整 A3，核实全部 job、V144 与 V286/V289 marker 及 PG18/Compose 实跑；未创建 run 则由维护者在同一 main HEAD 手动运行 release-candidate 或 V290-A3-release-candidate，失败续 V290，全部通过才关闭并转交 V291。#104 NO-GO 不变。
 
 ## 最近已关闭任务：V289 · VERIFIED (synthetic)
 
@@ -25,10 +27,10 @@ V289 精确代码 [`6583c63e57cfc0c7279e2f64dd1989719d23696b`](https://github.co
 | 项目 | 当前可独立证实的状态 |
 | --- | --- |
 | 技术栈 | main 直接开发；Java 25 / Spring Boot 4.1.2 / Gradle / PostgreSQL 18 / Flyway；React 19 / Next.js 16.4.5 / Node 24 / pnpm 12.20.0；Vite 仅回退及虚构 Pages |
-| 独立成熟度 | [78/100（V289 复评）](governance/project-scorecard-v231-2026-11-24.md)；真实利润10/25，非生产就绪比例 |
+| 独立成熟度 | [78/100（V290 待验收复评）](governance/project-scorecard-v231-2026-11-24.md)；真实利润10/25，非生产就绪比例 |
 | 历史完整 A3 | V280 r2 `07fccfb4be98cdaee4d46f592c804dd8c5826d75` [#45742981332](https://github.com/kunlong-luo/merchivra/actions/runs/45742981332) 7/7；含实际 PG18 101行全量类型发现及双人审核 |
 | 独立 Redis | V281 `cb9bb88eea150384fa87a121c60e2a11d4bf42cf` [#45743425032](https://github.com/kunlong-luo/merchivra/actions/runs/45743425032) SUCCESS：Redis8、真实登录/CSRF、重启身份、断连拒绝、GCRA |
-| 最新主线发布候选 | V289 精确代码快 CI/独立 Chromium/Pages 全绿；完整 A3 未验收，旧 SHA 绿灯不能继承 |
+| 最新主线发布候选 | V290 候选完整 A3 待验证；V289 精确代码快 CI/独立 Chromium/Pages 全绿，交接 Basis 快 CI 独立成功；旧 SHA 绿灯不能继承 |
 | 财务及授权 | `realizedNetProfit=null`、`bankReconciled=false`、`externallyVerified=false`；Seller/Ads OAuth OFF；真实 E1–E5/DEC/G1 未证 |
 | 生产 | pre-alpha；[#104](https://github.com/kunlong-luo/merchivra/issues/104) NO-GO；目标 G2/G3 TLS/KMS/备份恢复/告警及正式签署缺失 |
 
