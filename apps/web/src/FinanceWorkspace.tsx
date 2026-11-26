@@ -121,10 +121,10 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
     <strong>尚未认证 · 不自动入账</strong>
    </div>
   </section>}
-  {currentId&&<FinanceExceptionQueuePanel key={currentId}
+  {currentId&&<FinanceExceptionQueuePanel key={'exception-queue-'+currentId}
       tenantId={tenantId} marketplaceId={currentId}/>}
   {currentId&&markets.data?.find(m=>m.id===currentId)?.connectionStatus==='CONNECTED'&&
-    <FinancesSyncPanel key={currentId} tenantId={tenantId} marketplaceId={currentId}/>}
+    <FinancesSyncPanel key={'finances-sync-'+currentId} tenantId={tenantId} marketplaceId={currentId}/>}
   <section className="panel full-panel">
    <div className="panel-heading"><div><h2>按来源 / 原币 / 类别统计</h2>
     <p>相同币种和同类事件才聚合。这里的金额不等于销售额、利润或到账金额。</p></div>
@@ -139,8 +139,8 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
        <td>{b.currency} {b.amount}</td><td>{b.eventCount}</td></tr>)}</tbody></table>
     </div>}
   </section>
-  {currentId&&<SkuProfitPanel key={currentId} tenantId={tenantId} marketplaceId={currentId}/>}
-  {currentId&&<PeriodProfitReportPanel key={currentId} tenantId={tenantId} marketplaceId={currentId}/>}
+  {currentId&&<SkuProfitPanel key={'sku-profit-'+currentId} tenantId={tenantId} marketplaceId={currentId}/>}
+  {currentId&&<PeriodProfitReportPanel key={'period-profit-'+currentId} tenantId={tenantId} marketplaceId={currentId}/>}
   {currentId&&<CostProfitReadinessPanel key={'cost-readiness-'+currentId}
    tenantId={tenantId} marketplaceId={currentId}/>}
   {currentMarketplace&&<ManualCostBatchPanelV228
@@ -150,14 +150,14 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
    tenantId={tenantId} marketplaceId={currentId}/>}
   {currentId&&<RefundCostReadinessPanel key={'refund-cost-readiness-'+currentId}
    tenantId={tenantId} marketplaceId={currentId}/>}
-  {currentId&&<SettlementReportsPanel key={currentId} tenantId={tenantId} marketplaceId={currentId} connected={markets.data?.find(m=>m.id===currentId)?.connectionStatus==='CONNECTED'}/>}
-  {currentId&&<SettlementWorkspace key={currentId} tenantId={tenantId}
+  {currentId&&<SettlementReportsPanel key={'settlement-reports-'+currentId} tenantId={tenantId} marketplaceId={currentId} connected={markets.data?.find(m=>m.id===currentId)?.connectionStatus==='CONNECTED'}/>}
+  {currentId&&<SettlementWorkspace key={'settlement-workspace-'+currentId} tenantId={tenantId}
      marketplaceId={currentId}
      currency={markets.data?.find(m=>m.id===currentId)?.currency??'USD'}/>}
   {currentId&&<AdsReportsPanel key={'ads-report-'+currentId} tenantId={tenantId}
      marketplaceId={currentId}
      currency={markets.data?.find(m=>m.id===currentId)?.currency??'USD'}/>}
-  {currentId&&<AdSpendPanel key={currentId} tenantId={tenantId}
+  {currentId&&<AdSpendPanel key={'ad-spend-'+currentId} tenantId={tenantId}
      marketplaceId={currentId}
      currency={markets.data?.find(m=>m.id===currentId)?.currency??'USD'}/>}
   <section className="panel full-panel">
@@ -224,9 +224,9 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
      marketplaceId={currentId} kind="ORDER" id="fin-cogs-order"
      label="选择成本核对来源订单" value={selectedCostOrder}
      onChange={setSelectedCostOrder}/>
-    {selectedCostOrder&&<OrderCostReadinessPanel key={selectedCostOrder}
+    {selectedCostOrder&&<OrderCostReadinessPanel key={'order-cost-'+selectedCostOrder}
       tenantId={tenantId} marketplaceId={currentId} orderId={selectedCostOrder}/>}
-    {selectedCostOrder&&<OrderContributionPanel key={selectedCostOrder}
+    {selectedCostOrder&&<OrderContributionPanel key={'order-contribution-'+selectedCostOrder}
       tenantId={tenantId} marketplaceId={currentId} orderId={selectedCostOrder}/>}
    </section>}
    {current&&<div className="core-tools">
@@ -259,14 +259,14 @@ export default function FinanceWorkspace({tenantId}:{tenantId:string}){
         <td>{b.leaf?'末级明细':'包含子项，勿重复汇总'}</td>
        </tr>)}</tbody></table></div>}
     {current.dataOrigin==='LIVE'&&<FinanceClassificationPanel
-      key={current.id} tenantId={tenantId} marketplaceId={currentId}
+      key={'classification-'+current.id} tenantId={tenantId} marketplaceId={currentId}
       eventId={current.id} origin={current.dataOrigin}
       rawBreakdowns={breakdowns.data}/>}
     {current.dataOrigin==='LIVE'&&current.reviewStatus==='MATCHED'&&
-     <ItemAllocationPanel key={current.id} tenantId={tenantId}
+     <ItemAllocationPanel key={'item-allocation-'+current.id} tenantId={tenantId}
       marketplaceId={currentId} eventId={current.id}/>}
     {current.dataOrigin==='LIVE'&&current.reviewStatus==='MATCHED'&&
-     <RefundReviewPanel key={current.id} tenantId={tenantId}
+     <RefundReviewPanel key={'refund-review-'+current.id} tenantId={tenantId}
       marketplaceId={currentId} eventId={current.id}/>}
     <div className="sandbox-actions">
      <button className="primary-button" type="button" disabled={!selectedOrder||

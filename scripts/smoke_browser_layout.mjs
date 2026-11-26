@@ -1794,6 +1794,13 @@ async function main() {
           'V106 previous finance page restores correct 50-row dataset')
         assert.equal(await evaluate(send,"document.querySelectorAll('.next-workbench').length"),1,
           'V285 one portal across cached Next routes')
+        // V287: repeated Marketplace keys on sibling React components caused
+        // orphaned/duplicated panel DOM after ordinary query-driven updates.
+        // Fail at the structural boundary before interacting with a selector.
+        assert.equal(await evaluate(send,"document.querySelectorAll('section[aria-label=\"Amazon 结算报告来源核对\"]').length"),1,
+          'V287 exactly one report panel after finance pagination and rerenders')
+        assert.equal(await evaluate(send,"document.querySelectorAll('#reports-selected').length"),1,
+          'V287 exactly one report selector after pagination')
         assert.equal(await evaluate(send,"document.querySelector('.next-workbench').dataset.v285Persistent"),'yes',
           'V285 layout survives client navigation without replacing session root')
         // V282 real rendered workbench: full types, save + preview, request,

@@ -1,6 +1,6 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7；V259 快 CI 通过；V260 完整 A3 7/7；V261/V262 完整 A3 通过；V263 快 CI 通过、A3 取消；V264 完整 A3 通过；V265/V266/V267 完整 A3 通过；V268/V269 完整 A3 通过；V270 完整 A3 通过、独立 Redis smoke 启动失败；V271 完整 A3 通过；V272 完整 A3 通过；V273 A3 6/7（PG18 失败）；V274 快 CI 通过、未触发 A3；V275 分类 SQL 通过但 A3 6/7（补偿唯一键竞争）；V276 快 CI 通过；V277 完整 A3 7/7 通过；V278 完整 A3 7/7 通过；V279 快 CI/只读 Pages 通过；V280 r2 完整 A3 7/7 通过；V281 Redis 独立验收通过；V282 快 CI 节奏检查及 Next Chromium 类型发现失败；V283 快 CI/只读 Pages 通过、Next 分类选择仍超时；V284 快 CI 通过、Chromium 发现重复报告控件；V285 快 CI/只读 Pages 通过、Chromium 仍超时；V286 提交路由唯一视图及历史导航回归待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7；V259 快 CI 通过；V260 完整 A3 7/7；V261/V262 完整 A3 通过；V263 快 CI 通过、A3 取消；V264 完整 A3 通过；V265/V266/V267 完整 A3 通过；V268/V269 完整 A3 通过；V270 完整 A3 通过、独立 Redis smoke 启动失败；V271 完整 A3 通过；V272 完整 A3 通过；V273 A3 6/7（PG18 失败）；V274 快 CI 通过、未触发 A3；V275 分类 SQL 通过但 A3 6/7（补偿唯一键竞争）；V276 快 CI 通过；V277 完整 A3 7/7 通过；V278 完整 A3 7/7 通过；V279 快 CI/只读 Pages 通过；V280 r2 完整 A3 7/7 通过；V281 Redis 独立验收通过；V282 快 CI 节奏检查及 Next Chromium 类型发现失败；V283 快 CI/只读 Pages 通过、Next 分类选择仍超时；V284 快 CI 通过、Chromium 发现重复报告控件；V285 快 CI/只读 Pages 通过、Chromium 仍超时；V286 快 CI/只读 Pages 通过、Chromium 重复面板失败；V287 同级 React key 冲突修复待验收。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 核心项目状态
 
@@ -304,3 +304,13 @@ V286：继续修正实际应用的双重视图来源：Next 只按已提交路�
 ## V286 复评（2026-11-26）
 
 维持 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维8/10。V285 快 CI/Pages 成功但浏览器专项失败；V286 新提交待验收，不增加分值。#104 OPEN/BLOCKED；真实 E1–E5、DEC/G1、G2/G3 目标证明及签署未完成，realizedNetProfit=null、Seller/Ads OAuth OFF。已验收基线可受控本地/隔离合成试用，最新主线未获得 RC 完整验收；私有预生产仅限有条件验证，正式生产 NO-GO。评分是定性成熟度而不是上线许可。
+
+
+V286 [SHA e6e8fc1bea2f](https://github.com/kunlong-luo/merchivra/commit/e6e8fc1bea2fc295f3c644837077285fe34bde4b) [快 CI #45748172670 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45748172670) [只读 Pages #45748172657 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45748172657)；[独立 Chromium #45748172708 FAILURE](https://github.com/kunlong-luo/merchivra/actions/runs/45748172708) [job #139669209429](https://github.com/kunlong-luo/merchivra/actions/runs/45748172708/job/139669209429) 确认仅一个可见持久 Portal、一个 finance workspace，但七个报告 section、六个可见 select 均在同一 workspace 内，报告列表仅一次 GET、无分类子请求。代码直接发现 FinanceWorkspace 七个不同同级面板使用相同 key={currentId}；另两项订单面板共用 selectedCostOrder、三项事件面板共用 current.id。React 同级 key 重复是确定的协调契约缺陷，与日志相符；不是多个 Portal 的证据。是否完整解释所有残留 DOM 仍以实际复验为准。
+
+V287：修复 FinanceWorkspace 12 处裸实体 ID key：七个同级 Marketplace 面板、两项同订单面板、三项同事件面板分别使用稳定且独立的组件命名空间 + 原作用域 ID；保留切换站点/订单/事件时原有重挂载隔离，已有不同命名空间保持。新增 Vitest 使用现有 TypeScript AST 直接检查实际 JSX 中19个显式业务组件 key 为有命名空间的表达式且不重复，覆盖三类实体，而非仅测试未使用的 helper；新增 Chromium 在财务分页及重新渲染后先断言报告 section/select 唯一，再执行原有全量分类、写入、独立审批、证据失效、跨站点、历史导航检查。未放宽唯一性或延长超时，保留 V285/V286 布局与路由边界，不再推测需要修改路由。无依赖、数据库迁移、财务后端、OAuth 或生产权限变更。快 CI 与独立 Chromium 待实际执行；登录退出、非法路由及精确发布 SHA 完整 A3 仍需验收。
+
+
+## V287 复评（2026-11-26）
+
+维持 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维8/10。V286 快 CI/Pages 成功但浏览器失败；V287 已定位并修复确定的同级 key 缺陷，未取得运行验证，不加分。#104 OPEN/BLOCKED；真实 E1–E5、DEC/G1、G2/G3 目标证明及签署未完成，realizedNetProfit=null、Seller/Ads OAuth OFF。已验收基线可受控本地/隔离合成试用，最新主线未获 RC 完整验收，私有预生产仅限有条件验证，正式商业生产 NO-GO。评分为定性成熟度而非生产授权。

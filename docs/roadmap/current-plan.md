@@ -1,6 +1,6 @@
 # Merchivra · 唯一现行 P0 执行计划
 
-**CURRENT · 2026-11-25 · V286：提交路由唯一视图与历史导航回归。**
+**CURRENT · 2026-11-25 · V287：修复财务面板 React 同级 key 冲突。**
 
 > **北极星**：对 Amazon Seller ERP 的每笔订单、退款、SKU、采购批次及每个原币费用来源建立可以由独立第三方验证的记录，覆盖全成本/真实库存 COGS，最后在经批准的 G1/DEC 会计政策下生成可审计期间净利润。不能为了显示一个数字填补 UNKNOWN 为0。项目仍为 pre-alpha、`realizedNetProfit=null`，真实 Seller/Ads OAuth OFF，生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
 
@@ -26,10 +26,10 @@
 
 **评分闸门**：V231 76/100 与真实利润 10/25 仍为最新已验收基线；V232 未通过上述真实证据关卡前不发布新评分。合成 CI 通过只证明工程契约，不能代替会计签署。保持 `realizedNetProfit=null`、Seller/Ads OAuth OFF、#104 NO-GO。真实材料须由维护者在合法本地环境取得，独立财务人员签署，不由开发代理代签。
 
-### 当前执行：V286 提交路由唯一视图与历史导航回归
+### 当前执行：V287 财务面板 React key 冲突修复
 
 - V258/V260/V261/V262 完整 A3 成功；V263 快 CI 成功、A3 取消；V264 快 CI 及完整 A3 成功；V265/V266/V267/V268/V269/V270/V271 快 CI 与完整 A3 成功；V270 独立 Redis smoke 已核实为 Gradle 构建阶段 Maven Central 429，运行测试未开始；V281 独立复验成功（Redis 8.10.1、真实 Session/GCRA/断连）。各 SHA、运行与历史失败见[当前事实](../current-status.md)和[退款领域证据](../finance/v212-refund-original-sale-lot-quantity-envelope.md)。
-- V277/V278/V280 r2 完整 A3 7/7 通过，V280 101行真实 HTTP marker 已核；V281 Redis 独立验收通过。V285 快 CI/只读 Pages 成功但独立 Chromium 分类选择仍超时，重复选项的具体 DOM 实例归属未确认。V286 [整改](../finance/v198-settlement-source-claim-integrity.md) 消除双重视图来源、保留单根及严格唯一性、增加逐实例诊断和历史导航不重放回归；待快 CI/独立 Chromium，随后精确发布 SHA 完整 A3。真实 E1–E5、G1/DEC 与 G2/G3 按[生产准入](../operations/v143-production-release-preflight.md) V283 私有交接顺序办理，不扩张无关功能。
+- V277/V278/V280 r2 完整 A3 7/7 通过，V280 101行真实 HTTP marker 已核；V281 Redis 独立验收通过。V286 快 CI/只读 Pages 成功但 Chromium 确认单一 finance workspace 内重复面板。V287 [修复](../finance/v198-settlement-source-claim-integrity.md) 为各财务组件使用独立稳定 key，AST 守卫及分页后 DOM 唯一性回归，待快 CI/独立 Chromium；后续如失败先定位具体组件，不再盲目改路由。通过后精确发布 SHA 完整 A3。真实 E1–E5、G1/DEC 与 G2/G3 按[生产准入](../operations/v143-production-release-preflight.md) V283 私有交接顺序办理，不扩张无关功能。
 - 优先取得 E1 合法真实采购/头程费用或银行结算样本，受控本地提供原始字节、官方签发渠道或可信签章、原币金额/币种、不可变单据/行键、关联订单/批次/付款以及独立复核。外部原件及隐私不得进入公开 Git；无真实样本和 G1/DEC 签署前维持全部实际利润阻断。
 
 ## 文档清理规则
