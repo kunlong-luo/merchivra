@@ -112,3 +112,13 @@ V283：修正 V108 快速 CI cadence guard，要求 Chromium 的 main push 路�
 3. 先用既有 V270 本地原件核对（见财务来源契约），随后独立验证 E1–E5 归属及金额守恒、退款 COGS、订单/SKU/期间净利润，确认 G1/DEC-06/07/08；缺失不是零。不得把分类一致或本地审批视为外部真伪/银行到账认证。
 4. 目标环境另做 G2 TLS/Session/CSRF/角色/KMS/AV、G3 真实 PG18 异地加密备份/PITR/告警 ACK，记录签署人及实际结果；现有 V281 Redis 仅隔离运行证据，不替代目标 G2/G3。
 5. 执行现有只读 V143 预检并由独立发布负责人签署，任何未满足项保留 NO-GO；无签署不开放真实 OAuth 或生产部署。
+
+
+V283 [SHA 60a74d5c48e3](https://github.com/kunlong-luo/merchivra/commit/60a74d5c48e30375145efa3a2cf47613a7afc11c) [快 CI #45744211055 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45744211055) [只读 Pages #45744211134 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45744211134)；[独立 Chromium #45744211076 FAILURE](https://github.com/kunlong-luo/merchivra/actions/runs/45744211076)，[job #139656222559](https://github.com/kunlong-luo/merchivra/actions/runs/45744211076/job/139656222559) Next 阶段日志显示 selected 为空、分类报告子请求为空、报告列表和人工参考仍在加载。说明失败发生在分类服务请求之前；可能为 App Router 初次挂载/重挂载时序，尚未证明唯一根因或生产 UI 无缺陷。V280 r2 A3 7/7、V281 独立 Redis 成功保持。
+
+V284：将原 V282 分类专项旅程移动至既有财务页面明细分页和证据检查成功之后、切换 Marketplace 之前；要求 `/finance` 路由、精确合成报告选项、完整101行/2组覆盖及分类控件共同满足。只在原生 select 被重置时重复相同只读选择，写入按钮不重复操作；等待 fieldset 启用后才输入审核理由；实际报告列表及 `/category-types` GET、保存及申请的精确请求体、审批拒绝 alert、新证据 GET、跨站点清除等断言全部保留。补充根列表请求、路径及选项诊断，使用不与旧 SKU 夹具重复的报告 UUID。未增加超时时间、未跳过失败、未修改业务/财务服务、未开放真实授权。当前仅提交修复，实际浏览器验证仍待执行；如果再次失败按新日志定位应用或测试缺陷，不宣称已完成浏览器验收。
+
+
+## V284 复评（2026-11-26）
+
+维持 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维8/10。V283 快 CI 失败已修复并通过、Pages 成功，但专门 Next 分类旅程仍失败，V284 修复未验收，不提高评分。当前主线不应称发布候选已通过。#104 OPEN/BLOCKED；真实 E1–E5、DEC/G1、G2/G3 目标证据及签署未完成，realizedNetProfit=null、Seller/Ads OAuth OFF。可以使用已验收基线在受控本地/隔离合成环境试用；私有预生产仅有条件验证；正式生产 NO-GO。下一个可验证目标是独立 Chromium 全绿及精确发布 SHA 完整验收，随后真实财务与目标基础设施；评分不替代上线批准。

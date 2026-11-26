@@ -1,6 +1,6 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7；V259 快 CI 通过；V260 完整 A3 7/7；V261/V262 完整 A3 通过；V263 快 CI 通过、A3 取消；V264 完整 A3 通过；V265/V266/V267 完整 A3 通过；V268/V269 完整 A3 通过；V270 完整 A3 通过、独立 Redis smoke 启动失败；V271 完整 A3 通过；V272 完整 A3 通过；V273 A3 6/7（PG18 失败）；V274 快 CI 通过、未触发 A3；V275 分类 SQL 通过但 A3 6/7（补偿唯一键竞争）；V276 快 CI 通过；V277 完整 A3 7/7 通过；V278 完整 A3 7/7 通过；V279 快 CI/只读 Pages 通过；V280 r2 完整 A3 7/7 通过；V281 Redis 独立验收通过；V282 快 CI 节奏检查及 Next Chromium 类型发现失败；V283 修复及诊断待核。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-25 · V237 完整 A3 7/7（含 V236 真 PG18 服务回归），V238–V240 快 CI 成功；V241 完整 A3 7/7；V242 完整 A3 7/7；V243 快 CI 通过但 PG18 步骤失败；V244 完整 A3 7/7；V245 快 CI 成功；V246 快 CI 成功；V247 快 CI 成功、完整 A3 6/7；V248 完整 A3 7/7；V249 快 CI 成功；V250 工作流未启动；V251 工作流任务已恢复启动；V252 完整 A3 7/7；V253 快 CI 成功；V254 完整 A3 7/7；V255 完整 A3 7/7；V256 A3 6/7（PG18 变量冲突）；V257 快 CI 成功；V258 完整 A3 7/7；V259 快 CI 通过；V260 完整 A3 7/7；V261/V262 完整 A3 通过；V263 快 CI 通过、A3 取消；V264 完整 A3 通过；V265/V266/V267 完整 A3 通过；V268/V269 完整 A3 通过；V270 完整 A3 通过、独立 Redis smoke 启动失败；V271 完整 A3 通过；V272 完整 A3 通过；V273 A3 6/7（PG18 失败）；V274 快 CI 通过、未触发 A3；V275 分类 SQL 通过但 A3 6/7（补偿唯一键竞争）；V276 快 CI 通过；V277 完整 A3 7/7 通过；V278 完整 A3 7/7 通过；V279 快 CI/只读 Pages 通过；V280 r2 完整 A3 7/7 通过；V281 Redis 独立验收通过；V282 快 CI 节奏检查及 Next Chromium 类型发现失败；V283 快 CI/只读 Pages 通过、Next 分类选择仍超时；V284 稳定选择回归待核。** 这里记录“实际可以做什么”和“绝对不能推断什么”，不是各次版本新闻滚动记录。历史精确 CI/PR/SHA 保留在 [Vxxx 专项证据](README.md)、[Git 历史](https://github.com/kunlong-luo/merchivra/commits/main/)和 [旧文档归档](roadmap.md)，现行任务仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 核心项目状态
 
@@ -274,3 +274,13 @@ V283：修正 V108 快速 CI cadence guard，要求 Chromium 的 main push 路�
 ## V283 复评（2026-11-26）
 
 维持 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维8/10。V280 r2 完整 A3 与101行真实 HTTP 合成回归通过，确认此前技术闭环但业务评分已19/20；V282 发现新浏览器回归失败，V283 尚未通过，不增加前端或运维分。不以工程合成数据证明实际利润。#104 仍 OPEN/BLOCKED，真实 E1–E5、DEC/G1、目标 G2/G3 未验收；realizedNetProfit=null、Seller/Ads OAuth OFF。受控本地/隔离合成测试可以；私有预生产仅有条件验证；正式商业生产 NO-GO。
+
+
+V283 [SHA 60a74d5c48e3](https://github.com/kunlong-luo/merchivra/commit/60a74d5c48e30375145efa3a2cf47613a7afc11c) [快 CI #45744211055 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45744211055) [只读 Pages #45744211134 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45744211134)；[独立 Chromium #45744211076 FAILURE](https://github.com/kunlong-luo/merchivra/actions/runs/45744211076)，[job #139656222559](https://github.com/kunlong-luo/merchivra/actions/runs/45744211076/job/139656222559) Next 阶段日志显示 selected 为空、分类报告子请求为空、报告列表和人工参考仍在加载。说明失败发生在分类服务请求之前；可能为 App Router 初次挂载/重挂载时序，尚未证明唯一根因或生产 UI 无缺陷。V280 r2 A3 7/7、V281 独立 Redis 成功保持。
+
+V284：将原 V282 分类专项旅程移动至既有财务页面明细分页和证据检查成功之后、切换 Marketplace 之前；要求 `/finance` 路由、精确合成报告选项、完整101行/2组覆盖及分类控件共同满足。只在原生 select 被重置时重复相同只读选择，写入按钮不重复操作；等待 fieldset 启用后才输入审核理由；实际报告列表及 `/category-types` GET、保存及申请的精确请求体、审批拒绝 alert、新证据 GET、跨站点清除等断言全部保留。补充根列表请求、路径及选项诊断，使用不与旧 SKU 夹具重复的报告 UUID。未增加超时时间、未跳过失败、未修改业务/财务服务、未开放真实授权。当前仅提交修复，实际浏览器验证仍待执行；如果再次失败按新日志定位应用或测试缺陷，不宣称已完成浏览器验收。
+
+
+## V284 复评（2026-11-26）
+
+维持 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维8/10。V283 快 CI 失败已修复并通过、Pages 成功，但专门 Next 分类旅程仍失败，V284 修复未验收，不提高评分。当前主线不应称发布候选已通过。#104 OPEN/BLOCKED；真实 E1–E5、DEC/G1、G2/G3 目标证据及签署未完成，realizedNetProfit=null、Seller/Ads OAuth OFF。可以使用已验收基线在受控本地/隔离合成环境试用；私有预生产仅有条件验证；正式生产 NO-GO。下一个可验证目标是独立 Chromium 全绿及精确发布 SHA 完整验收，随后真实财务与目标基础设施；评分不替代上线批准。
