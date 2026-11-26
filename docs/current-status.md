@@ -1,28 +1,34 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-26 · V288 交接制度建立，V289 已提交修复、待验收。** 这是当前快照，不是版本流水账。每次开工先核对实际 main HEAD 与 Actions；本页可能滞后于正在运行的 CI。任务顺序仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-26 · V289 合成验收通过；V290 待领取。** 这是当前快照，不是版本流水账。每次开工先核对实际 main HEAD 与 Actions；本页可能滞后于正在运行的 CI。任务顺序仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 当前任务交接
 
-- Task: V289
-- State: IMPLEMENTED_PENDING_VERIFICATION
-- Basis: `ca11f7a93d2b0b7bcff7bb5447e5b45436b51ba5`（V287 代码；本轮文档提交不改变业务代码）
-- 任务提交定位：`fix(v289): use Vite raw source for finance key regression`（parent `fb9c2baa6da13f507db2b56c6bfe211b1e767ab5`，在 main 历史定位精确代码 SHA；禁止将父提交当作当前代码）。
-- 已实施：用现有 Vite `?raw` 导入替代 `node:fs`，AST 检查不变；Chromium 增加历史回退报告 section 唯一性及完整旅程 marker，不扩大类型权限、无新依赖。
-- 下一动作：核对该任务提交精确 SHA 的快 CI、独立 Chromium 与 Pages；失败则读取具体 job 日志并续办 V289，通过才领取 V290。按 [任务验收](roadmap/current-plan.md#当前任务) 执行。
-- 最新已知运行事实：V287 快 CI、Chromium、Pages 均失败，Chromium 未进入业务场景。Java/Compose 通过，PG18 跳过。V288 文档提交 `fb9c2baa6da13f507db2b56c6bfe211b1e767ab5` [快 CI #45809197904](https://github.com/kunlong-luo/merchivra/actions/runs/45809197904) 已排队（新提交可能取代）；V289 精确运行结果尚未取得。
-- 已知失败：[`#45806323293`](https://github.com/kunlong-luo/merchivra/actions/runs/45806323293) [React job #139862446987](https://github.com/kunlong-luo/merchivra/actions/runs/45806323293/job/139862446987) Typecheck TS2591（`node:fs`）；[Chromium #45806323382](https://github.com/kunlong-luo/merchivra/actions/runs/45806323382) 在 Vite 构建失败；[Pages #45806323270](https://github.com/kunlong-luo/merchivra/actions/runs/45806323270) 在静态编译失败，部署跳过。
-- 旧浏览器缺陷：V286 [#45748172708](https://github.com/kunlong-luo/merchivra/actions/runs/45748172708) 单 Portal 内七个结算面板/六个 select；V287 已修复12处同级 key，运行效果未验证。不得再盲目调整路由。
+- Task: V290
+- State: READY
+- Basis: `6583c63e57cfc0c7279e2f64dd1989719d23696b`（V289 已验收代码；下次开工重新核对实际 main HEAD）。
+- 本会话只关闭 V289，不实施 V290。
+- 下一动作：领取 V290，核对 main 与精确候选 SHA，手动启动 [完整 A3](https://github.com/kunlong-luo/merchivra/actions/workflows/milestone-validation.yml)，核实 7/7 及登录退出/缓存隔离/非法路由专项；不继承 V289 快 CI 或历史完整 A3。见 [当前任务](roadmap/current-plan.md#当前任务)。
+- 文档交接提交单独核实快 CI；本会话环境无法直接克隆仓库（DNS 不可用），提交前未本地执行两项文档/CI 守卫，不伪造通过。
+
+## 最近已关闭任务：V289 · VERIFIED (synthetic)
+
+V289 精确代码 [`6583c63e57cfc0c7279e2f64dd1989719d23696b`](https://github.com/kunlong-luo/merchivra/commit/6583c63e57cfc0c7279e2f64dd1989719d23696b)；以下均为 run_attempt=1：
+
+- [快 CI #45809305462](https://github.com/kunlong-luo/merchivra/actions/runs/45809305462) SUCCESS：Java25/Gradle、Compose（含文档与 cadence 守卫）、Orval、TypeScript、Vitest 97 个测试文件（含 [AST 专项 job #139872701718](https://github.com/kunlong-luo/merchivra/actions/runs/45809305462/job/139872701718) 1 项）、Next/Vite 构建通过；PG18 job、JaCoCo、完整 Next HTTP smoke 跳过。
+- [独立 Chromium #45809305581](https://github.com/kunlong-luo/merchivra/actions/runs/45809305581) SUCCESS：[job #139872673779](https://github.com/kunlong-luo/merchivra/actions/runs/45809305581/job/139872673779) Vite 与 Next 实际 Chromium 合成场景通过；原始日志确认 `PASS V286 committed route, persistent session root, history back/forward, no retained category selection or replay` 与 `PASS V289 finance reconciliation and full category browser journey, including unique history re-entry`。不再重复 V289 修复。
+- [Pages #45809305362](https://github.com/kunlong-luo/merchivra/actions/runs/45809305362) SUCCESS：只读静态构建、无 live OAuth 检查与公开演示部署成功，不等于生产 ERP。
+- 实际差异仅 AST `?raw` 导入、浏览器断言/marker 与任务文档；无依赖、运行时权限、金额/租户契约变更。V289 无新增失败，完整 A3 尚未执行。原 V286/V287 失败和修复前交接见 [V289 旧事实快照](https://github.com/kunlong-luo/merchivra/blob/6583c63e57cfc0c7279e2f64dd1989719d23696b/docs/current-status.md)。
 
 ## 核心项目状态
 
 | 项目 | 当前可独立证实的状态 |
 | --- | --- |
 | 技术栈 | main 直接开发；Java 25 / Spring Boot 4.1.2 / Gradle / PostgreSQL 18 / Flyway；React 19 / Next.js 16.4.5 / Node 24 / pnpm 12.20.0；Vite 仅回退及虚构 Pages |
-| 独立成熟度 | [78/100（V287 复评）](governance/project-scorecard-v231-2026-11-24.md)；真实利润10/25，非生产就绪比例 |
+| 独立成熟度 | [78/100（V289 复评）](governance/project-scorecard-v231-2026-11-24.md)；真实利润10/25，非生产就绪比例 |
 | 历史完整 A3 | V280 r2 `07fccfb4be98cdaee4d46f592c804dd8c5826d75` [#45742981332](https://github.com/kunlong-luo/merchivra/actions/runs/45742981332) 7/7；含实际 PG18 101行全量类型发现及双人审核 |
 | 独立 Redis | V281 `cb9bb88eea150384fa87a121c60e2a11d4bf42cf` [#45743425032](https://github.com/kunlong-luo/merchivra/actions/runs/45743425032) SUCCESS：Redis8、真实登录/CSRF、重启身份、断连拒绝、GCRA |
-| 最新主线发布候选 | 未获完整验收；旧 SHA 绿灯不能继承 |
+| 最新主线发布候选 | V289 精确代码快 CI/独立 Chromium/Pages 全绿；完整 A3 未验收，旧 SHA 绿灯不能继承 |
 | 财务及授权 | `realizedNetProfit=null`、`bankReconciled=false`、`externallyVerified=false`；Seller/Ads OAuth OFF；真实 E1–E5/DEC/G1 未证 |
 | 生产 | pre-alpha；[#104](https://github.com/kunlong-luo/merchivra/issues/104) NO-GO；目标 G2/G3 TLS/KMS/备份恢复/告警及正式签署缺失 |
 
@@ -35,7 +41,7 @@
 - **V230B**：从 V228 暂存或重放来源点击“查看缺口”；单个 RR 快照复用 V229 和 V182/V165/V94/V102 的审计/结算/重复候选，按八类来源列出哪些**真正独立第三方原始文件、签发主体、原币收费与成本守恒**尚未证明。Next/Orval/Zod 一律拒绝伪造的 `VERIFIED`、跨 Marketplace、错误原币、非 null 真实利润等响应；报告没有外部真实过账行为。详见 [V230](finance/v230-external-source-proof-dossier-and-owner-workflow.md)。
 - **V231 已验收（代码 SHA `9ff02147de17`、完整 A3 7/7）**：新增浏览器本地 SHA-256 按字节重算，最多读取 8 MiB 用户合法持有的文件，与 V91 **用户自述**摘要比较；不上传/保存文件或文件名，MATCH 仅称 `LOCAL_BYTES_MATCH_USER_CLAIM_ONLY`，不变更 V91/V182 审计、外部真实性或 `realizedNetProfit`。另外删去重复 `Agent.md` 和过时 V120 草稿，重建根中英文 README 目录用途、文档索引与自动目录守卫。详见 [V231 交付与清理](finance/v231-local-byte-claim-check-and-repository-pruning.md)。
 
-- **后续已实现**：V249–V269 本地批次/退款成本候选、证据与双人复核（无实际回转），见 [退款成本契约](finance/v212-refund-original-sale-lot-quantity-envelope.md)；V270 本地报告/银行样本只读比较，见 [V60/V270](finance/manual-bank-payout-v60.md)；V271–V280 结算来源分组、末级分类、不可变映射、独立审核 HTTP、Next 工作台与全量类型发现，见 [结算契约](finance/v198-settlement-source-claim-integrity.md)。V285/V286 单根布局与路由调整、V287 key 修复尚无新完整验收。
+- **后续已实现**：V249–V269 本地批次/退款成本候选、证据与双人复核（无实际回转），见 [退款成本契约](finance/v212-refund-original-sale-lot-quantity-envelope.md)；V270 本地报告/银行样本只读比较，见 [V60/V270](finance/manual-bank-payout-v60.md)；V271–V280 结算来源分组、末级分类、不可变映射、独立审核 HTTP、Next 工作台与全量类型发现，见 [结算契约](finance/v198-settlement-source-claim-integrity.md)。V285/V286 单根布局与路由调整、V287 key 修复及 V289 类型修复已通过快 CI 与独立 Chromium；完整 A3 待 V290。
 
 ## 生产阻塞与本地运行
 

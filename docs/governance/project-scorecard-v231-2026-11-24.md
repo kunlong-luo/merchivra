@@ -1,6 +1,8 @@
 # Merchivra · V231 独立成熟度重新评分（2026-11-24）
 
-**最新统一评分：76/100（V230 [75/100](project-scorecard-v230-2026-11-24.md) → +1）。** 原六维满分不改，也不追溯修改旧 [V229 74](project-scorecard-v229-2026-11-24.md)、[V228 73](project-scorecard-v228-2026-11-24.md) 和 [V200 70](project-scorecard-v200-2026-11-22.md)；评分是内部产品/工程**定性成熟度**，**不是**生产可用率、真实利润可信度或实际 Amazon ERP 上线完成率。
+**当前统一评分：78/100（V289 复评，见本页末尾）。**
+
+**V231 历史评分：76/100（V230 [75/100](project-scorecard-v230-2026-11-24.md) → +1）。** 原六维满分不改，也不追溯修改旧 [V229 74](project-scorecard-v229-2026-11-24.md)、[V228 73](project-scorecard-v228-2026-11-24.md) 和 [V200 70](project-scorecard-v200-2026-11-22.md)；评分是内部产品/工程**定性成熟度**，**不是**生产可用率、真实利润可信度或实际 Amazon ERP 上线完成率。
 
 ## 按原评分模型复评
 
@@ -28,7 +30,7 @@
 
 ## 下一阶段怎样真正显著提高分数
 
-[V232 现行 P0](../roadmap/current-plan.md) 应围绕合法第三方签发来源、独立授权/撤销、原始字节身份、费用行原币与订单/批次唯一归属、真实入库/退货 COGS 与 DEC-06/07/08/G1 共同签署，在**取得真实外部资料**后独立验证。不要再因为整理 README 或增加同类只读缺口卡片自动加分；在外部证据和会计决策完成之前，**真实利润 10/25 不得调整**。
+[V232 真实财务验收关卡](../roadmap/current-plan.md) 应围绕合法第三方签发来源、独立授权/撤销、原始字节身份、费用行原币与订单/批次唯一归属、真实入库/退货 COGS 与 DEC-06/07/08/G1 共同签署，在**取得真实外部资料**后独立验证。不要再因为整理 README 或增加同类只读缺口卡片自动加分；在外部证据和会计决策完成之前，**真实利润 10/25 不得调整**。
 
 本次文档-only 后续提交的快速 CI 是另外的精确 SHA；不能拿上述代码 A3 给尚未验证的新提交“继承”测试结果。
 
@@ -81,3 +83,8 @@ V281 [代码 cb9bb88eea15](https://github.com/kunlong-luo/merchivra/commit/cb9bb
 ## V287 复评（2026-11-26）
 
 维持 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维8/10。V286 快 CI/Pages 成功但浏览器失败；V287 已定位并修复确定的同级 key 缺陷，未取得运行验证，不加分。#104 OPEN/BLOCKED；真实 E1–E5、DEC/G1、G2/G3 目标证明及签署未完成，realizedNetProfit=null、Seller/Ads OAuth OFF。已验收基线可受控本地/隔离合成试用，最新主线未获 RC 完整验收，私有预生产仅限有条件验证，正式商业生产 NO-GO。评分为定性成熟度而非生产授权。
+
+
+## V289 复评（2026-11-26）
+
+维持 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维8/10。V289 [精确代码 `6583c63e57cfc0c7279e2f64dd1989719d23696b`](https://github.com/kunlong-luo/merchivra/commit/6583c63e57cfc0c7279e2f64dd1989719d23696b) 的 [快 CI #45809305462](https://github.com/kunlong-luo/merchivra/actions/runs/45809305462)、[独立 Chromium #45809305581](https://github.com/kunlong-luo/merchivra/actions/runs/45809305581)、[只读 Pages #45809305362](https://github.com/kunlong-luo/merchivra/actions/runs/45809305362) 全部 SUCCESS（run_attempt=1）；实际日志确认 AST 1 项及完整 V289 浏览器旅程 marker。消除已知回归但恢复既有能力，不新增评分，完整 A3/PG18 尚未验收。V290 READY，见 [当前事实](../current-status.md) 与 [当前任务](../roadmap/current-plan.md)。真实 E1–E5、DEC/G1、目标 G2/G3 缺失，#104 OPEN / NO-GO，`realizedNetProfit=null`、Seller/Ads OAuth OFF；受控本地/隔离合成验证可用，私有预生产仅限有条件验证，不批准正式商业生产。评分不是上线许可。
