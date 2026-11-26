@@ -111,3 +111,18 @@ V275 [完整 A3 #45618143096 FAILURE 6/7](https://github.com/kunlong-luo/merchiv
 ## V277 · 分类请求唯一键竞争预防（待验收）
 
 V277：修复 V123 请求双唯一约束仲裁漏洞，INSERT 使用无目标 ON CONFLICT DO NOTHING，使 PK 和为审批外键保留的 UNIQUE 均参与冲突仲裁；无操作后仍必须精确复核现行证据、canonical payload、actor/reason 及授权，非唯一键异常不吞掉，保留 V268 40001 整 RR 事务最多3次总尝试。V125 分类申请存在相同结构，预防性调整为全唯一仲裁，审批只有单主键维持原式；不新增事务重试或开放接口。V250 真 PG18 两连接表锁回归保留相同请求/批准与不同批准理由竞争，另增加不同请求理由同键竞争（一个成功、一个409、唯一记录）；强制 V277 JUnit marker，触发新 A3 待验收。无迁移、依赖、前端、补偿激活或 V56 分类门禁变化；分类审批服务的完整并发及 HTTP 验收仍待完成。真实 E1–E5、G1/DEC、Redis 独立 smoke 失败仍待解决；realizedNetProfit=null、OAuth OFF、#104 NO-GO。
+
+
+V276 [快 CI #45618870958 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45618870958)；V277 [代码 73485ed88c03](https://github.com/kunlong-luo/merchivra/commit/73485ed88c03249905d94b2c41e6383e96c5da46) [快 CI #45619345494 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45619345494) [完整 A3 #45619345828 SUCCESS 7/7](https://github.com/kunlong-luo/merchivra/actions/runs/45619345828)，PG18 job #139223062078 成功，含 V277 强制并发 JUnit marker 及 V125 TEMP SQL；历史 V273/V275 失败仍保留。
+
+## V278 · 本地分类审核 HTTP（待验收）
+
+V278：开放 V276 本地分类审核 HTTP（Owner Session/CSRF、no-store、tenant/actor 服务端解析），明确选择 report/mapping/evidence SHA；GET 当前有效审核、POST request/approve，复用 V125 记录及当前证据/角色/撤销门禁，不新增审批状态或 DB 迁移。CannotSerializeTransactionException 映射409要求重新加载，而非自动重试；其他错误不伪装成成功。新增 V250 实际 Spring HTTP/PG18 合成报告、真实 DB 交易/拆分/规则夹具及两个独立 Owner session，覆盖 draft/preview/request/approve/current、匿名、缺 CSRF、无申请、旧指纹、同人、跨站点、规则 revision 变化及不可激活字段，并强制 V278 JUnit marker，待新 A3。尚无专门 staff/跨租户 HTTP 新用例（复用既有权限边界）、前端、审核重开、V56 门禁、实际激活或真实 Amazon/银行/会计验证；mappingActivated/bankVerified/ledgerPosted=false、realizedNetProfit=null。Redis 独立 smoke 失败仍待修复；真实 Seller/Ads OAuth OFF，#104 NO-GO。
+
+基准路径 `/api/v1/finance/marketplaces/{marketplaceId}/reports/{reportId}/category-mapping-drafts/{mappingSha256}/reviews/{evidenceSha256}`。先保存草稿并调用其 `/preview` 取得非空当前证据摘要。
+
+- `POST /request`：`{"reason":"10–500字符的非敏感审核理由"}`，返回 LOCAL_CATEGORY_REVIEW_REQUESTED。
+- `POST /approve`：同请求结构，须由不同于申请人及草稿创建人的当前 Owner 执行；返回 LOCAL_CATEGORY_REVIEW_RECORDED_NOT_ACTIVATED。
+- `GET` 基准路径：仅返回当前有效审核记录；无申请、旧证据或已审计撤销导致 409，不可直接当作已批准。404 为不存在/不在所选范围；403 为权限或独立性拒绝。所有写请求携带既有 Session CSRF。409 重新预检，不能编辑旧记录；同证据撤销后的重开机制未实现。
+
+批准仅为本地证据记录，不会使 V56 自动批准、不产生会计凭证或实际利润。当前尚无前端操作入口。

@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-/** V276 internal review only. No controller, activation, V56 gate or ledger write.
+/** V276/V278 local review records only. No activation, V56 gate or ledger write.
  * One immutable request/decision per exact evidence. A revoked request is not
  * reopened under the same digest. All eligibility is point-in-RR-snapshot.
  */

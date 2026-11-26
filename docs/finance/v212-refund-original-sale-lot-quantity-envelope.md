@@ -169,3 +169,6 @@ V275 [完整 A3 #45618143096 FAILURE 6/7](https://github.com/kunlong-luo/merchiv
 ## V277 · 双唯一索引并发仲裁修复（待验收）
 
 V277：修复 V123 请求双唯一约束仲裁漏洞，INSERT 使用无目标 ON CONFLICT DO NOTHING，使 PK 和为审批外键保留的 UNIQUE 均参与冲突仲裁；无操作后仍必须精确复核现行证据、canonical payload、actor/reason 及授权，非唯一键异常不吞掉，保留 V268 40001 整 RR 事务最多3次总尝试。V125 分类申请存在相同结构，预防性调整为全唯一仲裁，审批只有单主键维持原式；不新增事务重试或开放接口。V250 真 PG18 两连接表锁回归保留相同请求/批准与不同批准理由竞争，另增加不同请求理由同键竞争（一个成功、一个409、唯一记录）；强制 V277 JUnit marker，触发新 A3 待验收。无迁移、依赖、前端、补偿激活或 V56 分类门禁变化；分类审批服务的完整并发及 HTTP 验收仍待完成。真实 E1–E5、G1/DEC、Redis 独立 smoke 失败仍待解决；realizedNetProfit=null、OAuth OFF、#104 NO-GO。
+
+
+V276 [快 CI #45618870958 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45618870958)；V277 [代码 73485ed88c03](https://github.com/kunlong-luo/merchivra/commit/73485ed88c03249905d94b2c41e6383e96c5da46) [快 CI #45619345494 SUCCESS](https://github.com/kunlong-luo/merchivra/actions/runs/45619345494) [完整 A3 #45619345828 SUCCESS 7/7](https://github.com/kunlong-luo/merchivra/actions/runs/45619345828)，PG18 job #139223062078 成功，含 V277 强制并发 JUnit marker 及 V125 TEMP SQL；历史 V273/V275 失败仍保留。

@@ -194,6 +194,8 @@ class ReceiptCostCompositionPg18V250Test {
         var second=new ReceiptCostCompositionPg18V250Test();
         second.db=db;second.write=write;second.service=service;second.recovery=recovery;
         second.crossClaimRace();
+        second.categoryReviewHttp();
+        System.out.println("PASS V278 actual Owner HTTP category draft, evidence, independent review and stale hold");
         System.out.println("PASS V269 actual PG18 whole-order compensation simulation, explicit approval, no activation and conservation");
         System.out.println("PASS V268 actual PG18 concurrent compensation request and approval, whole RR retry, conflicting reason hold");
         System.out.println("PASS V277 actual PG18 all unique arbiters compensation request and conflicting reason race");
@@ -236,18 +238,103 @@ class ReceiptCostCompositionPg18V250Test {
         return json.readTree(response.body());
     }
     private HttpClient loginFixtureOwner() throws Exception {
+        return loginFixtureOwner(loginName());
+    }
+    private HttpClient loginFixtureOwner(String username) throws Exception {
         var client=HttpClient.newBuilder()
             .cookieHandler(new CookieManager(null,CookiePolicy.ACCEPT_ALL))
             .connectTimeout(Duration.ofSeconds(5)).build();
         var csrf=readJson(http(client,"/api/v1/auth/csrf",null,null));
         assertEquals("X-CSRF-TOKEN",csrf.path("headerName").asText());
-        String body="username="+URLEncoder.encode(loginName(),StandardCharsets.UTF_8)
+        String body="username="+URLEncoder.encode(username,StandardCharsets.UTF_8)
             +"&password="+URLEncoder.encode(System.getenv("MERCHIVRA_BOOTSTRAP_PASSWORD"),StandardCharsets.UTF_8);
         assertEquals(200,http(client,"/api/v1/auth/login",body,csrf.path("token").asText()).statusCode());
         var viewer=readJson(http(client,"/api/v1/auth/me",null,null));
         assertTrue(viewer.path("isOwner").asBoolean());
         assertEquals(tenant.toString(),viewer.path("activeTenantId").asText());
         return client;
+    }
+    private HttpResponse<String> categoryPost(HttpClient client,String path,String body,boolean csrf) throws Exception {
+        var req=HttpRequest.newBuilder(URI.create("http://127.0.0.1:8080"+path))
+            .timeout(Duration.ofSeconds(15)).header("Accept","application/json")
+            .header("Content-Type","application/json");
+        if(csrf)req.header("X-CSRF-TOKEN",readJson(http(client,"/api/v1/auth/csrf",null,null)).path("token").asText());
+        return client.send(req.POST(HttpRequest.BodyPublishers.ofString(body)).build(),HttpResponse.BodyHandlers.ofString());
+    }
+    private void categoryReviewHttp() throws Exception {
+        UUID report=UUID.randomUUID(),event=UUID.randomUUID(),rule=UUID.randomUUID();
+        String checkerLogin="v278-"+approver, settlement="V278-"+report;
+        write.executeWithoutResult(ignored->{
+            assertEquals(1,db.update("""
+                INSERT INTO local_credential(user_id,login_name,password_hash)
+                SELECT ?,?,password_hash FROM local_credential WHERE login_name='v65-ci-owner'
+                """,approver,checkerLogin));
+            db.update("""
+                INSERT INTO spapi_settlement_report(id,tenant_id,seller_marketplace_id,amazon_report_id,
+                    report_document_id,report_type,state,source_origin,document_sha256,settlement_reference,
+                    statement_currency,declared_net,line_count)
+                VALUES (?,?,?,?,?,'GET_V2_SETTLEMENT_REPORT_DATA_FLAT_FILE_V2','IMPORTED','LIVE',?,?,'USD',20,1)
+                """,report,tenant,market,"V278-"+report,"V278-DOC-"+report,"a".repeat(64),settlement);
+            db.update("""
+                INSERT INTO spapi_settlement_report_line(tenant_id,report_id,line_number,transaction_type,
+                    amount_type,amount_description,external_order_id,signed_amount,currency_code)
+                VALUES (?,?,1,'Order','ItemPrice','Principal','V278-ORDER',20,'USD')
+                """,tenant,report);
+            db.update("""
+                INSERT INTO finance_source_event(id,tenant_id,seller_marketplace_id,source_family,source_event_key,
+                    data_origin,category,amount,currency_code,posted_at,external_order_id,source_type)
+                VALUES (?,?,?,'SPAPI_FINANCES',?,'LIVE','PRODUCT_SALES',20,'USD',now(),'V278-ORDER','V278_SALE')
+                """,event,tenant,market,"V278-"+event);
+            db.update("""
+                INSERT INTO finance_transaction_reference(tenant_id,event_id,reference_kind,reference_value)
+                VALUES (?,?,'SETTLEMENT_ID',?)
+                """,tenant,event,settlement);
+            db.update("""
+                INSERT INTO finance_transaction_breakdown(tenant_id,event_id,source_path,source_type,original_amount,currency_code,is_leaf)
+                VALUES (?,?,'0','V278_PRINCIPAL',20,'USD',true)
+                """,tenant,event);
+            db.update("""
+                INSERT INTO finance_breakdown_rule(id,tenant_id,seller_marketplace_id,source_type,category,state,updated_by)
+                VALUES (?,?,?,'V278_PRINCIPAL','PRODUCT_SALES','ACTIVE',?)
+                """,rule,tenant,market,maker);
+        });
+        var makerClient=loginFixtureOwner();
+        var checkerClient=loginFixtureOwner(checkerLogin);
+        String root="/api/v1/finance/marketplaces/"+market+"/reports/"+report+"/category-mapping-drafts";
+        String mappingJson="[{\"reportType\":{\"transactionType\":\"Order\",\"amountType\":\"ItemPrice\",\"amountDescription\":\"Principal\"},\"category\":\"PRODUCT_SALES\"}]";
+        var draft=readJson(categoryPost(makerClient,root,mappingJson,true));
+        String mapping=draft.path("mappingSha256").asText();
+        assertTrue(mapping.matches("[0-9a-f]{64}"));
+        String draftPath=root+"/"+mapping;
+        var preview=readJson(http(makerClient,draftPath+"/preview",null,null));
+        String evidence=preview.path("evidenceSha256").asText();
+        assertTrue(evidence.matches("[0-9a-f]{64}"));
+        assertEquals("LOCAL_CATEGORY_AMOUNTS_AGREE_UNVERIFIED",preview.path("preview").path("state").asText());
+        String review=draftPath+"/reviews/"+evidence;
+        String note="{\"reason\":\"V278 synthetic review rationale\"}";
+        assertEquals(401,http(HttpClient.newHttpClient(),review,null,null).statusCode());
+        assertEquals(403,categoryPost(makerClient,review+"/request",note,false).statusCode());
+        assertEquals(409,categoryPost(checkerClient,review+"/approve",note,true).statusCode());
+        assertEquals(409,categoryPost(makerClient,draftPath+"/reviews/"+"c".repeat(64)+"/request",note,true).statusCode());
+        var requested=readJson(categoryPost(makerClient,review+"/request",note,true));
+        assertEquals("LOCAL_CATEGORY_REVIEW_REQUESTED",requested.path("state").asText());
+        assertEquals(maker.toString(),requested.path("requestedBy").asText());
+        assertEquals(403,categoryPost(makerClient,review+"/approve",note,true).statusCode());
+        var approved=readJson(categoryPost(checkerClient,review+"/approve",note,true));
+        assertEquals("LOCAL_CATEGORY_REVIEW_RECORDED_NOT_ACTIVATED",approved.path("state").asText());
+        assertEquals(approver.toString(),approved.path("approvedBy").asText());
+        assertEquals(approved,readJson(http(makerClient,review,null,null)));
+        for(String key:List.of("mappingActivated","bankVerified","ledgerPosted"))
+            assertTrue(approved.path(key).isBoolean()&&!approved.path(key).asBoolean(),key);
+        assertTrue(approved.path("realizedNetProfit").isNull());
+        assertEquals(404,http(makerClient,review.replace(market.toString(),market2.toString()),null,null).statusCode());
+        assertEquals(1,db.queryForObject("SELECT count(*) FROM finance_settlement_category_request_v125 WHERE tenant_id=? AND report_id=?",Integer.class,tenant,report));
+        assertEquals(1,db.queryForObject("SELECT count(*) FROM finance_settlement_category_approval_v125 WHERE tenant_id=? AND report_id=?",Integer.class,tenant,report));
+        db.update("UPDATE finance_breakdown_rule SET revision=revision+1 WHERE id=?",rule);
+        assertEquals(409,http(makerClient,review,null,null).statusCode());
+        assertEquals(409,categoryPost(checkerClient,review+"/approve",note,true).statusCode());
+        var fresh=readJson(http(makerClient,draftPath+"/preview",null,null));
+        assertNotEquals(evidence,fresh.path("evidenceSha256").asText());
     }
     private JsonNode httpCandidate(HttpClient client) throws Exception {
         var d=readJson(http(client,candidatePath(),null,null));
