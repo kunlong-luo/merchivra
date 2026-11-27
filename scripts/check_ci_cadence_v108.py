@@ -33,10 +33,9 @@ assert "visual-refresh-browser:" not in ci
 assert "if: inputs.full_suite == true" in ci
 assert "Next 16 App Router TS gate" in ci
 assert "Build primary Next.js 16" in ci
-assert "Build explicit Vite rollback" in ci
-assert "run: pnpm run build:vite" in ci
-assert "run: pnpm run build:vite" in pages
-assert "run: pnpm run build:vite" in browser
+assert "build:vite" not in ci and "build:vite" not in browser
+assert "run: pnpm run build:pages" in pages
+assert "run: pnpm run build:next" in browser
 assert "pnpm run api:check" in ci and "pnpm run test" in ci
 assert "compose-deployment-config:" in ci
 assert "pg18-migrations:" in ci

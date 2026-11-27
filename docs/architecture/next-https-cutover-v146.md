@@ -1,5 +1,7 @@
 # V146 — 隔离的 HTTPS / Secure Session / Next → Vite → Next 回切验收
 
+> 本文保留历史 V146 的 Next/Vite 合成验收事实。现行认证 ERP 已退役 Vite；后续合成切换为两个 Next 实例，不能将其当作真实旧版本镜像回滚证据。最新状态见 [current-status.md](../current-status.md)。
+
 **范围：真实运行的本地 Nginx TLS + Next.js 16 Node standalone + Spring Boot 4 + PostgreSQL 18 + Vite/Nginx 回退。不是目标生产 HTTPS、真实组织 CA、切换域名或业务上线。**
 
 基线：V145 main `f05b1ccf0aaa38cf9baa1d8a82db6eab8ed8893c`，[完整 A3 #43222832240](https://github.com/kunlong-luo/merchivra/actions/runs/43222832240) 在第二次（失败 Compose 重试）达到 **7/7 success**。首次 Compose 构建因容器内 Gradle 依赖仓库下载失败而未通过；不能用其初次结果证明稳定性。V145 真 FBA PO/ASN Orval、V144 采购 P0、Session 缓存隔离和 11 个 Next 入口继续保留。

@@ -137,8 +137,10 @@ if not frontend["scripts"].get("dev", "").startswith("next dev "):
     errors.append("Default development web must be Next.js")
 if frontend["scripts"].get("build") != "next build":
     errors.append("Default production build must be Next.js")
-if not frontend["scripts"].get("dev:vite", "").startswith("vite "):
-    errors.append("Explicit Vite fallback must remain available")
+if any(key.endswith(":vite") for key in frontend["scripts"]):
+    errors.append("Retired Vite ERP scripts must not return")
+if frontend["scripts"].get("build:pages") != "vite build":
+    errors.append("Public Pages showcase must remain separate")
 for filepath in (
     "AGENTS.md", "README.md", "README.zh-CN.md",
     "CONTRIBUTING.md", "DESIGN.md", "docs/README.md", "docs/current-status.md", "docs/roadmap/current-plan.md",
@@ -223,7 +225,7 @@ for file in ("docs/roadmap.md", "docs/roadmap/mvp-freeze-release-v108.md",
     if "历史归档" not in load(file):
         errors.append(f"{file}: old current status not marked historical")
 # GitHub's Dependabot ecosystem key 'npm' covers pnpm; do not ban that name.
-for file in ("apps/web/Dockerfile", "apps/web/Dockerfile.next",
+for file in ("apps/web/Dockerfile.next",
              ".github/workflows/ci.yml", ".github/workflows/browser-layout-smoke.yml",
              ".github/workflows/github-pages.yml"):
     content = load(file)

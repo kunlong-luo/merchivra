@@ -26,7 +26,7 @@ FAKE={
 
 class V146SafeHttpsTests(unittest.TestCase):
     def test_only_fixed_loopback_tls_port_no_http_listener_and_deny_host_spoof(self):
-        for target,port in [("next",3001),("vite",3002)]:
+        for target,port in [("next",3001),("standby",3000)]:
             conf=smoke.config_for(target)
             self.assertIn("listen 127.0.0.1:3443 ssl;",conf)
             self.assertNotIn("listen 80;",conf)
@@ -70,8 +70,8 @@ class V146SafeHttpsTests(unittest.TestCase):
             smoke.write_config(good,"next")
             self.assertEqual(good.stat().st_mode&0o777,0o600)
             self.assertIn("127.0.0.1:3001",good.read_text())
-            smoke.write_config(good,"vite")
-            self.assertIn("127.0.0.1:3002",good.read_text())
+            smoke.write_config(good,"standby")
+            self.assertIn("127.0.0.1:3000",good.read_text())
             self.assertNotIn("127.0.0.1:3001",good.read_text())
         with self.assertRaisesRegex(ValueError,"unsafe_config_path"):
             smoke.write_config(Path("/etc/nginx/nginx.conf"),"next")
@@ -180,57 +180,57 @@ class V146SafeHttpsTests(unittest.TestCase):
         factory.assert_called_once()
         sleeper.assert_not_called()
 
-    def test_v163_vite_page_retries_only_known_reload_transients(self):
+    def test_v163_standby_page_retries_only_known_reload_transients(self):
         for first in (
-            (503,b"unavailable",{"X-Merchivra-V146-Candidate":"vite"}),
+            (503,b"unavailable",{"X-Merchivra-V146-Candidate":"standby"}),
             (200,b"old Next body",{"X-Merchivra-V146-Candidate":"next"}),
         ):
             probe=Mock()
             probe.call.side_effect=[
                 first,
-                (200,b"<html>Merchivra SPA</html>",
-                    {"X-Merchivra-V146-Candidate":"vite"})
+                (200,b"<html>Merchivra ERP<script src=/_next/static/chunk.js></script></html>",
+                    {"X-Merchivra-V146-Candidate":"standby"})
             ]
             with patch.object(smoke.time,"sleep") as sleeper:
-                smoke.verify_vite_rollback_page(probe,attempts=2)
+                smoke.verify_standby_rollback_page(probe,attempts=2)
             self.assertEqual(probe.call.call_count,2)
             probe.call.assert_called_with("/purchasing")
             sleeper.assert_called_once_with(.25)
 
-    def test_v163_vite_page_rejects_wrong_identity_and_content_without_retry(self):
+    def test_v163_standby_page_rejects_wrong_identity_and_content_without_retry(self):
         for response in (
             (200,b"Merchivra",{"X-Merchivra-V146-Candidate":"evil"}),
-            (200,b"not the SPA",{"X-Merchivra-V146-Candidate":"vite"}),
-            (404,b"Merchivra",{"X-Merchivra-V146-Candidate":"vite"}),
-            (401,b"Merchivra",{"X-Merchivra-V146-Candidate":"vite"}),
+            (200,b"not the Next document",{"X-Merchivra-V146-Candidate":"standby"}),
+            (404,b"Merchivra",{"X-Merchivra-V146-Candidate":"standby"}),
+            (401,b"Merchivra",{"X-Merchivra-V146-Candidate":"standby"}),
         ):
             probe=Mock()
             probe.call.return_value=response
             with (self.subTest(response=response[0]),
                   patch.object(smoke.time,"sleep") as sleeper,
                   self.assertRaises(AssertionError)):
-                smoke.verify_vite_rollback_page(probe,attempts=8)
+                smoke.verify_standby_rollback_page(probe,attempts=8)
             probe.call.assert_called_once_with("/purchasing")
             sleeper.assert_not_called()
         probe=Mock()
         probe.call.side_effect=ssl.SSLCertVerificationError("bad-ca")
         with (patch.object(smoke.time,"sleep") as sleeper,
               self.assertRaises(ssl.SSLError)):
-            smoke.verify_vite_rollback_page(probe,attempts=8)
+            smoke.verify_standby_rollback_page(probe,attempts=8)
         sleeper.assert_not_called()
 
-    def test_v163_vite_page_reload_must_converge_inside_fixed_bound(self):
+    def test_v163_standby_page_reload_must_converge_inside_fixed_bound(self):
         probe=Mock()
         probe.call.return_value=(200,b"stale Next",
             {"X-Merchivra-V146-Candidate":"next"})
         with (patch.object(smoke.time,"sleep") as sleeper,
               self.assertRaisesRegex(RuntimeError,"rollback_page_reload_not_ready")):
-            smoke.verify_vite_rollback_page(probe,attempts=3)
+            smoke.verify_standby_rollback_page(probe,attempts=3)
         self.assertEqual(probe.call.call_count,3)
         self.assertEqual(sleeper.call_count,2)
         for invalid in (0,9):
             with self.assertRaises(ValueError):
-                smoke.verify_vite_rollback_page(Mock(),attempts=invalid)
+                smoke.verify_standby_rollback_page(Mock(),attempts=invalid)
 
     def test_v156_rollback_phase_diagnostics_are_static_and_secret_free(self):
         # The V148 first-attempt AssertionError had no stage, so neither
@@ -238,10 +238,10 @@ class V146SafeHttpsTests(unittest.TestCase):
         # Future failures distinguish reload, identity, page and security
         # assertions without revealing exception payloads or principals.
         boundaries=(
-            ("vite-switch", 'switch("vite")'),
-            ("vite-auth", 'viewer_vite,_=client.json("/api/v1/auth/me")'),
-            ("vite-page", 'verify_vite_rollback_page(client)'),
-            ("vite-access-control", 'public.expect("/api/v1/auth/me",expected=401)'),
+            ("standby-switch", 'switch("standby")'),
+            ("standby-auth", 'viewer_standby,_=client.json("/api/v1/auth/me")'),
+            ("standby-page", 'verify_standby_rollback_page(client)'),
+            ("standby-access-control", 'public.expect("/api/v1/auth/me",expected=401)'),
             ("next-switch", 'switch("next")'),
             ("next-auth", 'viewer_next,_=client.json("/api/v1/auth/me")'),
         )
@@ -312,20 +312,20 @@ class V146SafeHttpsTests(unittest.TestCase):
         sleeper.assert_called_once_with(.25)
 
     def test_v157_previous_verified_backend_only_during_reload(self):
-        stale=self._v157_ingress_probe(candidate="vite").call.return_value
+        stale=self._v157_ingress_probe(candidate="standby").call.return_value
         ready=self._v157_ingress_probe(candidate="next").call.return_value
         probe=Mock()
         probe.call.side_effect=[stale,ready]
         with patch.object(smoke.time,"sleep") as sleeper:
-            smoke.wait_for_ingress(probe,"next",previous="vite",attempts=2)
+            smoke.wait_for_ingress(probe,"next",previous="standby",attempts=2)
         self.assertEqual(probe.call.call_count,2)
         sleeper.assert_called_once_with(.25)
         # An old backend cannot be accepted indefinitely as the new target.
-        stale_only=self._v157_ingress_probe(candidate="vite")
+        stale_only=self._v157_ingress_probe(candidate="standby")
         with (patch.object(smoke.time,"sleep") as sleeper,
               self.assertRaises(RuntimeError)):
             smoke.wait_for_ingress(
-                stale_only,"next",previous="vite",attempts=2
+                stale_only,"next",previous="standby",attempts=2
             )
         sleeper.assert_called_once_with(.25)
 
@@ -343,7 +343,7 @@ class V146SafeHttpsTests(unittest.TestCase):
             ("wrong-stage",self._v157_ingress_probe(payload=b'{"service":"merchivra","status":"ok","stage":"fake"}')),
             ("wrong-upstream",self._v157_ingress_probe(candidate="rogue")),
             ("unlabeled-upstream",self._v157_ingress_probe(candidate=None)),
-            ("stale-without-reload",self._v157_ingress_probe(candidate="vite")),
+            ("stale-without-reload",self._v157_ingress_probe(candidate="standby")),
         ]
         for description,probe in cases:
             with (self.subTest(description=description),
@@ -354,11 +354,11 @@ class V146SafeHttpsTests(unittest.TestCase):
             sleeper.assert_not_called()
         # Even a known stale candidate cannot shield a fake Spring identity.
         fake=self._v157_ingress_probe(
-            candidate="vite",payload=b'{"service":"fake","status":"ok","stage":"M0"}'
+            candidate="standby",payload=b'{"service":"fake","status":"ok","stage":"M0"}'
         )
         with (patch.object(smoke.time,"sleep") as sleeper,
               self.assertRaises(AssertionError)):
-            smoke.wait_for_ingress(fake,"next",previous="vite",attempts=3)
+            smoke.wait_for_ingress(fake,"next",previous="standby",attempts=3)
         sleeper.assert_not_called()
 
     def test_v157_urllib_wrapped_cert_error_fails_without_retry(self):
@@ -421,7 +421,7 @@ class V146SafeHttpsTests(unittest.TestCase):
         for expected in ('"productionApproved":False',
                          '"externalTlsVerified":False',
                          '"amazonLiveEnabled":False',
-                         '"viteRollbackSameSession":True',
+                         '"nextStandbySameSession":True',
                          '"nextRollforwardSameSession":True'):
             self.assertIn(expected,source)
 

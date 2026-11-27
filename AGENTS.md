@@ -5,7 +5,7 @@
 ## 工程基线
 
 - Java 25 / Spring Boot 4.1.2 / Gradle Wrapper / PostgreSQL 18 / Flyway。只追加前向迁移，禁止改删已应用迁移；不使用 Maven。
-- React 19 / Next.js 16.4.5 App Router / TypeScript 6 / Node 24 / pnpm 12.20.0。唯一 JS 锁文件为 `apps/web/pnpm-lock.yaml`。Vite 仅供明确回退及虚构 Pages，不是默认运行路径。
+- React 19 / Next.js 16.4.5 App Router / TypeScript 6 / Node 24 / pnpm 12.20.0。唯一 JS 锁文件为 `apps/web/pnpm-lock.yaml`。Next 是唯一认证 ERP 前端；Vite 只供公开虚构 Pages 构建（及 Vitest 工具链），不再有旧 ERP 回退入口。
 - 复用 Session/CSRF/Owner/tenant/Marketplace、Springdoc/OpenAPI + Orval、Zod、TanStack、Base UI。Redis 按已批准运行边界使用，不另造事实库、鉴权、通用客户端。
 - 普通变更直接提交 `main`，不新建例行分支/PR；写入前校验 HEAD，禁止 force push。代码、测试、文档须保持一致。
 

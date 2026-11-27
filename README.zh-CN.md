@@ -2,7 +2,7 @@
 
 以**可审计的订单、SKU、期间全成本与真实净利润**为核心目标的自托管 ERP，目前属于 **pre-alpha**，仅可在本地/隔离测试环境使用，**尚未批准生产上线**。
 
-**技术基线（2026-11-24）**：Java 25、Spring Boot 4.1.2、**Gradle**、PostgreSQL 18/Flyway；React 19、**Next.js 16.4.5 App Router**、Node 24、**pnpm 12.20.0（唯一前端包管理器，不用 npm）**。默认使用 Next.js；Vite/Nginx 仅供明确回退与 GitHub Pages **虚构展示**，不得误认为默认正式前端。
+**技术基线（2026-11-24）**：Java 25、Spring Boot 4.1.2、**Gradle**、PostgreSQL 18/Flyway；React 19、**Next.js 16.4.5 App Router**、Node 24、**pnpm 12.20.0（唯一前端包管理器，不用 npm）**。Next.js 是唯一认证 ERP 前端；Vite 仅用于 GitHub Pages **虚构展示**与测试工具链。
 
 - 独立成熟度：[当前状态](docs/current-status.md) 与[评分记录](docs/governance/project-scorecard-v231-2026-11-24.md)，不是生产就绪比例。
 - **真实净利润仍不能确认**：`realizedNetProfit=null`；真实 Amazon Seller/Ads OAuth **关闭**，真实银行、货代、关税、独立 WMS、退款实际 COGS 与 G1/DEC 财务口径未核证；生产 [#104](https://github.com/kunlong-luo/merchivra/issues/104) **NO-GO**。
@@ -20,7 +20,7 @@
 | 目录 | 实际作用、保留原因 | 是否可删除 |
 | --- | --- | --- |
 | `apps/server/` | Spring Boot API、领域/财务/库存服务、Session/CSRF、**Gradle Wrapper**、不可重写的 Flyway Vxxx 迁移、Java 测试 | **运行必需**；禁止删历史迁移，绝不换 Maven |
-| `apps/web/` | 正式 **Next.js** App Router、React 工作台、Zod、TanStack、Orval 合同/生成客户端、Vitest、唯一 `pnpm-lock.yaml` | **运行必需**；其中 `index.html`、`vite.config.ts`、部分 Nginx/Dockerfile 是明确回退/静态模拟测试资产，保留但**默认不运行 Vite** |
+| `apps/web/` | 正式 **Next.js** App Router、React 工作台、Zod、TanStack、Orval 合同/生成客户端、Vitest、唯一 `pnpm-lock.yaml` | **运行必需**；其中 `index.html`、`vite.config.ts` 仅为公开静态展示资产，不能运行旧认证 ERP |
 | `deploy/` | PostgreSQL18 + Spring + Next 本地 Compose、独立 `spark-db` 方案、生产参考和隔离 TLS 验收叠加 | **部署/验证必需**；两套基础 Compose 不可合并启动，不误删数据卷 |
 | `ops/` | 监控、发布/运维脚本与证据检查 | **运维必需**；不能因不是 Web 源码而删除 |
 | `scripts/` | 数据库/HTTP/浏览器/文档/Orval 合同校验、受控合成 A3、只在临时环境执行的安全负例 | **验证必需**；严禁在真实客户库运行一次性破坏性测试 |

@@ -290,9 +290,14 @@
 }
 
 /* V100 visual QA: keep source-aware Core filters above the fold on desktop. */
-.next-workbench .sidebar{
- scrollbar-width:thin;
- scrollbar-color:#4b6489 transparent;
+/* Hide navigation chrome only; preserve native scrolling and focus navigation. */
+.next-workbench .sidebar,.next-ui-nav-sheet{
+ scrollbar-width:none;
+ -ms-overflow-style:none;
+}
+.next-workbench .sidebar::-webkit-scrollbar,.next-ui-nav-sheet::-webkit-scrollbar{
+ display:none;
+ width:0;height:0;
 }
 .next-workbench .core-table-controls{
  display:block;

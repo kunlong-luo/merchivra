@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""V146 real TLS (synthetic CA) ingress -> Next -> Vite -> Next session canary.
+"""V146 real TLS (synthetic CA) ingress -> Next -> Next standby -> Next session canary.
 
 Only runs against TWO pre-existing disposable loopback frontends in Actions;
 never deploys, opens a public port, creates a production signing authority,
@@ -26,14 +26,14 @@ from urllib.request import (
 BASE="https://127.0.0.1:3443"
 ROUTES=("/", "/core", "/orders", "/catalog", "/inventory", "/purchasing",
         "/ops", "/finance", "/connections", "/team", "/sync")
-PORTS={"next":3001,"vite":3002}
+PORTS={"next":3001,"standby":3000}
 # V149: only fixed non-sensitive diagnostic stages may appear in CI stderr.
 # Never print exception text, URLs, response bodies, session or credential data.
 SAFE_STAGES=frozenset((
     "preflight","ingress-next","anonymous-access","csrf-init",
     "login-guard","login-real","session-cookie","secure-auth-readiness",
     "next-routes",
-    "vite-switch","vite-auth","vite-page","vite-access-control",
+    "standby-switch","standby-auth","standby-page","standby-access-control",
     "next-switch","next-auth","logout"
 ))
 CURRENT_STAGE="preflight"
@@ -278,11 +278,11 @@ def wait_for_secure_auth(certificate:str,attempts:int=40)->None:
     raise RuntimeError("secure_auth_backend_unavailable")
 
 
-def verify_vite_rollback_page(client:Client,attempts:int=8)->None:
+def verify_standby_rollback_page(client:Client,attempts:int=8)->None:
     """V163: bound only proxy reload/transport transients, not security failures.
 
     A previous known Next worker may briefly serve an old socket after the
-    reload; Vite must eventually return its own verified candidate and SPA.
+    reload; Next standby must eventually return its own verified candidate and App Router HTML.
     Wrong content, unknown upstream, 401/403/404 or invalid TLS fail at once.
     """
     if attempts<1 or attempts>8:
@@ -299,9 +299,9 @@ def verify_vite_rollback_page(client:Client,attempts:int=8)->None:
             continue
         if status!=200:
             raise AssertionError("rollback_page_unexpected_status")
-        if candidate!="vite":
+        if candidate!="standby":
             raise AssertionError("rollback_wrong_backend")
-        if b"Merchivra" not in body:
+        if b"Merchivra ERP" not in body or b"/_next/" not in body:
             raise AssertionError("rollback_unavailable")
         return
     raise RuntimeError("rollback_page_not_ready")
@@ -395,23 +395,23 @@ def run_synthetic(certificate:str,config_path:Path,container:str):
     client.expect("/api/v1/spapi/oauth/callback",expected=(401,404))
 
     # Same origin, same secure HttpOnly cookie, same Spring Session:
-    # Vite rollback must keep identity without a new login or a copied token.
+    # Next standby rollback must keep identity without a new login or a copied token.
     # V156: distinguish proxy reload from same-cookie identity and page checks.
     # Only static stage labels reach CI; no URL, tenant, user or cookie content.
-    mark_stage("vite-switch")
-    switch("vite")
-    mark_stage("vite-auth")
-    viewer_vite,_=client.json("/api/v1/auth/me")
-    if viewer_vite.get("userId")!=viewer["userId"]:
-        raise AssertionError("vite_rollback_lost_authenticated_principal")
-    mark_stage("vite-page")
-    verify_vite_rollback_page(client)
-    mark_stage("vite-access-control")
+    mark_stage("standby-switch")
+    switch("standby")
+    mark_stage("standby-auth")
+    viewer_standby,_=client.json("/api/v1/auth/me")
+    if viewer_standby.get("userId")!=viewer["userId"]:
+        raise AssertionError("standby_rollback_lost_authenticated_principal")
+    mark_stage("standby-page")
+    verify_standby_rollback_page(client)
+    mark_stage("standby-access-control")
     public.expect("/api/v1/auth/me",expected=401)
     client.expect("/api/v1/operations/scan",method="POST",
                   body={},expected=403)
 
-    # Roll forward after verifying Vite: identity still in same Spring store.
+    # Roll forward after verifying Next standby: identity still in same Spring store.
     mark_stage("next-switch")
     switch("next")
     mark_stage("next-auth")
@@ -436,14 +436,14 @@ def run_synthetic(certificate:str,config_path:Path,container:str):
         "hostHeaderRejection":True,
         "spoofedForwardedHeadersOverridden":True,
         "csrfUnsafeWriteRejected":True,
-        "viteRollbackSameSession":True,
+        "nextStandbySameSession":True,
         "nextRollforwardSameSession":True,
         "logoutRevokedSession":True,
         "amazonLiveEnabled":False,
         "productionApproved":False
     },separators=(",",":")))
     print("PASS V146 real synthetic HTTPS: local cert verified, Secure Session, "
-          "11 Next routes, CSRF/host spoof blocked, same-cookie Vite rollback "
+          "11 Next routes, CSRF/host spoof blocked, same-cookie Next standby rollback "
           "and Next rollforward, logout invalidated; production NOT approved",
           file=sys.stderr)
 

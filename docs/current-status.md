@@ -34,6 +34,8 @@
 
 - 维护者本机日志已执行至 LocalAdminBootstrap.java:50，首次管理员参数校验失败；按要求在主配置设置公开的一次性测试管理员、符合 >=16 字符的密码及工作空间名，默认宿主机 loopback，Compose 显式容器内监听且原有 BOOTSTRAP_* 注入保留（空值覆盖测试默认）；增加默认与覆盖回归断言，不降低密码校验、不重置已存在账号。基线 [`8e4da0dedf9aab705f1cf8e7f8f6d3af92c9a448`](https://github.com/kunlong-luo/merchivra/commit/8e4da0dedf9aab705f1cf8e7f8f6d3af92c9a448) [快 CI #46000482730](https://github.com/kunlong-luo/merchivra/actions/runs/46000482730) SUCCESS，[Redis #46000482643](https://github.com/kunlong-luo/merchivra/actions/runs/46000482643) SUCCESS。新提交 `fix(dev): provide requested disposable bootstrap login`，新 SHA CI 和本机启动待核验；V291 BLOCKED、78/100、NO-GO 不变。
 
+- 维护者报告本机 8081 启动、Hikari 连接 PG18.7、Flyway 122 项校验成功/schema V125、OWNER 创建成功；Redis 与真实登录/业务尚未验证。按要求退役旧认证 Vite ERP（删除开发/构建脚本、Docker/Nginx 与 Compose profile），仅保留隔离的公开 Pages 静态构建及测试工具链；TLS 合成切换改为两个 Next 实例，不构成真实旧版本镜像回滚验收；新增短桌面与移动导航隐藏滚动条/保留滚动 Chromium 断言。基线 [`69a662d39e2493bbcdbdecca2c7c004eafe7a52b`](https://github.com/kunlong-luo/merchivra/commit/69a662d39e2493bbcdbdecca2c7c004eafe7a52b) [快 CI #46001205879](https://github.com/kunlong-luo/merchivra/actions/runs/46001205879) SUCCESS，[Redis #46001205852](https://github.com/kunlong-luo/merchivra/actions/runs/46001205852) SUCCESS。新提交 `refactor(web): retire legacy ERP and hide navigation scrollbars`，新 SHA 快 CI、Chromium、完整 A3 和本地视觉待验收；V291 BLOCKED、78/100、NO-GO 不变。
+
 ## 最近已关闭任务：V290 · VERIFIED (synthetic)
 
 - V290 候选精确 SHA [`f5c42fa4669cf8089363ddcb6c7d884c414d0aae`](https://github.com/kunlong-luo/merchivra/commit/f5c42fa4669cf8089363ddcb6c7d884c414d0aae)，run_attempt=1；[快 CI #45812139153](https://github.com/kunlong-luo/merchivra/actions/runs/45812139153) SUCCESS，Java25/Gradle、Next/Vite/Orval/TypeScript/Vitest、Compose 与 cadence/文档守卫成功；PG18 job、JaCoCo、完整 Next HTTP 按快 CI 范围跳过。[完整 A3 #45812139166](https://github.com/kunlong-luo/merchivra/actions/runs/45812139166) SUCCESS 7/7：基线 #139882418732、Compose/mock-chain #139882455787、Chromium #139882456008、Next/React #139882456066、Compose 静态 #139882456115、Java/JaCoCo #139882456169、实际 PG18/Flyway #139882456626 均成功；仅失败诊断步骤跳过，无失败 job。
@@ -54,7 +56,7 @@ V289 精确代码 [`6583c63e57cfc0c7279e2f64dd1989719d23696b`](https://github.co
 
 | 项目 | 当前可独立证实的状态 |
 | --- | --- |
-| 技术栈 | main 直接开发；Java 25 / Spring Boot 4.1.2 / Gradle / PostgreSQL 18 / Flyway；React 19 / Next.js 16.4.5 / Node 24 / pnpm 12.20.0；Vite 仅回退及虚构 Pages |
+| 技术栈 | main 直接开发；Java 25 / Spring Boot 4.1.2 / Gradle / PostgreSQL 18 / Flyway；React 19 / Next.js 16.4.5 / Node 24 / pnpm 12.20.0；Vite 仅虚构 Pages 与测试工具链；认证 ERP 仅 Next |
 | 独立成熟度 | [78/100（V290 已验收复评）](governance/project-scorecard-v231-2026-11-24.md)；真实利润10/25，非生产就绪比例 |
 | 历史完整 A3 | V280 r2 `07fccfb4be98cdaee4d46f592c804dd8c5826d75` [#45742981332](https://github.com/kunlong-luo/merchivra/actions/runs/45742981332) 7/7；含实际 PG18 101行全量类型发现及双人审核 |
 | 独立 Redis | V281 `cb9bb88eea150384fa87a121c60e2a11d4bf42cf` [#45743425032](https://github.com/kunlong-luo/merchivra/actions/runs/45743425032) SUCCESS：Redis8、真实登录/CSRF、重启身份、断连拒绝、GCRA |

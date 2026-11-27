@@ -211,25 +211,25 @@ jobs:
           echo "PASS V122: Next 16 standalone Docker real same-origin PG18 session/CSRF"
       # V146: only AFTER all HTTP Session/CSRF tests pass, recreate the same
       # disposable Spring server with Secure cookies enabled. This allows a
-      # real CA-verified HTTPS Nginx canary to test the same-session Vite
+      # real CA-verified HTTPS Nginx canary to test the same-session Next
       # rollback under TLS rather than pretending local HTTP is production.
-      - name: Boot explicit Vite rollback on port 3002 for isolated TLS test
+      - name: Verify primary Next on port 3000 for isolated TLS test
         shell: bash
         run: |
           set -euo pipefail
-          docker compose --profile vite-fallback --env-file .env \
+          docker compose --env-file .env \
             -f deploy/compose.yaml -f deploy/compose.next.yaml \
             -f deploy/compose.v146-synthetic-https.yaml \
-            up -d --build vite-web
+            up -d --build web
           ready=0
           for i in $(seq 1 90); do
-            if curl -fsS --max-time 3 http://127.0.0.1:3002/api/v1/ping >/dev/null 2>&1; then
+            if curl -fsS --max-time 3 http://127.0.0.1:3000/api/v1/ping >/dev/null 2>&1; then
               ready=1; break
             fi
             sleep 2
           done
           test "$ready" = 1
-      - name: V146 synthetic TLS validated Next-to-Vite-to-Next cutover
+      - name: V146 synthetic TLS validated Next-to-standby-to-Next cutover
         shell: bash
         run: |
           set -euo pipefail
@@ -274,13 +274,13 @@ jobs:
           assert r['allNextWorkbenchRoutes']==11
           for key in ('secureHttpOnlySameSiteSession','anonymousIsolation',
                      'hostHeaderRejection','spoofedForwardedHeadersOverridden',
-                     'csrfUnsafeWriteRejected','viteRollbackSameSession',
+                     'csrfUnsafeWriteRejected','nextStandbySameSession',
                      'nextRollforwardSameSession','logoutRevokedSession'):
               assert r[key] is True,key
           assert r['externalTlsVerified'] is False
           assert r['productionApproved'] is False
           assert r['amazonLiveEnabled'] is False
-          print('PASS V146 full A3: disposable CA-verified HTTPS, Secure Session, Next/Vite same-cookie cutover; no external ingress or release')
+          print('PASS V146 full A3: disposable CA-verified HTTPS, Secure Session, Next/Next standby same-cookie cutover; no external ingress or release')
           PY
       - name: V146 synthetic TLS cutover evidence (never keys/cookies)
         if: always()

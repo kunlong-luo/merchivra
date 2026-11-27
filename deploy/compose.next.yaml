@@ -1,5 +1,5 @@
 # Legacy full-A3 canary: next-web is an additional Next.js instance on port 3001.
-# Normal web now runs Next.js; vite-web remains opt-in for rollback.
+# Both web and next-web run Next.js; no legacy authenticated SPA.
 # Only use behind reviewed HTTPS ingress; loopback staging port is NOT public.
 #
 # docker compose --env-file .env -f deploy/compose.yaml \

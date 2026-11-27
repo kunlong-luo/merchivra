@@ -49,7 +49,7 @@ jobs:
         run: ./apps/server/gradlew -p apps/server --no-daemon --console plain jacocoTestReport
 
   frontend:
-    name: React 19 / Next.js 16 primary + Vite rollback
+    name: React 19 / Next.js 16
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -80,8 +80,6 @@ jobs:
           node --test ../../scripts/chrome_devtools_port.test.mjs
       - name: Build primary Next.js 16
         run: pnpm run build
-      - name: Build explicit Vite rollback
-        run: pnpm run build:vite
       - name: Next 16 App Router TS gate
         run: pnpm run typecheck:next
       - name: Next 16 standalone App Router HTTP smoke (full milestone only)
@@ -304,7 +302,7 @@ jobs:
         run: |
           python3 -m py_compile scripts/check_lot_query_plans_v135.py
           python3 scripts/check_lot_query_plans_v135.py --self-test
-      - name: V122 fail-closed Next Node runtime image and Vite rollback contract
+      - name: Next-only runtime image and private health contract
         run: python3 scripts/check_next_runtime_v122.py
       - name: Validate both documented deployment modes without using real databases
         shell: bash

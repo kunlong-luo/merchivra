@@ -2,7 +2,7 @@
 
 **Open-source, self-hosted, pre-alpha ERP.** Its central goal is **auditable, complete SKU/order/period net profit**, not a plausible-looking profit number with missing costs. The project is usable for **isolated development and synthetic tests only**; it is **not approved for production**.
 
-**Verified baseline (2026-11-24).** Java 25, Spring Boot 4.1.2, **Gradle** (no Maven), PostgreSQL 18/Flyway; React 19, **Next.js 16.4.5** App Router, Node 24 and **pnpm 12.20.0 only** (not npm). Next.js is the default. Vite/Nginx exists **only for explicitly selected rollback and synthetic GitHub Pages**.
+**Verified baseline (2026-11-24).** Java 25, Spring Boot 4.1.2, **Gradle** (no Maven), PostgreSQL 18/Flyway; React 19, **Next.js 16.4.5** App Router, Node 24 and **pnpm 12.20.0 only** (not npm). Next.js is the sole authenticated ERP frontend. Vite is retained only for synthetic GitHub Pages and test tooling.
 
 - Independent maturity: see the [current assessment](docs/current-status.md) and [score history](docs/governance/project-scorecard-v231-2026-11-24.md). Not a production-readiness percentage.
 - **True profit is not verified**: `realizedNetProfit=null`; Amazon Seller/Ads live OAuth is **OFF**; independent bank, freight, customs, WMS and refund COGS evidence plus G1/DEC accounting approval are missing. Production [#104](https://github.com/kunlong-luo/merchivra/issues/104) remains **NO-GO**.
@@ -20,7 +20,7 @@ These are the **retained, tracked, functional directories**. Do **not** delete a
 | Directory | What uses it / why it stays | Maintenance boundary |
 | --- | --- | --- |
 | `apps/server/` | Spring Boot 4.1.2 ERP API, Java domain logic, Session/CSRF, Gradle Wrapper, **forward-only Flyway Vxxx migrations** and tests | **Required runtime**, no Maven; never delete/modify historic Flyway migrations |
-| `apps/web/` | React 19, **Next.js App Router** pages, finance/Core workspaces, Orval OpenAPI snapshots/generated clients, Zod, Vitest and pnpm lock | **Required runtime**. `index.html`, `vite.config.ts`, rollback Dockerfile/Nginx belong to explicit rollback/synthetic pages, **not the default server** |
+| `apps/web/` | React 19, **Next.js App Router** pages, finance/Core workspaces, Orval OpenAPI snapshots/generated clients, Zod, Vitest and pnpm lock | **Required runtime**. `index.html` and `vite.config.ts` are public synthetic Pages assets only, never authenticated ERP |
 | `deploy/` | Local PostgreSQL18/Next/Spring Compose, separate `spark-db`, production reference and isolated TLS regression overlays | **Required operation/test files**. Never mix alternative base Compose files or run destructive volume commands on real data |
 | `ops/` | Monitoring, operational scripts and release evidence/checklists | **Retained operational controls**, not demo-only code |
 | `scripts/` | CI contract, documentation, generated-client, browser, database and **disposable-only** HTTP/PG18 regression tests | **Required verification**. Synthetic data-damaging scripts must never run on real customer databases |

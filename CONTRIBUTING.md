@@ -12,7 +12,7 @@
 | 前端 | React 19、Next.js 16.4.5 App Router、TypeScript 6、Node 24 |
 | 包管理 | **pnpm 12.20.0**，唯一锁文件 `apps/web/pnpm-lock.yaml`，不再维护另一个 JS lockfile |
 | API/组件 | Springdoc/OpenAPI + Orval、Zod、TanStack Query/Table、Base UI |
-| 运行 | 默认 Next 独立 Node；Vite/Nginx 仅显式回退与 Pages 虚构展示；Redis 可选 |
+| 运行 | 唯一认证前端 Next 独立 Node；Vite 仅用于 Pages 虚构展示与测试；Redis 可选 |
 
 ## 开发与自检
 
@@ -31,7 +31,7 @@ pnpm api:check
 pnpm typecheck
 pnpm test
 pnpm build
-pnpm build:vite # 仅为回退保真验证，不是默认 ERP
+pnpm build:pages # 仅公开虚构展示，非 ERP
 cd ../..
 
 python3 scripts/check_docs_consistency_v109.py

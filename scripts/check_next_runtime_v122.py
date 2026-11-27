@@ -19,7 +19,8 @@ node = (ROOT / "apps/web/Dockerfile.next").read_text()
 ignore = (ROOT / "apps/web/.dockerignore").read_text().splitlines()
 overlay = (ROOT / "deploy/compose.next.yaml").read_text()
 next_config = (ROOT / "apps/web/next.config.ts").read_text()
-vite = (ROOT / "apps/web/Dockerfile").read_text()
+assert not (ROOT / "apps/web/Dockerfile").exists()
+assert not (ROOT / "apps/web/nginx.conf").exists()
 for exact in (
     "FROM node:24-alpine AS deps",
     "FROM node:24-alpine AS runtime",
@@ -31,12 +32,12 @@ for exact in (
     'CMD ["node", "server.js"]',
 ):
     assert exact in node, f"Unsafe/invalid Next runtime: missing {exact}"
-assert "FROM nginx:alpine" in vite, "Vite rollback path was deleted"
 manifest=json.loads((ROOT / "apps/web/package.json").read_text())
 assert manifest["scripts"]["dev"].startswith("next dev ")
 assert manifest["scripts"]["build"] == "next build"
-assert manifest["scripts"]["dev:vite"].startswith("vite ")
-assert "vite build" in manifest["scripts"]["build:vite"]
+assert not any(key.endswith(":vite") for key in manifest["scripts"])
+assert manifest["scripts"]["build:pages"] == "vite build"
+assert "./Root" not in (ROOT / "apps/web/src/main.tsx").read_text()
 assert "MERCHIVRA_API_INTERNAL_URL=http://server:8080" in node
 assert "MERCHIVRA_API_INTERNAL_URL" in next_config
 assert "output:'standalone'" in next_config
@@ -112,11 +113,9 @@ if args.compose:
     assert services["web"]["ports"][0]["host_ip"] == "127.0.0.1"
     assert str(services["web"]["ports"][0]["target"]) == "3000"
     assert services["web"].get("healthcheck",{}).get("test") == probe, "Default Next lost private DB-aware health"
-    assert "vite-web:" in (ROOT / "deploy/compose.yaml").read_text()
-    assert "profiles: ['vite-fallback']" in (ROOT / "deploy/compose.yaml").read_text()
-    if "vite-web" in services:
-        assert services["vite-web"]["build"]["dockerfile"] == "Dockerfile", "Vite rollback must stay optional"
-        assert "vite-fallback" in services["vite-web"].get("profiles",[])
+    assert "vite-web" not in services
+    for path in ("deploy/compose.yaml", "deploy/compose.spark-db.yaml"):
+        assert "vite-web:" not in (ROOT / path).read_text()
     assert services["postgres"]["image"].startswith("postgres:18-")
     if args.production:
         env = services["server"]["environment"]
@@ -130,5 +129,5 @@ if args.compose:
             assert env.get(var,"").lower() == "false", f"Unsafe {var}"
         assert env["SESSION_COOKIE_SECURE"] == "true"
 
-print("PASS V122/V128/V153/V154/V155: nonroot Node standalone, private API proxy, safe rollback "
+print("PASS V122/V128/V153/V154/V155: nonroot Node standalone, private API proxy, Next-only frontend "
       "and loopback-only Next container")

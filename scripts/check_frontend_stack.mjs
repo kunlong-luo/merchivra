@@ -28,7 +28,7 @@ function walk(dir){
 const vue=walk(join(web,'src')).filter(p=>p.endsWith('.vue'))
 const rejected=[...new Set([...deps,...locked].filter(x=>forbidden.test(x)))]
 const relevant=[
-  'apps/web/Dockerfile','apps/web/Dockerfile.next',
+  'apps/web/Dockerfile.next',
   '.github/workflows/ci.yml','.github/workflows/github-pages.yml',
   '.github/workflows/browser-layout-smoke.yml','scripts/check_ci_cadence_v108.py',
   'scripts/check_next_runtime_v122.py','scripts/check-orval-generated.mjs',

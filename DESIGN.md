@@ -1,6 +1,6 @@
 # Merchivra · UI Design System
 
-> **当前设计系统（V191 / 2026-11-21）**：A+B 已应用于 React 19 / **Next.js 16.4.5 默认本地工作台**，组件采用 Base UI、TanStack Table、Orval。前端唯一包管理器为 pnpm 12.20.0，Vite 只用于受控回退/Pages 虚构展示。下文 V99/V100/V109 迭代内容保留历史时态；可对照 [当前事实基线](docs/current-status.md)、[现行 P0](docs/roadmap/current-plan.md) 与 [V191 合成 A3](https://github.com/kunlong-luo/merchivra/actions/runs/44882890834)。真实财务核销与生产 #104 仍 NO-GO。
+> **当前设计系统（V191 / 2026-11-21）**：A+B 已应用于 React 19 / **Next.js 16.4.5 默认本地工作台**，组件采用 Base UI、TanStack Table、Orval。前端唯一包管理器为 pnpm 12.20.0，Vite 只用于 Pages 虚构展示和测试工具链，旧 ERP 已退役。Next 左侧导航隐藏滚动条轨道/滑块但保留原生滚动与焦点可达性。下文 V99/V100/V109 迭代内容保留历史时态；可对照 [当前事实基线](docs/current-status.md)、[现行 P0](docs/roadmap/current-plan.md) 与 [V191 合成 A3](https://github.com/kunlong-luo/merchivra/actions/runs/44882890834)。真实财务核销与生产 #104 仍 NO-GO。
 
 Status: 2026-10-31 manual implementation of public design-review methods (Impeccable-inspired). **Impeccable is not installed or executed.** Reference: https://impeccable.style/docs/audit/ and https://impeccable.style/docs/polish/.
 

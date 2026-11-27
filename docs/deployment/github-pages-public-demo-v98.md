@@ -8,7 +8,7 @@ GitHub Pages 只有虚构的商品、采购单、库存、金额及异常卡片�
 
 ## 真实发布流程
 
-GitHub Pages 由 [`.github/workflows/github-pages.yml`](../../.github/workflows/github-pages.yml) 在相应 `main` 前端变更或人工运行时构建，使用 Node 24 + pnpm 12.20.0 冻结安装、`VITE_PUBLIC_DEMO=true pnpm build:vite`、`scripts/check_pages_dist.mjs` 静态安全检查，再上传/部署 Pages artifact。它不会启动 Next Node、Spring 或 PostgreSQL。
+GitHub Pages 由 [`.github/workflows/github-pages.yml`](../../.github/workflows/github-pages.yml) 在相应 `main` 前端变更或人工运行时构建，使用 Node 24 + pnpm 12.20.0 冻结安装、`pnpm build:pages`、`scripts/check_pages_dist.mjs` 静态安全检查，再上传/部署 Pages artifact。它不会启动 Next Node、Spring 或 PostgreSQL。
 
 如需首次启用 Pages，管理员在仓库 **Settings → Pages → Build and deployment → Source** 选择 **GitHub Actions**，再检查 [Pages workflow](https://github.com/kunlong-luo/merchivra/actions/workflows/github-pages.yml)。以**实际 Deploy job 的状态及 page_url**为准；构建绿灯不能保证仓库 Pages 管理员配置已启用。
 
@@ -18,7 +18,7 @@ GitHub Pages 由 [`.github/workflows/github-pages.yml`](../../.github/workflows/
 cd apps/web
 corepack enable
 pnpm install --frozen-lockfile
-VITE_PUBLIC_DEMO=true pnpm build:vite
+pnpm build:pages
 cd ../..
 node scripts/check_pages_dist.mjs apps/web/dist
 ```

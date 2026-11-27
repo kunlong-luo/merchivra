@@ -1,5 +1,4 @@
-# V122: opt-in private Next 16 standalone Node runtime. Existing Vite/Nginx
-# Dockerfile remains the safe, separately selectable rollback path.
+# Next 16 standalone Node runtime: sole authenticated ERP frontend.
 FROM node:24-alpine AS deps
 WORKDIR /workspace/apps/web
 RUN corepack enable

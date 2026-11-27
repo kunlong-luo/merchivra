@@ -13,10 +13,9 @@ flowchart LR
   API --> Core["订单 / SKU / 采购 / FBA / 异常 / 财务"]
   Core --> PG
   API -. "Gateway 代码已有，真实授权关闭" .-> Amazon["Amazon Seller / Ads 外部系统"]
-  Browser -. "仅人工切换与合成测试" .-> Vite["Vite/Nginx fallback"]
 ```
 
-默认 `deploy/compose.yaml` 有 `postgres + server + web` 三个容器；复用 spark-db 的 `compose.spark-db.yaml` 只启动 `server + web`，独立数据库角色/库由操作员事先手动建好。二者默认 `web` **都是 Next.js Node**，端口绑定 `127.0.0.1:3000`；后端 API 为本地 8080。Vite/Nginx 通过 opt-in `vite-web` profile（3002）或 `pnpm dev:vite`（5173）保留受控回退。公开 Pages 静态虚构展示与认证业务是两条不同链路。
+默认 `deploy/compose.yaml` 有 `postgres + server + web` 三个容器；复用 spark-db 的 `compose.spark-db.yaml` 只启动 `server + web`，独立数据库角色/库由操作员事先手动建好。二者默认 `web` **都是 Next.js Node**，端口绑定 `127.0.0.1:3000`；后端 API 为本地 8080。旧认证 Vite 运行入口已退役；隔离 TLS 回退演练使用两个 Next 实例。公开 Pages 静态虚构展示与认证业务是两条不同链路。
 
 ## 2. 技术选型（按代码而非历史候选图）
 

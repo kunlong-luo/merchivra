@@ -5,16 +5,13 @@ import assert from 'node:assert/strict'
 import { spawn } from 'node:child_process'
 import { createServer } from 'node:http'
 import { mkdtemp, readFile, mkdir, writeFile, rm } from 'node:fs/promises'
-import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join, resolve, extname } from 'node:path'
+import { join, resolve } from 'node:path'
 import { portFromChromeStderr } from './chrome_devtools_port.mjs'
 
-const dist = resolve(process.argv[2] ?? 'apps/web/dist')
-// When set, run the same synthetic API + Chrome assertions against the real
-// Next App Router process instead of serving the Vite-built dist directory.
-const nextTarget=process.env.MERCHIVRA_BROWSER_NEXT_URL??null
-const output = resolve(process.argv[3] ?? 'browser-smoke-artifacts')
+// Only the real Next App Router is a supported authenticated browser target.
+const nextTarget=process.env.MERCHIVRA_BROWSER_NEXT_URL??'http://127.0.0.1:3355'
+const output = resolve(process.argv[2] ?? 'browser-smoke-artifacts')
 const tenant = '11111111-1111-4111-8111-111111111111'
 const account = '22222222-2222-4222-8222-222222222222'
 const market = '33333333-3333-4333-8333-333333333333'
@@ -847,13 +844,7 @@ const server = createServer(async (req, res) => {
     }
     return
   }
-  const local = resolve(dist, '.' + decodeURIComponent(url.pathname === '/' ? '/index.html' : url.pathname))
-  if (!local.startsWith(dist + '/')) return res.writeHead(403).end()
-  try {
-    const bytes = await readFile(local)
-    res.writeHead(200, { 'Content-Type': mime[extname(local)] ?? 'application/octet-stream' })
-    res.end(bytes)
-  } catch { res.writeHead(404).end('Missing test asset') }
+
 })
 const sleep = ms => new Promise(r => setTimeout(r, ms))
 let chrome, socket, profile
@@ -955,10 +946,9 @@ async function select(send, name) {
   assert.equal(cols[0], cols[1], name+' header/data columns')
 }
 async function main() {
-  if(!nextTarget)assert.ok(existsSync(join(dist,'index.html')), 'Build the Vite baseline first')
   await mkdir(output,{recursive:true})
   await new Promise(ok => server.listen(0,'127.0.0.1',ok))
-  const url = 'http://127.0.0.1:' + server.address().port + (nextTarget?'/core':'/')
+  const url = 'http://127.0.0.1:' + server.address().port + '/core'
   profile = await mkdtemp(join(tmpdir(),'merchivra-chrome-'))
   chrome = spawn(process.env.CHROME_BIN || 'google-chrome', [
     '--headless=new','--no-sandbox','--disable-dev-shm-usage',
@@ -1026,6 +1016,23 @@ async function main() {
     await layout(send,width,'core-listings-'+width,true)
     await screenshot(send,'core-listings-'+width+'.png')
     await screenshot(send,'core-listings-table-'+width+'.png',true)
+    if(width===1280){
+      // A short desktop must still reach the entire navigation without a visible scrollbar.
+      await send('Emulation.setDeviceMetricsOverride',{
+        width,height:500,deviceScaleFactor:1,mobile:false
+      })
+      await waitFor(send,"(()=>{const s=document.querySelector('.next-ui-sidebar');return !!s&&s.scrollHeight>s.clientHeight})()",'short desktop sidebar overflow')
+      const navigation=await evaluate(send, `(()=>{const s=document.querySelector('.next-ui-sidebar');
+        const style=getComputedStyle(s);s.scrollTop=s.scrollHeight;
+        const result={width:style.scrollbarWidth,overflow:style.overflowY,scrollTop:s.scrollTop};
+        s.scrollTop=0;return result})()`)
+      assert.equal(navigation.width,'none','hide desktop scrollbar chrome')
+      assert.equal(navigation.overflow,'auto','preserve native navigation scrolling')
+      assert.ok(navigation.scrollTop>0,'bottom navigation must remain reachable')
+      await send('Emulation.setDeviceMetricsOverride',{
+        width,height:900,deviceScaleFactor:1,mobile:false
+      })
+    }
     if(nextTarget&&width===360){
       await evaluate(send,
         "document.querySelector('.next-ui-mobile-trigger')?.click()")
@@ -1035,6 +1042,7 @@ async function main() {
         ".some(a=>a.textContent.includes('订单管理') && "+
         "a.getAttribute('href')==='/orders')",
         'V103 Base UI mobile navigation opens with native deep links')
+      assert.equal(await evaluate(send,"getComputedStyle(document.querySelector('.next-ui-nav-sheet')).scrollbarWidth"),'none','hide mobile navigation scrollbar chrome')
       await screenshot(send,'v103-base-ui-mobile-navigation-360.png')
       await evaluate(send,
         "document.querySelector('.next-ui-nav-close')?.click()")
