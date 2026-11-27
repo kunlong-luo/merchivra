@@ -176,8 +176,9 @@ class TargetImageEvidenceV160Tests(unittest.TestCase):
 
     def test_runtime_image_labels_and_compose_args_are_wired_for_all_services(self):
         root=Path(__file__).resolve().parents[1]
-        for path in ("apps/server/Dockerfile","apps/web/Dockerfile.next",
-                     "apps/web/Dockerfile"):
+        self.assertFalse((root/"apps/web/Dockerfile").exists(),
+                         "Retired authenticated frontend must not return")
+        for path in ("apps/server/Dockerfile","apps/web/Dockerfile.next"):
             with self.subTest(path=path):
                 source=(root/path).read_text()
                 self.assertIn("ARG MERCHIVRA_BUILD_REVISION",source)
