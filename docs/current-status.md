@@ -9,9 +9,10 @@
 - Basis: V290 已 VERIFIED (synthetic)，精确候选 `f5c42fa4669cf8089363ddcb6c7d884c414d0aae`，完整 A3 7/7；本会话只关闭 V290，未领取或实施 V291。
 - 阻塞：维护者未提供合法真实第三方原件/授权及独立财务批准；E1–E5、DEC-06/07/08、G1 未证。真实 Seller/Ads OAuth OFF，realizedNetProfit=null，#104 NO-GO。
 - 唯一下一动作：维护者在合法本地/受控环境准备一个可独立复算的真实订单/批次/结算证据包（不上传原件或凭据），按现行计划从 E1 签发主体及原件真实性开始；材料缺失继续 BLOCKED，不重复合成 UI 或跳转 V292。
-- V290 交接文档精确 SHA [`85c86ecd0b6d6cfb454ed8fec1433d7d368c2db2`](https://github.com/kunlong-luo/merchivra/commit/85c86ecd0b6d6cfb454ed8fec1433d7d368c2db2)，[快 CI #45929190678](https://github.com/kunlong-luo/merchivra/actions/runs/45929190678) SUCCESS（run_attempt=1）：Java/Gradle #140277589459、Next/Vite/Orval/TypeScript/Vitest #140277589402、Compose/cadence/文档守卫 #140277589216 均成功；PG18 #140277590762、JaCoCo、完整 Next HTTP 按快速 CI 范围跳过，无失败 job。仅三个权威文档变更，业务代码不变；完整 A3 仍只对应 V290 候选。
-- 本次静态核对该 SHA 的 `CostProfitReadinessService.java` 293–315 行：来源外部核证/扣除保持 false，八类缺口保持 UNKNOWN，Page 最终 false/false/false/null；`scripts/check_production_gate_v143.py` 241–247 行仍固定 productionApproved=false、deploymentPermitted=false。#104 实际 OPEN/BLOCKED。未获得真实外部样本或独立审批，V291 不关闭，不领取 V292。
-- 本次只回填验收与阻塞，不改代码或工作流；提交标题 `docs(v291): record handoff CI and retain external evidence hold`，parent 为 `85c86ecd0b6d6cfb454ed8fec1433d7d368c2db2`。未在本地运行文档/cadence 守卫；新提交快 CI 另核，不继承旧 SHA。
+- 精确核验 HEAD [`c5195f432aeb81584a0dfd8e3d332361427cb439`](https://github.com/kunlong-luo/merchivra/commit/c5195f432aeb81584a0dfd8e3d332361427cb439)，[快 CI #45930185858](https://github.com/kunlong-luo/merchivra/actions/runs/45930185858) SUCCESS（run_attempt=1）：Java/Gradle #140280763791、Compose/cadence/文档守卫 #140280763960、Next/Vite/Orval/TypeScript/Vitest #140280764002 均成功；PG18 #140280765160、JaCoCo、完整 Next HTTP 按快速 CI 范围跳过，无失败 job。与 V290 精确候选相比仅三份权威文档变更（2 commits），完整 A3 7/7 仍只对应 V290 候选。
+- 静态核对该 SHA 的 `CostProfitReadinessService.java` 285–320 行：外部核证和扣除仍 false，各成本类别继续缺证，Page 最终 false/false/false/null；`scripts/check_production_gate_v143.py` 232–253 行仍固定 productionApproved=false、deploymentPermitted=false。#104 实际 OPEN/BLOCKED。未收到合法真实样本、授权或独立签署，不领取 V292。
+- 本次仅记录新 CI 证据和阻塞，不改业务代码、迁移或工作流；提交标题 `docs(v291): verify latest handoff CI and retain evidence block`，parent 为 `c5195f432aeb81584a0dfd8e3d332361427cb439`。本地网络无法解析 GitHub，未能克隆并执行提交前文档/cadence 守卫；新提交快 CI 需按其精确 SHA 独立核查，不继承旧 SHA。无新外部材料不得重复开发或仅为增加版本/评分而提交；后续仅核对本次 CI 并继续等待 E1 材料。
+- [前次 V291 交接证据（不可变快照）](https://github.com/kunlong-luo/merchivra/blob/c5195f432aeb81584a0dfd8e3d332361427cb439/docs/current-status.md)。
 
 ## 最近已关闭任务：V290 · VERIFIED (synthetic)
 
@@ -37,7 +38,7 @@ V289 精确代码 [`6583c63e57cfc0c7279e2f64dd1989719d23696b`](https://github.co
 | 独立成熟度 | [78/100（V290 已验收复评）](governance/project-scorecard-v231-2026-11-24.md)；真实利润10/25，非生产就绪比例 |
 | 历史完整 A3 | V280 r2 `07fccfb4be98cdaee4d46f592c804dd8c5826d75` [#45742981332](https://github.com/kunlong-luo/merchivra/actions/runs/45742981332) 7/7；含实际 PG18 101行全量类型发现及双人审核 |
 | 独立 Redis | V281 `cb9bb88eea150384fa87a121c60e2a11d4bf42cf` [#45743425032](https://github.com/kunlong-luo/merchivra/actions/runs/45743425032) SUCCESS：Redis8、真实登录/CSRF、重启身份、断连拒绝、GCRA |
-| 最新主线发布候选 | V290 精确候选快 CI 与完整 A3 7/7 已成功；V290 交接文档快 CI #45929190678 独立成功；本次 V291 回填文档快 CI 另核 |
+| 最新主线发布候选 | V290 精确候选快 CI 与完整 A3 7/7 已成功；V290 交接及前次 V291 文档快 CI 分别成功；本次回填文档快 CI 另核 |
 | 财务及授权 | `realizedNetProfit=null`、`bankReconciled=false`、`externallyVerified=false`；Seller/Ads OAuth OFF；真实 E1–E5/DEC/G1 未证 |
 | 生产 | pre-alpha；[#104](https://github.com/kunlong-luo/merchivra/issues/104) NO-GO；目标 G2/G3 TLS/KMS/备份恢复/告警及正式签署缺失 |
 

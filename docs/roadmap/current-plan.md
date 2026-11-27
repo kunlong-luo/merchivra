@@ -16,8 +16,8 @@
 - 依赖/阻塞：维护者提供合法真实样本、授权与独立财务批准；尚未取得。E1–E5、DEC-06/07/08、G1 未证。
 - 验收：按下列 E1–E5 的真实材料与可复算条件逐项取得独立证据，记录脱敏证据索引、范围、原币、归属、覆盖、未知项与签署状态；样本不等于完整期间，不解除生产 #104 NO-GO。
 - 唯一下一动作：维护者在受控环境准备一个真实订单/批次/结算证据包及授权范围，先核验 E1 签发主体和原件真实性；没有材料继续 BLOCKED。
-- 交接核验：V290 交接文档精确 SHA [`85c86ecd0b6d6cfb454ed8fec1433d7d368c2db2`](https://github.com/kunlong-luo/merchivra/commit/85c86ecd0b6d6cfb454ed8fec1433d7d368c2db2)，[快 CI #45929190678](https://github.com/kunlong-luo/merchivra/actions/runs/45929190678) SUCCESS（run_attempt=1）：Java/Gradle #140277589459、Next/Vite/Orval/TypeScript/Vitest #140277589402、Compose/cadence/文档守卫 #140277589216 均成功；PG18 #140277590762、JaCoCo、完整 Next HTTP 按快速 CI 范围跳过，无失败 job。仅三个权威文档变更，业务代码不变；完整 A3 仍只对应 V290 候选。
-- 本次只回填验收与阻塞，不改代码或工作流；提交标题 `docs(v291): record handoff CI and retain external evidence hold`，parent 为 `85c86ecd0b6d6cfb454ed8fec1433d7d368c2db2`。未在本地运行文档/cadence 守卫；新提交快 CI 另核，不继承旧 SHA。 V291 未 VERIFIED 前不得领取 V292。
+- 交接核验：精确核验 HEAD [`c5195f432aeb81584a0dfd8e3d332361427cb439`](https://github.com/kunlong-luo/merchivra/commit/c5195f432aeb81584a0dfd8e3d332361427cb439)，[快 CI #45930185858](https://github.com/kunlong-luo/merchivra/actions/runs/45930185858) SUCCESS（run_attempt=1）：Java/Gradle #140280763791、Compose/cadence/文档守卫 #140280763960、Next/Vite/Orval/TypeScript/Vitest #140280764002 均成功；PG18 #140280765160、JaCoCo、完整 Next HTTP 按快速 CI 范围跳过，无失败 job。与 V290 精确候选相比仅三份权威文档变更（2 commits），完整 A3 7/7 仍只对应 V290 候选。
+- 本次仅记录新 CI 证据和阻塞，不改业务代码、迁移或工作流；提交标题 `docs(v291): verify latest handoff CI and retain evidence block`，parent 为 `c5195f432aeb81584a0dfd8e3d332361427cb439`。本地网络无法解析 GitHub，未能克隆并执行提交前文档/cadence 守卫；新提交快 CI 需按其精确 SHA 独立核查，不继承旧 SHA。无新外部材料不得重复开发或仅为增加版本/评分而提交；后续仅核对本次 CI 并继续等待 E1 材料。 V291 未 VERIFIED 前不得领取 V292。
 
 ## 后续队列（一次只领取一项）
 
