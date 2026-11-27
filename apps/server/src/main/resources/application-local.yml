@@ -1,0 +1,20 @@
+# Native Pop!_OS / shared spark-db development only. Activate explicitly.
+# Container and CI defaults remain in application.yml.
+spring:
+  config:
+    import: "optional:file:${user.home}/.config/merchivra/application.yml"
+  datasource:
+    url: "${DB_URL:jdbc:postgresql://${DB_HOST:127.0.0.1}:${DB_PORT:5432}/${DB_NAME:merchivra}}"
+    username: ${DB_USER:merchivra}
+    password: ${DB_PASSWORD:}
+  data:
+    redis:
+      host: ${MERCHIVRA_REDIS_HOST:127.0.0.1}
+      port: ${MERCHIVRA_REDIS_PORT:6379}
+      password: ${MERCHIVRA_REDIS_PASSWORD:}
+
+server:
+  address: ${SERVER_ADDRESS:127.0.0.1}
+  port: ${SERVER_PORT:8081}
+# Existing optional Redis switches, Amazon gates and evidence checks are
+# inherited unchanged. Never enable shared Redis sessions by default.

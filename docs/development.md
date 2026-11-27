@@ -51,7 +51,7 @@ pnpm dev
 
 **Next.js 在 127.0.0.1:3000**，本地后端在 **127.0.0.1:8080**；默认 `next.config.ts` 将 `/api/**` 同源代理至后端。8080 不可用时前端不会凭空提供真实业务数据。只有显式执行 `pnpm dev:vite` 才会用 Vite 开发回退（默认端口 5173）。
 
-### 与 spark-iot-farm 共存：IDEA 私有配置（无需重复填写环境变量）
+### 与 spark-iot-farm 共存：仓库内置 local profile（推荐 Pop!_OS）
 
 宿主机可通过完整 `DB_URL` 或原有 `DB_HOST/DB_PORT/DB_NAME` 配置 JDBC；完整 URL 优先，用户名仍为 `DB_USER`，密码仍为 `DB_PASSWORD`（无默认密码）。Compose 与 CI 的默认 8080/3000 不变。不要将连接凭据写入共享 YAML 或 Git。
 
@@ -74,14 +74,14 @@ merchivra:
     enabled: false
 ```
 
-在 IDEA 的 MerchivraApplication 环境变量中设置 `SPRING_CONFIG_ADDITIONAL_LOCATION=file:/home/<你的Linux用户名>/.config/merchivra/`（替换用户名，目录末尾斜杠保留），删去冲突的旧启动参数；首次管理员密码至少16位。不要使用可被其他本机用户读取的文件，不要保存为共享 IDEA 配置。保持 Seller/Ads OAuth、同步、真实写入关闭，非 Demo 未核证文件仍不能传输。
+仓库内置 `application-local.yml` 默认连接 127.0.0.1:5432/merchivra 和 127.0.0.1:6379，后端只监听 127.0.0.1:8081，并自动读取上述用户私有 YAML（设置 `chmod 700 ~/.config/merchivra; chmod 600 ~/.config/merchivra/application.yml`）。IDEA 导入 Gradle 项目后直接选择共享运行配置 `Merchivra Local (spark-db)`；或者在已有 Spring Boot 运行配置将 Active profiles 设为 `local`，或执行 `./apps/server/gradlew -p apps/server --no-daemon bootRun --args='--spring.profiles.active=local'`。删去冲突的旧启动参数；首次管理员密码至少16位。Redis 密码如需使用也仅在私有 YAML 或环境中注入，默认 Session/限流关闭；不得清空/改动共享实例。保持 Seller/Ads OAuth、同步、真实写入关闭，非 Demo 未核证文件仍不能传输。
 
-前端使用已存在的 Next 开发脚本（本地 3001）：
+前端使用新增的 Pop!_OS/Linux 专用 Next 开发脚本（本地 3001，自动代理 8081）：
 
 ```bash
 cd apps/web
 pnpm install --frozen-lockfile
-MERCHIVRA_API_INTERNAL_URL=http://127.0.0.1:8081 pnpm dev:next
+pnpm dev:local
 curl -i http://127.0.0.1:8081/api/v1/ping
 curl -i http://127.0.0.1:3001/api/v1/auth/me
 ```

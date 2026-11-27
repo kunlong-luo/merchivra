@@ -22,6 +22,30 @@ class LocalConnectionConfigTest {
     }
 
     @Test
+    void localProfileUsesSharedLoopbackAndNonConflictingPort() throws IOException {
+        var sources = new MutablePropertySources();
+        var loader = new YamlPropertySourceLoader();
+        for (var source : loader.load("local", new ClassPathResource("application-local.yml"))) {
+            sources.addLast(source);
+        }
+        for (var source : loader.load("base", new ClassPathResource("application.yml"))) {
+            sources.addLast(source);
+        }
+        var config = new PropertySourcesPropertyResolver(sources);
+        assertEquals("jdbc:postgresql://127.0.0.1:5432/merchivra", config.getProperty("spring.datasource.url"));
+        assertEquals("merchivra", config.getProperty("spring.datasource.username"));
+        assertEquals("", config.getProperty("spring.datasource.password"));
+        assertEquals("127.0.0.1", config.getProperty("spring.data.redis.host"));
+        assertEquals("6379", config.getProperty("spring.data.redis.port"));
+        assertEquals("", config.getProperty("spring.data.redis.password"));
+        assertEquals("127.0.0.1", config.getProperty("server.address"));
+        assertEquals("8081", config.getProperty("server.port"));
+        assertEquals("false", config.getProperty("merchivra.redis.sessions-enabled"));
+        assertEquals("false", config.getProperty("merchivra.spapi.rate-limit.enabled"));
+        assertEquals("false", config.getProperty("merchivra.spapi.oauth.enabled"));
+    }
+
+    @Test
     void fullJdbcUrlOverridesSplitInputs() throws IOException {
         var config = resolver(Map.of("DB_URL", "jdbc:postgresql://127.0.0.1:5544/isolated",
                 "DB_HOST", "unused", "DB_PORT", "1234", "DB_NAME", "unused",
