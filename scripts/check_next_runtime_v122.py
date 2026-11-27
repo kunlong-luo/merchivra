@@ -43,7 +43,9 @@ assert "output:'standalone'" in next_config
 assert "source:'/api/:path*'" in next_config
 assert "/actuator/health" not in next_config, "Actuator must remain private to backend DNS"
 assert not any(secret in overlay for secret in (
+    "LWA_CLIENT_SECRET",
     "MERCHIVRA_LWA_CLIENT_SECRET",
+    "SPAPI_OAUTH_ENCRYPTION_KEY_BASE64",
     "MERCHIVRA_SPAPI_OAUTH_ENCRYPTION_KEY_BASE64",
     "MERCHIVRA_DB_PASSWORD=",
 ))
@@ -63,8 +65,8 @@ if args.compose:
     assert next_web["environment"]["PORT"] == "3000"
     assert next_web["environment"]["HOSTNAME"] == "0.0.0.0"
     assert set(next_web["environment"]).isdisjoint({
-        "MERCHIVRA_DB_PASSWORD", "MERCHIVRA_LWA_CLIENT_SECRET",
-        "MERCHIVRA_SPAPI_OAUTH_ENCRYPTION_KEY_BASE64"
+        "MERCHIVRA_DB_PASSWORD", "DB_PASSWORD", "LWA_CLIENT_SECRET", "MERCHIVRA_LWA_CLIENT_SECRET",
+        "SPAPI_OAUTH_ENCRYPTION_KEY_BASE64", "MERCHIVRA_SPAPI_OAUTH_ENCRYPTION_KEY_BASE64"
     }), "Next container must not receive backend secrets"
     ports = next_web.get("ports",[])
     assert len(ports) == 1
@@ -118,14 +120,15 @@ if args.compose:
     assert services["postgres"]["image"].startswith("postgres:18-")
     if args.production:
         env = services["server"]["environment"]
+        assert not any(key.startswith("MERCHIVRA_") for key in env)
         for var in (
-            "MERCHIVRA_DEMO_ENABLED",
-            "MERCHIVRA_SPAPI_ENABLED",
-            "MERCHIVRA_SPAPI_OAUTH_ENABLED",
-            "MERCHIVRA_SPAPI_ALLOW_WRITES",
+            "DEMO_ENABLED",
+            "SPAPI_ENABLED",
+            "SPAPI_OAUTH_ENABLED",
+            "SPAPI_ALLOW_WRITES",
         ):
             assert env.get(var,"").lower() == "false", f"Unsafe {var}"
-        assert env["MERCHIVRA_SESSION_COOKIE_SECURE"] == "true"
+        assert env["SESSION_COOKIE_SECURE"] == "true"
 
 print("PASS V122/V128/V153/V154/V155: nonroot Node standalone, private API proxy, safe rollback "
       "and loopback-only Next container")

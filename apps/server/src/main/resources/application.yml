@@ -1,5 +1,4 @@
-# Native environment names omit MERCHIVRA_; legacy deployment names remain
-# authoritative when explicitly set. Keep Spring property paths and defaults stable.
+# Backend environment variables use concise domain names.
 server:
   # Preserve the container/CI port; local IDEA may override to 8081.
   port: ${SERVER_PORT:8080}
@@ -10,11 +9,11 @@ server:
       cookie:
         http-only: true
         same-site: strict
-        secure: ${MERCHIVRA_SESSION_COOKIE_SECURE:${SESSION_COOKIE_SECURE:false}}
+        secure: ${SESSION_COOKIE_SECURE:false}
 
 springdoc:
   api-docs:
-    enabled: ${MERCHIVRA_CONTRACT_EXPORT_ENABLED:${CONTRACT_EXPORT_ENABLED:false}}
+    enabled: ${CONTRACT_EXPORT_ENABLED:false}
   group-configs:
     - group: finance-profits
       paths-to-match:
@@ -50,10 +49,10 @@ spring:
     validate-on-migrate: true
   data:
     redis:
-      host: ${MERCHIVRA_REDIS_HOST:${REDIS_HOST:localhost}}
-      port: ${MERCHIVRA_REDIS_PORT:${REDIS_PORT:6379}}
-      database: ${MERCHIVRA_REDIS_DATABASE:${REDIS_DATABASE:0}}
-      password: ${MERCHIVRA_REDIS_PASSWORD:${REDIS_PASSWORD:}}
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      database: ${REDIS_DATABASE:0}
+      password: ${REDIS_PASSWORD:}
       timeout: 2s
       connect-timeout: 2s
     repositories:
@@ -68,7 +67,7 @@ management:
     # Redis is optional in single-node mode. Enable this contributor only when
     # Redis-backed sessions or SP-API throttling is explicitly configured.
     redis:
-      enabled: ${MERCHIVRA_REDIS_HEALTH_ENABLED:${REDIS_HEALTH_ENABLED:false}}
+      enabled: ${REDIS_HEALTH_ENABLED:false}
   endpoints:
     web:
       exposure:
@@ -81,33 +80,33 @@ merchivra:
   evidence:
     # Never permit unscanned private original uploads outside synthetic Demo.
     # When required, startup fails if clamd host is absent; scan errors reject upload.
-    av-required: ${MERCHIVRA_EVIDENCE_AV_REQUIRED:${EVIDENCE_AV_REQUIRED:false}}
+    av-required: ${EVIDENCE_AV_REQUIRED:false}
     av-host: ${EVIDENCE_AV_HOST:}
-    av-port: ${MERCHIVRA_EVIDENCE_AV_PORT:${EVIDENCE_AV_PORT:3310}}
+    av-port: ${EVIDENCE_AV_PORT:3310}
   external-issuer:
     offline-trust:
       # V209 technical PKIX/CRL checks only; never external legal identity.
       # These paths are deployed by the OPERATIONS team outside tenant APIs.
       # No AIA, CRLDP, OCSP, certificate network fetch, or CA enrollment route.
       # Strict default OFF and no access without root+chain+current signed CRL.
-      enabled: ${MERCHIVRA_EXTERNAL_ISSUER_OFFLINE_TRUST_ENABLED:${EXTERNAL_ISSUER_OFFLINE_TRUST_ENABLED:false}}
-      root-cert-file: ${MERCHIVRA_EXTERNAL_ISSUER_TRUST_ROOT_CERT_FILE:${EXTERNAL_ISSUER_TRUST_ROOT_CERT_FILE:}}
-      issuer-chain-file: ${MERCHIVRA_EXTERNAL_ISSUER_TRUST_CHAIN_FILE:${EXTERNAL_ISSUER_TRUST_CHAIN_FILE:}}
-      crl-file: ${MERCHIVRA_EXTERNAL_ISSUER_TRUST_CRL_FILE:${EXTERNAL_ISSUER_TRUST_CRL_FILE:}}
-      operator-dns-allowlist: ${MERCHIVRA_EXTERNAL_ISSUER_OPERATOR_DNS_ALLOWLIST:${EXTERNAL_ISSUER_OPERATOR_DNS_ALLOWLIST:}}
-      carrier-dns-allowlist: ${MERCHIVRA_EXTERNAL_ISSUER_CARRIER_DNS_ALLOWLIST:${EXTERNAL_ISSUER_CARRIER_DNS_ALLOWLIST:}}
+      enabled: ${EXTERNAL_ISSUER_OFFLINE_TRUST_ENABLED:false}
+      root-cert-file: ${EXTERNAL_ISSUER_TRUST_ROOT_CERT_FILE:}
+      issuer-chain-file: ${EXTERNAL_ISSUER_TRUST_CHAIN_FILE:}
+      crl-file: ${EXTERNAL_ISSUER_TRUST_CRL_FILE:}
+      operator-dns-allowlist: ${EXTERNAL_ISSUER_OPERATOR_DNS_ALLOWLIST:}
+      carrier-dns-allowlist: ${EXTERNAL_ISSUER_CARRIER_DNS_ALLOWLIST:}
   redis:
     # Explicit opt-in: shared Session/CSRF only when Redis is configured.
-    sessions-enabled: ${MERCHIVRA_REDIS_SESSIONS_ENABLED:${REDIS_SESSIONS_ENABLED:false}}
+    sessions-enabled: ${REDIS_SESSIONS_ENABLED:false}
   team:
     # Explicitly opt in to multi-owner invitations and reviewer permissions.
-    enabled: ${MERCHIVRA_TEAM_ENABLED:${TEAM_ENABLED:false}}
+    enabled: ${TEAM_ENABLED:false}
   demo:
-    enabled: ${MERCHIVRA_DEMO_ENABLED:${DEMO_ENABLED:false}}
+    enabled: ${DEMO_ENABLED:false}
   bootstrap:
-    username: ${MERCHIVRA_BOOTSTRAP_USERNAME:${BOOTSTRAP_USERNAME:}}
-    password: ${MERCHIVRA_BOOTSTRAP_PASSWORD:${BOOTSTRAP_PASSWORD:}}
-    tenant-name: ${MERCHIVRA_BOOTSTRAP_TENANT_NAME:${BOOTSTRAP_TENANT_NAME:Merchivra Workspace}}
+    username: ${BOOTSTRAP_USERNAME:}
+    password: ${BOOTSTRAP_PASSWORD:}
+    tenant-name: ${BOOTSTRAP_TENANT_NAME:Merchivra Workspace}
 
   spapi:
     rate-limit:
@@ -116,91 +115,91 @@ merchivra:
       # Legacy HTTP reads: same operation-specific Redis budget. All callers
       # share an atomic Redis-time GCRA and 429 fence. No burst is assumed.
       # All replicas share Redis; Redis errors fail closed.
-      enabled: ${MERCHIVRA_SPAPI_RATE_LIMIT_ENABLED:${SPAPI_RATE_LIMIT_ENABLED:false}}
-      cooldown-ms: ${MERCHIVRA_SPAPI_RATE_LIMIT_COOLDOWN_MS:${SPAPI_RATE_LIMIT_COOLDOWN_MS:2000}}
+      enabled: ${SPAPI_RATE_LIMIT_ENABLED:false}
+      cooldown-ms: ${SPAPI_RATE_LIMIT_COOLDOWN_MS:2000}
       # Default empty/one-token burst. Only configure manually approved
       # read operations (e.g. SEARCH_ORDERS=2); a learned rate header is
       # required before any configured burst takes effect.
-      approved-bursts: ${MERCHIVRA_SPAPI_APPROVED_BURSTS:${SPAPI_APPROVED_BURSTS:}}
+      approved-bursts: ${SPAPI_APPROVED_BURSTS:}
     # Real outbound requests remain disabled until approved per-seller OAuth/vault.
-    enabled: ${MERCHIVRA_SPAPI_ENABLED:${SPAPI_ENABLED:false}}
-    sandbox: ${MERCHIVRA_SPAPI_SANDBOX:${SPAPI_SANDBOX:true}}
-    allow-writes: ${MERCHIVRA_SPAPI_ALLOW_WRITES:${SPAPI_ALLOW_WRITES:false}}
+    enabled: ${SPAPI_ENABLED:false}
+    sandbox: ${SPAPI_SANDBOX:true}
+    allow-writes: ${SPAPI_ALLOW_WRITES:false}
     reports:
       # Internal Amazon-generated settlement report discovery only. Requires
       # LIVE Seller+Finance role, Redis quota, approved egress and secret vault.
       # No schedule or public remote-import route. Default OFF.
-      enabled: ${MERCHIVRA_SPAPI_REPORTS_ENABLED:${SPAPI_REPORTS_ENABLED:false}}
-      scheduler-enabled: ${MERCHIVRA_SPAPI_REPORTS_SCHEDULER_ENABLED:${SPAPI_REPORTS_SCHEDULER_ENABLED:false}}
-      scheduler-ms: ${MERCHIVRA_SPAPI_REPORTS_SCHEDULER_MS:${SPAPI_REPORTS_SCHEDULER_MS:120000}}
+      enabled: ${SPAPI_REPORTS_ENABLED:false}
+      scheduler-enabled: ${SPAPI_REPORTS_SCHEDULER_ENABLED:false}
+      scheduler-ms: ${SPAPI_REPORTS_SCHEDULER_MS:120000}
     orders-role-review:
       # Explicit two-person off-platform application-role verification.
       # Default OFF; reviewer RBAC is provisioned through trusted administration.
-      enabled: ${MERCHIVRA_SPAPI_ORDERS_ROLE_REVIEW_ENABLED:${SPAPI_ORDERS_ROLE_REVIEW_ENABLED:false}}
+      enabled: ${SPAPI_ORDERS_ROLE_REVIEW_ENABLED:false}
     finances-role-review:
       # Independent dual-owner off-platform Amazon Finances app-role approval. OFF.
-      enabled: ${MERCHIVRA_SPAPI_FINANCES_ROLE_REVIEW_ENABLED:${SPAPI_FINANCES_ROLE_REVIEW_ENABLED:false}}
+      enabled: ${SPAPI_FINANCES_ROLE_REVIEW_ENABLED:false}
     verification:
       # Separate explicit live-only gate. No sandbox/Demo verification.
-      enabled: ${MERCHIVRA_SPAPI_VERIFICATION_ENABLED:${SPAPI_VERIFICATION_ENABLED:false}}
+      enabled: ${SPAPI_VERIFICATION_ENABLED:false}
     private:
       # Private Seller Central self-authorization: server-only one-shot import.
-      enabled: ${MERCHIVRA_SPAPI_PRIVATE_ENABLED:${SPAPI_PRIVATE_ENABLED:false}}
+      enabled: ${SPAPI_PRIVATE_ENABLED:false}
     private-import:
-      enabled: ${MERCHIVRA_SPAPI_PRIVATE_IMPORT_ENABLED:${SPAPI_PRIVATE_IMPORT_ENABLED:false}}
-      tenant-id: ${MERCHIVRA_SPAPI_PRIVATE_IMPORT_TENANT_ID:${SPAPI_PRIVATE_IMPORT_TENANT_ID:}}
-      account-id: ${MERCHIVRA_SPAPI_PRIVATE_IMPORT_ACCOUNT_ID:${SPAPI_PRIVATE_IMPORT_ACCOUNT_ID:}}
-      seller-id: ${MERCHIVRA_SPAPI_PRIVATE_IMPORT_SELLER_ID:${SPAPI_PRIVATE_IMPORT_SELLER_ID:}}
-      refresh-token: ${MERCHIVRA_SPAPI_PRIVATE_IMPORT_REFRESH_TOKEN:${SPAPI_PRIVATE_IMPORT_REFRESH_TOKEN:}}
-    lwa-client-id: ${MERCHIVRA_LWA_CLIENT_ID:${LWA_CLIENT_ID:}}
-    lwa-client-secret: ${MERCHIVRA_LWA_CLIENT_SECRET:${LWA_CLIENT_SECRET:}}
+      enabled: ${SPAPI_PRIVATE_IMPORT_ENABLED:false}
+      tenant-id: ${SPAPI_PRIVATE_IMPORT_TENANT_ID:}
+      account-id: ${SPAPI_PRIVATE_IMPORT_ACCOUNT_ID:}
+      seller-id: ${SPAPI_PRIVATE_IMPORT_SELLER_ID:}
+      refresh-token: ${SPAPI_PRIVATE_IMPORT_REFRESH_TOKEN:}
+    lwa-client-id: ${LWA_CLIENT_ID:}
+    lwa-client-secret: ${LWA_CLIENT_SECRET:}
     oauth:
       # Requires reviewed public App registration and registered redirect URI.
-      enabled: ${MERCHIVRA_SPAPI_OAUTH_ENABLED:${SPAPI_OAUTH_ENABLED:false}}
-      application-id: ${MERCHIVRA_SPAPI_APP_ID:${SPAPI_APP_ID:}}
-      redirect-uri: ${MERCHIVRA_SPAPI_OAUTH_REDIRECT_URI:${SPAPI_OAUTH_REDIRECT_URI:}}
-      encryption-key-base64: ${MERCHIVRA_SPAPI_OAUTH_ENCRYPTION_KEY_BASE64:${SPAPI_OAUTH_ENCRYPTION_KEY_BASE64:}}
+      enabled: ${SPAPI_OAUTH_ENABLED:false}
+      application-id: ${SPAPI_APP_ID:}
+      redirect-uri: ${SPAPI_OAUTH_REDIRECT_URI:}
+      encryption-key-base64: ${SPAPI_OAUTH_ENCRYPTION_KEY_BASE64:}
       # Alternative to legacy key: comma-separated version:Base64Key entries.
-      encryption-keyring: ${MERCHIVRA_SPAPI_OAUTH_ENCRYPTION_KEYRING:${SPAPI_OAUTH_ENCRYPTION_KEYRING:}}
-      active-key-version: ${MERCHIVRA_SPAPI_OAUTH_ACTIVE_KEY_VERSION:${SPAPI_OAUTH_ACTIVE_KEY_VERSION:1}}
-      allowed-amazon-origins: ${MERCHIVRA_SPAPI_OAUTH_AMAZON_ORIGINS:${SPAPI_OAUTH_AMAZON_ORIGINS:}}
-      secure-cookie: ${MERCHIVRA_SPAPI_OAUTH_SECURE_COOKIE:${SPAPI_OAUTH_SECURE_COOKIE:true}}
+      encryption-keyring: ${SPAPI_OAUTH_ENCRYPTION_KEYRING:}
+      active-key-version: ${SPAPI_OAUTH_ACTIVE_KEY_VERSION:1}
+      allowed-amazon-origins: ${SPAPI_OAUTH_AMAZON_ORIGINS:}
+      secure-cookie: ${SPAPI_OAUTH_SECURE_COOKIE:true}
 
   operations:
     # Advisory-only: manual scans work without this scheduler.
-    scheduler-enabled: ${MERCHIVRA_OPS_SCHEDULER_ENABLED:${OPS_SCHEDULER_ENABLED:false}}
-    scan-interval-ms: ${MERCHIVRA_OPS_SCAN_INTERVAL_MS:${OPS_SCAN_INTERVAL_MS:900000}}
-    low-stock-threshold: ${MERCHIVRA_OPS_LOW_STOCK_THRESHOLD:${OPS_LOW_STOCK_THRESHOLD:3}}
+    scheduler-enabled: ${OPS_SCHEDULER_ENABLED:false}
+    scan-interval-ms: ${OPS_SCAN_INTERVAL_MS:900000}
+    low-stock-threshold: ${OPS_LOW_STOCK_THRESHOLD:3}
 
   orders-sync:
     # V11C explicit source selection: MOCK default, LIVE requires extra gates.
-    mode: ${MERCHIVRA_ORDERS_SYNC_MODE:${ORDERS_SYNC_MODE:MOCK}}
-    live-approved: ${MERCHIVRA_ORDERS_SYNC_LIVE_APPROVED:${ORDERS_SYNC_LIVE_APPROVED:false}}
+    mode: ${ORDERS_SYNC_MODE:MOCK}
+    live-approved: ${ORDERS_SYNC_LIVE_APPROVED:false}
     # A LIVE source also requires app-role evidence for every Seller and
     # production-only read access. Never infer Orders role from Seller OAuth.
 
-    enabled: ${MERCHIVRA_ORDERS_SYNC_ENABLED:${ORDERS_SYNC_ENABLED:false}}
-    scheduler-enabled: ${MERCHIVRA_ORDERS_SYNC_SCHEDULER_ENABLED:${ORDERS_SYNC_SCHEDULER_ENABLED:false}}
-    scheduler-ms: ${MERCHIVRA_ORDERS_SYNC_SCHEDULER_MS:${ORDERS_SYNC_SCHEDULER_MS:30000}}
+    enabled: ${ORDERS_SYNC_ENABLED:false}
+    scheduler-enabled: ${ORDERS_SYNC_SCHEDULER_ENABLED:false}
+    scheduler-ms: ${ORDERS_SYNC_SCHEDULER_MS:30000}
 
   catalog-sync:
     # LIVE-only Inventory/Order Tracking reviewed role. No DEMO, no writes, no sandbox.
-    enabled: ${MERCHIVRA_CATALOG_SYNC_ENABLED:${CATALOG_SYNC_ENABLED:false}}
+    enabled: ${CATALOG_SYNC_ENABLED:false}
     # Automatically progress only jobs started by a tenant Owner. OFF by default.
-    scheduler-enabled: ${MERCHIVRA_CATALOG_SYNC_SCHEDULER_ENABLED:${CATALOG_SYNC_SCHEDULER_ENABLED:false}}
-    scheduler-ms: ${MERCHIVRA_CATALOG_SYNC_SCHEDULER_MS:${CATALOG_SYNC_SCHEDULER_MS:10000}}
+    scheduler-enabled: ${CATALOG_SYNC_SCHEDULER_ENABLED:false}
+    scheduler-ms: ${CATALOG_SYNC_SCHEDULER_MS:10000}
 
   finance:
     profit-report:
       # Only progresses jobs explicitly created by a tenant Owner.
       # Default OFF: Owner may manually advance one bounded batch via API.
       # No Amazon, Ads or bank network access, no official ledger posting.
-      scheduler-enabled: ${MERCHIVRA_PROFIT_REPORT_SCHEDULER_ENABLED:${PROFIT_REPORT_SCHEDULER_ENABLED:false}}
-      scheduler-ms: ${MERCHIVRA_PROFIT_REPORT_SCHEDULER_MS:${PROFIT_REPORT_SCHEDULER_MS:15000}}
+      scheduler-enabled: ${PROFIT_REPORT_SCHEDULER_ENABLED:false}
+      scheduler-ms: ${PROFIT_REPORT_SCHEDULER_MS:15000}
 
   finances-sync:
     # Default OFF; verified Finance and Accounting role required per Seller.
-    enabled: ${MERCHIVRA_FINANCES_SYNC_ENABLED:${FINANCES_SYNC_ENABLED:false}}
+    enabled: ${FINANCES_SYNC_ENABLED:false}
     # Optional: continue only Owner-started finance scans.
-    scheduler-enabled: ${MERCHIVRA_FINANCES_SYNC_SCHEDULER_ENABLED:${FINANCES_SYNC_SCHEDULER_ENABLED:false}}
-    scheduler-ms: ${MERCHIVRA_FINANCES_SYNC_SCHEDULER_MS:${FINANCES_SYNC_SCHEDULER_MS:60000}}
+    scheduler-enabled: ${FINANCES_SYNC_SCHEDULER_ENABLED:false}
+    scheduler-ms: ${FINANCES_SYNC_SCHEDULER_MS:60000}

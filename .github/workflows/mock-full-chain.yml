@@ -245,7 +245,7 @@ jobs:
             -f deploy/compose.yaml -f deploy/compose.next.yaml \
             -f deploy/compose.v146-synthetic-https.yaml \
             exec -T server sh -c \
-            'test "$MERCHIVRA_SESSION_COOKIE_SECURE" = true && test "$MERCHIVRA_SPAPI_ENABLED" = false && test "$MERCHIVRA_SPAPI_OAUTH_ENABLED" = false'
+            'test "$SESSION_COOKIE_SECURE" = true && test "$SPAPI_ENABLED" = false && test "$SPAPI_OAUTH_ENABLED" = false'
           ready=0
           for i in $(seq 1 60); do
             if curl -fsS --max-time 3 http://127.0.0.1:3001/api/v1/ping \

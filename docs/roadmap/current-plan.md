@@ -22,7 +22,7 @@
 ### V291 本地 E1 操作清单（维护者执行）
 
 1. 在本地 `git switch main`、`git pull --ff-only`、`git rev-parse HEAD`；记录精确 SHA。按[开发指南](../development.md)及[数据库指南](../deployment/local-spark-db.md)使用独立 PG18 数据库/低权限角色，Java25/Gradle 与 Next16/pnpm；已有 spark-db 可用 `deploy/compose.spark-db.yaml`，不要和内置 Compose 合并。内置 `deploy/compose.yaml` **强制 Demo=true**，只能测试虚构数据，禁止导入真实材料。真实证据先在应用外的受控本地目录保存，不上传到应用或 Git。
-2. 非 Demo 本地配置 `MERCHIVRA_DEMO_ENABLED=false`，保持 `MERCHIVRA_SPAPI_ENABLED=false`、`MERCHIVRA_SPAPI_OAUTH_ENABLED=false`、`MERCHIVRA_SPAPI_ALLOW_WRITES=false`、真实同步和 Seller/Ads OAuth 均关闭；数据库密码和首次管理员密码只在本地注入（管理员密码至少16位）。通过宿主机 Gradle `./apps/server/gradlew -p apps/server --no-daemon bootRun`，另一个终端 `cd apps/web`、`pnpm install --frozen-lockfile`、`pnpm dev`；或按 spark-db 指南启动两容器。`curl -i http://127.0.0.1:8080/api/v1/ping` 应200，匿名 `curl -i http://127.0.0.1:3000/api/v1/auth/me` 应401；登录后检查财务、订单、库存页面。不得用关闭鉴权解决 5xx。
+2. 非 Demo 本地配置 `DEMO_ENABLED=false`，保持 `SPAPI_ENABLED=false`、`SPAPI_OAUTH_ENABLED=false`、`SPAPI_ALLOW_WRITES=false`、真实同步和 Seller/Ads OAuth 均关闭；数据库密码和首次管理员密码只在本地注入（管理员密码至少16位）。通过宿主机 Gradle `./apps/server/gradlew -p apps/server --no-daemon bootRun`，另一个终端 `cd apps/web`、`pnpm install --frozen-lockfile`、`pnpm dev`；或按 spark-db 指南启动两容器。`curl -i http://127.0.0.1:8080/api/v1/ping` 应200，匿名 `curl -i http://127.0.0.1:3000/api/v1/auth/me` 应401；登录后检查财务、订单、库存页面。不得用关闭鉴权解决 5xx。
 3. 通过维护者合法授权的 Seller Central/Ads 官方渠道、供应商、货代、报关、WMS、银行等独立来源在应用外取得单一真实订单相关原始文件；按原始字节计算 SHA-256（Linux `sha256sum`、macOS `shasum -a 256`、Windows PowerShell `Get-FileHash -Algorithm SHA256`）。保存可验证的签发来源、账户/站点、报告版本、行键、授权与更正链；仅哈希匹配不证明签发者。
 4. 仅回传脱敏索引：样本代号、来源类别、币种、期间、文件/行数量、摘要核验结果、签发主体及授权核验 PASS/FAIL/UNKNOWN、独立复核状态、缺失或冲突项；禁止上传真实文件、凭据、银行账号或客户信息。E1 通过后继续同一 V291 的 E2–E5，未证保持 UNKNOWN/hold。样本闭环不代表整期或生产放行。
 

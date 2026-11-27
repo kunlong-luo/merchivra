@@ -12,17 +12,18 @@ services=config.get("services",{})
 assert {"postgres","server","web","redis"} <= set(services), "Unexpected bundled services"
 env=services["server"]["environment"]
 required={
-    "MERCHIVRA_DEMO_ENABLED":"false",
-    "MERCHIVRA_SESSION_COOKIE_SECURE":"true",
-    "MERCHIVRA_SPAPI_ENABLED":"false",
-    "MERCHIVRA_SPAPI_OAUTH_ENABLED":"false",
-    "MERCHIVRA_SPAPI_PRIVATE_ENABLED":"false",
-    "MERCHIVRA_SPAPI_ALLOW_WRITES":"false",
-    "MERCHIVRA_SPAPI_VERIFICATION_ENABLED":"false",
-    "MERCHIVRA_ORDERS_SYNC_ENABLED":"false",
-    "MERCHIVRA_ORDERS_SYNC_LIVE_APPROVED":"false",
-    "MERCHIVRA_EVIDENCE_AV_REQUIRED":"true",
+    "DEMO_ENABLED":"false",
+    "SESSION_COOKIE_SECURE":"true",
+    "SPAPI_ENABLED":"false",
+    "SPAPI_OAUTH_ENABLED":"false",
+    "SPAPI_PRIVATE_ENABLED":"false",
+    "SPAPI_ALLOW_WRITES":"false",
+    "SPAPI_VERIFICATION_ENABLED":"false",
+    "ORDERS_SYNC_ENABLED":"false",
+    "ORDERS_SYNC_LIVE_APPROVED":"false",
+    "EVIDENCE_AV_REQUIRED":"true",
 }
+assert not any(str(key).startswith("MERCHIVRA_") for key in env), "Legacy backend environment names must be translated before container startup"
 for key,expected in required.items():
     assert str(env.get(key,"")).lower()==expected, f"Production overlay default unsafe: {key}"
 
@@ -39,7 +40,7 @@ for service in ("server","web"):
         assert port.get("host_ip")=="127.0.0.1",f"{service} binds a non-loopback host port"
 
 assert "EVIDENCE_AV_HOST" in env, "V137 private clamd hostname must be configurable"
-port=env.get("MERCHIVRA_EVIDENCE_AV_PORT","3310")
+port=env.get("EVIDENCE_AV_PORT","3310")
 assert str(port).isdigit() and 1<=int(port)<=65535, "Invalid clamd internal TCP port"
 # An absent host is an intentional *runtime* startup blocker until operations
 # provisions a private scanner. Do not invent external ingress or a public port.

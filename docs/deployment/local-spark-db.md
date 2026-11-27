@@ -143,9 +143,9 @@ export DB_HOST=127.0.0.1 DB_PORT=5432
 export DB_NAME=merchivra DB_USER=merchivra
 # 将下方值换成本地真正的 merchivra 角色密码；不要提交到 Git
 export DB_PASSWORD='your-dedicated-database-password'
-export MERCHIVRA_BOOTSTRAP_USERNAME=your_admin
-export MERCHIVRA_BOOTSTRAP_PASSWORD='your-unique-16-plus-character-password'
-export MERCHIVRA_DEMO_ENABLED=false
+export BOOTSTRAP_USERNAME=your_admin
+export BOOTSTRAP_PASSWORD='your-unique-16-plus-character-password'
+export DEMO_ENABLED=false
 (cd apps/server && ./gradlew bootRun)
 ```
 

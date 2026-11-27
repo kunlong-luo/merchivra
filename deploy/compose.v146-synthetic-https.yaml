@@ -5,7 +5,7 @@
 services:
   server:
     environment:
-      MERCHIVRA_SESSION_COOKIE_SECURE: 'true'
-      MERCHIVRA_SPAPI_ENABLED: 'false'
-      MERCHIVRA_SPAPI_OAUTH_ENABLED: 'false'
-      MERCHIVRA_SPAPI_ALLOW_WRITES: 'false'
+      SESSION_COOKIE_SECURE: 'true'
+      SPAPI_ENABLED: 'false'
+      SPAPI_OAUTH_ENABLED: 'false'
+      SPAPI_ALLOW_WRITES: 'false'

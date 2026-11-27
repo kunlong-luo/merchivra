@@ -56,7 +56,7 @@ class LocalConnectionConfigTest {
     }
 
     @Test
-    void conciseNamesResolveAndLegacyDeploymentValuesTakePrecedence() throws IOException {
+    void conciseNamesResolveWithoutLegacyPlaceholderAliases() throws IOException {
         var config = resolver(Map.of(
                 "REDIS_HOST", "shared-redis",
                 "BOOTSTRAP_USERNAME", "local-admin",
@@ -64,26 +64,24 @@ class LocalConnectionConfigTest {
                 "EVIDENCE_AV_HOST", "clamd.internal",
                 "EVIDENCE_AV_PORT", "3311",
                 "SPAPI_OAUTH_ENABLED", "true",
-                "MERCHIVRA_SPAPI_OAUTH_ENABLED", "false",
                 "OPS_SCAN_INTERVAL_MS", "12345"));
         assertEquals("shared-redis", config.getProperty("spring.data.redis.host"));
         assertEquals("local-admin", config.getProperty("merchivra.bootstrap.username"));
         assertEquals("true", config.getProperty("merchivra.evidence.av-required"));
         assertEquals("clamd.internal", config.getProperty("merchivra.evidence.av-host"));
         assertEquals("3311", config.getProperty("merchivra.evidence.av-port"));
-        assertEquals("false", config.getProperty("merchivra.spapi.oauth.enabled"));
+        assertEquals("true", config.getProperty("merchivra.spapi.oauth.enabled"));
         assertEquals("12345", config.getProperty("merchivra.operations.scan-interval-ms"));
     }
 
     @Test
-    void explicitLegacyBlankAndTrueAreNotSilentlyOverridden() throws IOException {
-        var config = resolver(Map.of(
-                "MERCHIVRA_REDIS_PASSWORD", "", "REDIS_PASSWORD", "synthetic-only",
-                "MERCHIVRA_EVIDENCE_AV_REQUIRED", "true", "EVIDENCE_AV_REQUIRED", "false",
-                "MERCHIVRA_SESSION_COOKIE_SECURE", "true", "SESSION_COOKIE_SECURE", "false"));
-        assertEquals("", config.getProperty("spring.data.redis.password"));
-        assertEquals("true", config.getProperty("merchivra.evidence.av-required"));
-        assertEquals("true", config.getProperty("server.servlet.session.cookie.secure"));
+    void yamlContainsNoLegacyEnvironmentPlaceholders() throws IOException {
+        for (String resource : new String[]{"application.yml", "application-local.yml"}) {
+            try (var in = new ClassPathResource(resource).getInputStream()) {
+                String yaml = new String(in.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                org.junit.jupiter.api.Assertions.assertFalse(yaml.contains("MERCHIVRA_"));
+            }
+        }
     }
 
     @Test

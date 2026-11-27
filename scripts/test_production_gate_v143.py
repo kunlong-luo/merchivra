@@ -28,18 +28,18 @@ def compose():
         "server":{"ports":[{"host_ip":"127.0.0.1","published":"8080"}],
             "environment":{
                 "DB_PASSWORD":secret,
-                "MERCHIVRA_EVIDENCE_AV_REQUIRED":"true",
+                "EVIDENCE_AV_REQUIRED":"true",
                 "EVIDENCE_AV_HOST":"clamd.internal",
-                "MERCHIVRA_SESSION_COOKIE_SECURE":"true",
-                "MERCHIVRA_DEMO_ENABLED":"false",
+                "SESSION_COOKIE_SECURE":"true",
+                "DEMO_ENABLED":"false",
                 **{k:"false" for k in (
-                    "MERCHIVRA_SPAPI_ENABLED",
-                    "MERCHIVRA_SPAPI_OAUTH_ENABLED",
-                    "MERCHIVRA_SPAPI_PRIVATE_ENABLED",
-                    "MERCHIVRA_SPAPI_ALLOW_WRITES",
-                    "MERCHIVRA_SPAPI_VERIFICATION_ENABLED",
-                    "MERCHIVRA_ORDERS_SYNC_ENABLED",
-                    "MERCHIVRA_ORDERS_SYNC_LIVE_APPROVED")}}},
+                    "SPAPI_ENABLED",
+                    "SPAPI_OAUTH_ENABLED",
+                    "SPAPI_PRIVATE_ENABLED",
+                    "SPAPI_ALLOW_WRITES",
+                    "SPAPI_VERIFICATION_ENABLED",
+                    "ORDERS_SYNC_ENABLED",
+                    "ORDERS_SYNC_LIVE_APPROVED")}}},
         "web":{"ports":[{"host_ip":"127.0.0.1","published":"3000"}]},
         "next-web":{"ports":[{"host_ip":"127.0.0.1","published":"3001"}],
                     "healthcheck":{"test":["CMD","node"]},
@@ -86,8 +86,8 @@ class V143ProductionGateTests(unittest.TestCase):
 
     def test_current_demo_compose_does_not_pass_as_prod(self):
         c=compose()
-        c["services"]["server"]["environment"]["MERCHIVRA_DEMO_ENABLED"]="true"
-        c["services"]["server"]["environment"]["MERCHIVRA_SESSION_COOKIE_SECURE"]="false"
+        c["services"]["server"]["environment"]["DEMO_ENABLED"]="true"
+        c["services"]["server"]["environment"]["SESSION_COOKIE_SECURE"]="false"
         report=inspect(c,evidence(),SHA,NOW)
         self.assertEqual(report["status"],"BLOCKED")
         self.assertIn("SECURE_SESSION_AND_DEMO_OFF",
@@ -114,7 +114,7 @@ class V143ProductionGateTests(unittest.TestCase):
                     inspect(c,evidence(),SHA,NOW)["blockedChecks"]["compose"])
         self.assertTrue(private_dns_hostname("clamd.internal"))
         c=compose()
-        c["services"]["server"]["environment"]["MERCHIVRA_EVIDENCE_AV_REQUIRED"]="false"
+        c["services"]["server"]["environment"]["EVIDENCE_AV_REQUIRED"]="false"
         self.assertIn("PRIVATE_AV_HOST_CONFIGURED",
                       inspect(c,evidence(),SHA,NOW)["blockedChecks"]["compose"])
 
@@ -125,13 +125,19 @@ class V143ProductionGateTests(unittest.TestCase):
         self.assertIn("PRIVATE_AV_HOST_CONFIGURED",
                       inspect(c,evidence(),SHA,NOW)["blockedChecks"]["compose"])
 
+    def test_legacy_effective_server_env_is_rejected_even_with_safe_short_names(self):
+        c=compose()
+        c["services"]["server"]["environment"]["MERCHIVRA_SPAPI_ENABLED"]="true"
+        self.assertIn("SELLER_OAUTH_AND_WRITES_DISABLED",
+                      inspect(c,evidence(),SHA,NOW)["blockedChecks"]["compose"])
+
     def test_every_amazon_or_sync_enablement_blocks_production_gate(self):
-        for key in ("MERCHIVRA_SPAPI_ENABLED","MERCHIVRA_SPAPI_OAUTH_ENABLED",
-                    "MERCHIVRA_SPAPI_PRIVATE_ENABLED",
-                    "MERCHIVRA_SPAPI_ALLOW_WRITES",
-                    "MERCHIVRA_SPAPI_VERIFICATION_ENABLED",
-                    "MERCHIVRA_ORDERS_SYNC_ENABLED",
-                    "MERCHIVRA_ORDERS_SYNC_LIVE_APPROVED"):
+        for key in ("SPAPI_ENABLED","SPAPI_OAUTH_ENABLED",
+                    "SPAPI_PRIVATE_ENABLED",
+                    "SPAPI_ALLOW_WRITES",
+                    "SPAPI_VERIFICATION_ENABLED",
+                    "ORDERS_SYNC_ENABLED",
+                    "ORDERS_SYNC_LIVE_APPROVED"):
             with self.subTest(key=key):
                 c=compose()
                 c["services"]["server"]["environment"][key]="true"

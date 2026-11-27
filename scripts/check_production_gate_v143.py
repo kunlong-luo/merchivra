@@ -51,13 +51,13 @@ CONTROL_GROUPS = {
 }
 ALL_CODES = tuple(x for v in CONTROL_GROUPS.values() for x in v)
 REQUIRED_DISABLED = (
-    "MERCHIVRA_SPAPI_ENABLED",
-    "MERCHIVRA_SPAPI_OAUTH_ENABLED",
-    "MERCHIVRA_SPAPI_PRIVATE_ENABLED",
-    "MERCHIVRA_SPAPI_ALLOW_WRITES",
-    "MERCHIVRA_SPAPI_VERIFICATION_ENABLED",
-    "MERCHIVRA_ORDERS_SYNC_ENABLED",
-    "MERCHIVRA_ORDERS_SYNC_LIVE_APPROVED",
+    "SPAPI_ENABLED",
+    "SPAPI_OAUTH_ENABLED",
+    "SPAPI_PRIVATE_ENABLED",
+    "SPAPI_ALLOW_WRITES",
+    "SPAPI_VERIFICATION_ENABLED",
+    "ORDERS_SYNC_ENABLED",
+    "ORDERS_SYNC_LIVE_APPROVED",
 )
 NONPRODUCTION_PASSWORD_MARKERS = (
     "please_change", "ci_disposable", "test_only", "replace_me",
@@ -130,6 +130,7 @@ def safety_checks(compose: dict[str,Any]) -> dict[str,bool]:
         return isinstance(item,dict) and not item.get("ports")
     image=pg.get("image","") if isinstance(pg,dict) else ""
     av=env.get("EVIDENCE_AV_HOST")
+    legacy_backend_keys=any(str(key).startswith("MERCHIVRA_") for key in env)
     return {
         "PG18_PRIVATE_UNEXPOSED":
             isinstance(image,str) and image.startswith("postgres:18-")
@@ -138,12 +139,12 @@ def safety_checks(compose: dict[str,Any]) -> dict[str,bool]:
         "CLAMD_NO_PUBLIC_PORT":
             "clamav" not in services or no_public_ports(services.get("clamav")),
         "PRIVATE_AV_HOST_CONFIGURED":private_dns_hostname(av)
-            and str(env.get("MERCHIVRA_EVIDENCE_AV_REQUIRED","")).lower()=="true",
+            and str(env.get("EVIDENCE_AV_REQUIRED","")).lower()=="true",
         "SECURE_SESSION_AND_DEMO_OFF":
-            str(env.get("MERCHIVRA_SESSION_COOKIE_SECURE","")).lower()=="true"
-            and str(env.get("MERCHIVRA_DEMO_ENABLED","")).lower()=="false",
+            str(env.get("SESSION_COOKIE_SECURE","")).lower()=="true"
+            and str(env.get("DEMO_ENABLED","")).lower()=="false",
         "SELLER_OAUTH_AND_WRITES_DISABLED":
-            all(str(env.get(key,"")).lower()=="false" for key in REQUIRED_DISABLED),
+            not legacy_backend_keys and all(str(env.get(key,"")).lower()=="false" for key in REQUIRED_DISABLED),
         "NEXT_RUNTIME_LOCAL_AND_ROLLBACK_PRESENT":
             loopback_ports(nextweb) and loopback_ports(web)
             and isinstance(nextweb.get("healthcheck"),dict)

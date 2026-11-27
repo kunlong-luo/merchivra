@@ -35,7 +35,7 @@ docker compose --env-file .env -f deploy/compose.yaml ps
 | Amazon | `SPAPI_*`、`LWA_*` |
 | 自动化与核证 | `OPS_*`、`ORDERS_SYNC_*`、`CATALOG_SYNC_*`、`FINANCES_SYNC_*`、`PROFIT_REPORT_*`、`EXTERNAL_ISSUER_*`、`TEAM_ENABLED`、`CONTRACT_EXPORT_ENABLED` |
 
-所有原有后端 YAML 中的 `MERCHIVRA_*` 环境变量（已单独迁移的扫描 HOST 除外）继续作为兼容输入：同名旧变量显式存在（含 false 或空字符串）时，旧变量优先，防止覆盖 Compose 已强制的安全值。切换本机命名请删除旧项，不混用。现有 `.env.example` 是 Docker Compose 输入模板，仍使用其既有变量和生产校验；不要直接将其整体去前缀。Next 的 `MERCHIVRA_API_INTERNAL_URL` 不在本次后端范围。原件扫描 HOST 只接受先前已迁移的 `EVIDENCE_AV_HOST`；生产强制扫描，空主机拒绝启动，非 Demo 未启用扫描仍拒绝原件传输。所有真实 Amazon 开关保持关闭，基础/生产配置不提供密码、密钥默认值；仅显式 local profile 有维护者指定的公开测试占位值。
+后端 `application.yml` 与 `application-local.yml` 只使用短名，不再有旧环境变量占位符；原有 IDEA/宿主机环境变量应改成上表短名，删除旧项（Spring relaxed binding 可能仍识别部分旧名，不依赖该行为）。现有 `.env.example` 是 Docker Compose 输入模板，保持已有输入名；Compose 在 server 环境中显式映射为短名，生产门禁校验实际容器环境。Next 的 `MERCHIVRA_API_INTERNAL_URL` 和隔离测试脚本自身环境变量不在本次范围。扫描 HOST 继续使用 `EVIDENCE_AV_HOST`；生产强制扫描，空主机拒绝启动，非 Demo 未启用扫描仍拒绝原件传输。所有真实 Amazon 开关保持关闭，基础/生产配置不提供密码、密钥默认值；local profile 的测试默认值不用于非一次性环境。
 
 ## 3. 分别启动开发进程
 

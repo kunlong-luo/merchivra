@@ -25,6 +25,14 @@ done
 # Resolve repository root, independent of the caller's working directory.
 cd "$(dirname "$0")/.."
 
+# Keep smoke harness variables; translate checked disposable settings for Spring.
+export SPAPI_ENABLED="$MERCHIVRA_SPAPI_ENABLED"
+export SPAPI_OAUTH_ENABLED="$MERCHIVRA_SPAPI_OAUTH_ENABLED"
+export DEMO_ENABLED="${MERCHIVRA_DEMO_ENABLED:?}"
+export TEAM_ENABLED="${MERCHIVRA_TEAM_ENABLED:?}"
+export BOOTSTRAP_USERNAME="$MERCHIVRA_BOOTSTRAP_USERNAME"
+export BOOTSTRAP_PASSWORD="$MERCHIVRA_BOOTSTRAP_PASSWORD"
+export CONTRACT_EXPORT_ENABLED="${MERCHIVRA_CONTRACT_EXPORT_ENABLED:?}"
 set -euo pipefail
 ./apps/server/gradlew -p apps/server --no-daemon --console plain bootRun \
   > /tmp/merchivra-flyway.log 2>&1 &
