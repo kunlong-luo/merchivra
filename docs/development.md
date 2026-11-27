@@ -51,6 +51,43 @@ pnpm dev
 
 **Next.js 在 127.0.0.1:3000**，本地后端在 **127.0.0.1:8080**；默认 `next.config.ts` 将 `/api/**` 同源代理至后端。8080 不可用时前端不会凭空提供真实业务数据。只有显式执行 `pnpm dev:vite` 才会用 Vite 开发回退（默认端口 5173）。
 
+### 与 spark-iot-farm 共存：IDEA 私有配置（无需重复填写环境变量）
+
+宿主机可通过完整 `DB_URL` 或原有 `DB_HOST/DB_PORT/DB_NAME` 配置 JDBC；完整 URL 优先，用户名仍为 `DB_USER`，密码仍为 `DB_PASSWORD`（无默认密码）。Compose 与 CI 的默认 8080/3000 不变。不要将连接凭据写入共享 YAML 或 Git。
+
+如已有其他应用占用 8080/3000，可在仓库外的 `~/.config/merchivra/application.yml` 设置以下本地覆盖（真实密码自行填入；仅文件所有者可读写）：
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://127.0.0.1:5432/merchivra
+    username: merchivra
+    password: YOUR_LOCAL_DATABASE_PASSWORD
+server:
+  address: 127.0.0.1
+  port: 8081
+merchivra:
+  bootstrap:
+    username: admin
+    password: YOUR_LOCAL_ADMIN_PASSWORD
+  demo:
+    enabled: false
+```
+
+在 IDEA 的 MerchivraApplication 环境变量中设置 `SPRING_CONFIG_ADDITIONAL_LOCATION=file:/home/<你的Linux用户名>/.config/merchivra/`（替换用户名，目录末尾斜杠保留），删去冲突的旧启动参数；首次管理员密码至少16位。不要使用可被其他本机用户读取的文件，不要保存为共享 IDEA 配置。保持 Seller/Ads OAuth、同步、真实写入关闭，非 Demo 未核证文件仍不能传输。
+
+前端使用已存在的 Next 开发脚本（本地 3001）：
+
+```bash
+cd apps/web
+pnpm install --frozen-lockfile
+MERCHIVRA_API_INTERNAL_URL=http://127.0.0.1:8081 pnpm dev:next
+curl -i http://127.0.0.1:8081/api/v1/ping
+curl -i http://127.0.0.1:3001/api/v1/auth/me
+```
+
+预期 ping 200、匿名 auth/me 401。上述端口为宿主机开发示例，不修改 Compose 容器内端口或生产监听方式。
+
 ### 本地启动时显示“服务暂时未就绪”
 
 前端 `pnpm dev` **只启动 Next.js**，不会启动数据库或后端。首页先在同源代理 `GET /api/v1/auth/me` 检查 Session：**401 表示未登录（正常展示登录页）**；500/502/503/504、代理连接中断和后端异常表示无法完成检查，**不能当作密码错误，也不能绕过身份验证**。
