@@ -35,7 +35,7 @@ docker compose --env-file .env -f deploy/compose.yaml ps
 | Amazon | `SPAPI_*`、`LWA_*` |
 | 自动化与核证 | `OPS_*`、`ORDERS_SYNC_*`、`CATALOG_SYNC_*`、`FINANCES_SYNC_*`、`PROFIT_REPORT_*`、`EXTERNAL_ISSUER_*`、`TEAM_ENABLED`、`CONTRACT_EXPORT_ENABLED` |
 
-所有原有后端 YAML 中的 `MERCHIVRA_*` 环境变量（已单独迁移的扫描 HOST 除外）继续作为兼容输入：同名旧变量显式存在（含 false 或空字符串）时，旧变量优先，防止覆盖 Compose 已强制的安全值。切换本机命名请删除旧项，不混用。现有 `.env.example` 是 Docker Compose 输入模板，仍使用其既有变量和生产校验；不要直接将其整体去前缀。Next 的 `MERCHIVRA_API_INTERNAL_URL` 不在本次后端范围。原件扫描 HOST 只接受先前已迁移的 `EVIDENCE_AV_HOST`；生产强制扫描，空主机拒绝启动，非 Demo 未启用扫描仍拒绝原件传输。所有真实 Amazon 开关保持关闭，密码、密钥仍不提供默认值。
+所有原有后端 YAML 中的 `MERCHIVRA_*` 环境变量（已单独迁移的扫描 HOST 除外）继续作为兼容输入：同名旧变量显式存在（含 false 或空字符串）时，旧变量优先，防止覆盖 Compose 已强制的安全值。切换本机命名请删除旧项，不混用。现有 `.env.example` 是 Docker Compose 输入模板，仍使用其既有变量和生产校验；不要直接将其整体去前缀。Next 的 `MERCHIVRA_API_INTERNAL_URL` 不在本次后端范围。原件扫描 HOST 只接受先前已迁移的 `EVIDENCE_AV_HOST`；生产强制扫描，空主机拒绝启动，非 Demo 未启用扫描仍拒绝原件传输。所有真实 Amazon 开关保持关闭，基础/生产配置不提供密码、密钥默认值；仅显式 local profile 有维护者指定的公开测试占位值。
 
 ## 3. 分别启动开发进程
 
@@ -65,7 +65,7 @@ pnpm dev
 
 ### 与 spark-iot-farm 共存：仓库内置 local profile（推荐 Pop!_OS）
 
-宿主机可通过完整 `DB_URL` 或原有 `DB_HOST/DB_PORT/DB_NAME` 配置 JDBC；完整 URL 优先，用户名仍为 `DB_USER`，密码仍为 `DB_PASSWORD`（无默认密码）。Compose 与 CI 的默认 8080/3000 不变。不要将连接凭据写入共享 YAML 或 Git。
+宿主机可通过完整 `DB_URL` 或原有 `DB_HOST/DB_PORT/DB_NAME` 配置 JDBC；完整 URL 优先，用户名仍为 `DB_USER`，密码仍为 `DB_PASSWORD`（基础配置无默认密码，local profile 有公开测试默认值）。Compose 与 CI 的默认 8080/3000 不变。不要将连接凭据写入共享 YAML 或 Git。
 
 如已有其他应用占用 8080/3000，可在仓库外的 `~/.config/merchivra/application.yml` 设置以下本地覆盖（真实密码自行填入；仅文件所有者可读写）：
 
@@ -86,7 +86,7 @@ merchivra:
     enabled: false
 ```
 
-仓库内置 `application-local.yml` 默认连接 127.0.0.1:5432/merchivra 和 127.0.0.1:6379，后端只监听 127.0.0.1:8081，并自动读取上述用户私有 YAML（设置 `chmod 700 ~/.config/merchivra; chmod 600 ~/.config/merchivra/application.yml`）。IDEA 导入 Gradle 项目后直接选择共享运行配置 `Merchivra Local (spark-db)`；或者在已有 Spring Boot 运行配置将 Active profiles 设为 `local`，或执行 `./apps/server/gradlew -p apps/server --no-daemon bootRun --args='--spring.profiles.active=local'`。删去冲突的旧启动参数；首次管理员密码至少16位。Redis 密码如需使用也仅在私有 YAML 或环境中注入，默认 Session/限流关闭；不得清空/改动共享实例。保持 Seller/Ads OAuth、同步、真实写入关闭，非 Demo 未核证文件仍不能传输。
+仓库内置 `application-local.yml` 默认连接 127.0.0.1:5432/merchivra 和 127.0.0.1:6379，后端只监听 127.0.0.1:8081，并自动读取上述用户私有 YAML（设置 `chmod 700 ~/.config/merchivra; chmod 600 ~/.config/merchivra/application.yml`）。IDEA 导入 Gradle 项目后直接选择共享运行配置 `Merchivra Local (spark-db)`；或者在已有 Spring Boot 运行配置将 Active profiles 设为 `local`，或执行 `./apps/server/gradlew -p apps/server --no-daemon bootRun --args='--spring.profiles.active=local'`。删去冲突的旧启动参数；首次管理员密码至少16位。本地 profile 中的数据库/Redis 默认密码仅是维护者明确要求公开的测试值，未经实际认证验证，任何非一次性环境或共享服务的真实密码必须使用私有 YAML 或环境覆盖；默认 Session/限流关闭；不得清空/改动共享实例。保持 Seller/Ads OAuth、同步、真实写入关闭，非 Demo 未核证文件仍不能传输。
 
 前端使用新增的 Pop!_OS/Linux 专用 Next 开发脚本（本地 3001，自动代理 8081）：
 

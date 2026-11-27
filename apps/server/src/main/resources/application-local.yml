@@ -1,17 +1,19 @@
 # Native Pop!_OS / shared spark-db development only. Activate explicitly.
 # Container and CI defaults remain in application.yml.
+# Maintainer-approved PUBLIC TEST defaults only; never use for production.
+# Override with private configuration for any non-disposable data or credentials.
 spring:
   config:
     import: "optional:file:${user.home}/.config/merchivra/application.yml"
   datasource:
     url: "${DB_URL:jdbc:postgresql://${DB_HOST:127.0.0.1}:${DB_PORT:5432}/${DB_NAME:merchivra}}"
     username: ${DB_USER:merchivra}
-    password: ${DB_PASSWORD:}
+    password: ${DB_PASSWORD:merchivra}
   data:
     redis:
       host: ${MERCHIVRA_REDIS_HOST:${REDIS_HOST:127.0.0.1}}
       port: ${MERCHIVRA_REDIS_PORT:${REDIS_PORT:6379}}
-      password: ${MERCHIVRA_REDIS_PASSWORD:${REDIS_PASSWORD:}}
+      password: ${MERCHIVRA_REDIS_PASSWORD:${REDIS_PASSWORD:redis123456}}
 
 server:
   address: ${SERVER_ADDRESS:127.0.0.1}
