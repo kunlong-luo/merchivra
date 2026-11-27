@@ -15,9 +15,11 @@
 - 不做：上传原件、凭据或隐私到 Git；擅自开启真实 Seller/Ads OAuth、银行过账或实际利润；重复合成 UI、越界 V292、批准生产。
 - 依赖/阻塞：维护者提供合法真实样本、授权与独立财务批准；尚未取得。E1–E5、DEC-06/07/08、G1 未证。
 - 验收：按下列 E1–E5 的真实材料与可复算条件逐项取得独立证据，记录脱敏证据索引、范围、原币、归属、覆盖、未知项与签署状态；样本不等于完整期间，不解除生产 #104 NO-GO。
-- 唯一下一动作：维护者在受控环境准备一个真实订单/批次/结算证据包及授权范围，先核验 E1 签发主体和原件真实性；没有材料继续 BLOCKED。
+- 唯一下一动作：维护者按下方 E1 回执准备单一合法原始证据包，若适用运行既有 V270 离线样本工具，仅返回脱敏回执；没有材料继续 BLOCKED。
 - 交接核验：精确基线 [`efe94b5841b05dfa14de6fea0167a0bb3badebd2`](https://github.com/kunlong-luo/merchivra/commit/efe94b5841b05dfa14de6fea0167a0bb3badebd2) [快 CI #46004710153](https://github.com/kunlong-luo/merchivra/actions/runs/46004710153) SUCCESS：Next #140524860211、Java #140524860489、Compose #140524860757；PG18 #140524862581、JaCoCo、完整 Next HTTP 跳过。 [完整 A3 #46004710175](https://github.com/kunlong-luo/merchivra/actions/runs/46004710175) run_attempt=1，核查时 IN_PROGRESS，6/7 成功：#140524861405 success、#140524894832 success、#140524895041 success、#140524895375 success、#140524895440 in_progress、#140524895605 success、#140524895685 success；完整结论以该 run 为准。 旧配置维护详见[当前事实](../current-status.md)的历史快照。
 - 维护者本地验收回执（2026-11-27，执行人：维护者；精确本地 SHA、用例输入、逐项日志/截图未提供）：管理员登录/退出、左侧菜单滚动及视觉、商品与 SKU、供应商与采购、仓库及库存、订单与退款、FBA 货件、财务报表及利润页面、Redis 本机认证，9/9 报告通过，无报告缺陷。记录为维护者功能级验收，不声称逐操作覆盖、独立重算或当前 SHA 自动化验证；Redis 认证不等于本机启用 Redis Session/限流。 本机启动已获日志，不重复建库/重置管理员或重复九项验收，除非发生回归。V291 未 VERIFIED 前不得领取 V292；不得仅为回填自身文档 CI 反复提交。
+
+- 最新 CI 复核：精确基线 [`563fdd83b8ffa3fe926aa356032bd40e0c8ea10b`](https://github.com/kunlong-luo/merchivra/commit/563fdd83b8ffa3fe926aa356032bd40e0c8ea10b) [快 CI #46005205927](https://github.com/kunlong-luo/merchivra/actions/runs/46005205927) SUCCESS：Java #140526526124、Next #140526526495、Compose #140526526527 成功；PG18 #140526528662、JaCoCo、完整 Next HTTP 按快速范围跳过。完整 A3 属于 `efe94b5841b05dfa14de6fea0167a0bb3badebd2` [#46004710175](https://github.com/kunlong-luo/merchivra/actions/runs/46004710175) run_attempt=1，核查时 SUCCESS，7/7 成功（#140524861405 success、#140524894832 success、#140524895041 success、#140524895375 success、#140524895440 success、#140524895605 success、#140524895685 success）。
 
 ### V291 本地 E1 操作清单（维护者执行）
 
@@ -27,6 +29,53 @@
 2. 非 Demo 本地配置 `DEMO_ENABLED=false`，保持 `SPAPI_ENABLED=false`、`SPAPI_OAUTH_ENABLED=false`、`SPAPI_ALLOW_WRITES=false`、真实同步和 Seller/Ads OAuth 均关闭；数据库密码和首次管理员密码只在本地注入（管理员密码至少16位）。共存本机使用 IDEA 的 local profile 或 `./apps/server/gradlew -p apps/server --no-daemon bootRun --args='--spring.profiles.active=local'`（8081）；前端 `cd apps/web`、`pnpm install --frozen-lockfile`、`pnpm dev:local`（3001）。若走独立 Compose/普通开发，按对应指南使用 8080/3000，不混用。`curl -i http://127.0.0.1:8081/api/v1/ping` 与 `curl -i http://127.0.0.1:3001/api/v1/ping` 应200且 Spring 身份一致，匿名 `curl -i http://127.0.0.1:3001/api/v1/auth/me` 应401。使用已有 OWNER 本地登录、打开财务/订单/库存/采购、退出后再次检查会话401；短窗口滚动到导航底部并确认轨道隐藏；共享 Redis 仅用 `docker exec -it spark-redis redis-cli --askpass ping` 只读检查 PONG，不清空、不修改配置，不启用共享 Session/限流。公开测试默认密码仅用于一次性数据库，非一次性/真实材料环境必须以私有配置覆盖，并更换已创建测试账号密码，不把密码/Session 写入验收记录。不得用关闭鉴权解决5xx。
 3. 通过维护者合法授权的 Seller Central/Ads 官方渠道、供应商、货代、报关、WMS、银行等独立来源在应用外取得单一真实订单相关原始文件；按原始字节计算 SHA-256（Linux `sha256sum`、macOS `shasum -a 256`、Windows PowerShell `Get-FileHash -Algorithm SHA256`）。保存可验证的签发来源、账户/站点、报告版本、行键、授权与更正链；仅哈希匹配不证明签发者。
 4. 仅回传脱敏索引：样本代号、来源类别、币种、期间、文件/行数量、摘要核验结果、签发主体及授权核验 PASS/FAIL/UNKNOWN、独立复核状态、缺失或冲突项；禁止上传真实文件、凭据、银行账号或客户信息。E1 通过后继续同一 V291 的 E2–E5，未证保持 UNKNOWN/hold。样本闭环不代表整期或生产放行。
+
+### V291 E1 回执及 V270 既有工具（当前唯一执行项）
+
+**先只选一个真实订单、一个 Marketplace 和一种结算原币；不得为凑齐材料而编造记录。** 若暂时没有合法 Seller 资料，只反馈 `E1=UNKNOWN（未取得材料）`，不重复已通过的九项本机测试。此阶段无需开启 Merchivra Seller/Ads OAuth；可从本人已获授权的官方后台导出，并从供应商、货代、仓储及银行各自合法渠道取证。不要将真实资料导入当前公开测试密码环境；先采用独立受控环境、私有强密码、最小权限。
+
+| 原件类别（按样本适用性） | 本地独立检查 |
+| --- | --- |
+| Amazon 订单、退款及结算/费用原报告 | 同一账户、站点、订单/行键、结算期和原币；原始字节、签发渠道和授权可追溯 |
+| Ads 费用（仅适用时） | 官方实际收费/报表、适用期间及分配依据；未取得不得按0 |
+| 采购发票、收货/出库、物流/关税 | 原采购与实际销售批次、数量及原币费用唯一归属 |
+| 退款及仓库实际处置（如有） | 原销售批次、返仓/质检/处置、数量守恒；退款 COGS 未证不得回转 |
+| 结算对应银行真实回单/流水 | 账户归属和原币实际到账、费用及差异；银行原件在本地留存 |
+
+在私有目录保留原文件及原始字节 SHA-256；不要上传原件、摘要原文、真实订单号、金额、账号、凭据或签署件。V230 [缺口清单](../finance/v230-external-source-proof-dossier-and-owner-workflow.md) 的本地审计结果、V231 [浏览器摘要对照](../finance/v231-local-byte-claim-check-and-repository-pruning.md) 与 V270 本地金额一致都不是独立签发证明。V231 的浏览器上限为8 MiB；更大的原件使用受控本机散列，不绕过边界。
+
+**如已取得符合 V270 合同的同币种、单一正向结算及唯一对应银行条目**，复用[现有结算样本工具](../finance/manual-bank-payout-v60.md#v270--首笔真实结算样本本地核对代码待-a3真实材料-blocked)，不用启动 Spring 或数据库，不新增 API。先离线准备标准化银行 CSV（派生文件，不是银行原件），在仓库根执行，以下路径仅占位：
+
+```bash
+export MERCHIVRA_SAMPLE_REPORT=/private/path/settlement.tsv
+export MERCHIVRA_SAMPLE_BANK=/private/path/normalized-bank.csv
+export MERCHIVRA_SAMPLE_PRIVATE_DETAILS=false
+# 原报告为 gzip 时才设置 MERCHIVRA_SAMPLE_GZIP=true，否则 false
+export MERCHIVRA_SAMPLE_GZIP=false
+./apps/server/gradlew -p apps/server --offline --no-daemon --console=plain checkLocalSettlementSample
+unset MERCHIVRA_SAMPLE_REPORT MERCHIVRA_SAMPLE_BANK MERCHIVRA_SAMPLE_GZIP MERCHIVRA_SAMPLE_PRIVATE_DETAILS
+```
+
+仅回传状态码，不转发完整 Gradle 输出。 `LOCAL_SAMPLE_AMOUNTS_AGREE_UNVERIFIED` 只说明有限算术一致；输入不支持、分拆合并、跨币种、冲正、差异保持 UNKNOWN/HOLD，不能强行修数据。无材料则 NOT_RUN。E1 签发及授权须由合法渠道与独立复核人员判定，V270 不能代替 E1/E2–E5。
+
+**脱敏回执（复制填写，UNKNOWN/NOT_RUN 为初始值，不是假通过）：**
+
+```text
+样本代号：SAMPLE-01（自拟）
+本机代码 SHA：
+Marketplace 范围：单站点/UNKNOWN
+结算原币：UNKNOWN
+原件类别及数量：UNKNOWN
+原始字节重算：UNKNOWN
+独立签发来源核验：UNKNOWN
+合法授权与更正链：UNKNOWN
+独立复核状态：UNKNOWN
+V270 状态：NOT_RUN
+缺失/冲突类别：
+E1：UNKNOWN
+```
+
+只有实际授权、原始材料及独立验证均满足才由维护者确认 E1；再推进同一 V291 的 E2–E5。DEC-06/07/08 尚待正式确认，见[决策登记](../governance/decision-register.md)，不自行签署或改变利润状态。
 
 ## 后续队列（一次只领取一项）
 

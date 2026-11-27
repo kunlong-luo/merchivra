@@ -12,6 +12,8 @@
 - 财务与上线：核对该基线 CostProfitReadinessService 第308–313行仍 false/false/false/null，application.yml 中 SPAPI/OAuth/写入默认 false，V143 gate 始终拒绝批准/部署，[#104](https://github.com/kunlong-luo/merchivra/issues/104) OPEN。E1–E5、DEC-06/07/08、G1 未证；78/100 不变，realizedNetProfit=null，OAuth OFF，NO-GO。
 - 唯一下一动作：维护者按 [本地验收/E1 清单](roadmap/current-plan.md) 在受控环境准备单一合法原始证据包，回传脱敏索引；无材料 V291 继续 BLOCKED，不领取 V292。真实资料不得上传 Git 或聊天；公开测试凭据仅限一次性环境。
 
+- 本轮核对：精确基线 [`563fdd83b8ffa3fe926aa356032bd40e0c8ea10b`](https://github.com/kunlong-luo/merchivra/commit/563fdd83b8ffa3fe926aa356032bd40e0c8ea10b) [快 CI #46005205927](https://github.com/kunlong-luo/merchivra/actions/runs/46005205927) SUCCESS：Java #140526526124、Next #140526526495、Compose #140526526527 成功；PG18 #140526528662、JaCoCo、完整 Next HTTP 按快速范围跳过。完整 A3 属于 `efe94b5841b05dfa14de6fea0167a0bb3badebd2` [#46004710175](https://github.com/kunlong-luo/merchivra/actions/runs/46004710175) run_attempt=1，核查时 SUCCESS，7/7 成功（#140524861405 success、#140524894832 success、#140524895041 success、#140524895375 success、#140524895440 success、#140524895605 success、#140524895685 success）。 V230 服务仍返回外部真实性 false/null，V231 仅本地 SHA 比对，V270 既有离线 `checkLocalSettlementSample` 仅限定单一同币种结算算术一致；DEC-06/07/08 登记仍待确认。未获真实样本，不运行真实工具、不新增业务代码。现行计划新增可直接执行的私有取证/V270 命令与脱敏回执；E1 BLOCKED，评分不变。新提交 `docs(v291): operationalize private evidence intake` 仅文档，独立快 CI 待核。
+
 ## V291 本地配置与前端维护
 
 - 以 [精确历史快照](https://github.com/kunlong-luo/merchivra/blob/5bebad3e773161edacc2b1b03becd430686c45fd/docs/current-status.md) 保留全部配置维护、失败/修复与运行记录。旧认证 Vite 已退役，Next 是唯一认证 ERP；公开 Pages/Vitest 仍使用必要 Vite 工具链。左侧导航隐藏滚动条、保留可滚动性；Chromium 已在上述代码 SHA 合成验证，维护者人工视觉已报告通过。
@@ -41,7 +43,7 @@ V289 精确代码 [`6583c63e57cfc0c7279e2f64dd1989719d23696b`](https://github.co
 | 独立成熟度 | [78/100（V290 已验收复评）](governance/project-scorecard-v231-2026-11-24.md)；真实利润10/25，非生产就绪比例 |
 | 历史完整 A3 | V280 r2 `07fccfb4be98cdaee4d46f592c804dd8c5826d75` [#45742981332](https://github.com/kunlong-luo/merchivra/actions/runs/45742981332) 7/7；含实际 PG18 101行全量类型发现及双人审核 |
 | 独立 Redis | V281 `cb9bb88eea150384fa87a121c60e2a11d4bf42cf` [#45743425032](https://github.com/kunlong-luo/merchivra/actions/runs/45743425032) SUCCESS：Redis8、真实登录/CSRF、重启身份、断连拒绝、GCRA |
-| 最新主线发布候选 | V290 精确候选完整 A3 7/7；Next-only 基线快 CI 成功，新的完整 A3 6/7 成功（in_progress）；本机9/9维护者报告通过；本次文档 SHA 快 CI 另核 |
+| 最新主线发布候选 | V290 精确候选完整 A3 7/7；Next-only 基线快 CI 成功，新的完整 A3 7/7 成功（completed）；本机9/9维护者报告通过；上一文档 SHA 快 CI 已成功；本轮文档 SHA 另核 |
 | 财务及授权 | `realizedNetProfit=null`、`bankReconciled=false`、`externallyVerified=false`；Seller/Ads OAuth OFF；真实 E1–E5/DEC/G1 未证 |
 | 生产 | pre-alpha；[#104](https://github.com/kunlong-luo/merchivra/issues/104) NO-GO；目标 G2/G3 TLS/KMS/备份恢复/告警及正式签署缺失 |
 
