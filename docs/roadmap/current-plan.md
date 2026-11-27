@@ -16,8 +16,15 @@
 - 依赖/阻塞：维护者提供合法真实样本、授权与独立财务批准；尚未取得。E1–E5、DEC-06/07/08、G1 未证。
 - 验收：按下列 E1–E5 的真实材料与可复算条件逐项取得独立证据，记录脱敏证据索引、范围、原币、归属、覆盖、未知项与签署状态；样本不等于完整期间，不解除生产 #104 NO-GO。
 - 唯一下一动作：维护者在受控环境准备一个真实订单/批次/结算证据包及授权范围，先核验 E1 签发主体和原件真实性；没有材料继续 BLOCKED。
-- 交接核验：精确核验 HEAD [`c5195f432aeb81584a0dfd8e3d332361427cb439`](https://github.com/kunlong-luo/merchivra/commit/c5195f432aeb81584a0dfd8e3d332361427cb439)，[快 CI #45930185858](https://github.com/kunlong-luo/merchivra/actions/runs/45930185858) SUCCESS（run_attempt=1）：Java/Gradle #140280763791、Compose/cadence/文档守卫 #140280763960、Next/Vite/Orval/TypeScript/Vitest #140280764002 均成功；PG18 #140280765160、JaCoCo、完整 Next HTTP 按快速 CI 范围跳过，无失败 job。与 V290 精确候选相比仅三份权威文档变更（2 commits），完整 A3 7/7 仍只对应 V290 候选。
-- 本次仅记录新 CI 证据和阻塞，不改业务代码、迁移或工作流；提交标题 `docs(v291): verify latest handoff CI and retain evidence block`，parent 为 `c5195f432aeb81584a0dfd8e3d332361427cb439`。本地网络无法解析 GitHub，未能克隆并执行提交前文档/cadence 守卫；新提交快 CI 需按其精确 SHA 独立核查，不继承旧 SHA。无新外部材料不得重复开发或仅为增加版本/评分而提交；后续仅核对本次 CI 并继续等待 E1 材料。 V291 未 VERIFIED 前不得领取 V292。
+- 交接核验：精确核验 HEAD [`d98f9601ddf2b32e2707bd5daba9ac515a164e86`](https://github.com/kunlong-luo/merchivra/commit/d98f9601ddf2b32e2707bd5daba9ac515a164e86)，[快 CI #45931034746](https://github.com/kunlong-luo/merchivra/actions/runs/45931034746) SUCCESS（run_attempt=1）：Java/Gradle #140283452228、Compose/cadence/文档与生产门禁守卫 #140283452063、Next/Vite/Orval/TypeScript/单元测试 #140283452319 成功；PG18 #140283453728、JaCoCo、完整 Next HTTP 按快 CI 范围跳过；无失败 job。与 V290 候选相比仅三份权威文档变更（3 commits），完整 A3 7/7 仅属于 V290 候选。该 SHA 的 CostProfitReadinessService.java 285–320 行仍 false/false/false/null，check_production_gate_v143.py 232–253 行仍禁止生产批准和部署；#104 OPEN，NO-GO。
+- 本轮仅回填已独立核实的快 CI 与明确本地 E1 操作步骤，不改业务代码、迁移或工作流。提交标题 `docs(v291): record verified handoff and local E1 checklist`，parent 为 `d98f9601ddf2b32e2707bd5daba9ac515a164e86`。执行环境 DNS 无法解析 GitHub，无法克隆并运行提交前文档/cadence 守卫；新提交快 CI 尚待按精确 SHA 核对，不继承已有绿灯。无真实材料继续 BLOCKED；不得仅为回填自身文档 CI 反复提交，下一次可在提供真实材料时合并记录。 V291 未 VERIFIED 前不得领取 V292。
+
+### V291 本地 E1 操作清单（维护者执行）
+
+1. 在本地 `git switch main`、`git pull --ff-only`、`git rev-parse HEAD`；记录精确 SHA。按[开发指南](../development.md)及[数据库指南](../deployment/local-spark-db.md)使用独立 PG18 数据库/低权限角色，Java25/Gradle 与 Next16/pnpm；已有 spark-db 可用 `deploy/compose.spark-db.yaml`，不要和内置 Compose 合并。内置 `deploy/compose.yaml` **强制 Demo=true**，只能测试虚构数据，禁止导入真实材料。真实证据先在应用外的受控本地目录保存，不上传到应用或 Git。
+2. 非 Demo 本地配置 `MERCHIVRA_DEMO_ENABLED=false`，保持 `MERCHIVRA_SPAPI_ENABLED=false`、`MERCHIVRA_SPAPI_OAUTH_ENABLED=false`、`MERCHIVRA_SPAPI_ALLOW_WRITES=false`、真实同步和 Seller/Ads OAuth 均关闭；数据库密码和首次管理员密码只在本地注入（管理员密码至少16位）。通过宿主机 Gradle `./apps/server/gradlew -p apps/server --no-daemon bootRun`，另一个终端 `cd apps/web`、`pnpm install --frozen-lockfile`、`pnpm dev`；或按 spark-db 指南启动两容器。`curl -i http://127.0.0.1:8080/api/v1/ping` 应200，匿名 `curl -i http://127.0.0.1:3000/api/v1/auth/me` 应401；登录后检查财务、订单、库存页面。不得用关闭鉴权解决 5xx。
+3. 通过维护者合法授权的 Seller Central/Ads 官方渠道、供应商、货代、报关、WMS、银行等独立来源在应用外取得单一真实订单相关原始文件；按原始字节计算 SHA-256（Linux `sha256sum`、macOS `shasum -a 256`、Windows PowerShell `Get-FileHash -Algorithm SHA256`）。保存可验证的签发来源、账户/站点、报告版本、行键、授权与更正链；仅哈希匹配不证明签发者。
+4. 仅回传脱敏索引：样本代号、来源类别、币种、期间、文件/行数量、摘要核验结果、签发主体及授权核验 PASS/FAIL/UNKNOWN、独立复核状态、缺失或冲突项；禁止上传真实文件、凭据、银行账号或客户信息。E1 通过后继续同一 V291 的 E2–E5，未证保持 UNKNOWN/hold。样本闭环不代表整期或生产放行。
 
 ## 后续队列（一次只领取一项）
 
