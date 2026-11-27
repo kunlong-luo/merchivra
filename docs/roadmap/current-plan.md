@@ -1,29 +1,29 @@
 # Merchivra · 唯一现行 P0 执行计划
 
-**CURRENT · 2026-11-26 · 单任务会话队列。** 以 [AGENTS.md](../../AGENTS.md) 为规则，[当前事实](../current-status.md) 为验收事实；main / Gradle / pnpm，#104 NO-GO，realizedNetProfit=null。优先级不代表生产授权。
+**CURRENT · 2026-11-27 · 单任务会话队列。** 以 [AGENTS.md](../../AGENTS.md) 为规则，[当前事实](../current-status.md) 为验收事实；main / Gradle / pnpm，#104 NO-GO，realizedNetProfit=null。优先级不代表生产授权。
 
 ## 当前任务
 
-### V290 · 精确候选 SHA 完整 A3 与 RC 工程验收
+### V291 · 单一真实订单/批次/结算财务证据闭环
 
-- Task: V290
-- State: IMPLEMENTED_PENDING_VERIFICATION
+- Task: V291
+- State: BLOCKED
 - Priority: P0
-- Basis: V289 `6583c63e57cfc0c7279e2f64dd1989719d23696b`，已 VERIFIED (synthetic)；领取时 main `7a2471e1fe4d2982d4a3e45bfaa9f10ee5cdb1f3` 快 CI [#45809895628](https://github.com/kunlong-luo/merchivra/actions/runs/45809895628) SUCCESS（run_attempt=1）。候选定位：唯一提交标题 `ci(v290): select release candidate A3 and record pending verification`、parent 为领取时 main。见[当前事实](../current-status.md#当前任务交接)。
-- 目标：取得精确候选的完整 A3 7/7，并核实登录退出、缓存隔离及非法路由回归；形成 RC 工程验收结论，不自动上线。
-- 范围：复用 [完整 A3 工作流](https://github.com/kunlong-luo/merchivra/actions/workflows/milestone-validation.yml)、已有 Session/CSRF、Next/Vite 和合成 fixture；先核对覆盖，只有具体日志或验收缺口证明必要时才补最小代码/测试。
-- 不做：重复 V289 已验证修复、无依据重构、升级依赖、真实 OAuth/银行接入、解锁利润或生产发布。
-- 依赖：V289 VERIFIED；有权启动 Actions 的维护者/执行环境和一次性合成 PG18。
-- 验收：同一精确候选 SHA 完整 A3 7/7，实际 PG18/Flyway、HTTP、Chromium、Compose/mock chain 与登录退出/缓存隔离/非法路由回归有明确非跳过证据；记录 run URL、run_attempt、各 job 成败/跳过及日志标记。失败续 V290；成功只确认 RC 工程范围。
-- 下一动作：核对上述候选精确 SHA 的快 CI、完整 A3 运行与全部 job/log marker；候选通过前不得关闭 V290。连接不支持手动 dispatch，故复用已存在的 milestone 路径变更触发器（只更新 V290 标签，不改测试/触发范围）；若未出现运行，由维护者在同一候选 main HEAD 手动运行 V290-A3-release-candidate。旧 SHA 绿灯不能继承。
-- 后续：V290 VERIFIED 后按队列处理 V291；缺真实材料时保持 BLOCKED。
+- Basis: V290 精确候选 `f5c42fa4669cf8089363ddcb6c7d884c414d0aae` [快 CI #45812139153](https://github.com/kunlong-luo/merchivra/actions/runs/45812139153) 与 [完整 A3 #45812139166](https://github.com/kunlong-luo/merchivra/actions/runs/45812139166) SUCCESS（run_attempt=1，7/7），已 VERIFIED (synthetic)，见[当前事实](../current-status.md)。本次 V290 会话只做关闭交接，不实施 V291。
+- 目标：对单一合法、可独立复算的真实订单/批次/结算，按 E1–E5 核验签发主体、原始字节、原币费用、货物与退款 COGS、银行归属和正式会计批准。
+- 范围：只在合法本地/受控环境取得证据并复用已有模型；仅针对真实样本证明的缺口设计最小改动和正反例。
+- 不做：上传原件、凭据或隐私到 Git；擅自开启真实 Seller/Ads OAuth、银行过账或实际利润；重复合成 UI、越界 V292、批准生产。
+- 依赖/阻塞：维护者提供合法真实样本、授权与独立财务批准；尚未取得。E1–E5、DEC-06/07/08、G1 未证。
+- 验收：按下列 E1–E5 的真实材料与可复算条件逐项取得独立证据，记录脱敏证据索引、范围、原币、归属、覆盖、未知项与签署状态；样本不等于完整期间，不解除生产 #104 NO-GO。
+- 唯一下一动作：维护者在受控环境准备一个真实订单/批次/结算证据包及授权范围，先核验 E1 签发主体和原件真实性；没有材料继续 BLOCKED。
+- 交接文档提交标题 `docs(v290): close verified release candidate and hand off blocked V291`，parent 为上述候选；快 CI 另核，不继承旧 SHA。V291 未 VERIFIED 前不得领取 V292。
 
 ## 后续队列（一次只领取一项）
 
 | ID | 状态 | 前置 | 验收标准 |
 | --- | --- | --- | --- |
 | V289 | VERIFIED | V287 | 快 CI、独立 Chromium、Pages 全部成功，见当前事实 |
-| V290 | IMPLEMENTED_PENDING_VERIFICATION | V289 VERIFIED | 精确候选 SHA 完整 A3 7/7、登录退出/缓存隔离及非法路由回归；记录 RC 工程验收，不自动上线 |
+| V290 | VERIFIED | V289 VERIFIED | 精确候选 SHA 完整 A3 7/7、登录退出/缓存隔离及非法路由回归通过；仅 RC 工程验收 |
 | V291 | BLOCKED | 维护者提供合法真实样本/授权 | E1–E5 单一真实订单/批次/结算及独立复算、G1/DEC 批准；未证不激活 |
 | V292 | BLOCKED | 目标环境及负责人 | G2/G3 实际安全、备份恢复及告警签署；#104 独立发布决定 |
 

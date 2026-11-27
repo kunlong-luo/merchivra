@@ -1,17 +1,22 @@
 # Merchivra · 当前事实与验收状态
 
-**CURRENT · 2026-11-26 · V290 候选已提交，完整验收待核。** 这是当前快照，不是版本流水账。每次开工先核对实际 main HEAD 与 Actions；本页可能滞后于正在运行的 CI。任务顺序仅看 [current-plan.md](roadmap/current-plan.md)。
+**CURRENT · 2026-11-27 · V290 RC 工程验收已完成；V291 外部材料阻塞。** 这是当前快照，不是版本流水账。每次开工先核对实际 main HEAD 与 Actions；本页可能滞后于正在运行的 CI。任务顺序仅看 [current-plan.md](roadmap/current-plan.md)。
 
 ## 当前任务交接
 
-- Task: V290
-- State: IMPLEMENTED_PENDING_VERIFICATION
-- Basis: `7a2471e1fe4d2982d4a3e45bfaa9f10ee5cdb1f3`（领取时 main HEAD；V289 交接文档快 CI 已独立核实）。
-- 候选：本次唯一提交标题 `ci(v290): select release candidate A3 and record pending verification`，parent 为上述 Basis；下一会话以实际 Git SHA 与 Actions head_sha 确认。仅改里程碑标识及三个权威文档，无业务代码、测试逻辑、授权或触发范围改变。
-- 基线快 CI [#45809895628](https://github.com/kunlong-luo/merchivra/actions/runs/45809895628) SUCCESS（run_attempt=1，精确 Basis）：Java/Gradle、Next/Vite、Compose 静态检查（含 cadence/文档守卫）成功；PG18 job、JaCoCo、Next 完整 HTTP smoke 跳过。不是候选的新 CI。
-- 源码核查：`scripts/smoke_next_session_csrf_v101.py` 已断言真实 Session/CSRF、no-store、匿名客户端隔离、11 路由无 SSR 私密信息、非法路由 404、退出后 401；`scripts/smoke_browser_layout.mjs` 已断言 V286/V289 持久根、前后导航及无遗留选择/重放。复用完整 A3 原有 7 job 结构，未重复实现。
-- 当前 GitHub 连接没有 workflow_dispatch 写入能力；采用现行 milestone 工作流自带 main 路径变更触发器，更新默认 run-name、实际日志标识和可选里程碑为 V290-A3-release-candidate。未扩大 CI cadence。候选的运行 ID、run_attempt、7/7 job 和日志 marker 未取得前一律待验证；未本地执行守卫，须以候选 CI 为准。
-- 唯一下一动作：查询候选精确 SHA 的快 CI 和完整 A3，核实全部 job、V144 与 V286/V289 marker 及 PG18/Compose 实跑；未创建 run 则由维护者在同一 main HEAD 手动运行 release-candidate 或 V290-A3-release-candidate，失败续 V290，全部通过才关闭并转交 V291。#104 NO-GO 不变。
+- Task: V291
+- State: BLOCKED
+- Basis: V290 已 VERIFIED (synthetic)，精确候选 `f5c42fa4669cf8089363ddcb6c7d884c414d0aae`，完整 A3 7/7；本会话只关闭 V290，未领取或实施 V291。
+- 阻塞：维护者未提供合法真实第三方原件/授权及独立财务批准；E1–E5、DEC-06/07/08、G1 未证。真实 Seller/Ads OAuth OFF，realizedNetProfit=null，#104 NO-GO。
+- 唯一下一动作：维护者在合法本地/受控环境准备一个可独立复算的真实订单/批次/结算证据包（不上传原件或凭据），按现行计划从 E1 签发主体及原件真实性开始；材料缺失继续 BLOCKED，不重复合成 UI 或跳转 V292。
+- 本次交接仅更新三个权威文档，不改变业务代码、工作流、授权或生产边界。提交定位：`docs(v290): close verified release candidate and hand off blocked V291`，parent 为上述候选 SHA。未在本地运行文档/cadence 守卫；新文档提交的快 CI 须单独核验，不继承候选绿灯。
+
+## 最近已关闭任务：V290 · VERIFIED (synthetic)
+
+- V290 候选精确 SHA [`f5c42fa4669cf8089363ddcb6c7d884c414d0aae`](https://github.com/kunlong-luo/merchivra/commit/f5c42fa4669cf8089363ddcb6c7d884c414d0aae)，run_attempt=1；[快 CI #45812139153](https://github.com/kunlong-luo/merchivra/actions/runs/45812139153) SUCCESS，Java25/Gradle、Next/Vite/Orval/TypeScript/Vitest、Compose 与 cadence/文档守卫成功；PG18 job、JaCoCo、完整 Next HTTP 按快 CI 范围跳过。[完整 A3 #45812139166](https://github.com/kunlong-luo/merchivra/actions/runs/45812139166) SUCCESS 7/7：基线 #139882418732、Compose/mock-chain #139882455787、Chromium #139882456008、Next/React #139882456066、Compose 静态 #139882456115、Java/JaCoCo #139882456169、实际 PG18/Flyway #139882456626 均成功；仅失败诊断步骤跳过，无失败 job。
+- 原始日志：基线 MILESTONE=V290-A3-release-candidate；[HTTP/Compose job](https://github.com/kunlong-luo/merchivra/actions/runs/45812139166/job/139882455787) PASS V144（11 routes、真实 Spring Session/CSRF、匿名隔离、退出失效）、V122、V146；[Chromium job](https://github.com/kunlong-luo/merchivra/actions/runs/45812139166/job/139882456008) PASS V286 committed route, persistent session root, history back/forward, no retained category selection or replay；PASS V289 finance reconciliation and full category browser journey, including unique history re-entry。[PG18 job](https://github.com/kunlong-luo/merchivra/actions/runs/45812139166/job/139882456626) PostgreSQL 18.7、PASS V144、实际 PITR/Alertmanager、非跳过 PG18 JUnit marker；[Next job](https://github.com/kunlong-luo/merchivra/actions/runs/45812139166/job/139882456066) PASS unknown-route 404。精确源码 scripts/smoke_next_session_csrf_v101.py 确认 no-store、11 路由 SSR 无私密数据、独立匿名客户端、非法路由404及退出后401断言。全部为隔离合成证据。
+- 候选相对于领取时 Basis `7a2471e1fe4d2982d4a3e45bfaa9f10ee5cdb1f3` 仅改变 milestone 默认标签/可选项/日志及三个权威文档；没有业务实现、测试逻辑或触发范围变更。无需重复修复 V289。RC 工程范围已验收，不是生产批准；评分仍 78/100，真实利润 10/25。
+- [候选提交时待验证事实（不可变快照）](https://github.com/kunlong-luo/merchivra/blob/f5c42fa4669cf8089363ddcb6c7d884c414d0aae/docs/current-status.md)。
 
 ## 最近已关闭任务：V289 · VERIFIED (synthetic)
 
@@ -20,17 +25,17 @@ V289 精确代码 [`6583c63e57cfc0c7279e2f64dd1989719d23696b`](https://github.co
 - [快 CI #45809305462](https://github.com/kunlong-luo/merchivra/actions/runs/45809305462) SUCCESS：Java25/Gradle、Compose（含文档与 cadence 守卫）、Orval、TypeScript、Vitest 97 个测试文件（含 [AST 专项 job #139872701718](https://github.com/kunlong-luo/merchivra/actions/runs/45809305462/job/139872701718) 1 项）、Next/Vite 构建通过；PG18 job、JaCoCo、完整 Next HTTP smoke 跳过。
 - [独立 Chromium #45809305581](https://github.com/kunlong-luo/merchivra/actions/runs/45809305581) SUCCESS：[job #139872673779](https://github.com/kunlong-luo/merchivra/actions/runs/45809305581/job/139872673779) Vite 与 Next 实际 Chromium 合成场景通过；原始日志确认 `PASS V286 committed route, persistent session root, history back/forward, no retained category selection or replay` 与 `PASS V289 finance reconciliation and full category browser journey, including unique history re-entry`。不再重复 V289 修复。
 - [Pages #45809305362](https://github.com/kunlong-luo/merchivra/actions/runs/45809305362) SUCCESS：只读静态构建、无 live OAuth 检查与公开演示部署成功，不等于生产 ERP。
-- 实际差异仅 AST `?raw` 导入、浏览器断言/marker 与任务文档；无依赖、运行时权限、金额/租户契约变更。V289 无新增失败，完整 A3 尚未执行。原 V286/V287 失败和修复前交接见 [V289 旧事实快照](https://github.com/kunlong-luo/merchivra/blob/6583c63e57cfc0c7279e2f64dd1989719d23696b/docs/current-status.md)。
+- 实际差异仅 AST `?raw` 导入、浏览器断言/marker 与任务文档；无依赖、运行时权限、金额/租户契约变更。V289 无新增失败；后续 V290 精确候选已完整 A3 验收。原 V286/V287 失败和修复前交接见 [V289 旧事实快照](https://github.com/kunlong-luo/merchivra/blob/6583c63e57cfc0c7279e2f64dd1989719d23696b/docs/current-status.md)。
 
 ## 核心项目状态
 
 | 项目 | 当前可独立证实的状态 |
 | --- | --- |
 | 技术栈 | main 直接开发；Java 25 / Spring Boot 4.1.2 / Gradle / PostgreSQL 18 / Flyway；React 19 / Next.js 16.4.5 / Node 24 / pnpm 12.20.0；Vite 仅回退及虚构 Pages |
-| 独立成熟度 | [78/100（V290 待验收复评）](governance/project-scorecard-v231-2026-11-24.md)；真实利润10/25，非生产就绪比例 |
+| 独立成熟度 | [78/100（V290 已验收复评）](governance/project-scorecard-v231-2026-11-24.md)；真实利润10/25，非生产就绪比例 |
 | 历史完整 A3 | V280 r2 `07fccfb4be98cdaee4d46f592c804dd8c5826d75` [#45742981332](https://github.com/kunlong-luo/merchivra/actions/runs/45742981332) 7/7；含实际 PG18 101行全量类型发现及双人审核 |
 | 独立 Redis | V281 `cb9bb88eea150384fa87a121c60e2a11d4bf42cf` [#45743425032](https://github.com/kunlong-luo/merchivra/actions/runs/45743425032) SUCCESS：Redis8、真实登录/CSRF、重启身份、断连拒绝、GCRA |
-| 最新主线发布候选 | V290 候选完整 A3 待验证；V289 精确代码快 CI/独立 Chromium/Pages 全绿，交接 Basis 快 CI 独立成功；旧 SHA 绿灯不能继承 |
+| 最新主线发布候选 | V290 精确候选快 CI 与完整 A3 7/7 已成功；交接文档 SHA 快 CI 另核，不继承 |
 | 财务及授权 | `realizedNetProfit=null`、`bankReconciled=false`、`externallyVerified=false`；Seller/Ads OAuth OFF；真实 E1–E5/DEC/G1 未证 |
 | 生产 | pre-alpha；[#104](https://github.com/kunlong-luo/merchivra/issues/104) NO-GO；目标 G2/G3 TLS/KMS/备份恢复/告警及正式签署缺失 |
 
@@ -43,7 +48,7 @@ V289 精确代码 [`6583c63e57cfc0c7279e2f64dd1989719d23696b`](https://github.co
 - **V230B**：从 V228 暂存或重放来源点击“查看缺口”；单个 RR 快照复用 V229 和 V182/V165/V94/V102 的审计/结算/重复候选，按八类来源列出哪些**真正独立第三方原始文件、签发主体、原币收费与成本守恒**尚未证明。Next/Orval/Zod 一律拒绝伪造的 `VERIFIED`、跨 Marketplace、错误原币、非 null 真实利润等响应；报告没有外部真实过账行为。详见 [V230](finance/v230-external-source-proof-dossier-and-owner-workflow.md)。
 - **V231 已验收（代码 SHA `9ff02147de17`、完整 A3 7/7）**：新增浏览器本地 SHA-256 按字节重算，最多读取 8 MiB 用户合法持有的文件，与 V91 **用户自述**摘要比较；不上传/保存文件或文件名，MATCH 仅称 `LOCAL_BYTES_MATCH_USER_CLAIM_ONLY`，不变更 V91/V182 审计、外部真实性或 `realizedNetProfit`。另外删去重复 `Agent.md` 和过时 V120 草稿，重建根中英文 README 目录用途、文档索引与自动目录守卫。详见 [V231 交付与清理](finance/v231-local-byte-claim-check-and-repository-pruning.md)。
 
-- **后续已实现**：V249–V269 本地批次/退款成本候选、证据与双人复核（无实际回转），见 [退款成本契约](finance/v212-refund-original-sale-lot-quantity-envelope.md)；V270 本地报告/银行样本只读比较，见 [V60/V270](finance/manual-bank-payout-v60.md)；V271–V280 结算来源分组、末级分类、不可变映射、独立审核 HTTP、Next 工作台与全量类型发现，见 [结算契约](finance/v198-settlement-source-claim-integrity.md)。V285/V286 单根布局与路由调整、V287 key 修复及 V289 类型修复已通过快 CI 与独立 Chromium；完整 A3 待 V290。
+- **后续已实现**：V249–V269 本地批次/退款成本候选、证据与双人复核（无实际回转），见 [退款成本契约](finance/v212-refund-original-sale-lot-quantity-envelope.md)；V270 本地报告/银行样本只读比较，见 [V60/V270](finance/manual-bank-payout-v60.md)；V271–V280 结算来源分组、末级分类、不可变映射、独立审核 HTTP、Next 工作台与全量类型发现，见 [结算契约](finance/v198-settlement-source-claim-integrity.md)。V285/V286 单根布局与路由调整、V287 key 修复及 V289 类型修复已通过快 CI 与独立 Chromium；完整 A3 已由 V290 精确候选通过。
 
 ## 生产阻塞与本地运行
 

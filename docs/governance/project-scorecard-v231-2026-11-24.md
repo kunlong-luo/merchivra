@@ -1,6 +1,6 @@
 # Merchivra · V231 独立成熟度重新评分（2026-11-24）
 
-**当前统一评分：78/100（V289 复评，见本页末尾）。**
+**当前统一评分：78/100（V290 已验收复评，见本页末尾）。**
 
 **V231 历史评分：76/100（V230 [75/100](project-scorecard-v230-2026-11-24.md) → +1）。** 原六维满分不改，也不追溯修改旧 [V229 74](project-scorecard-v229-2026-11-24.md)、[V228 73](project-scorecard-v228-2026-11-24.md) 和 [V200 70](project-scorecard-v200-2026-11-22.md)；评分是内部产品/工程**定性成熟度**，**不是**生产可用率、真实利润可信度或实际 Amazon ERP 上线完成率。
 
@@ -93,3 +93,11 @@ V281 [代码 cb9bb88eea15](https://github.com/kunlong-luo/merchivra/commit/cb9bb
 ## V290 待验收复评（2026-11-26）
 
 维持 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维8/10。领取时 main `7a2471e1fe4d2982d4a3e45bfaa9f10ee5cdb1f3` [快 CI #45809895628](https://github.com/kunlong-luo/merchivra/actions/runs/45809895628) SUCCESS（run_attempt=1；PG18、JaCoCo、完整 Next HTTP 跳过）；V290 只更新既有 A3 验收标识及交接，候选新快 CI、完整 A3 和专项日志尚待核实，不新增评分。候选定位及唯一下一动作见[当前事实](../current-status.md)与[当前任务](../roadmap/current-plan.md)。真实 E1–E5、DEC/G1、目标 G2/G3 缺失，#104 OPEN / NO-GO，realizedNetProfit=null、Seller/Ads OAuth OFF；已验收基线可受控本地及隔离合成验证，私有预生产仅有条件验证，正式商业生产 NO-GO。评分不是上线许可。
+
+## V290 完成验收复评（2026-11-27）
+
+维持原六维 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维8/10。V290 候选精确 SHA [`f5c42fa4669cf8089363ddcb6c7d884c414d0aae`](https://github.com/kunlong-luo/merchivra/commit/f5c42fa4669cf8089363ddcb6c7d884c414d0aae)，run_attempt=1；[快 CI #45812139153](https://github.com/kunlong-luo/merchivra/actions/runs/45812139153) SUCCESS，Java25/Gradle、Next/Vite/Orval/TypeScript/Vitest、Compose 与 cadence/文档守卫成功；PG18 job、JaCoCo、完整 Next HTTP 按快 CI 范围跳过。[完整 A3 #45812139166](https://github.com/kunlong-luo/merchivra/actions/runs/45812139166) SUCCESS 7/7：基线 #139882418732、Compose/mock-chain #139882455787、Chromium #139882456008、Next/React #139882456066、Compose 静态 #139882456115、Java/JaCoCo #139882456169、实际 PG18/Flyway #139882456626 均成功；仅失败诊断步骤跳过，无失败 job。
+
+原始日志：基线 MILESTONE=V290-A3-release-candidate；[HTTP/Compose job](https://github.com/kunlong-luo/merchivra/actions/runs/45812139166/job/139882455787) PASS V144（11 routes、真实 Spring Session/CSRF、匿名隔离、退出失效）、V122、V146；[Chromium job](https://github.com/kunlong-luo/merchivra/actions/runs/45812139166/job/139882456008) PASS V286 committed route, persistent session root, history back/forward, no retained category selection or replay；PASS V289 finance reconciliation and full category browser journey, including unique history re-entry。[PG18 job](https://github.com/kunlong-luo/merchivra/actions/runs/45812139166/job/139882456626) PostgreSQL 18.7、PASS V144、实际 PITR/Alertmanager、非跳过 PG18 JUnit marker；[Next job](https://github.com/kunlong-luo/merchivra/actions/runs/45812139166/job/139882456066) PASS unknown-route 404。精确源码 scripts/smoke_next_session_csrf_v101.py 确认 no-store、11 路由 SSR 无私密数据、独立匿名客户端、非法路由404及退出后401断言。全部为隔离合成证据。
+
+恢复并确认现有 RC 工程能力，不新增业务或生产环境证明，故不重复计分。已验收候选可受控本地及隔离合成验证；私有预生产仅有条件验证，不批准商业生产。真实 E1–E5、DEC/G1 与目标 G2/G3 未证；#104 OPEN / NO-GO，realizedNetProfit=null，Seller/Ads OAuth OFF。V291 BLOCKED，待维护者合法本地提供真实证据包。交接文档的快 CI 独立核验，不继承 V290 候选。评分不是上线许可。
