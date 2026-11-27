@@ -18,7 +18,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /** Actual Springdoc contract with bootstrap mocked; no database or Amazon traffic. */
 @SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT,
-    properties={"spring.flyway.enabled=false", "MERCHIVRA_CONTRACT_EXPORT_ENABLED=true"})
+    properties={"spring.flyway.enabled=false", "CONTRACT_EXPORT_ENABLED=true"})
 class FbaPurchaseLinkOpenApiV145Test {
     @MockitoBean LocalAdminBootstrap bootstrap;
     @LocalServerPort int port;

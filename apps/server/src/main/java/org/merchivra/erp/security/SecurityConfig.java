@@ -27,7 +27,7 @@ public class SecurityConfig {
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http, TenantAccessService tenants,
-        @Value("${MERCHIVRA_CONTRACT_EXPORT_ENABLED:false}") boolean contractExport) throws Exception {
+        @Value("${springdoc.api-docs.enabled:false}") boolean contractExport) throws Exception {
         // CSRF token is stored server-side in the session and fetched by the SPA
         // through GET /api/v1/auth/csrf. JSESSIONID remains HttpOnly.
         var csrfHandler = new CsrfTokenRequestAttributeHandler();
