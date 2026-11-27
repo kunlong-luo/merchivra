@@ -9,9 +9,9 @@ spring:
     password: ${DB_PASSWORD:}
   data:
     redis:
-      host: ${MERCHIVRA_REDIS_HOST:127.0.0.1}
-      port: ${MERCHIVRA_REDIS_PORT:6379}
-      password: ${MERCHIVRA_REDIS_PASSWORD:}
+      host: ${MERCHIVRA_REDIS_HOST:${REDIS_HOST:127.0.0.1}}
+      port: ${MERCHIVRA_REDIS_PORT:${REDIS_PORT:6379}}
+      password: ${MERCHIVRA_REDIS_PASSWORD:${REDIS_PASSWORD:}}
 
 server:
   address: ${SERVER_ADDRESS:127.0.0.1}

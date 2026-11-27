@@ -21,9 +21,21 @@ docker compose --env-file .env -f deploy/compose.yaml ps
 
 默认只启动 `postgres`、`server`、`web`。访问 `http://127.0.0.1:3000`（Next），后端 `http://127.0.0.1:8080/api/v1/ping`。真实 OAuth/SP-API 不启用；演示配置只可用于合成场景。退出可执行 `docker compose --env-file .env -f deploy/compose.yaml down`，**不要加 `-v`**。若需要复用独立 spark-db，必须遵循[专用角色和数据库初始化](deployment/local-spark-db.md)，基础 Compose 文件不可合并使用。
 
-### ClamAV 主机环境变量
+### 后端环境变量命名
 
-扫描主机统一使用 `EVIDENCE_AV_HOST`；已有本地 `.env`、IDEA 运行配置及部署环境请将旧 `MERCHIVRA_EVIDENCE_AV_HOST` 改名，并删除旧项。`MERCHIVRA_EVIDENCE_AV_REQUIRED` 与 `MERCHIVRA_EVIDENCE_AV_PORT` 本次不改名。生产 Compose 仍强制扫描，空主机时拒绝启动；非 Demo 未启用扫描时仍拒绝原件传输。没有私网 clamd 时不要填虚构主机或关闭真实环境的扫描要求。
+宿主机 Spring Boot / IDEA 推荐按领域使用短名，避免重复项目名。Spring 原生属性和 Java 内部 `merchivra.*` 保持不变，默认值、单位和功能开关语义不变。
+
+| 领域 | 本机推荐变量 |
+| --- | --- |
+| HTTP | `SERVER_ADDRESS`、`SERVER_PORT`、`SESSION_COOKIE_SECURE` |
+| PostgreSQL | `DB_URL`（或 `DB_HOST/DB_PORT/DB_NAME`）、`DB_USER`、`DB_PASSWORD` |
+| Redis | `REDIS_HOST`、`REDIS_PORT`、`REDIS_DATABASE`、`REDIS_PASSWORD`、`REDIS_HEALTH_ENABLED`、`REDIS_SESSIONS_ENABLED` |
+| 首次启动 | `BOOTSTRAP_USERNAME`、`BOOTSTRAP_PASSWORD`、`BOOTSTRAP_TENANT_NAME`、`DEMO_ENABLED` |
+| 原件扫描 | `EVIDENCE_AV_REQUIRED`、`EVIDENCE_AV_HOST`、`EVIDENCE_AV_PORT` |
+| Amazon | `SPAPI_*`、`LWA_*` |
+| 自动化与核证 | `OPS_*`、`ORDERS_SYNC_*`、`CATALOG_SYNC_*`、`FINANCES_SYNC_*`、`PROFIT_REPORT_*`、`EXTERNAL_ISSUER_*`、`TEAM_ENABLED`、`CONTRACT_EXPORT_ENABLED` |
+
+所有原有后端 YAML 中的 `MERCHIVRA_*` 环境变量（已单独迁移的扫描 HOST 除外）继续作为兼容输入：同名旧变量显式存在（含 false 或空字符串）时，旧变量优先，防止覆盖 Compose 已强制的安全值。切换本机命名请删除旧项，不混用。现有 `.env.example` 是 Docker Compose 输入模板，仍使用其既有变量和生产校验；不要直接将其整体去前缀。Next 的 `MERCHIVRA_API_INTERNAL_URL` 不在本次后端范围。原件扫描 HOST 只接受先前已迁移的 `EVIDENCE_AV_HOST`；生产强制扫描，空主机拒绝启动，非 Demo 未启用扫描仍拒绝原件传输。所有真实 Amazon 开关保持关闭，密码、密钥仍不提供默认值。
 
 ## 3. 分别启动开发进程
 
@@ -33,9 +45,9 @@ docker compose --env-file .env -f deploy/compose.yaml ps
 export DB_HOST=127.0.0.1 DB_PORT=5432
 export DB_NAME=merchivra DB_USER=merchivra
 # 使用本地安全方式注入 DB_PASSWORD；不得提交真实凭据
-export MERCHIVRA_BOOTSTRAP_USERNAME=your_admin
-# 使用本地安全方式注入至少 16 位的 MERCHIVRA_BOOTSTRAP_PASSWORD
-export MERCHIVRA_DEMO_ENABLED=false
+export BOOTSTRAP_USERNAME=your_admin
+# 使用本地安全方式注入至少 16 位的 BOOTSTRAP_PASSWORD
+export DEMO_ENABLED=false
 ./apps/server/gradlew -p apps/server --no-daemon bootRun
 ```
 

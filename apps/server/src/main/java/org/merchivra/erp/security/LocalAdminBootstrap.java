@@ -42,7 +42,7 @@ public class LocalAdminBootstrap implements ApplicationRunner {
             Long existing = jdbc.queryForObject("SELECT count(*) FROM local_credential", Long.class);
             if (existing != null && existing > 0) return;
             if (username.isBlank() && password.isBlank()) {
-                log.warn("No local admin configured. Set both MERCHIVRA_BOOTSTRAP_USERNAME and MERCHIVRA_BOOTSTRAP_PASSWORD on first start.");
+                log.warn("No local admin configured. Set both BOOTSTRAP_USERNAME and BOOTSTRAP_PASSWORD on first start (legacy deployment names also supported).");
                 return;
             }
             if (!username.matches("[A-Za-z0-9._-]{3,64}") || password.length() < 16
