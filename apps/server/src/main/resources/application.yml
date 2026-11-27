@@ -43,7 +43,8 @@ spring:
     # Full JDBC URL is optional; keep split DB_* inputs for existing Compose/CI.
     url: ${DB_URL:jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:merchivra}}
     username: ${DB_USER:merchivra}
-    password: ${DB_PASSWORD:}
+    # Public test default; Docker supplies the required deployment password.
+    password: ${DB_PASSWORD:merchivra}
   flyway:
     enabled: true
     validate-on-migrate: true
@@ -52,7 +53,8 @@ spring:
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       database: ${REDIS_DATABASE:0}
-      password: ${REDIS_PASSWORD:}
+      # Public test default; deployment settings override explicitly.
+      password: ${REDIS_PASSWORD:redis123456}
       timeout: 2s
       connect-timeout: 2s
     repositories:

@@ -46,6 +46,13 @@ class LocalConnectionConfigTest {
     }
 
     @Test
+    void baseConfigurationProvidesRequestedPublicTestDefaults() throws IOException {
+        var config = resolver(Map.of());
+        assertEquals("merchivra", config.getProperty("spring.datasource.password"));
+        assertEquals("redis123456", config.getProperty("spring.data.redis.password"));
+    }
+
+    @Test
     void fullJdbcUrlOverridesSplitInputs() throws IOException {
         var config = resolver(Map.of("DB_URL", "jdbc:postgresql://127.0.0.1:5544/isolated",
                 "DB_HOST", "unused", "DB_PORT", "1234", "DB_NAME", "unused",
@@ -85,11 +92,13 @@ class LocalConnectionConfigTest {
     }
 
     @Test
-    void existingComposeInputsAndFailClosedDefaultsArePreserved() throws IOException {
-        var config = resolver(Map.of("DB_HOST", "postgres", "DB_PORT", "5432", "DB_NAME", "merchivra"));
+    void existingComposeInputsAndFailClosedFeatureDefaultsArePreserved() throws IOException {
+        var config = resolver(Map.of("DB_HOST", "postgres", "DB_PORT", "5432", "DB_NAME", "merchivra",
+                "DB_PASSWORD", "synthetic-compose-password", "REDIS_PASSWORD", ""));
         assertEquals("jdbc:postgresql://postgres:5432/merchivra", config.getProperty("spring.datasource.url"));
         assertEquals("merchivra", config.getProperty("spring.datasource.username"));
-        assertEquals("", config.getProperty("spring.datasource.password"));
+        assertEquals("synthetic-compose-password", config.getProperty("spring.datasource.password"));
+        assertEquals("", config.getProperty("spring.data.redis.password"));
         assertEquals("8080", config.getProperty("server.port"));
         assertEquals("true", config.getProperty("spring.flyway.validate-on-migrate"));
         assertEquals("false", config.getProperty("merchivra.spapi.enabled"));

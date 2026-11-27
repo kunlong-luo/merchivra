@@ -1,6 +1,6 @@
 # Native Pop!_OS / shared spark-db development only. Activate explicitly.
 # Container and CI defaults remain in application.yml.
-# Maintainer-approved PUBLIC TEST defaults only; never use for production.
+# Test password defaults are inherited from application.yml.
 # Override with private configuration for any non-disposable data or credentials.
 spring:
   config:
@@ -8,12 +8,10 @@ spring:
   datasource:
     url: "${DB_URL:jdbc:postgresql://${DB_HOST:127.0.0.1}:${DB_PORT:5432}/${DB_NAME:merchivra}}"
     username: ${DB_USER:merchivra}
-    password: ${DB_PASSWORD:merchivra}
   data:
     redis:
       host: ${REDIS_HOST:127.0.0.1}
       port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:redis123456}
 
 server:
   address: ${SERVER_ADDRESS:127.0.0.1}
