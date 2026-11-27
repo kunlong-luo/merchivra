@@ -1,6 +1,6 @@
 # Merchivra · V231 独立成熟度重新评分（2026-11-24）
 
-**当前统一评分：78/100（V290 已验收复评，见本页末尾）。**
+**当前统一评分：78/100（V290 已验收、V291 阻塞复核，见本页末尾）。**
 
 **V231 历史评分：76/100（V230 [75/100](project-scorecard-v230-2026-11-24.md) → +1）。** 原六维满分不改，也不追溯修改旧 [V229 74](project-scorecard-v229-2026-11-24.md)、[V228 73](project-scorecard-v228-2026-11-24.md) 和 [V200 70](project-scorecard-v200-2026-11-22.md)；评分是内部产品/工程**定性成熟度**，**不是**生产可用率、真实利润可信度或实际 Amazon ERP 上线完成率。
 
@@ -100,4 +100,8 @@ V281 [代码 cb9bb88eea15](https://github.com/kunlong-luo/merchivra/commit/cb9bb
 
 原始日志：基线 MILESTONE=V290-A3-release-candidate；[HTTP/Compose job](https://github.com/kunlong-luo/merchivra/actions/runs/45812139166/job/139882455787) PASS V144（11 routes、真实 Spring Session/CSRF、匿名隔离、退出失效）、V122、V146；[Chromium job](https://github.com/kunlong-luo/merchivra/actions/runs/45812139166/job/139882456008) PASS V286 committed route, persistent session root, history back/forward, no retained category selection or replay；PASS V289 finance reconciliation and full category browser journey, including unique history re-entry。[PG18 job](https://github.com/kunlong-luo/merchivra/actions/runs/45812139166/job/139882456626) PostgreSQL 18.7、PASS V144、实际 PITR/Alertmanager、非跳过 PG18 JUnit marker；[Next job](https://github.com/kunlong-luo/merchivra/actions/runs/45812139166/job/139882456066) PASS unknown-route 404。精确源码 scripts/smoke_next_session_csrf_v101.py 确认 no-store、11 路由 SSR 无私密数据、独立匿名客户端、非法路由404及退出后401断言。全部为隔离合成证据。
 
-恢复并确认现有 RC 工程能力，不新增业务或生产环境证明，故不重复计分。已验收候选可受控本地及隔离合成验证；私有预生产仅有条件验证，不批准商业生产。真实 E1–E5、DEC/G1 与目标 G2/G3 未证；#104 OPEN / NO-GO，realizedNetProfit=null，Seller/Ads OAuth OFF。V291 BLOCKED，待维护者合法本地提供真实证据包。交接文档的快 CI 独立核验，不继承 V290 候选。评分不是上线许可。
+恢复并确认现有 RC 工程能力，不新增业务或生产环境证明，故不重复计分。已验收候选可受控本地及隔离合成验证；私有预生产仅有条件验证，不批准商业生产。真实 E1–E5、DEC/G1 与目标 G2/G3 未证；#104 OPEN / NO-GO，realizedNetProfit=null，Seller/Ads OAuth OFF。V291 BLOCKED，待维护者合法本地提供真实证据包。交接文档的快 CI 独立核验结果见下，不继承 V290 候选。评分不是上线许可。
+
+## V291 阻塞复核（2026-11-27）
+
+维持 **78/100**：架构18/20、业务19/20、真实全成本及净利润10/25、安全14/15、前端9/10、测试运维8/10。V290 交接文档精确 SHA [`85c86ecd0b6d6cfb454ed8fec1433d7d368c2db2`](https://github.com/kunlong-luo/merchivra/commit/85c86ecd0b6d6cfb454ed8fec1433d7d368c2db2)，[快 CI #45929190678](https://github.com/kunlong-luo/merchivra/actions/runs/45929190678) SUCCESS（run_attempt=1）：Java/Gradle #140277589459、Next/Vite/Orval/TypeScript/Vitest #140277589402、Compose/cadence/文档守卫 #140277589216 均成功；PG18 #140277590762、JaCoCo、完整 Next HTTP 按快速 CI 范围跳过，无失败 job。仅三个权威文档变更，业务代码不变；完整 A3 仍只对应 V290 候选。 本次静态核对该 SHA 的 `CostProfitReadinessService.java` 293–315 行：来源外部核证/扣除保持 false，八类缺口保持 UNKNOWN，Page 最终 false/false/false/null；`scripts/check_production_gate_v143.py` 241–247 行仍固定 productionApproved=false、deploymentPermitted=false。#104 实际 OPEN/BLOCKED。未获得真实外部样本或独立审批，V291 不关闭，不领取 V292。 没有新增能力或外部真实性证据，不加分。受控本地/隔离合成验证可用；私有预生产仅有条件验证；正式生产 NO-GO，真实 Seller/Ads OAuth OFF，realizedNetProfit=null。下一动作仍为维护者在合法受控环境提供单一真实订单/批次/结算证据包，从 E1 签发主体及原件核验开始。本次只回填验收与阻塞，不改代码或工作流；提交标题 `docs(v291): record handoff CI and retain external evidence hold`，parent 为 `85c86ecd0b6d6cfb454ed8fec1433d7d368c2db2`。未在本地运行文档/cadence 守卫；新提交快 CI 另核，不继承旧 SHA。
