@@ -29,7 +29,7 @@ def compose():
             "environment":{
                 "DB_PASSWORD":secret,
                 "MERCHIVRA_EVIDENCE_AV_REQUIRED":"true",
-                "MERCHIVRA_EVIDENCE_AV_HOST":"clamd.internal",
+                "EVIDENCE_AV_HOST":"clamd.internal",
                 "MERCHIVRA_SESSION_COOKIE_SECURE":"true",
                 "MERCHIVRA_DEMO_ENABLED":"false",
                 **{k:"false" for k in (
@@ -109,12 +109,19 @@ class V143ProductionGateTests(unittest.TestCase):
                      "my..clamd","bad-.internal","10.0.0.5"):
             with self.subTest(host=host):
                 c=compose()
-                c["services"]["server"]["environment"]["MERCHIVRA_EVIDENCE_AV_HOST"]=host
+                c["services"]["server"]["environment"]["EVIDENCE_AV_HOST"]=host
                 self.assertIn("PRIVATE_AV_HOST_CONFIGURED",
                     inspect(c,evidence(),SHA,NOW)["blockedChecks"]["compose"])
         self.assertTrue(private_dns_hostname("clamd.internal"))
         c=compose()
         c["services"]["server"]["environment"]["MERCHIVRA_EVIDENCE_AV_REQUIRED"]="false"
+        self.assertIn("PRIVATE_AV_HOST_CONFIGURED",
+                      inspect(c,evidence(),SHA,NOW)["blockedChecks"]["compose"])
+
+    def test_legacy_av_host_key_alone_does_not_pass_production_gate(self):
+        c=compose()
+        env=c["services"]["server"]["environment"]
+        env["MERCHIVRA_EVIDENCE_AV_HOST"]=env.pop("EVIDENCE_AV_HOST")
         self.assertIn("PRIVATE_AV_HOST_CONFIGURED",
                       inspect(c,evidence(),SHA,NOW)["blockedChecks"]["compose"])
 

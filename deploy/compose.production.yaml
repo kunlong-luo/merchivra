@@ -9,7 +9,7 @@ services:
       # Ops must supply an internal-only clamd hostname/network, not public TCP.
       # Blank host intentionally makes Spring startup fail closed.
       MERCHIVRA_EVIDENCE_AV_REQUIRED: 'true'
-      MERCHIVRA_EVIDENCE_AV_HOST: ${MERCHIVRA_EVIDENCE_AV_HOST:-}
+      EVIDENCE_AV_HOST: ${EVIDENCE_AV_HOST:-}
       MERCHIVRA_EVIDENCE_AV_PORT: ${MERCHIVRA_EVIDENCE_AV_PORT:-3310}
       MERCHIVRA_SESSION_COOKIE_SECURE: 'true'
       MERCHIVRA_SPAPI_ENABLED: ${MERCHIVRA_SPAPI_ENABLED:-false}

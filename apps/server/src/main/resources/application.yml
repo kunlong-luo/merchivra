@@ -76,7 +76,7 @@ merchivra:
     # Never permit unscanned private original uploads outside synthetic Demo.
     # When required, startup fails if clamd host is absent; scan errors reject upload.
     av-required: ${MERCHIVRA_EVIDENCE_AV_REQUIRED:false}
-    av-host: ${MERCHIVRA_EVIDENCE_AV_HOST:}
+    av-host: ${EVIDENCE_AV_HOST:}
     av-port: ${MERCHIVRA_EVIDENCE_AV_PORT:3310}
   external-issuer:
     offline-trust:

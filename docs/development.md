@@ -21,6 +21,10 @@ docker compose --env-file .env -f deploy/compose.yaml ps
 
 默认只启动 `postgres`、`server`、`web`。访问 `http://127.0.0.1:3000`（Next），后端 `http://127.0.0.1:8080/api/v1/ping`。真实 OAuth/SP-API 不启用；演示配置只可用于合成场景。退出可执行 `docker compose --env-file .env -f deploy/compose.yaml down`，**不要加 `-v`**。若需要复用独立 spark-db，必须遵循[专用角色和数据库初始化](deployment/local-spark-db.md)，基础 Compose 文件不可合并使用。
 
+### ClamAV 主机环境变量
+
+扫描主机统一使用 `EVIDENCE_AV_HOST`；已有本地 `.env`、IDEA 运行配置及部署环境请将旧 `MERCHIVRA_EVIDENCE_AV_HOST` 改名，并删除旧项。`MERCHIVRA_EVIDENCE_AV_REQUIRED` 与 `MERCHIVRA_EVIDENCE_AV_PORT` 本次不改名。生产 Compose 仍强制扫描，空主机时拒绝启动；非 Demo 未启用扫描时仍拒绝原件传输。没有私网 clamd 时不要填虚构主机或关闭真实环境的扫描要求。
+
 ## 3. 分别启动开发进程
 
 首先为 PostgreSQL 18 中的 `merchivra` 数据库创建独立账号（参照 [部署指南](deployment/local-spark-db.md)）；宿主机上启动 Spring：

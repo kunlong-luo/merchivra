@@ -38,7 +38,7 @@ for service in ("server","web"):
     for port in ports:
         assert port.get("host_ip")=="127.0.0.1",f"{service} binds a non-loopback host port"
 
-assert "MERCHIVRA_EVIDENCE_AV_HOST" in env, "V137 private clamd hostname must be configurable"
+assert "EVIDENCE_AV_HOST" in env, "V137 private clamd hostname must be configurable"
 port=env.get("MERCHIVRA_EVIDENCE_AV_PORT","3310")
 assert str(port).isdigit() and 1<=int(port)<=65535, "Invalid clamd internal TCP port"
 # An absent host is an intentional *runtime* startup blocker until operations

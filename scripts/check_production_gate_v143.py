@@ -129,7 +129,7 @@ def safety_checks(compose: dict[str,Any]) -> dict[str,bool]:
     def no_public_ports(item: Any) -> bool:
         return isinstance(item,dict) and not item.get("ports")
     image=pg.get("image","") if isinstance(pg,dict) else ""
-    av=env.get("MERCHIVRA_EVIDENCE_AV_HOST")
+    av=env.get("EVIDENCE_AV_HOST")
     return {
         "PG18_PRIVATE_UNEXPOSED":
             isinstance(image,str) and image.startswith("postgres:18-")

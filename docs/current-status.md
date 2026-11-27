@@ -13,6 +13,11 @@
 - 本轮仅回填已独立核实的快 CI 与明确本地 E1 操作步骤，不改业务代码、迁移或工作流。提交标题 `docs(v291): record verified handoff and local E1 checklist`，parent 为 `d98f9601ddf2b32e2707bd5daba9ac515a164e86`。执行环境 DNS 无法解析 GitHub，无法克隆并运行提交前文档/cadence 守卫；新提交快 CI 尚待按精确 SHA 核对，不继承已有绿灯。无真实材料继续 BLOCKED；不得仅为回填自身文档 CI 反复提交，下一次可在提供真实材料时合并记录。
 - [前次 V291 交接证据（不可变快照）](https://github.com/kunlong-luo/merchivra/blob/d98f9601ddf2b32e2707bd5daba9ac515a164e86/docs/current-status.md)。
 
+## V291 本地配置维护（维护者明确要求）
+
+- 基线 [`5bacf013ee1d58d3a9102a7252596b81bf86b8ba`](https://github.com/kunlong-luo/merchivra/commit/5bacf013ee1d58d3a9102a7252596b81bf86b8ba) [快 CI #45936142246](https://github.com/kunlong-luo/merchivra/actions/runs/45936142246) SUCCESS：Compose #140299680899、Next #140299681236、Java #140299681273 成功，PG18 #140299682184 跳过。
+- 仅将 ClamAV 主机环境变量改为 `EVIDENCE_AV_HOST`，同步 Spring、生产 Compose、环境模板、发布门禁及正反测试；REQUIRED/PORT 和内部 Spring 属性不改名，扫描要求与生产门禁不放宽。迁移说明见[开发指南](development.md)。提交标题 `fix(config): rename evidence AV host environment variable`，parent 为 `5bacf013ee1d58d3a9102a7252596b81bf86b8ba`；本地未执行测试，精确新提交快 CI/运行验证待核，不继承旧 CI。V291 真实材料仍 BLOCKED，评分 78/100，realizedNetProfit=null、OAuth OFF、#104 NO-GO；不领取 V292。
+
 ## 最近已关闭任务：V290 · VERIFIED (synthetic)
 
 - V290 候选精确 SHA [`f5c42fa4669cf8089363ddcb6c7d884c414d0aae`](https://github.com/kunlong-luo/merchivra/commit/f5c42fa4669cf8089363ddcb6c7d884c414d0aae)，run_attempt=1；[快 CI #45812139153](https://github.com/kunlong-luo/merchivra/actions/runs/45812139153) SUCCESS，Java25/Gradle、Next/Vite/Orval/TypeScript/Vitest、Compose 与 cadence/文档守卫成功；PG18 job、JaCoCo、完整 Next HTTP 按快 CI 范围跳过。[完整 A3 #45812139166](https://github.com/kunlong-luo/merchivra/actions/runs/45812139166) SUCCESS 7/7：基线 #139882418732、Compose/mock-chain #139882455787、Chromium #139882456008、Next/React #139882456066、Compose 静态 #139882456115、Java/JaCoCo #139882456169、实际 PG18/Flyway #139882456626 均成功；仅失败诊断步骤跳过，无失败 job。
