@@ -13,6 +13,7 @@ services:
       context: ../apps/server
     restart: unless-stopped
     environment:
+      SERVER_ADDRESS: 0.0.0.0 # Container-only bind; published port remains loopback.
       DB_HOST: spark-postgres
       DB_PORT: '5432'
       DB_NAME: ${MERCHIVRA_DB_NAME:-merchivra}

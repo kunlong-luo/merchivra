@@ -50,6 +50,11 @@ class LocalConnectionConfigTest {
         var config = resolver(Map.of());
         assertEquals("merchivra", config.getProperty("spring.datasource.password"));
         assertEquals("redis123456", config.getProperty("spring.data.redis.password"));
+        assertEquals("127.0.0.1", config.getProperty("server.address"));
+        assertEquals("admin", config.getProperty("merchivra.bootstrap.username"));
+        assertEquals("MerchivraTest2026", config.getProperty("merchivra.bootstrap.password"));
+        org.junit.jupiter.api.Assertions.assertTrue(config.getProperty("merchivra.bootstrap.password").length() >= 16);
+        assertEquals("Merchivra", config.getProperty("merchivra.bootstrap.tenant-name"));
     }
 
     @Test
@@ -94,12 +99,16 @@ class LocalConnectionConfigTest {
     @Test
     void existingComposeInputsAndFailClosedFeatureDefaultsArePreserved() throws IOException {
         var config = resolver(Map.of("DB_HOST", "postgres", "DB_PORT", "5432", "DB_NAME", "merchivra",
-                "DB_PASSWORD", "synthetic-compose-password", "REDIS_PASSWORD", ""));
+                "DB_PASSWORD", "synthetic-compose-password", "REDIS_PASSWORD", "",
+                "SERVER_ADDRESS", "0.0.0.0", "BOOTSTRAP_USERNAME", "", "BOOTSTRAP_PASSWORD", ""));
         assertEquals("jdbc:postgresql://postgres:5432/merchivra", config.getProperty("spring.datasource.url"));
         assertEquals("merchivra", config.getProperty("spring.datasource.username"));
         assertEquals("synthetic-compose-password", config.getProperty("spring.datasource.password"));
         assertEquals("", config.getProperty("spring.data.redis.password"));
         assertEquals("8080", config.getProperty("server.port"));
+        assertEquals("0.0.0.0", config.getProperty("server.address"));
+        assertEquals("", config.getProperty("merchivra.bootstrap.username"));
+        assertEquals("", config.getProperty("merchivra.bootstrap.password"));
         assertEquals("true", config.getProperty("spring.flyway.validate-on-migrate"));
         assertEquals("false", config.getProperty("merchivra.spapi.enabled"));
         assertEquals("false", config.getProperty("merchivra.spapi.oauth.enabled"));

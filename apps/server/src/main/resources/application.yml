@@ -1,5 +1,7 @@
 # Backend environment variables use concise domain names.
 server:
+  # Native test startup is loopback-only; Compose explicitly binds inside its network.
+  address: ${SERVER_ADDRESS:127.0.0.1}
   # Preserve the container/CI port; local IDEA may override to 8081.
   port: ${SERVER_PORT:8080}
   shutdown: graceful
@@ -106,9 +108,10 @@ merchivra:
   demo:
     enabled: ${DEMO_ENABLED:false}
   bootstrap:
-    username: ${BOOTSTRAP_USERNAME:}
-    password: ${BOOTSTRAP_PASSWORD:}
-    tenant-name: ${BOOTSTRAP_TENANT_NAME:Merchivra Workspace}
+    # Public disposable test login only; Compose explicitly overrides these values.
+    username: ${BOOTSTRAP_USERNAME:admin}
+    password: ${BOOTSTRAP_PASSWORD:MerchivraTest2026}
+    tenant-name: ${BOOTSTRAP_TENANT_NAME:Merchivra}
 
   spapi:
     rate-limit:
