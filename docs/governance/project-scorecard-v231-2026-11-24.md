@@ -1,6 +1,6 @@
 # Merchivra · V231 独立成熟度重新评分（2026-11-24）
 
-**当前统一评分：78/100（V290 已验收、V291 阻塞复核，见本页末尾）。**
+**当前统一评分：78/100（V291 本机9/9功能回执与真实证据阻塞复核，见本页末尾）。**
 
 **V231 历史评分：76/100（V230 [75/100](project-scorecard-v230-2026-11-24.md) → +1）。** 原六维满分不改，也不追溯修改旧 [V229 74](project-scorecard-v229-2026-11-24.md)、[V228 73](project-scorecard-v228-2026-11-24.md) 和 [V200 70](project-scorecard-v200-2026-11-22.md)；评分是内部产品/工程**定性成熟度**，**不是**生产可用率、真实利润可信度或实际 Amazon ERP 上线完成率。
 
@@ -112,3 +112,8 @@ V281 [代码 cb9bb88eea15](https://github.com/kunlong-luo/merchivra/commit/cb9bb
 ### 2026-11-27 · 本机启动与 Next-only 维护复评
 
 精确基线 [`5bebad3e773161edacc2b1b03becd430686c45fd`](https://github.com/kunlong-luo/merchivra/commit/5bebad3e773161edacc2b1b03becd430686c45fd) [快 CI #46002940789](https://github.com/kunlong-luo/merchivra/actions/runs/46002940789) SUCCESS：Next #140518916953、Java #140518916955、Compose #140518917216 成功；PG18 #140518918768、JaCoCo、完整 Next HTTP 跳过，无失败 job。前一代码 SHA `2e58a59ba8e8155aac2a1b12b447310892b21b2c` 的 [Chromium #46002602282](https://github.com/kunlong-luo/merchivra/actions/runs/46002602282)、[Pages #46002602307](https://github.com/kunlong-luo/merchivra/actions/runs/46002602307)、[Redis #46002602506](https://github.com/kunlong-luo/merchivra/actions/runs/46002602506) SUCCESS；随后只修复退役 Dockerfile 测试引用和文档。 维护者本机日志证明 PG18.7、122 项 Flyway、8081 与 OWNER 初始化成功；真实登录/业务和外部证据未验收。维持 **78/100**（架构18/20、业务19/20、真实利润10/25、安全14/15、前端9/10、运维8/10）。新完整 A3 待核；不加分，不将双 Next 合成切换当真实版本回滚。E1–E5、DEC/G1、G2/G3 仍缺，#104 OPEN / NO-GO，realizedNetProfit=null，OAuth OFF。
+
+
+### 2026-11-27 · 本地功能验收回执复评
+
+维护者本地验收回执（2026-11-27，执行人：维护者；精确本地 SHA、用例输入、逐项日志/截图未提供）：管理员登录/退出、左侧菜单滚动及视觉、商品与 SKU、供应商与采购、仓库及库存、订单与退款、FBA 货件、财务报表及利润页面、Redis 本机认证，9/9 报告通过，无报告缺陷。记录为维护者功能级验收，不声称逐操作覆盖、独立重算或当前 SHA 自动化验证；Redis 认证不等于本机启用 Redis Session/限流。 精确基线 [`efe94b5841b05dfa14de6fea0167a0bb3badebd2`](https://github.com/kunlong-luo/merchivra/commit/efe94b5841b05dfa14de6fea0167a0bb3badebd2) [快 CI #46004710153](https://github.com/kunlong-luo/merchivra/actions/runs/46004710153) SUCCESS：Next #140524860211、Java #140524860489、Compose #140524860757；PG18 #140524862581、JaCoCo、完整 Next HTTP 跳过。 [完整 A3 #46004710175](https://github.com/kunlong-luo/merchivra/actions/runs/46004710175) run_attempt=1，核查时 IN_PROGRESS，6/7 成功：#140524861405 success、#140524894832 success、#140524895041 success、#140524895375 success、#140524895440 in_progress、#140524895605 success、#140524895685 success；完整结论以该 run 为准。 维持 **78/100**（架构18/20、业务19/20、真实利润10/25、安全14/15、前端9/10、运维8/10）：新增维护者实测回执增强可用性信心，但无可独立复核的具体测试输入、完整覆盖或真实利润证据，不自动加分。无报告缺陷，不虚构修复项。E1–E5、DEC/G1、G2/G3 未证，#104 NO-GO、realizedNetProfit=null、OAuth OFF。下一步按现行计划准备单一合法原件及脱敏索引。

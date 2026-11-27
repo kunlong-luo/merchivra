@@ -8,14 +8,14 @@
 - State: BLOCKED
 - Basis: V290 已 VERIFIED (synthetic)，精确候选 `f5c42fa4669cf8089363ddcb6c7d884c414d0aae`，完整 A3 7/7；仅属于该候选。后续本地配置与前端退役维护见下。
 - 精确基线 [`5bebad3e773161edacc2b1b03becd430686c45fd`](https://github.com/kunlong-luo/merchivra/commit/5bebad3e773161edacc2b1b03becd430686c45fd) [快 CI #46002940789](https://github.com/kunlong-luo/merchivra/actions/runs/46002940789) SUCCESS：Next #140518916953、Java #140518916955、Compose #140518917216 成功；PG18 #140518918768、JaCoCo、完整 Next HTTP 跳过，无失败 job。前一代码 SHA `2e58a59ba8e8155aac2a1b12b447310892b21b2c` 的 [Chromium #46002602282](https://github.com/kunlong-luo/merchivra/actions/runs/46002602282)、[Pages #46002602307](https://github.com/kunlong-luo/merchivra/actions/runs/46002602307)、[Redis #46002602506](https://github.com/kunlong-luo/merchivra/actions/runs/46002602506) SUCCESS；随后只修复退役 Dockerfile 测试引用和文档。
-- 真实本机：维护者提供 2026-11-27 20:47 (+08:00) 启动日志，Java25.0.4、Spring Boot 4.1.2、Hikari 连接 PG18.7、122 项 Flyway 校验成功、schema V125、8081 启动、初始 OWNER 创建成功；此为维护者日志证据，非当前 SHA 自动化验收。Redis 本机认证、登录/退出、菜单视觉及业务尚未得到独立可核证结果。
+- 真实本机：维护者提供 2026-11-27 20:47 (+08:00) 启动日志，Java25.0.4、Spring Boot 4.1.2、Hikari 连接 PG18.7、122 项 Flyway 校验成功、schema V125、8081 启动、初始 OWNER 创建成功；此为维护者日志证据，非当前 SHA 自动化验收。维护者本地验收回执（2026-11-27，执行人：维护者；精确本地 SHA、用例输入、逐项日志/截图未提供）：管理员登录/退出、左侧菜单滚动及视觉、商品与 SKU、供应商与采购、仓库及库存、订单与退款、FBA 货件、财务报表及利润页面、Redis 本机认证，9/9 报告通过，无报告缺陷。记录为维护者功能级验收，不声称逐操作覆盖、独立重算或当前 SHA 自动化验证；Redis 认证不等于本机启用 Redis Session/限流。
 - 财务与上线：核对该基线 CostProfitReadinessService 第308–313行仍 false/false/false/null，application.yml 中 SPAPI/OAuth/写入默认 false，V143 gate 始终拒绝批准/部署，[#104](https://github.com/kunlong-luo/merchivra/issues/104) OPEN。E1–E5、DEC-06/07/08、G1 未证；78/100 不变，realizedNetProfit=null，OAuth OFF，NO-GO。
-- 唯一下一动作：维护者按 [本地验收/E1 清单](roadmap/current-plan.md) 完成受控本机登录及准备单一合法原始证据包，回传脱敏索引；无材料 V291 继续 BLOCKED，不领取 V292。真实资料不得上传 Git 或聊天；公开测试凭据仅限一次性环境。
+- 唯一下一动作：维护者按 [本地验收/E1 清单](roadmap/current-plan.md) 在受控环境准备单一合法原始证据包，回传脱敏索引；无材料 V291 继续 BLOCKED，不领取 V292。真实资料不得上传 Git 或聊天；公开测试凭据仅限一次性环境。
 
 ## V291 本地配置与前端维护
 
-- 以 [精确历史快照](https://github.com/kunlong-luo/merchivra/blob/5bebad3e773161edacc2b1b03becd430686c45fd/docs/current-status.md) 保留全部配置维护、失败/修复与运行记录。旧认证 Vite 已退役，Next 是唯一认证 ERP；公开 Pages/Vitest 仍使用必要 Vite 工具链。左侧导航隐藏滚动条、保留可滚动性；Chromium 已在上述代码 SHA 合成验证，人工视觉待确认。
-- 部署变更（Next-only、双 Next TLS 切换、配置重命名）按 TEST-003 需要新的完整 A3。修正 milestone 的当前标识为 `NEXT16-A3-next-only-local-readiness` 与浏览器 job 名称，按既有 workflow 文件变更触发规则启动隔离完整 A3；不更改测试范围、权限、真实授权、业务代码或迁移。提交标题 `docs(ci): reconcile next-only acceptance and V291 handoff`，新 SHA 快 CI 和 A3 尚待核验，不能沿用旧绿灯。双 Next 同版本合成切换不构成真实旧版本镜像回滚或生产证明；目标回滚及 G2/G3 仍待独立验收。
+- 以 [精确历史快照](https://github.com/kunlong-luo/merchivra/blob/5bebad3e773161edacc2b1b03becd430686c45fd/docs/current-status.md) 保留全部配置维护、失败/修复与运行记录。旧认证 Vite 已退役，Next 是唯一认证 ERP；公开 Pages/Vitest 仍使用必要 Vite 工具链。左侧导航隐藏滚动条、保留可滚动性；Chromium 已在上述代码 SHA 合成验证，维护者人工视觉已报告通过。
+- 部署变更（Next-only、双 Next TLS 切换、配置重命名）按 TEST-003 需要新的完整 A3。修正 milestone 的当前标识为 `NEXT16-A3-next-only-local-readiness` 与浏览器 job 名称，按既有 workflow 文件变更触发规则启动隔离完整 A3；不更改测试范围、权限、真实授权、业务代码或迁移。提交标题 `docs(ci): reconcile next-only acceptance and V291 handoff`，精确基线 [`efe94b5841b05dfa14de6fea0167a0bb3badebd2`](https://github.com/kunlong-luo/merchivra/commit/efe94b5841b05dfa14de6fea0167a0bb3badebd2) [快 CI #46004710153](https://github.com/kunlong-luo/merchivra/actions/runs/46004710153) SUCCESS：Next #140524860211、Java #140524860489、Compose #140524860757；PG18 #140524862581、JaCoCo、完整 Next HTTP 跳过。 [完整 A3 #46004710175](https://github.com/kunlong-luo/merchivra/actions/runs/46004710175) run_attempt=1，核查时 IN_PROGRESS，6/7 成功：#140524861405 success、#140524894832 success、#140524895041 success、#140524895375 success、#140524895440 in_progress、#140524895605 success、#140524895685 success；完整结论以该 run 为准。 本轮仅更新三份验收文档，新文档 SHA 快 CI 待核。双 Next 同版本合成切换不构成真实旧版本镜像回滚或生产证明；目标回滚及 G2/G3 仍待独立验收。
 
 ## 最近已关闭任务：V290 · VERIFIED (synthetic)
 
@@ -41,7 +41,7 @@ V289 精确代码 [`6583c63e57cfc0c7279e2f64dd1989719d23696b`](https://github.co
 | 独立成熟度 | [78/100（V290 已验收复评）](governance/project-scorecard-v231-2026-11-24.md)；真实利润10/25，非生产就绪比例 |
 | 历史完整 A3 | V280 r2 `07fccfb4be98cdaee4d46f592c804dd8c5826d75` [#45742981332](https://github.com/kunlong-luo/merchivra/actions/runs/45742981332) 7/7；含实际 PG18 101行全量类型发现及双人审核 |
 | 独立 Redis | V281 `cb9bb88eea150384fa87a121c60e2a11d4bf42cf` [#45743425032](https://github.com/kunlong-luo/merchivra/actions/runs/45743425032) SUCCESS：Redis8、真实登录/CSRF、重启身份、断连拒绝、GCRA |
-| 最新主线发布候选 | V290 精确候选快 CI 与完整 A3 7/7 已成功；V290 交接及 V291 文档快 CI 分别成功；本次回填文档快 CI 另核 |
+| 最新主线发布候选 | V290 精确候选完整 A3 7/7；Next-only 基线快 CI 成功，新的完整 A3 6/7 成功（in_progress）；本机9/9维护者报告通过；本次文档 SHA 快 CI 另核 |
 | 财务及授权 | `realizedNetProfit=null`、`bankReconciled=false`、`externallyVerified=false`；Seller/Ads OAuth OFF；真实 E1–E5/DEC/G1 未证 |
 | 生产 | pre-alpha；[#104](https://github.com/kunlong-luo/merchivra/issues/104) NO-GO；目标 G2/G3 TLS/KMS/备份恢复/告警及正式签署缺失 |
 
