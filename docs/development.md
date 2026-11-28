@@ -143,3 +143,8 @@ curl -i http://127.0.0.1:3000/api/v1/auth/me
 - **故障排查**：确认 3000 是 `pnpm dev` 或 Compose `web` 的 Next 进程，8080 是 Spring；如果仍有本机旧 Vite 5173 进程或旧 `vite-web` 容器，确认归属后手动停止/删除；不要操作共享数据库容器或卷。任何数据初始化/回滚操作先看 [部署卸载安全说明](deployment/local-spark-db.md)。
 
 工程规范见 [AGENTS](../AGENTS.md) · [ENG-001](governance/engineering-standards.md) · [文档控制](governance/document-control.md)。产品/财务现行任务见 [P0 计划](roadmap/current-plan.md)，技术架构见 [ARCH-001](architecture/overview.md)，合成浏览器/PG18/恢复覆盖见 [CI 策略](testing/ci-policy.md)。历史 V6–V145 同步、采购、OpenAPI 试验说明继续保存在各自版本文档，但**不再是当前开发入口**。
+
+
+### 私有 Seller 应用真实只读联调（V291）
+
+维护者使用自有私有应用时，唯一操作入口为 [INT-005](integrations/private-seller-import.md)。先确认实际站点（当前 US/DE/JP 预设）、独立数据库/强密码、Redis 配额与实际角色批准；在获独立受控只读审批前保持全部真实开关 OFF。不要把旧 Compose `MERCHIVRA_` 输入变量直接用于宿主 Spring；INT-005 使用短名，一次性 Refresh Token 导入与常驻服务严格分离。公有 OAuth 回调保持关闭，Ads 独立授权，不做远程写入。

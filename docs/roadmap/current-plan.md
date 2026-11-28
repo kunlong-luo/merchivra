@@ -15,11 +15,11 @@
 - 不做：上传原件、凭据或隐私到 Git；擅自开启真实 Seller/Ads OAuth、银行过账或实际利润；重复合成 UI、越界 V292、批准生产。
 - 依赖/阻塞：维护者提供合法真实样本、授权与独立财务批准；尚未取得。E1–E5、DEC-06/07/08、G1 未证。
 - 验收：按下列 E1–E5 的真实材料与可复算条件逐项取得独立证据，记录脱敏证据索引、范围、原币、归属、覆盖、未知项与签署状态；样本不等于完整期间，不解除生产 #104 NO-GO。
-- 唯一下一动作：维护者按下方 E1 回执准备单一合法原始证据包，若适用运行既有 V270 离线样本工具，仅返回脱敏回执；没有材料继续 BLOCKED。
+- 唯一下一动作：维护者确认采用本人私有 Seller 应用；按 [INT-005 私有联调方案](../integrations/private-seller-import.md) 第2节准备站点、私有凭据、安全隔离环境及受控只读审批，返回准备状态，不发送秘密。E1 可同时从合法官方后台取得原件；真实出站仍关闭，未获审批不得执行 R1，V291 继续 BLOCKED。
 - 交接核验：精确基线 [`d66e9942074184e15930fb86ae9dac73643b4652`](https://github.com/kunlong-luo/merchivra/commit/d66e9942074184e15930fb86ae9dac73643b4652) [快 CI #46005594115](https://github.com/kunlong-luo/merchivra/actions/runs/46005594115) SUCCESS：Next #140527812894、Compose #140527813341、Java #140527813459 成功；PG18 #140527815372、JaCoCo、完整 Next HTTP 按快 CI 范围跳过。 完整 A3 精确候选 `efe94b5841b05dfa14de6fea0167a0bb3badebd2` [#46004710175](https://github.com/kunlong-luo/merchivra/actions/runs/46004710175) SUCCESS（run_attempt=1，7/7）。本轮核查真实 job 原始日志：[Compose #140524895041](https://github.com/kunlong-luo/merchivra/actions/runs/46004710175/job/140524895041) 实际 PASS V144/V122（11 路由、真实 Spring Session/CSRF、退出失效）、V146（合成 CA 验证、双 Next 同一 Cookie 切换及返回、拒绝伪造 Host、Secure Session）；[PG18 #140524895440](https://github.com/kunlong-luo/merchivra/actions/runs/46004710175/job/140524895440) 实际 PG18.7、PASS V250/V254/V255–V269/V278/V280 对应非跳过 JUnit marker（成本、退款证据、并发及分类审核）；[Chromium #140524894832](https://github.com/kunlong-luo/merchivra/actions/runs/46004710175/job/140524894832) 实际 PASS V254/V285/V286/V289。此为隔离合成工程验收，不证明真实旧版本镜像回滚、目标 TLS、真实 Amazon 或银行认证。 历史维护见[当前事实](../current-status.md)。
 - 维护者本地验收回执（2026-11-27，执行人：维护者；精确本地 SHA、用例输入、逐项日志/截图未提供）：管理员登录/退出、左侧菜单滚动及视觉、商品与 SKU、供应商与采购、仓库及库存、订单与退款、FBA 货件、财务报表及利润页面、Redis 本机认证，9/9 报告通过，无报告缺陷。记录为维护者功能级验收，不声称逐操作覆盖、独立重算或当前 SHA 自动化验证；Redis 认证不等于本机启用 Redis Session/限流。 本机启动已获日志，不重复建库/重置管理员或重复九项验收，除非发生回归。V291 未 VERIFIED 前不得领取 V292；不得仅为回填自身文档 CI 反复提交。
 
-- 当前无新增真实样本或报告缺陷：工程合成验收及本机功能回执已经完成，停止重复运行和仅回填自身 CI 的文档提交。待维护者反馈 E1 脱敏回执（包括 UNKNOWN）或具体缺陷后恢复同一 V291；不以重复「继续」作为材料或授权。
+- 私有应用方案已按当前代码及 Amazon 官方文档核对：实际 SP-API 强制 Redis 限流、仅 US/DE/JP 预设、独立角色双人审核。精确基线 [`7dd29280438be1d53d3788b400e5cfc4b523ec0c`](https://github.com/kunlong-luo/merchivra/commit/7dd29280438be1d53d3788b400e5cfc4b523ec0c) [快 CI #46005938792](https://github.com/kunlong-luo/merchivra/actions/runs/46005938792) SUCCESS：Next #140528987913、Java #140528988203、Compose #140528988268；PG18 #140528990185、JaCoCo、完整 Next HTTP 按快 CI 范围跳过。完整 A3 仍对应 efe94b5841b05dfa14de6fea0167a0bb3badebd2，7/7。 无真实样本或批准；先准备，不开启真实开关，后续按 INT-005 R1→R6 逐步受控联调，不重复本地九项或完整 A3，不新增 V292。
 
 ### V291 本地 E1 操作清单（维护者执行）
 
