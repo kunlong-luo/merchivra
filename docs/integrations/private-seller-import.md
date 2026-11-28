@@ -18,6 +18,133 @@
 3. 本机保持 `DEMO_ENABLED=false`、`SPAPI_ENABLED=false`、所有真实同步/授权 OFF，启动 IDEA local profile（8081）和 `pnpm dev:local`（3001）。登录“核心业务数据 → 本地店铺配置与测试工具”，创建一个真实站点对应的 LOCAL 占位店铺并添加 Marketplace。仅在已登录自己的浏览器本地查看同源 `/api/v1/auth/me` 返回 activeTenantId、`/api/v1/seller-accounts` 返回所选 id；记录对应 UUID，不要发到聊天。确认实际区域与授权主体一致。
 4. 确认独立 Redis 可用、最小权限、私有凭据、TLS/网络边界、Amazon DPP/AUP 及 G1/G2 安全负责人批准受控只读试验。无批准继续 BLOCKED，可先在官方后台导出 E1 文件，不开启真实 API。
 
+## 2A. US 首轮本机安全配置（维护者已报告 LWA 就绪）
+
+2026-11-28 维护者回执：本人私有应用，US/NA（ATVPDKIKX0DER）；LWA Client ID/Secret/Refresh Token 已备；Product Listing、Amazon Fulfillment、Finance and Accounting、Inventory and Order Tracking 报告已获批。未提交真实值、审批原件或 Seller ID；实际 Seller ID、独立环境、Redis 配额、受控出站批准及真实核验仍待确认。 不再询问应用类型、站点和 LWA 准备情况；首先完成下列 **R0**。仅使用美国站，不新增其他 Marketplace。官方 [私有开发者](https://developer-docs.amazon.com/sp-api/docs/register-as-a-private-developer)、[北美正式端点](https://developer-docs.amazon.com/sp-api/docs/sp-api-endpoints) 确认私有自授权路径及 NA 区域（`https://sellingpartnerapi-na.amazon.com`）。
+
+### A. 新的隔离数据库（建议名称，可自行调整）
+
+已有 spark-postgres 可复用服务，不复用原测试数据库、旧 OWNER 或公开密码。只在经授权的本机管理员会话中执行，若角色/库已存在则先核对归属，不删除、不覆盖、不重跑。每条语句 autocommit，`CREATE DATABASE` 不在事务内：
+
+```bash
+docker exec -it spark-postgres psql -X -U root -d postgres
+```
+
+在 psql 中依次输入（\password 交互输入独立强密码，不出现在 SQL/命令历史）：
+
+```sql
+CREATE ROLE merchivra_us_r1 NOLOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE;
+SET password_encryption = 'scram-sha-256';
+\password merchivra_us_r1
+ALTER ROLE merchivra_us_r1 LOGIN;
+CREATE DATABASE merchivra_us_r1 OWNER merchivra_us_r1;
+REVOKE CONNECT ON DATABASE merchivra_us_r1 FROM PUBLIC;
+\q
+```
+
+`docker exec -it spark-postgres psql -X -h 127.0.0.1 -U merchivra_us_r1 -d merchivra_us_r1 -W -c "SELECT current_database(), current_user;"` 验证。集群管理员仍有其既有权限；不修改原测试库或 spark-iot 数据。首次新库 Flyway 由 Spring 自动执行。
+
+### B. 专用 Redis（建议 6381；先检查端口和容器名未占用）
+
+已有共享 spark-redis 的 PONG 不证明真实配额，不修改其策略。推荐使用独立 Redis 8 容器、loopback、noeviction、独立密码。以下是建议本机操作（不是已执行事实），需要已存在的 Redis 8.10.1-alpine 镜像或从可信镜像源获取；如果端口、名称或目录已存在，先停下核查，不覆盖或删除：
+
+```bash
+umask 077
+install -d -m 700 "$HOME/.config/merchivra"
+# 仅新建：若目录已存在，mkdir 会失败，不应继续覆盖。
+(
+  set -eu
+  d="$HOME/.config/merchivra/redis-us-r1"
+  mkdir -m 700 "$d"
+  mkdir -m 700 "$d/data"
+  secret=$(openssl rand -hex 32)
+  printf 'bind 0.0.0.0\nprotected-mode yes\nport 6379\nrequirepass %s\nmaxmemory 128mb\nmaxmemory-policy noeviction\nappendonly yes\ndir /data\n' "$secret" > "$d/redis.conf"
+  unset secret
+  docker run -d --name merchivra-redis-us-r1 \
+    --user "$(id -u):$(id -g)" \
+    -p 127.0.0.1:6381:6379 \
+    --mount "type=bind,src=$d/redis.conf,dst=/etc/redis/redis.conf,readonly" \
+    --mount "type=bind,src=$d/data,dst=/data" \
+    redis:8.10.1-alpine redis-server /etc/redis/redis.conf
+)
+```
+
+密码只在本机受控编辑器查看 `redis.conf`，不要打印、截图或发给他人。通过 `docker exec -it merchivra-redis-us-r1 redis-cli --askpass` 私下输入密码；交互中依次执行 `PING`、`CONFIG GET maxmemory-policy`、`SET merchivra:r1:preflight:<自拟随机后缀> 1 NX PX 10000`（首次 OK、立即同键重放 nil）、`EVAL "return redis.call('TIME')" 0`、`QUIT`。把尖括号占位替换为本机随机无敏感后缀；键自动过期，不使用 FLUSHDB。应得到 PONG、noeviction、SET NX 成功/重复拒绝及 Lua TIME 结果。这是连接/权限基础预检，非完整 GCRA 验收；原 `scripts/smoke_redis_quota.py` 固定指向 disposable Compose，不能直接对现有共享实例执行。实际 R1 将验证应用限流入口（SET NX PX/PTTL）；后续 R3–R5 才验证操作级 GCRA。重启/停止后额度状态须谨慎复验；不得通过清空 Redis 消除 429。
+
+### C. 私有环境文件（在仓库外；不提交）
+
+在受控编辑器新建 `~/.config/merchivra/us-r1.env`，先设文件权限600；以下是 Bash 环境模板，所有占位必须由本人私下替换，使用正确 shell 引号，不能原样启动。不要把 Refresh Token 写入文件。已有 `~/.config/merchivra/application.yml` 由 local profile 自动导入，如其中存在同名 Spring 属性直接值，应先核对/备份冲突配置，不能让旧 DB/开关覆盖该独立环境；IDEA 也不得留冲突运行参数。只使用一个安全配置来源。
+
+```bash
+DB_URL='jdbc:postgresql://127.0.0.1:5432/merchivra_us_r1'
+DB_USER='merchivra_us_r1'
+DB_PASSWORD='<新数据库强密码>'
+REDIS_HOST='127.0.0.1'
+REDIS_PORT='6381'
+REDIS_DATABASE='0'
+REDIS_PASSWORD='<专用Redis密码>'
+BOOTSTRAP_USERNAME='r1-owner'
+BOOTSTRAP_PASSWORD='<独立管理员密码，至少16位>'
+BOOTSTRAP_TENANT_NAME='Merchivra US R1'
+LWA_CLIENT_ID='<本机LWA Client ID>'
+LWA_CLIENT_SECRET='<本机LWA Client Secret>'
+SPAPI_OAUTH_ENCRYPTION_KEY_BASE64='<一次生成的32字节Base64密钥>'
+SPAPI_OAUTH_ENCRYPTION_KEYRING=''
+SPAPI_OAUTH_ACTIVE_KEY_VERSION=1
+SERVER_ADDRESS='127.0.0.1'
+SERVER_PORT=8081
+DEMO_ENABLED=false
+SPAPI_ENABLED=false
+SPAPI_SANDBOX=true
+SPAPI_ALLOW_WRITES=false
+SPAPI_PRIVATE_ENABLED=false
+SPAPI_OAUTH_ENABLED=false
+SPAPI_VERIFICATION_ENABLED=false
+SPAPI_RATE_LIMIT_ENABLED=false
+SPAPI_APPROVED_BURSTS=''
+REDIS_HEALTH_ENABLED=true
+REDIS_SESSIONS_ENABLED=false
+SPAPI_PRIVATE_IMPORT_ENABLED=false
+TEAM_ENABLED=false
+SPAPI_ORDERS_ROLE_REVIEW_ENABLED=false
+SPAPI_FINANCES_ROLE_REVIEW_ENABLED=false
+ORDERS_SYNC_ENABLED=false
+ORDERS_SYNC_MODE=MOCK
+ORDERS_SYNC_LIVE_APPROVED=false
+CATALOG_SYNC_ENABLED=false
+FINANCES_SYNC_ENABLED=false
+SPAPI_REPORTS_ENABLED=false
+ORDERS_SYNC_SCHEDULER_ENABLED=false
+CATALOG_SYNC_SCHEDULER_ENABLED=false
+FINANCES_SYNC_SCHEDULER_ENABLED=false
+SPAPI_REPORTS_SCHEDULER_ENABLED=false
+OPS_SCHEDULER_ENABLED=false
+PROFIT_REPORT_SCHEDULER_ENABLED=false
+```
+
+本地生成 Vault Key 一次（`openssl rand -base64 32` 仅在私密终端执行，安全备份；不要每次重置）。检查文件 `chmod 600 ~/.config/merchivra/us-r1.env`。不在前端、共享 IDEA 配置、命令参数或 CI 使用任何秘密。不要启用 shell xtrace。
+
+### D. R0 启动及美国站占位
+
+停现有 Merchivra 后端（不停止 spark-iot），在独立终端使用同一私有环境启动；IDEA 也可使用等效私有运行配置，但不应在 Git 中保存凭据。首次启动不出站：
+
+```bash
+cd /home/spark/Projects/github/merchivra
+git pull --ff-only
+git rev-parse HEAD
+(
+  set +x
+  set -a
+  . "$HOME/.config/merchivra/us-r1.env"
+  set +a
+  ./apps/server/gradlew -p apps/server --no-daemon bootRun --args='--spring.profiles.active=local'
+)
+```
+
+另一个终端 `cd apps/web; pnpm dev:local`，访问 127.0.0.1:3001；以新 OWNER 登录。在“核心业务数据 → 本地店铺配置与测试工具”创建 US 单店铺，选择 NA、美国站（ATVPDKIKX0DER）。查看已登录同源 `/api/v1/auth/me` 的 activeTenantId、`/api/v1/seller-accounts` 的选中 id；只在本机记录 UUID。新 OWNER 建立后，编辑私有文件令 BOOTSTRAP_USERNAME 与 BOOTSTRAP_PASSWORD 均为空，保留独立已建账号。不要将 UUID、账号或凭据回传。
+
+R0 完成且受控只读试验安全审批明确通过后，按第3节一次性导入/核验。**R1 仅调用 Sellers v1 的站点参与读取，不同步订单、商品、库存、财务，不启动 Reports、scheduler、Ads 或写入。** Amazon 角色报告不构成 Merchivra 双人角色审核，R2 仍待证。通过预期为 PRIVATE_SELF、VERIFIED/CONNECTED、verifiedMarketplaceCount=1（只配置 US）；不代表独立 Seller 身份认证或真实利润。
+
 ## 3. 获明确受控只读批准后：首轮仅站点核验
 
 以下是**条件式本机配置**，不是当前启用指令。只在独立本地非 Demo 环境以私有环境变量提供；保留原仓库默认 OFF：
@@ -56,6 +183,11 @@ SPAPI_REPORTS_SCHEDULER_ENABLED=false
 cd /home/spark/Projects/github/merchivra
 (
   set +x
+  set -a
+  . "$HOME/.config/merchivra/us-r1.env"
+  set +a
+  export SPAPI_ENABLED=true SPAPI_SANDBOX=false SPAPI_PRIVATE_ENABLED=true
+  export SPAPI_RATE_LIMIT_ENABLED=true
   read -r -s -p 'Local tenant UUID: ' SPAPI_PRIVATE_IMPORT_TENANT_ID; echo
   read -r -s -p 'Local seller account UUID: ' SPAPI_PRIVATE_IMPORT_ACCOUNT_ID; echo
   read -r -s -p 'Amazon Seller ID: ' SPAPI_PRIVATE_IMPORT_SELLER_ID; echo
@@ -68,7 +200,25 @@ cd /home/spark/Projects/github/merchivra
 )
 ```
 
-使用独立子 shell，导入值不留在父 shell；确认正常进程退出、没有错误、无 token 日志。环境变量仍可能被同权限进程读取，真实环境须受控；不要使用 --debug/--scan，不上传完整日志。此宿主机命令是按当前代码设计的操作方案，尚未真实执行。导入失败保持关闭，核对目标、UUID、已有 grant、Key、区域，不删除现存数据或绕过权限。常驻重启时确保 IMPORT=false、4项 import 输入均不存在、verification=true 仅在批准环境。前端“卖家授权”选店，期望 PRIVATE_SELF/PENDING_VERIFICATION，点击“手动验证 Marketplace”一次；通过为 VERIFIED/CONNECTED。失败只回传脱敏 HTTP/错误枚举，不反复点击。
+使用独立子 shell，导入值不留在父 shell；确认正常进程退出、没有错误、无 token 日志。环境变量仍可能被同权限进程读取，真实环境须受控；不要使用 --debug/--scan，不上传完整日志。此宿主机命令是按当前代码设计的操作方案，尚未真实执行。导入失败保持关闭，核对目标、UUID、已有 grant、Key、区域，不删除现存数据或绕过权限。常驻重启时确保 IMPORT=false、4项 import 输入均不存在、verification=true 仅在批准环境。使用同一个私有配置文件，以下只覆盖 R1 所需开关，后续停止子 shell 后默认文件仍为 OFF：
+
+```bash
+cd /home/spark/Projects/github/merchivra
+(
+  set +x
+  set -a
+  . "$HOME/.config/merchivra/us-r1.env"
+  set +a
+  unset SPAPI_PRIVATE_IMPORT_TENANT_ID SPAPI_PRIVATE_IMPORT_ACCOUNT_ID
+  unset SPAPI_PRIVATE_IMPORT_SELLER_ID SPAPI_PRIVATE_IMPORT_REFRESH_TOKEN
+  export SPAPI_PRIVATE_IMPORT_ENABLED=false
+  export SPAPI_ENABLED=true SPAPI_SANDBOX=false SPAPI_PRIVATE_ENABLED=true
+  export SPAPI_RATE_LIMIT_ENABLED=true SPAPI_VERIFICATION_ENABLED=true
+  ./apps/server/gradlew -p apps/server --no-daemon bootRun --args='--spring.profiles.active=local'
+)
+```
+
+前端“卖家授权”选店，期望 PRIVATE_SELF/PENDING_VERIFICATION，点击“手动验证 Marketplace”一次；通过为 VERIFIED/CONNECTED。失败只回传脱敏 HTTP/错误枚举，不反复点击。
 
 ## 4. 分步扩大读权限（首轮通过且分别获批后）
 
@@ -91,3 +241,5 @@ cd /home/spark/Projects/github/merchivra
 - 没有批准或材料则 NOT_RUN。E1–E5 仍独立，不把成功连接等同于真实财务签署。
 
 精确基线 [`7dd29280438be1d53d3788b400e5cfc4b523ec0c`](https://github.com/kunlong-luo/merchivra/commit/7dd29280438be1d53d3788b400e5cfc4b523ec0c) [快 CI #46005938792](https://github.com/kunlong-luo/merchivra/actions/runs/46005938792) SUCCESS：Next #140528987913、Java #140528988203、Compose #140528988268；PG18 #140528990185、JaCoCo、完整 Next HTTP 按快 CI 范围跳过。完整 A3 仍对应 efe94b5841b05dfa14de6fea0167a0bb3badebd2，7/7。 本轮核查与方案编写不调用 Amazon，不导入 Token，不运行实际商家数据。新文档 SHA CI 另核。
+
+精确基线 [`ffc599896a55f08a6461d8ac7543b32dd5118c5b`](https://github.com/kunlong-luo/merchivra/commit/ffc599896a55f08a6461d8ac7543b32dd5118c5b) [快 CI #46101466457](https://github.com/kunlong-luo/merchivra/actions/runs/46101466457) SUCCESS：Java #140844637319、Next #140844637491、Compose #140844637545 成功；PG18 #140844638203、JaCoCo、完整 Next HTTP 按快 CI 范围跳过。 新回执及 R0/R1 本地配置尚未在维护者机器执行验证；本轮未调用 Amazon 或修改实际配置。
